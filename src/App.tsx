@@ -41,9 +41,10 @@ import {
   MailTaskShow,
 } from "./pages/mail-tasks";
 import { Login } from "./pages/login";
+import { Home } from "./pages/home";
 import { dataProvider } from "./providers/data";
 import { useTranslation } from "react-i18next";
-import { UnorderedListOutlined, FileTextOutlined, SendOutlined } from "@ant-design/icons";
+import { UnorderedListOutlined, FileTextOutlined, SendOutlined, HomeOutlined } from "@ant-design/icons";
 
 function App() {
   const { keycloak, initialized } = useKeycloak();
@@ -98,6 +99,18 @@ function App() {
           await keycloak.updateToken(5);
           const { token } = keycloak;
           if (token) {
+            const roles = keycloak.resourceAccess?.[keycloak.clientId || ""]?.roles || [];
+            if (!roles.includes("skymail:access")) {
+              return {
+                authenticated: false,
+                redirectTo: "/login",
+                error: {
+                  message: "Erişim Reddedildi",
+                  name: "Skymail'e erişim yetkiniz bulunmuyor.",
+                },
+              };
+            }
+
             axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
             return {
               authenticated: true,
@@ -158,6 +171,14 @@ function App() {
                 authProvider={authProvider}
                 i18nProvider={i18nProvider}
                 resources={[
+                  {
+                    name: "dashboard",
+                    list: "/",
+                    meta: {
+                      label: t("dashboard.title", "Ana Sayfa"),
+                      icon: <HomeOutlined />,
+                    },
+                  },
                   {
                     name: "templates",
                     list: "/templates",
@@ -251,7 +272,7 @@ function App() {
                   >
                     <Route
                       index
-                      element={<NavigateToResource resource="templates"/>}
+                      element={<Home/>}
                     />
                     <Route path="/templates">
                       <Route index element={<TemplateList/>}/>

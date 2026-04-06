@@ -21,13 +21,15 @@ export const MailTaskShow = () => {
     const { tableProps } = useTable({
         resource: `mail_tasks/${record?.id}/queue`,
         syncWithLocation: false,
-        permanentFilter: [
+        filters: {
+          permanent: [
             {
-                field: "task_id",
-                operator: "eq",
-                value: record?.id,
+              field: "mailTaskId",
+              operator: "eq",
+              value: record?.id,
             },
-        ],
+          ],
+        },
         queryOptions: {
             enabled: !!record?.id,
         },

@@ -1,11 +1,36 @@
-import { ThemedTitle } from "@refinedev/antd";
-import { useLogin } from "@refinedev/core";
-import { Button, Layout, Space, Typography } from "antd";
+import { useLogin, useLogout } from "@refinedev/core";
+import { Button, Layout, Space, Typography, Result } from "antd";
 import { useTranslation } from "react-i18next";
+import { useKeycloak } from "@react-keycloak/web";
 
 export const Login: React.FC = () => {
   const { mutate: login } = useLogin();
+  const { mutate: logout } = useLogout();
   const { t } = useTranslation();
+  const { keycloak } = useKeycloak();
+
+  if (keycloak?.authenticated) {
+    return (
+      <Layout
+        style={{
+          height: "100vh",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <Result
+          status="403"
+          title="Erişim Reddedildi"
+          subTitle="Skymail'e erişim yetkiniz bulunmuyor. Lütfen yetkili bir hesapla tekrar deneyin."
+          extra={
+            <Button type="primary" onClick={() => logout()}>
+              Çıkış Yap
+            </Button>
+          }
+        />
+      </Layout>
+    );
+  }
 
   return (
     <Layout
@@ -18,7 +43,7 @@ export const Login: React.FC = () => {
       <Space direction="vertical" align="center" size="large">
         <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "36px" }}>
           <img
-            src="https://yildizskylab.com/static/media/skylab-logo.073a10615624c3396d17.png"
+            src="/skylab.svg"
             width="48"
             height="48"
             alt="SKY LAB"
