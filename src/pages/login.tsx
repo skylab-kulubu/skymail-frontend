@@ -1,9 +1,11 @@
 import { ThemedTitle } from "@refinedev/antd";
 import { useLogin } from "@refinedev/core";
 import { Button, Layout, Space, Typography } from "antd";
+import { useTranslation } from "react-i18next";
 
 export const Login: React.FC = () => {
   const { mutate: login } = useLogin();
+  const { t } = useTranslation();
 
   return (
     <Layout
@@ -13,31 +15,29 @@ export const Login: React.FC = () => {
         alignItems: "center",
       }}
     >
-      <Space direction="vertical" align="center">
-        <ThemedTitle
-          collapsed={false}
-          wrapperStyles={{
-            fontSize: "22px",
-            marginBottom: "36px",
-          }}
-        />
+      <Space direction="vertical" align="center" size="large">
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "36px" }}>
+          <img
+            src="https://yildizskylab.com/static/media/skylab-logo.073a10615624c3396d17.png"
+            width="48"
+            height="48"
+            alt="SKY LAB"
+          />
+          <Typography.Title level={2} style={{ margin: 0, fontSize: "48px", color: "inherit", letterSpacing: "-0.04em" }}>
+            Skymail
+          </Typography.Title>
+        </div>
         <Button
-          style={{ width: "240px" }}
+          style={{ width: "240px", height: "44px" }}
           type="primary"
           size="middle"
           onClick={() => login({})}
         >
-          Sign in
+          {t("buttons.login", "Giriş Yap")}
         </Button>
-        <Typography.Text type="secondary">
-          Powered by
-          <img
-            style={{ padding: "0 5px" }}
-            alt="Keycloak"
-            src="https://refine.ams3.cdn.digitaloceanspaces.com/superplate-auth-icons%2Fkeycloak.svg"
-          />
-          Keycloak
-        </Typography.Text>
+        <Typography.Link type="secondary" style={{ marginTop: "16px" }} href="https://enesgenc.dev" target="_blank">
+          🛠️ Enes Genç
+        </Typography.Link>
       </Space>
     </Layout>
   );
