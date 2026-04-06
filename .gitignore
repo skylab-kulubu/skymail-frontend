@@ -28,3 +28,11 @@ _.ntvs_
 _.njsproj
 _.sln
 \*.sw?
+
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
