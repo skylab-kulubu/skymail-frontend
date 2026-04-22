@@ -1,4 +1,4 @@
-import { Authenticated, AuthProvider, Refine } from "@refinedev/core";
+import { Authenticated, AuthProvider, Refine, AccessControlProvider } from "@refinedev/core";
 import { DevtoolsPanel, DevtoolsProvider } from "@refinedev/devtools";
 import { RefineKbar, RefineKbarProvider } from "@refinedev/kbar";
 
@@ -40,11 +40,17 @@ import {
   MailTaskList,
   MailTaskShow,
 } from "./pages/mail-tasks";
+import {
+  ApplicationCreate,
+  ApplicationEdit,
+  ApplicationList,
+  ApplicationShow,
+} from "./pages/applications";
 import { Login } from "./pages/login";
 import { Home } from "./pages/home";
 import { dataProvider } from "./providers/data";
 import { useTranslation } from "react-i18next";
-import { UnorderedListOutlined, FileTextOutlined, SendOutlined, HomeOutlined } from "@ant-design/icons";
+import { UnorderedListOutlined, FileTextOutlined, SendOutlined, HomeOutlined, AppstoreOutlined } from "@ant-design/icons";
 
 function App() {
   const { keycloak, initialized } = useKeycloak();
@@ -158,6 +164,54 @@ function App() {
     },
   };
 
+  const accessControlProvider: AccessControlProvider = {
+    can: async ({ resource, action }) => {
+      const roles = keycloak.resourceAccess?.[keycloak.clientId || ""]?.roles || [];
+
+      if (resource === "dashboard") {
+        return { can: roles.includes("skymail:access") };
+      }
+
+      if (resource === "applications") {
+        if (action === "list" || action === "show") {
+          return { can: roles.includes("skymail:apps:read") };
+        }
+        if (action === "create" || action === "edit" || action === "delete") {
+          return { can: roles.includes("skymail:apps:write") };
+        }
+      }
+
+      if (resource === "templates") {
+        if (action === "list" || action === "show") {
+          return { can: roles.includes("skymail:templates:read") };
+        }
+        if (action === "create" || action === "edit" || action === "delete") {
+          return { can: roles.includes("skymail:templates:write") };
+        }
+      }
+
+      if (resource === "mailing_lists") {
+        if (action === "list" || action === "show") {
+          return { can: roles.includes("skymail:lists:read") };
+        }
+        if (action === "create" || action === "edit" || action === "delete") {
+          return { can: roles.includes("skymail:lists:write") };
+        }
+      }
+
+      if (resource === "mail_tasks" || resource?.startsWith("mail_tasks/")) {
+        if (action === "list" || action === "show") {
+          return { can: roles.includes("skymail:mails:read") };
+        }
+        if (action === "create" || action === "edit" || action === "delete") {
+          return { can: roles.includes("skymail:mails:write") };
+        }
+      }
+
+      return { can: true };
+    },
+  };
+
   return (
     <BrowserRouter>
       <RefineKbarProvider>
@@ -169,6 +223,7 @@ function App() {
                 notificationProvider={useNotificationProvider}
                 routerProvider={routerProvider}
                 authProvider={authProvider}
+                accessControlProvider={accessControlProvider}
                 i18nProvider={i18nProvider}
                 resources={[
                   {
@@ -177,6 +232,18 @@ function App() {
                     meta: {
                       label: t("dashboard.title", "Ana Sayfa"),
                       icon: <HomeOutlined />,
+                    },
+                  },
+                  {
+                    name: "applications",
+                    list: "/applications",
+                    create: "/applications/create",
+                    edit: "/applications/edit/:id",
+                    show: "/applications/show/:id",
+                    meta: {
+                      canDelete: true,
+                      label: t("applications.applications", "Uygulamalar"),
+                      icon: <AppstoreOutlined/>,
                     },
                   },
                   {
@@ -274,6 +341,12 @@ function App() {
                       index
                       element={<Home/>}
                     />
+                    <Route path="/applications">
+                      <Route index element={<ApplicationList/>}/>
+                      <Route path="create" element={<ApplicationCreate/>}/>
+                      <Route path="edit/:id" element={<ApplicationEdit/>}/>
+                      <Route path="show/:id" element={<ApplicationShow/>}/>
+                    </Route>
                     <Route path="/templates">
                       <Route index element={<TemplateList/>}/>
                       <Route path="create" element={<TemplateCreate/>}/>
