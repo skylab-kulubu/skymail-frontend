@@ -5,7 +5,6 @@
 </div>
 
 <h2 align="center">Skymail</h3>
-<br>
 
 <div align="center">
   <img src="https://img.shields.io/badge/license-MIT-blue.svg?labelColor=003694&color=ffffff" alt="License">
