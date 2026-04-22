@@ -1,37 +1,33 @@
-# This Dockerfile uses `serve` npm package to serve the static files with node process.
-# You can find the Dockerfile for nginx in the following link:
-# https://github.com/refinedev/dockerfiles/blob/main/vite/Dockerfile.nginx
-FROM refinedev/node:18 AS base
+# Build stage
+FROM node:24-alpine AS builder
 
-FROM base as deps
+WORKDIR /app
 
-COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* .npmrc* ./
+# Copy dependency files
+COPY package.json yarn.lock* .yarnrc.yml* .npmrc* ./
 
-RUN \
-  if [ -f yarn.lock ]; then yarn --frozen-lockfile; \
-  elif [ -f package-lock.json ]; then npm ci; \
-  elif [ -f pnpm-lock.yaml ]; then yarn global add pnpm && pnpm i --frozen-lockfile; \
-  else echo "Lockfile not found." && exit 1; \
-  fi
+# Install dependencies
+RUN yarn install
 
-FROM base as builder
-
-ENV NODE_ENV production
-
-COPY --from=deps /app/refine/node_modules ./node_modules
-
+# Copy the rest of the application
 COPY . .
 
-RUN npm run build
+# Build the application
+RUN yarn build
 
-FROM base as runner
+# Final stage
+FROM node:24-alpine
 
-ENV NODE_ENV production
+WORKDIR /app
 
+# Install serve to host the static files
 RUN npm install -g serve
 
-COPY --from=builder /app/refine/dist ./
+# Copy only the built assets from the builder stage
+COPY --from=builder /app/dist ./dist
 
-USER refine
+EXPOSE 3000
 
-CMD ["serve"]
+# Serve the 'dist' directory on port 3000
+# -s flag is for SPA (Single Page Application) routing
+CMD ["serve", "-s", "dist", "-l", "3000"]
