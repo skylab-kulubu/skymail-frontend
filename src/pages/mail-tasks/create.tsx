@@ -11,10 +11,12 @@ export const MailTaskCreate = () => {
 
     const { selectProps: templateSelectProps } = useSelect({
         resource: "templates",
+        optionLabel: "name",
     });
 
     const { selectProps: mailingListSelectProps } = useSelect({
         resource: "mailing_lists",
+        optionLabel: "name",
     });
 
     return (
