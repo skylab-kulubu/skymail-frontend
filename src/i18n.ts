@@ -53,6 +53,10 @@ i18n
               email: "E-posta",
               full_name: "Ad Soyad",
               actions: "İşlemler",
+              external: "Harici",
+            },
+            warnings: {
+              external_source: "Bu liste harici bir kaynaktan sağlanmaktadır. Düzenleme ve silme işlemleri devre dışıdır.",
             },
           },
           applications: {

@@ -1,6 +1,6 @@
-import { DateField, Show, useModalForm, useTable } from "@refinedev/antd";
+import { DateField, DeleteButton, EditButton, RefreshButton, Show, useModalForm, useTable } from "@refinedev/antd";
 import { useShow, useDelete } from "@refinedev/core";
-import { Typography, Card, Row, Col, Table, Button, Space, Modal, Form, Input } from "antd";
+import { Alert, Typography, Card, Row, Col, Table, Button, Space, Modal, Form, Input } from "antd";
 import { useTranslation } from "react-i18next";
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 
@@ -46,6 +46,8 @@ export const MailingListShow = () => {
     });
   };
 
+  const isInternal = record?.source === "internal";
+
   return (
     <Show
       isLoading={isLoading}
@@ -54,23 +56,40 @@ export const MailingListShow = () => {
                     {t("mailing_lists.titles.show")}
                 </span>
       }
+      headerButtons={({ editButtonProps, deleteButtonProps, refreshButtonProps }) => (
+        <>
+          {isInternal && editButtonProps && <EditButton {...editButtonProps} />}
+          {isInternal && deleteButtonProps && <DeleteButton {...deleteButtonProps} />}
+          {refreshButtonProps && <RefreshButton {...refreshButtonProps} />}
+        </>
+      )}
     >
+      {!isInternal && !isLoading && (
+        <Alert
+          type="warning"
+          showIcon
+          message={t("mailing_lists.warnings.external_source")}
+          style={{ marginBottom: 16 }}
+        />
+      )}
       <Row gutter={[16, 16]}>
         <Col span={24}>
           <Card size="small">
             <Row>
-              <Col span={6}>
+              <Col span={isInternal ? 6 : 8}>
                 <Title level={5} style={{ margin: 0 }}>{t("mailing_lists.fields.id")}</Title>
                 <Text>{record?.id}</Text>
               </Col>
-              <Col span={12}>
+              <Col span={isInternal ? 12 : 16}>
                 <Title level={5} style={{ margin: 0 }}>{t("mailing_lists.fields.name")}</Title>
                 <Text>{record?.name}</Text>
               </Col>
-              <Col span={6}>
-                <Title level={5} style={{ margin: 0 }}>{t("mailing_lists.fields.created_at")}</Title>
-                <DateField value={record?.created_at} format="LLL"/>
-              </Col>
+              {isInternal && (
+                <Col span={6}>
+                  <Title level={5} style={{ margin: 0 }}>{t("mailing_lists.fields.created_at")}</Title>
+                  <DateField value={record?.created_at} format="LLL"/>
+                </Col>
+              )}
             </Row>
           </Card>
         </Col>
@@ -82,13 +101,15 @@ export const MailingListShow = () => {
                             </span>
             }
             extra={
-              <Button
-                type="primary"
-                icon={<PlusOutlined/>}
-                onClick={() => show()}
-              >
-                {t("mailing_lists.fields.add_recipient")}
-              </Button>
+              isInternal && (
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined/>}
+                  onClick={() => show()}
+                >
+                  {t("mailing_lists.fields.add_recipient")}
+                </Button>
+              )
             }
           >
             <Table
@@ -103,12 +124,14 @@ export const MailingListShow = () => {
                 dataIndex="actions"
                 render={(_, record: any) => (
                   <Space>
-                    <Button
-                      danger
-                      size="small"
-                      icon={<DeleteOutlined/>}
-                      onClick={() => handleDelete(record.id)}
-                    />
+                    {isInternal && (
+                      <Button
+                        danger
+                        size="small"
+                        icon={<DeleteOutlined/>}
+                        onClick={() => handleDelete(record.id)}
+                      />
+                    )}
                   </Space>
                 )}
               />

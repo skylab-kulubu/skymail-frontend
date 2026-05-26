@@ -1,12 +1,23 @@
 import { Edit, useForm } from "@refinedev/antd";
+import { useNavigation } from "@refinedev/core";
 import { Form, Input } from "antd";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
 export const MailingListEdit = () => {
     const { t } = useTranslation();
-    const { formProps, saveButtonProps } = useForm({
+    const { list } = useNavigation();
+    const { formProps, saveButtonProps, query } = useForm({
         resource: "mailing_lists"
     });
+
+    const record = query?.data?.data;
+
+    useEffect(() => {
+        if (record && record.source !== "internal") {
+            list("mailing_lists");
+        }
+    }, [record]);
 
     return (
         <Edit 
