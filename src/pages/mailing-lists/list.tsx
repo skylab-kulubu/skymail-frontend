@@ -29,7 +29,12 @@ export const MailingListList = () => {
                     title={t("mailing_lists.fields.name")}
                     render={(value: string, record: any) => (
                         <Space size="small">
-                            {value}
+                            <span>
+                                {value}
+                                {record.source !== "internal" && record.description && (
+                                    <div style={{ fontSize: 12, color: "rgba(0,0,0,0.45)" }}>{record.description}</div>
+                                )}
+                            </span>
                             {record.source !== "internal" && (
                                 <Tag color="orange">{t("mailing_lists.fields.external")}</Tag>
                             )}

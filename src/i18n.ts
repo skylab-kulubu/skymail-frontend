@@ -59,35 +59,6 @@ i18n
               external_source: "Bu liste harici bir kaynaktan sağlanmaktadır. Düzenleme ve silme işlemleri devre dışıdır.",
             },
           },
-          applications: {
-            applications: "Uygulamalar",
-            titles: {
-              create: "Uygulama Oluştur",
-              edit: "Uygulamayı Düzenle",
-              list: "Uygulamalar",
-              show: "Uygulama Detayı",
-            },
-            fields: {
-              id: "ID",
-              name: "İsim",
-              name_required: "Lütfen uygulama adını giriniz",
-              name_placeholder: "Örn: Skyforms",
-              token_version: "Token Versiyonu",
-              created_at: "Oluşturulma",
-              updated_at: "Güncellenme",
-            },
-            buttons: {
-              reroll: "Token Yenile",
-            },
-            reroll: {
-              title: "Token Yenile",
-              content: "Eski token geçersiz olacak. Yeni bir token oluşturmak istediğinize emin misiniz?",
-              success: "Token başarıyla yenilendi.",
-              error: "Token yenilenirken hata oluştu.",
-              warning: "Lütfen bu token'ı güvenli bir yere kaydedin. Bir daha göremeyeceksiniz.",
-              newToken: "Yeni Token",
-            }
-          },
           mail_tasks: {
             mail_tasks: "Mail Gönderimleri",
             titles: {
