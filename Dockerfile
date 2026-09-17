@@ -12,7 +12,8 @@ RUN yarn install
 # Copy the rest of the application
 COPY . .
 
-# Build the application
+ARG VITE_API_URL=https://api.yildizskylab.com/api/skymail/v1
+ENV VITE_API_URL=$VITE_API_URL
 RUN yarn build
 
 # Final stage
