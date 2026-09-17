@@ -4,7 +4,8 @@ FROM node:24-alpine AS builder
 WORKDIR /app
 
 # Copy dependency files
-COPY package.json yarn.lock* .yarnrc.yml* .npmrc* ./
+COPY package.json yarn.lock .yarnrc.yml ./
+COPY .yarn/releases .yarn/releases
 
 # Install dependencies
 RUN yarn install
