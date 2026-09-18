@@ -1,13 +1,23 @@
 import { Create, useForm, useSelect } from "@refinedev/antd";
 import { Form, Select } from "antd";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router";
 
 export const MailTaskCreate = () => {
     const { t } = useTranslation();
+    const [params] = useSearchParams();
+    const mailListId = params.get("mail_list_id") ?? undefined;
     const { formProps, saveButtonProps } = useForm({
         resource: "mail_tasks",
         redirect: "list",
     });
+
+    useEffect(() => {
+        if (mailListId) {
+            formProps.form?.setFieldsValue({ mail_list_id: mailListId });
+        }
+    }, [mailListId, formProps.form]);
 
     const { selectProps: templateSelectProps } = useSelect({
         resource: "templates",
