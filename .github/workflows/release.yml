@@ -2,7 +2,7 @@ name: Build and Push Docker Image
 
 on:
   push:
-    branches: [main]
+    branches: [main, production]
     tags: ["v*.*.*"]
   release:
     types: [published]
@@ -36,6 +36,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=production,enable=${{ github.ref == 'refs/heads/production' }}
             type=semver,pattern={{version}}
             type=sha,format=long
 
@@ -52,3 +53,14 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Notify Dokploy
+        if: github.ref == 'refs/heads/production'
+        env:
+          HOOK: ${{ secrets.DOKPLOY_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "DOKPLOY_DEPLOY_HOOK unset; skip"
+            exit 0
+          fi
+          curl -fsS -X POST "$HOOK"
