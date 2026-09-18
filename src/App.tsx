@@ -22,6 +22,7 @@ import { App as AntdApp } from "antd";
 import axios from "axios";
 import { BrowserRouter, Outlet, Route, Routes } from "react-router";
 import { Header } from "./components";
+import { ClubSwitcher } from "./components/club-switcher";
 import { ColorModeContextProvider } from "./contexts/color-mode";
 import {
   TemplateCreate,
@@ -280,7 +281,19 @@ function App() {
                       >
                         <ThemedLayout
                           Header={Header}
-                          Sider={(props) => <ThemedSider {...props} fixed/>}
+                          Sider={(props) => (
+                            <ThemedSider
+                              {...props}
+                              fixed
+                              render={({ items, logout, collapsed }) => (
+                                <>
+                                  {items}
+                                  {collapsed ? null : <ClubSwitcher />}
+                                  {logout}
+                                </>
+                              )}
+                            />
+                          )}
                           Title={({ collapsed }) => (
                             <ThemedTitle
                               collapsed={collapsed}
