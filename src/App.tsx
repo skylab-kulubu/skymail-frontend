@@ -288,8 +288,8 @@ function App() {
                               render={({ items, logout, collapsed }) => (
                                 <>
                                   {items}
-                                  {collapsed ? null : <ClubSwitcher />}
                                   {logout}
+                                  {collapsed ? null : <ClubSwitcher />}
                                 </>
                               )}
                             />

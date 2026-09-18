@@ -1,20 +1,11 @@
 import { clubSwitcherLinks } from "../lib/club-switcher";
+import "./club-switcher.css";
 
 export function ClubSwitcher() {
   return (
-    <nav aria-label="Kulüp konsolları" style={{ padding: "8px 16px 16px" }}>
+    <nav aria-label="Kulüp konsolları" className="club-switcher">
       {clubSwitcherLinks("mail").map((app) => (
-        <a
-          key={app.id}
-          href={app.href}
-          style={{
-            display: "block",
-            padding: "8px 12px",
-            color: "rgba(255,255,255,0.65)",
-            textDecoration: "none",
-            fontSize: 14,
-          }}
-        >
+        <a key={app.id} href={app.href} className="club-switcher-link">
           {app.label}
         </a>
       ))}
