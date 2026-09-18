@@ -2,12 +2,14 @@ import { DateField, DeleteButton, EditButton, RefreshButton, Show, useModalForm,
 import { useShow, useDelete } from "@refinedev/core";
 import { Alert, Typography, Card, Row, Col, Table, Button, Space, Modal, Form, Input } from "antd";
 import { useTranslation } from "react-i18next";
-import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
+import { DeleteOutlined, PlusOutlined, SendOutlined } from "@ant-design/icons";
+import { useNavigate } from "react-router";
 
 const { Title, Text } = Typography;
 
 export const MailingListShow = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { query } = useShow({
     resource: "mailing_lists"
   });
@@ -58,6 +60,15 @@ export const MailingListShow = () => {
       }
       headerButtons={({ editButtonProps, deleteButtonProps, refreshButtonProps }) => (
         <>
+          {isInternal && record?.id && (
+            <Button
+              type="primary"
+              icon={<SendOutlined />}
+              onClick={() => navigate(`/mail-tasks/create?mail_list_id=${record.id}`)}
+            >
+              {t("mail_tasks.titles.create")}
+            </Button>
+          )}
           {isInternal && editButtonProps && <EditButton {...editButtonProps} />}
           {isInternal && deleteButtonProps && <DeleteButton {...deleteButtonProps} />}
           {refreshButtonProps && <RefreshButton {...refreshButtonProps} />}
