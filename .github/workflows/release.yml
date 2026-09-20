@@ -36,12 +36,30 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=sandbox,enable={{is_default_branch}}
             type=raw,value=production,enable=${{ github.ref == 'refs/heads/production' }}
             type=semver,pattern={{version}}
             type=sha,format=long
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
+      - id: environment
+        run: |
+          ref='${{ github.ref_name }}'
+          if [ "$ref" = production ] || [[ "$ref" == v* ]]; then
+            echo "api_url=https://api.yildizskylab.com/api/skymail/v1" >> "$GITHUB_OUTPUT"
+            echo "keycloak_realm=e-skylab" >> "$GITHUB_OUTPUT"
+            echo "admin_url=https://admin.yildizskylab.com" >> "$GITHUB_OUTPUT"
+            echo "forms_admin_url=https://forms.yildizskylab.com/admin" >> "$GITHUB_OUTPUT"
+            echo "mail_url=https://mail.yildizskylab.com" >> "$GITHUB_OUTPUT"
+          else
+            echo "api_url=https://sandbox-api.yildizskylab.com/api/skymail/v1" >> "$GITHUB_OUTPUT"
+            echo "keycloak_realm=e-skylab-sandbox" >> "$GITHUB_OUTPUT"
+            echo "admin_url=https://sandbox-admin.yildizskylab.com" >> "$GITHUB_OUTPUT"
+            echo "forms_admin_url=https://sandbox-forms.yildizskylab.com/admin" >> "$GITHUB_OUTPUT"
+            echo "mail_url=https://sandbox-mail.yildizskylab.com" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -51,6 +69,14 @@ jobs:
           platforms: linux/amd64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VITE_API_URL=${{ steps.environment.outputs.api_url }}
+            VITE_KEYCLOAK_URL=https://e.yildizskylab.com
+            VITE_KEYCLOAK_REALM=${{ steps.environment.outputs.keycloak_realm }}
+            VITE_KEYCLOAK_CLIENT_ID=skymail
+            VITE_ADMIN_URL=${{ steps.environment.outputs.admin_url }}
+            VITE_FORMS_ADMIN_URL=${{ steps.environment.outputs.forms_admin_url }}
+            VITE_MAIL_URL=${{ steps.environment.outputs.mail_url }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
