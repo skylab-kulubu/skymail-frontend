@@ -42,6 +42,31 @@ function checkBalancedActions(key: string, body: string, problems: string[]): vo
   }
 }
 
+/**
+ * A mail client that darkens a light e-mail on its own — which is most of them,
+ * because an e-mail cannot rely on prefers-color-scheme — darkens what is behind
+ * a translucent surface but leaves the surface, and the mail arrives washed out.
+ * Opaque surfaces invert predictably, so a translucent one is a defect.
+ */
+function checkOpaqueSurfaces(key: string, body: string, problems: string[]): void {
+  const inlineStyles = [...body.matchAll(/style="([^"]*)"/g)].map((match) => match[1]);
+
+  for (const style of inlineStyles) {
+    for (const declaration of style.split(";")) {
+      const [property, value] = declaration.split(":").map((part) => part?.trim());
+      if (!property || !value) {
+        continue;
+      }
+      if (!/^(background|background-color|border(-[a-z]+)?-color|border(-[a-z]+)?)$/.test(property)) {
+        continue;
+      }
+      if (value.includes("rgba(") || value.includes("hsla(")) {
+        problems.push(`${key}: saydam yüzey → ${property}: ${value} — opak renk kullan`);
+      }
+    }
+  }
+}
+
 function checkSubjectVariables(key: string, subject: string, declared: string[], problems: string[]): void {
   for (const match of subject.matchAll(/\{\{\.(\w+)\}\}/g)) {
     const name = match[1];
@@ -97,6 +122,7 @@ async function main(): Promise<void> {
     const plainText = await render(React.createElement(Component), { plainText: true });
 
     checkBalancedActions(meta.key, html, problems);
+    checkOpaqueSurfaces(meta.key, html, problems);
     checkSubjectVariables(meta.key, meta.subject, meta.variables, problems);
 
     await writeFile(join(OUT_DIR, `${meta.key}.html`), html, "utf8");

@@ -56,7 +56,7 @@ export default function OpsSendFailed() {
             padding: "10px 14px",
             borderRadius: "8px",
             border: `1px solid ${colors.cardBorder}`,
-            backgroundColor: "rgba(143,94,152,0.06)",
+            backgroundColor: colors.noteBg,
             fontSize: "12px",
             lineHeight: "1.6",
             color: colors.textBody,

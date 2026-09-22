@@ -42,18 +42,26 @@ export const colors = {
   skylab800: "#8f5e98",
   skylab900: "#6e4576",
   pageBg: "#f4f1f7",
-  cardBg: "rgba(255,255,255,0.62)",
-  cardBorder: "rgba(143,94,152,0.18)",
+  // Every surface is opaque on purpose. A mail client that darkens a light
+  // e-mail by itself — which is most of them, because `prefers-color-scheme`
+  // is not something an e-mail can rely on — darkens what is behind a
+  // translucent layer but leaves the layer, and the result is the washed-out
+  // grey-on-grey we shipped first. Opaque colours inverse predictably.
+  cardBg: "#fbfafc",
+  cardBorder: "#e2d7e6",
   textPrimary: "#1b1620",
   textBody: "#4a4253",
-  textMuted: "#8a8194",
-  textFaint: "#a59cae",
-  divider: "rgba(0,0,0,0.08)",
+  textMuted: "#6f6579",
+  textFaint: "#8c8397",
+  divider: "#e7e6e8",
+  noteBg: "#f5f1f6",
+  ctaBg: "#ece4ee",
+  ctaBorder: "#cab4cf",
   // A caution accent for the mails that report something the reader may need to
   // undo — a password change they did not make, a cancelled event.
   alert: "#b06b78",
   alertBg: "#f3e3e5",
-  alertBorder: "rgba(176,107,120,0.30)",
+  alertBorder: "#dcb6bd",
   alertText: "#9e5560",
 } as const;
 
@@ -77,29 +85,58 @@ const darkStarfield = [
 const darkModeCss = `
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
+/* Tells a client that understands it not to apply its own inversion on top of
+   the rules below. Clients that ignore it fall back to the opaque light theme,
+   which survives their inversion on its own. */
+:root { color-scheme: light dark; supported-color-schemes: light dark; }
+
 @media (prefers-color-scheme: dark) {
   .email-bg   { background-color: #08070b !important; background-image: ${darkStarfield} !important; }
-  .card       { background-color: rgba(255,255,255,0.04) !important; border-color: rgba(255,255,255,0.1) !important; }
+  .card       { background-color: #121115 !important; border-color: #2a292c !important; }
   .t-primary  { color: #ffffff !important; }
-  .t-body     { color: #d4d4d4 !important; }
-  .t-muted    { color: #737373 !important; }
-  .t-faint    { color: #525252 !important; }
+  .t-body     { color: #dcdcdc !important; }
+  .t-muted    { color: #a3a3a3 !important; }
+  .t-faint    { color: #8f8f8f !important; }
   .t-brand    { color: #efe3fe !important; }
   .t-num      { color: #c8a4ce !important; }
-  .dev-link   { color: rgba(212,212,212,0.5) !important; }
-  .divider    { border-top-color: rgba(255,255,255,0.10) !important; border-bottom-color: rgba(255,255,255,0.10) !important; }
-  .note-box   { background-color: rgba(255,255,255,0.03) !important; }
-  .chip       { background-color: rgba(224,200,229,0.12) !important; border-color: rgba(224,200,229,0.28) !important; color: #f3e8f5 !important; }
-  .cta        { background-color: rgba(235,213,238,0.40) !important; border-color: rgba(243,232,245,0.50) !important; color: #f3e8f5 !important; }
-  .alert-chip { background-color: rgba(229,200,205,0.12) !important; border-color: rgba(229,200,205,0.30) !important; color: #f3e8ea !important; }
+  .dev-link   { color: #9a9a9a !important; }
+  .divider    { border-top-color: #2a292c !important; border-bottom-color: #2a292c !important; }
+  .note-box   { background-color: #19181c !important; }
+  .chip       { background-color: #2b272e !important; border-color: #4c444f !important; color: #f3e8f5 !important; }
+  .cta        { background-color: #695f6c !important; border-color: #837d85 !important; color: #ffffff !important; }
+  .alert-chip { background-color: #2b272b !important; border-color: #51484c !important; color: #f3e8ea !important; }
   .alert-note { border-left-color: #c0848f !important; }
-  .code-block { background-color: rgba(255,255,255,0.06) !important; color: #f3e8f5 !important; border-color: rgba(255,255,255,0.12) !important; }
+  .code-block { background-color: #201f23 !important; color: #f3e8f5 !important; border-color: #2a292c !important; }
 }
+
+/*
+  Outlook does not honour prefers-color-scheme. Instead it rewrites the colours
+  itself and marks what it touched: [data-ogsc] on an element whose text colour
+  it changed, [data-ogsb] on one whose background it changed. Targeting those
+  attributes is the only way to tell it what we actually want. Other clients
+  never set them, so these rules simply never match there.
+*/
+[data-ogsb] .card, .card[data-ogsb] { background-color: #121115 !important; border-color: #2a292c !important; }
+[data-ogsb] .email-bg, .email-bg[data-ogsb] { background-color: #08070b !important; }
+[data-ogsc] .t-primary, .t-primary[data-ogsc] { color: #ffffff !important; }
+[data-ogsc] .t-body, .t-body[data-ogsc] { color: #dcdcdc !important; }
+[data-ogsc] .t-muted, .t-muted[data-ogsc] { color: #a3a3a3 !important; }
+[data-ogsc] .t-faint, .t-faint[data-ogsc] { color: #8f8f8f !important; }
+[data-ogsc] .t-brand, .t-brand[data-ogsc] { color: #efe3fe !important; }
+[data-ogsb] .note-box, .note-box[data-ogsb] { background-color: #19181c !important; }
+[data-ogsb] .chip, .chip[data-ogsb] { background-color: #2b272e !important; border-color: #4c444f !important; }
+[data-ogsc] .chip, .chip[data-ogsc] { color: #f3e8f5 !important; }
+[data-ogsb] .alert-chip, .alert-chip[data-ogsb] { background-color: #2b272b !important; border-color: #51484c !important; }
+[data-ogsc] .alert-chip, .alert-chip[data-ogsc] { color: #f3e8ea !important; }
+[data-ogsb] .cta, .cta[data-ogsb] { background-color: #695f6c !important; border-color: #837d85 !important; }
+[data-ogsc] .cta, .cta[data-ogsc] { color: #ffffff !important; }
+[data-ogsb] .code-block, .code-block[data-ogsb] { background-color: #201f23 !important; }
+[data-ogsc] .code-block, .code-block[data-ogsc] { color: #f3e8f5 !important; }
 
 .brand-link:hover { opacity: 0.85; }
 .dev-link:hover   { color: #e0c8e5 !important; }
 .legal-link:hover { opacity: 0.8; }
-.cta:hover        { background-color: rgba(251,207,232,0.55) !important; }
+.cta:hover        { background-color: #f5d3e5 !important; }
 `;
 
 /**
@@ -152,6 +189,7 @@ export function Shell({
                   React renders it fine but its types do not know it on <td>. */}
               <td
                 align="center"
+                className="email-bg"
                 {...({ bgcolor: colors.pageBg } as React.TdHTMLAttributes<HTMLTableCellElement>)}
                 style={{ padding: "48px 0" }}
               >
@@ -264,7 +302,7 @@ export function Chip({ children, tone = "brand" }: { children: React.ReactNode; 
               padding: "5px 13px",
               borderRadius: "9999px",
               backgroundColor: alert ? colors.alertBg : "#ece3ef",
-              border: `1px solid ${alert ? colors.alertBorder : "rgba(143,94,152,0.30)"}`,
+              border: `1px solid ${alert ? colors.alertBorder : colors.ctaBorder}`,
               color: alert ? colors.alertText : colors.skylab900,
               fontSize: "12px",
               fontWeight: 600,
@@ -292,8 +330,8 @@ export function Cta({ href, children }: { href: string; children: React.ReactNod
             className="cta"
             style={{
               borderRadius: "12px",
-              backgroundColor: "rgba(143,94,152,0.14)",
-              border: "1.5px solid rgba(143,94,152,0.45)",
+              backgroundColor: colors.ctaBg,
+              border: `1.5px solid ${colors.ctaBorder}`,
             }}
           >
             <Link
@@ -392,7 +430,7 @@ export function Note({ children, tone = "brand" }: { children: React.ReactNode; 
         marginTop: "12px",
         borderRadius: "12px",
         padding: "16px 20px",
-        backgroundColor: "rgba(143,94,152,0.06)",
+        backgroundColor: colors.noteBg,
         borderLeft: `3px solid ${alert ? colors.alert : colors.skylab800}`,
       }}
     >
@@ -421,12 +459,12 @@ function Footer({ brand }: { brand: Brand }) {
         <tbody>
           <tr>
             <td valign="middle" style={{ paddingRight: "7px", lineHeight: "0" }}>
-              <Link href={href} className="brand-link" style={{ textDecoration: "none" }}>
+              <Link href={href} className="brand-link t-brand" style={{ textDecoration: "none", color: colors.skylab800 }}>
                 <Img src={LOGO} width="20" height="20" alt="SKY LAB" style={{ display: "inline-block", verticalAlign: "middle" }} />
               </Link>
             </td>
             <td valign="middle" style={{ paddingRight: "8px" }}>
-              <Link href={href} className="brand-link" style={{ textDecoration: "none" }}>
+              <Link href={href} className="brand-link" style={{ textDecoration: "none", color: colors.skylab800 }}>
                 <span
                   className="t-brand"
                   style={{
