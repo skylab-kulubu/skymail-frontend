@@ -1,10 +1,10 @@
 'use client';
 
-import { useId, useState, type FormEvent } from 'react';
-import { Field } from '@/components/chrome/Field';
+import { useState, type FormEvent } from 'react';
+import { FormField } from '@/components/chrome/FormField';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
-import { ApiError } from '@/lib/api/errors';
+import { apiErrorMessage } from '@/lib/api/errors';
 import { useApi } from '@/lib/api/react';
 import {
   addRecipient,
@@ -44,7 +44,6 @@ function AddRecipientForm({
   onAdded: (recipient: Recipient) => Promise<void> | void;
 }) {
   const api = useApi();
-  const ids = { name: useId(), email: useId(), nameError: useId(), emailError: useId() };
   const [input, setInput] = useState<RecipientInput>(EMPTY);
   const [errors, setErrors] = useState<Partial<Record<keyof RecipientInput, string>>>({});
   const [apiError, setApiError] = useState<string | null>(null);
@@ -58,54 +57,31 @@ function AddRecipientForm({
     if (Object.keys(found).length > 0) return;
     setSaving(true);
     try {
-      const added = await addRecipient(api, listId, input);
-      await onAdded(added);
+      await onAdded(await addRecipient(api, listId, input));
     } catch (error) {
-      setApiError(error instanceof ApiError ? error.message : new ApiError(0, 'network').message);
+      setApiError(apiErrorMessage(error));
       setSaving(false);
     }
   }
 
   return (
     <form onSubmit={submit} noValidate className="space-y-4">
-      <div className="space-y-1.5">
-        <label htmlFor={ids.name} className="block text-xs font-medium text-neutral-300">
-          Ad soyad
-        </label>
-        <Field
-          id={ids.name}
-          value={input.full_name}
-          onChange={(event) => setInput({ ...input, full_name: event.target.value })}
-          autoComplete="off"
-          aria-invalid={errors.full_name ? true : undefined}
-          aria-describedby={errors.full_name ? ids.nameError : undefined}
-        />
-        {errors.full_name ? (
-          <p id={ids.nameError} className="text-xs text-red-300">
-            {errors.full_name}
-          </p>
-        ) : null}
-      </div>
-      <div className="space-y-1.5">
-        <label htmlFor={ids.email} className="block text-xs font-medium text-neutral-300">
-          E-posta
-        </label>
-        <Field
-          id={ids.email}
-          type="email"
-          inputMode="email"
-          value={input.email}
-          onChange={(event) => setInput({ ...input, email: event.target.value })}
-          autoComplete="off"
-          aria-invalid={errors.email ? true : undefined}
-          aria-describedby={errors.email ? ids.emailError : undefined}
-        />
-        {errors.email ? (
-          <p id={ids.emailError} className="text-xs text-red-300">
-            {errors.email}
-          </p>
-        ) : null}
-      </div>
+      <FormField
+        label="Ad soyad"
+        value={input.full_name}
+        onChange={(event) => setInput({ ...input, full_name: event.target.value })}
+        autoComplete="off"
+        error={errors.full_name}
+      />
+      <FormField
+        label="E-posta"
+        type="email"
+        inputMode="email"
+        value={input.email}
+        onChange={(event) => setInput({ ...input, email: event.target.value })}
+        autoComplete="off"
+        error={errors.email}
+      />
       <p className="text-xs leading-relaxed text-neutral-500">
         Bu adres SkyMail&apos;de başka bir listede de varsa aynı alıcı eklenir ve adı her listede burada
         yazdığınla güncellenir.

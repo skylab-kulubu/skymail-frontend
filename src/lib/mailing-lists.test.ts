@@ -6,7 +6,7 @@
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { createApiClient } from "./api/client";
+import { TEST_BASE_URL, json, scriptedClient, type RecordedCall } from "./api/testing";
 import {
   LIST_PAGE_SIZE,
   RECIPIENT_PAGE_SIZE,
@@ -28,34 +28,12 @@ import {
   type Recipient,
 } from "./mailing-lists";
 
-const BASE_URL = "https://api.example.test/api/skymail/v1";
-
-type Call = { url: string; method: string; body: string | null };
-
-function scriptedApi(...responses: Response[]) {
-  const calls: Call[] = [];
-  const api = createApiClient({
-    baseUrl: BASE_URL,
-    getSession: async () => ({ accessToken: "token" }),
-    fetch: async (input, init) => {
-      calls.push({
-        url: String(input).replace(BASE_URL, ""),
-        method: init?.method ?? "GET",
-        body: typeof init?.body === "string" ? init.body : null,
-      });
-      const next = responses.shift();
-      if (!next) throw new Error(`unexpected request ${String(input)}`);
-      return next;
-    },
-  });
-  return { api, calls };
-}
-
 function answer(status: number, body: unknown, total?: number): Response {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (total !== undefined) headers["X-Total-Count"] = String(total);
-  return new Response(body === undefined ? null : JSON.stringify(body), { status, headers });
+  return json(status, body, total === undefined ? {} : { "X-Total-Count": String(total) });
 }
+
+/** The path a request went to, after the API base. */
+const pathOf = (call: RecordedCall) => call.url.slice(TEST_BASE_URL.length);
 
 const ID = {
   beta: "11111111-1111-4111-8111-111111111111",
@@ -137,42 +115,64 @@ describe("a row of the list screen", () => {
   });
 });
 
-describe("the actions on a row", () => {
+describe("what a row allows", () => {
   const current = toListRow(internal(ID.beta, "Beta"));
   const archived = toListRow(internal(ID.old, "Eski", "2026-09-20T08:30:00Z"));
   const keycloak = toListRow(group(ID.weblab, "WEBLAB", "/UYELER/ARGE/WEBLAB"));
 
-  it("let a writer open, rename and archive a current internal list", () => {
-    assert.deepEqual(listActions(current, true), ["show", "edit", "archive"]);
+  const READER = ["skymail:access", "skymail:lists:read"];
+  const WRITER = [...READER, "skymail:lists:write"];
+  const SENDER = [...WRITER, "skymail:mails:write"];
+
+  const allowed = (actions: ReturnType<typeof listActions>) =>
+    Object.entries(actions)
+      .filter(([, yes]) => yes)
+      .map(([name]) => name)
+      .sort();
+
+  it("lets a writer open a current internal list and change it: rename, archive, recipients", () => {
+    assert.deepEqual(allowed(listActions(current, WRITER)), ["change", "open"]);
+  });
+
+  // Creating a send needs mails:write, and the API sends only to a current internal list.
+  it("lets someone who may send start a send to a current internal list", () => {
+    assert.deepEqual(allowed(listActions(current, SENDER)), ["change", "compose", "open"]);
+    assert.equal(listActions(keycloak, SENDER).compose, false);
+    assert.equal(listActions(archived, SENDER).compose, false);
   });
 
   // The API hides an archived list from every read, so it cannot be opened.
-  it("let a writer only restore an archived list", () => {
-    assert.deepEqual(listActions(archived, true), ["restore"]);
+  it("lets a writer only restore an archived list", () => {
+    assert.deepEqual(allowed(listActions(archived, WRITER)), ["restore"]);
   });
 
-  it("only open a Keycloak group, whoever is looking", () => {
-    assert.deepEqual(listActions(keycloak, true), ["show"]);
-    assert.deepEqual(listActions(keycloak, false), ["show"]);
+  // Keycloak owns the group; everyone, a reader too, is told it is read-only.
+  it("marks a Keycloak group read-only for everyone and lets no one change it", () => {
+    assert.deepEqual(allowed(listActions(keycloak, SENDER)), ["open", "readOnly"]);
+    assert.deepEqual(allowed(listActions(keycloak, READER)), ["open", "readOnly"]);
   });
 
-  it("offer a reader nothing that writes", () => {
-    assert.deepEqual(listActions(current, false), ["show"]);
-    assert.deepEqual(listActions(archived, false), []);
+  it("offers a reader nothing that writes", () => {
+    assert.deepEqual(allowed(listActions(current, READER)), ["open"]);
+    assert.deepEqual(allowed(listActions(archived, READER)), []);
+  });
+
+  it("offers nothing that writes without skymail:access, whatever else the token carries", () => {
+    assert.deepEqual(allowed(listActions(current, ["skymail:lists:write", "skymail:mails:write"])), ["open"]);
   });
 });
 
 describe("a page of the list screen", () => {
   it("asks for the filter and the page's slice", async () => {
-    const { api, calls } = scriptedApi(answer(200, [], 0));
+    const { api, calls } = scriptedClient(answer(200, [], 0));
 
     await fetchListPage(api, { lifecycle: "inactive", page: 2 });
 
-    assert.equal(calls[0].url, `/mailing_lists?lifecycle=inactive&_start=${LIST_PAGE_SIZE}&_end=${2 * LIST_PAGE_SIZE}`);
+    assert.equal(pathOf(calls[0]), `/mailing_lists?lifecycle=inactive&_start=${LIST_PAGE_SIZE}&_end=${2 * LIST_PAGE_SIZE}`);
   });
 
   it("shows internal lists first, then the Keycloak groups, with the API's total", async () => {
-    const { api } = scriptedApi(
+    const { api } = scriptedClient(
       answer(
         200,
         [internal(ID.beta, "Beta"), group(ID.weblab, "WEBLAB", "/UYELER/ARGE/WEBLAB"), group(ID.arge, "ARGE", "/UYELER/ARGE")],
@@ -201,7 +201,7 @@ describe("a page of the list screen", () => {
       internal(`aaaaaaaa-0000-4000-8000-${String(i).padStart(12, "0")}`, `Liste ${i}`),
     );
     const groups = [group(ID.weblab, "WEBLAB", "/UYELER/ARGE/WEBLAB"), group(ID.arge, "ARGE", "/UYELER/ARGE")];
-    const { api } = scriptedApi(answer(200, [...internals, ...groups], LIST_PAGE_SIZE + 5 + groups.length));
+    const { api } = scriptedClient(answer(200, [...internals, ...groups], LIST_PAGE_SIZE + 5 + groups.length));
 
     const page = await fetchListPage(api, { lifecycle: "current", page: 1 });
 
@@ -213,7 +213,7 @@ describe("a page of the list screen", () => {
     const lastInternals = [internal(ID.beta, "Liste 25"), internal(ID.old, "Liste 26")];
     const groups = [group(ID.weblab, "WEBLAB", "/UYELER/ARGE/WEBLAB"), group(ID.arge, "ARGE", "/UYELER/ARGE")];
     // 27 internal lists and 2 groups; page 2 holds internal 25–26 and both groups.
-    const { api } = scriptedApi(answer(200, [...lastInternals, ...groups], 27 + 2));
+    const { api } = scriptedClient(answer(200, [...lastInternals, ...groups], 27 + 2));
 
     const page = await fetchListPage(api, { lifecycle: "current", page: 2 });
 
@@ -229,8 +229,8 @@ describe("a page of the list screen", () => {
       group(`bbbbbbbb-0000-4000-8000-${String(i).padStart(12, "0")}`, `Grup ${i}`, `/G/${i}`),
     );
     // No internal lists: page 1 is groups 0–24, page 2 is groups 25–29.
-    const first = scriptedApi(answer(200, groups, 30));
-    const second = scriptedApi(answer(200, groups, 30));
+    const first = scriptedClient(answer(200, groups, 30));
+    const second = scriptedClient(answer(200, groups, 30));
 
     const one = await fetchListPage(first.api, { lifecycle: "all", page: 1 });
     const two = await fetchListPage(second.api, { lifecycle: "all", page: 2 });
@@ -242,7 +242,7 @@ describe("a page of the list screen", () => {
   // Without X-Total-Count (a proxy that does not expose it) the page cannot
   // be placed in the whole list; it shows what came back, once, and no pager.
   it("shows every row it got when the answer has no total", async () => {
-    const { api } = scriptedApi(answer(200, [internal(ID.beta, "Beta"), group(ID.weblab, "WEBLAB", "/W")]));
+    const { api } = scriptedClient(answer(200, [internal(ID.beta, "Beta"), group(ID.weblab, "WEBLAB", "/W")]));
 
     const page = await fetchListPage(api, { lifecycle: "current", page: 1 });
 
@@ -253,18 +253,18 @@ describe("a page of the list screen", () => {
 
 describe("one list", () => {
   it("is read by its id", async () => {
-    const { api, calls } = scriptedApi(answer(200, group(ID.weblab, "WEBLAB", "/UYELER/ARGE/WEBLAB")));
+    const { api, calls } = scriptedClient(answer(200, group(ID.weblab, "WEBLAB", "/UYELER/ARGE/WEBLAB")));
 
     const list = await fetchList(api, ID.weblab);
 
-    assert.equal(calls[0].url, `/mailing_lists/${ID.weblab}`);
+    assert.equal(pathOf(calls[0]), `/mailing_lists/${ID.weblab}`);
     assert.equal(list.name, "WEBLAB");
   });
 
   // The API answers a malformed id with a 500; a link with a broken id is a
   // missing list, not a server error, and needs no request.
   it("is not found, without asking the API, when the id is not one", async () => {
-    const { api, calls } = scriptedApi();
+    const { api, calls } = scriptedClient();
 
     const error = await fetchList(api, "not-a-list").catch((reason: unknown) => reason);
 
@@ -283,12 +283,12 @@ describe("one list", () => {
 describe("the recipients of a list", () => {
   it("are paged by the API for an internal list", async () => {
     const rows = [recipient(26), recipient(27)];
-    const { api, calls } = scriptedApi(answer(200, rows, 27));
+    const { api, calls } = scriptedClient(answer(200, rows, 27));
 
     const page = await fetchRecipientPage(api, { id: ID.beta, external: false }, 2);
 
     assert.equal(
-      calls[0].url,
+      pathOf(calls[0]),
       `/mailing_lists/${ID.beta}/recipients?_start=${RECIPIENT_PAGE_SIZE}&_end=${2 * RECIPIENT_PAGE_SIZE}`,
     );
     assert.deepEqual(page, { recipients: rows, total: 27 });
@@ -296,7 +296,7 @@ describe("the recipients of a list", () => {
 
   // An empty internal list answers null (an empty sqlc result).
   it("are none for an empty list", async () => {
-    const { api } = scriptedApi(answer(200, null, 0));
+    const { api } = scriptedClient(answer(200, null, 0));
 
     assert.deepEqual(await fetchRecipientPage(api, { id: ID.beta, external: false }, 1), {
       recipients: [],
@@ -307,8 +307,8 @@ describe("the recipients of a list", () => {
   // A Keycloak group answers with every member at once and ignores the range.
   it("are paged in the panel for a Keycloak group", async () => {
     const members = Array.from({ length: 30 }, (_, i) => recipient(i + 1));
-    const first = scriptedApi(answer(200, members, 30));
-    const second = scriptedApi(answer(200, members, 30));
+    const first = scriptedClient(answer(200, members, 30));
+    const second = scriptedClient(answer(200, members, 30));
 
     const one = await fetchRecipientPage(first.api, { id: ID.weblab, external: true }, 1);
     const two = await fetchRecipientPage(second.api, { id: ID.weblab, external: true }, 2);
@@ -320,58 +320,58 @@ describe("the recipients of a list", () => {
 
 describe("changing a list", () => {
   it("creates a list with the trimmed name", async () => {
-    const { api, calls } = scriptedApi(answer(201, internal(ID.beta, "Beta")));
+    const { api, calls } = scriptedClient(answer(201, internal(ID.beta, "Beta")));
 
     const created = await createList(api, "  Beta  ");
 
-    assert.deepEqual([calls[0].method, calls[0].url, calls[0].body], ["POST", "/mailing_lists", '{"name":"Beta"}']);
+    assert.deepEqual([calls[0].method, pathOf(calls[0]), calls[0].body], ["POST", "/mailing_lists", '{"name":"Beta"}']);
     assert.equal(created.id, ID.beta);
   });
 
   it("renames a list", async () => {
-    const { api, calls } = scriptedApi(answer(200, internal(ID.beta, "Gama")));
+    const { api, calls } = scriptedClient(answer(200, internal(ID.beta, "Gama")));
 
     await renameList(api, ID.beta, "Gama ");
 
-    assert.deepEqual([calls[0].method, calls[0].url, calls[0].body], ["PATCH", `/mailing_lists/${ID.beta}`, '{"name":"Gama"}']);
+    assert.deepEqual([calls[0].method, pathOf(calls[0]), calls[0].body], ["PATCH", `/mailing_lists/${ID.beta}`, '{"name":"Gama"}']);
   });
 
   // Archiving answers 204 with no body; that is a success.
   it("archives a list with DELETE and succeeds on 204", async () => {
-    const { api, calls } = scriptedApi(new Response(null, { status: 204 }));
+    const { api, calls } = scriptedClient(new Response(null, { status: 204 }));
 
     await archiveList(api, ID.beta);
 
-    assert.deepEqual([calls[0].method, calls[0].url], ["DELETE", `/mailing_lists/${ID.beta}`]);
+    assert.deepEqual([calls[0].method, pathOf(calls[0])], ["DELETE", `/mailing_lists/${ID.beta}`]);
   });
 
   it("restores an archived list", async () => {
-    const { api, calls } = scriptedApi(answer(200, internal(ID.old, "Eski")));
+    const { api, calls } = scriptedClient(answer(200, internal(ID.old, "Eski")));
 
     await restoreList(api, ID.old);
 
-    assert.deepEqual([calls[0].method, calls[0].url], ["POST", `/mailing_lists/${ID.old}/restore`]);
+    assert.deepEqual([calls[0].method, pathOf(calls[0])], ["POST", `/mailing_lists/${ID.old}/restore`]);
   });
 
   it("adds a recipient with the trimmed name and address", async () => {
-    const { api, calls } = scriptedApi(answer(201, recipient(1)));
+    const { api, calls } = scriptedClient(answer(201, recipient(1)));
 
     await addRecipient(api, ID.beta, { full_name: " Ayşe Yılmaz ", email: " ayse@example.test " });
 
-    assert.equal(calls[0].url, `/mailing_lists/${ID.beta}/recipients`);
+    assert.equal(pathOf(calls[0]), `/mailing_lists/${ID.beta}/recipients`);
     assert.deepEqual(JSON.parse(calls[0].body!), { full_name: "Ayşe Yılmaz", email: "ayse@example.test" });
   });
 
   it("removes a recipient and succeeds on 204", async () => {
-    const { api, calls } = scriptedApi(new Response(null, { status: 204 }));
+    const { api, calls } = scriptedClient(new Response(null, { status: 204 }));
 
     await removeRecipient(api, ID.beta, ID.ayse);
 
-    assert.deepEqual([calls[0].method, calls[0].url], ["DELETE", `/mailing_lists/${ID.beta}/recipients/${ID.ayse}`]);
+    assert.deepEqual([calls[0].method, pathOf(calls[0])], ["DELETE", `/mailing_lists/${ID.beta}/recipients/${ID.ayse}`]);
   });
 
   it("reports an API error in the client's Turkish", async () => {
-    const { api } = scriptedApi(answer(404, { code: "server.not_found", message: "The requested resource was not found." }));
+    const { api } = scriptedClient(answer(404, { code: "server.not_found", message: "The requested resource was not found." }));
 
     const error = await archiveList(api, ID.beta).catch((reason: unknown) => reason);
 

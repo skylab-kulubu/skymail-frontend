@@ -4,15 +4,16 @@ import { useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { useApi } from '@/lib/api/react';
 import { createList, listHref } from '@/lib/mailing-lists';
+import { RoleGate } from '@/components/layout/RoleGate';
+import { ROLE } from '@/lib/access';
 import { flashNotice } from './flash';
 import { ListNameForm } from './ListNameForm';
-import { WriteGate } from './WriteGate';
 
 export function MailingListCreate() {
   return (
-    <WriteGate>
+    <RoleGate role={ROLE.listsWrite}>
       <CreateForm />
-    </WriteGate>
+    </RoleGate>
   );
 }
 

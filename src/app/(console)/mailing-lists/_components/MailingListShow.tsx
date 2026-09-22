@@ -1,107 +1,55 @@
 'use client';
 
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { AlertTriangle, Archive, Lock, Pencil, SearchX, Send, UserPlus } from 'lucide-react';
+import { AlertTriangle, Archive, Lock, Pencil, Send, UserPlus } from 'lucide-react';
 import { Pagination } from '@/components/chrome/Pagination';
 import { StateCard } from '@/components/chrome/StateCard';
-import { useCan } from '@/components/layout/ConsoleContext';
+import { useConsole } from '@/components/layout/ConsoleContext';
 import { DataTable } from '@/components/tables/DataTable';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { ModalDangerActions } from '@/components/ui/modal-actions';
-import { ROLE } from '@/lib/access';
-import { ApiError } from '@/lib/api/errors';
-import { useApi } from '@/lib/api/react';
+import { apiErrorMessage } from '@/lib/api/errors';
+import { useApi, useApiLoad } from '@/lib/api/react';
 import { pageCount } from '@/lib/list-view';
 import {
   GROUP_READ_ONLY_REASON,
   RECIPIENT_PAGE_SIZE,
-  archiveList,
   fetchList,
   fetchRecipientPage,
-  isInternal,
+  listActions,
   listHref,
   removeRecipient,
+  toListRow,
   type MailingList,
   type Recipient,
 } from '@/lib/mailing-lists';
 import { AddRecipientModal } from './AddRecipientModal';
+import { ArchiveListDialog, archivedNotice } from './ArchiveListDialog';
 import { flashNotice, useFlashNotice } from './flash';
 import { formatDateTime } from './format';
+import { ListLoadFailure } from './ListLoadFailure';
 import { Notice, type NoticeData } from './Notice';
 import { Tag } from './Tag';
-import { useLoad } from './use-load';
-
-function message(error: unknown): string {
-  return error instanceof ApiError ? error.message : new ApiError(0, 'network').message;
-}
 
 /** One list: what it is, who is on it, and — for an internal list — changing both. */
 export function MailingListShow({ id }: { id: string }) {
-  const state = useLoad((api, signal) => fetchList(api, id, signal), id);
+  const state = useApiLoad((api, signal) => fetchList(api, id, signal), id);
 
   if (state.status === 'loading') return <StateCard isLoading title="Liste yükleniyor" />;
-  if (state.status === 'error') {
-    if (state.error.status === 404) {
-      return (
-        <StateCard
-          Icon={SearchX}
-          title="Liste bulunamadı"
-          description="Bu adreste bir liste yok ya da liste arşivlenmiş. Arşivlenmiş bir liste, Mail listeleri ekranındaki Arşivli filtresinde görünür ve oradan geri alınabilir."
-        >
-          <div className="flex flex-wrap justify-center gap-4 text-sm">
-            <Link href={listHref.index} className="text-skylab-300 hover:underline">
-              Mail listelerine dön
-            </Link>
-            <Link href={listHref.archived} className="text-skylab-300 hover:underline">
-              Arşivli listeler
-            </Link>
-          </div>
-        </StateCard>
-      );
-    }
-    return (
-      <StateCard Icon={AlertTriangle} tone="danger" title="Liste yüklenemedi" description={state.error.message}>
-        <Button variant="secondary" onClick={() => void state.reload()}>
-          Tekrar dene
-        </Button>
-      </StateCard>
-    );
-  }
+  if (state.status === 'error') return <ListLoadFailure error={state.error} onRetry={() => void state.reload()} />;
   return <ListDetail list={state.data} />;
 }
 
 function ListDetail({ list }: { list: MailingList }) {
-  const api = useApi();
   const router = useRouter();
-  const canWrite = useCan(ROLE.listsWrite);
-  const canCompose = useCan(ROLE.mailsWrite);
-  const internal = isInternal(list);
-  const editable = internal && canWrite;
+  const { roles } = useConsole();
+  const row = toListRow(list);
+  const actions = listActions(row, roles);
 
   const [notice, setNotice] = useFlashNotice(listHref.show(list.id));
   const [archiveOpen, setArchiveOpen] = useState(false);
-  const [archiving, setArchiving] = useState(false);
-  const [archiveError, setArchiveError] = useState<string | null>(null);
-
-  async function archive() {
-    setArchiving(true);
-    setArchiveError(null);
-    try {
-      await archiveList(api, list.id);
-      flashNotice(listHref.index, {
-        tone: 'success',
-        text: `“${list.name}” arşivlendi. Alıcıları ve geçmiş gönderimleri korunuyor.`,
-        restore: { id: list.id, name: list.name },
-      });
-      router.push(listHref.index);
-    } catch (error) {
-      setArchiveError(message(error));
-      setArchiving(false);
-    }
-  }
 
   return (
     <div className="space-y-6">
@@ -109,35 +57,29 @@ function ListDetail({ list }: { list: MailingList }) {
         <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="min-w-0 text-lg font-medium break-words text-neutral-100">{list.name}</h1>
-            {internal ? null : <Tag tone="external">Harici</Tag>}
+            {row.external ? <Tag tone="external">Harici</Tag> : null}
           </div>
-          {internal ? (
-            <p className="text-sm text-neutral-500">Internal liste</p>
+          {row.external ? (
+            <p className="text-sm break-all text-neutral-500">{row.groupPath ?? 'Keycloak grubu'}</p>
           ) : (
-            <p className="text-sm break-all text-neutral-500">{list.description ?? 'Keycloak grubu'}</p>
+            <p className="text-sm text-neutral-500">Internal liste</p>
           )}
         </div>
-        {internal && (canCompose || canWrite) ? (
+        {actions.compose || actions.change ? (
           <div className="flex flex-wrap gap-2">
-            {canCompose ? (
+            {actions.compose ? (
               <Button href={`/mail-tasks/create?mail_list_id=${encodeURIComponent(list.id)}`}>
                 <Send className="h-4 w-4" aria-hidden />
                 Yeni gönderim
               </Button>
             ) : null}
-            {canWrite ? (
+            {actions.change ? (
               <>
                 <Button variant="secondary" href={listHref.edit(list.id)}>
                   <Pencil className="h-4 w-4" aria-hidden />
                   Düzenle
                 </Button>
-                <Button
-                  variant="outlineDanger"
-                  onClick={() => {
-                    setArchiveError(null);
-                    setArchiveOpen(true);
-                  }}
-                >
+                <Button variant="outlineDanger" onClick={() => setArchiveOpen(true)}>
                   <Archive className="h-4 w-4" aria-hidden />
                   Arşivle
                 </Button>
@@ -147,13 +89,9 @@ function ListDetail({ list }: { list: MailingList }) {
         ) : null}
       </div>
 
-      {notice ? (
-        <Notice tone={notice.tone} onDismiss={() => setNotice(null)}>
-          {notice.text}
-        </Notice>
-      ) : null}
+      {notice ? <Notice notice={notice} onDismiss={() => setNotice(null)} /> : null}
 
-      {internal ? null : (
+      {actions.readOnly ? (
         <div className="flex items-start gap-3 rounded-lg border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-sm text-amber-300">
           <Lock className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
           <div className="space-y-1">
@@ -161,7 +99,7 @@ function ListDetail({ list }: { list: MailingList }) {
             <p className="leading-relaxed">{GROUP_READ_ONLY_REASON}</p>
           </div>
         </div>
-      )}
+      ) : null}
 
       <dl className="grid gap-4 rounded-lg border border-white/5 bg-white/[0.02] p-4 sm:grid-cols-3">
         <div className="min-w-0 space-y-1">
@@ -170,48 +108,32 @@ function ListDetail({ list }: { list: MailingList }) {
         </div>
         <div className="min-w-0 space-y-1">
           <dt className="text-2xs tracking-wider text-neutral-500 uppercase">Kaynak</dt>
-          <dd className="text-sm text-neutral-200">{internal ? 'SkyMail' : 'Keycloak grubu'}</dd>
+          <dd className="text-sm text-neutral-200">{row.external ? 'Keycloak grubu' : 'SkyMail'}</dd>
         </div>
-        {internal ? (
+        {row.createdAt ? (
           <div className="min-w-0 space-y-1">
             <dt className="text-2xs tracking-wider text-neutral-500 uppercase">Oluşturulma</dt>
-            <dd className="text-sm text-neutral-200">{formatDateTime(list.created_at)}</dd>
+            <dd className="text-sm text-neutral-200">{formatDateTime(row.createdAt)}</dd>
           </div>
         ) : null}
       </dl>
 
-      <Recipients list={list} editable={editable} />
+      <Recipients list={list} external={row.external} editable={actions.change} />
 
-      <Modal
-        isOpen={archiveOpen}
-        onClose={() => (archiving ? undefined : setArchiveOpen(false))}
-        title="Listeyi arşivle"
-      >
-        <p className="leading-relaxed">
-          <strong className="font-medium text-neutral-100">“{list.name}”</strong> arşivlenecek. Alıcıları ve geçmiş
-          gönderimleri silinmez; listeyi Mail listeleri ekranındaki Arşivli filtresinden geri alabilirsin. Arşivdeki
-          bir listeye gönderim yapılamaz.
-        </p>
-        {archiveError ? (
-          <p role="alert" className="mt-3 text-red-300">
-            {archiveError}
-          </p>
-        ) : null}
-        <ModalDangerActions
-          onCancel={() => setArchiveOpen(false)}
-          onConfirm={() => void archive()}
-          confirmLabel="Arşivle"
-          pendingLabel="Arşivleniyor…"
-          isPending={archiving}
-        />
-      </Modal>
+      <ArchiveListDialog
+        list={archiveOpen ? list : null}
+        onClose={() => setArchiveOpen(false)}
+        onArchived={(archived) => {
+          flashNotice(listHref.index, archivedNotice(archived));
+          router.push(listHref.index);
+        }}
+      />
     </div>
   );
 }
 
-function Recipients({ list, editable }: { list: MailingList; editable: boolean }) {
+function Recipients({ list, external, editable }: { list: MailingList; external: boolean; editable: boolean }) {
   const api = useApi();
-  const external = !isInternal(list);
   const [page, setPage] = useState(1);
   // Said next to the table it changed, not at the top of a page scrolled past.
   const [notice, setNotice] = useState<NoticeData | null>(null);
@@ -220,7 +142,7 @@ function Recipients({ list, editable }: { list: MailingList; editable: boolean }
   const [removing, setRemoving] = useState(false);
   const [removeError, setRemoveError] = useState<string | null>(null);
 
-  const state = useLoad(
+  const state = useApiLoad(
     (client, signal) => fetchRecipientPage(client, { id: list.id, external }, page, signal),
     `${list.id}:${page}`,
   );
@@ -240,7 +162,7 @@ function Recipients({ list, editable }: { list: MailingList; editable: boolean }
       setToRemove(null);
       setNotice({ tone: 'success', text: `${recipient.full_name} (${recipient.email}) listeden çıkarıldı.` });
     } catch (error) {
-      setRemoveError(message(error));
+      setRemoveError(apiErrorMessage(error));
     } finally {
       setRemoving(false);
     }
@@ -289,11 +211,7 @@ function Recipients({ list, editable }: { list: MailingList; editable: boolean }
         ) : null}
       </div>
 
-      {notice ? (
-        <Notice tone={notice.tone} onDismiss={() => setNotice(null)}>
-          {notice.text}
-        </Notice>
-      ) : null}
+      {notice ? <Notice notice={notice} onDismiss={() => setNotice(null)} /> : null}
 
       {state.status === 'loading' ? (
         <StateCard isLoading title="Alıcılar yükleniyor" />
@@ -308,11 +226,14 @@ function Recipients({ list, editable }: { list: MailingList; editable: boolean }
           <DataTable
             data={state.data.recipients}
             columns={columns}
-            emptyText={
-              external ? 'Bu grupta e-posta adresi olan üye yok.' : 'Bu listede henüz alıcı yok.'
-            }
+            emptyText={external ? 'Bu grupta e-posta adresi olan üye yok.' : 'Bu listede henüz alıcı yok.'}
           />
-          <Pagination current={page} totalPages={lastPage ?? 1} onPageChange={setPage} />
+          <Pagination
+            ariaLabel="Alıcı sayfaları"
+            current={page}
+            totalPages={lastPage ?? 1}
+            onPageChange={setPage}
+          />
         </div>
       )}
 
@@ -321,11 +242,13 @@ function Recipients({ list, editable }: { list: MailingList; editable: boolean }
         listId={list.id}
         onClose={() => setAdding(false)}
         onAdded={async (recipient) => {
-          // The API lists the newest recipients first.
-          if (page === 1) await state.reload();
-          else setPage(1);
+          // The API answers 201 whether the address was added or already on
+          // the list, and orders recipients by when the recipient record was
+          // first created, so the row may be on any page: refresh this one
+          // (and the total) and say only what is sure.
+          await state.reload();
           setAdding(false);
-          setNotice({ tone: 'success', text: `${recipient.full_name} (${recipient.email}) listeye eklendi.` });
+          setNotice({ tone: 'success', text: `${recipient.full_name} (${recipient.email}) listede.` });
         }}
       />
 

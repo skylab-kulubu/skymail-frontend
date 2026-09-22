@@ -9,6 +9,7 @@
  * Keycloak group is a list too: read-only, its members are the group's
  * members, and the API hands its path over as the `description`.
  */
+import { ROLE, hasRole } from "./access";
 import type { ApiClient } from "./api/client";
 import { ApiError } from "./api/errors";
 import { listViewQuery, pageRange, type ListView } from "./list-view";
@@ -44,6 +45,9 @@ export const RECIPIENT_PAGE_SIZE = 25;
 export const GROUP_READ_ONLY_REASON =
   "Bu liste Keycloak'taki bir gruptan geliyor, bu yüzden SkyMail'de salt okunur. Alıcıları grubun üyeleridir; " +
   "adı, üyeleri ve kendisi Keycloak'ta yönetilir. SkyMail'de yeniden adlandırılamaz, arşivlenemez, alıcı eklenip çıkarılamaz.";
+
+/** The same, short enough to stand on a row of the list. */
+export const GROUP_READ_ONLY_NOTE = "Salt okunur: Keycloak'ta yönetilir.";
 
 /** Today's addresses; superadmin links to `show/<id>` and `create`. */
 export const listHref = {
@@ -84,16 +88,30 @@ export function toListRow(list: MailingList): ListRow {
   };
 }
 
-export type ListAction = "show" | "edit" | "archive" | "restore";
+/** Everything a list's row and page offer, decided in one place. */
+export type ListActions = Readonly<{
+  /** Its page opens; every read of an archived list answers 404, so it does not. */
+  open: boolean;
+  /** Rename and archive it, add and remove its recipients. */
+  change: boolean;
+  restore: boolean;
+  /** Start a send to it; the API sends only to a current internal list. */
+  compose: boolean;
+  /** A Keycloak group: no one can change it in SkyMail, and every viewer is told so. */
+  readOnly: boolean;
+}>;
 
-/**
- * What a row offers. Every read of an archived list answers 404, so an
- * archived list can only be restored; a Keycloak group can only be opened.
- */
-export function listActions(row: ListRow, canWrite: boolean): ListAction[] {
-  if (row.archivedAt) return canWrite ? ["restore"] : [];
-  if (row.external || !canWrite) return ["show"];
-  return ["show", "edit", "archive"];
+export function listActions(row: ListRow, roles: readonly string[]): ListActions {
+  const archived = row.archivedAt !== null;
+  const owned = !row.external && !archived;
+  const canWrite = hasRole(roles, ROLE.listsWrite);
+  return {
+    open: !archived,
+    change: owned && canWrite,
+    restore: archived && canWrite,
+    compose: owned && hasRole(roles, ROLE.mailsWrite),
+    readOnly: row.external,
+  };
 }
 
 /**

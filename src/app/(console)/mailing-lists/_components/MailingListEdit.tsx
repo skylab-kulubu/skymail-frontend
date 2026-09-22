@@ -2,64 +2,41 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { AlertTriangle, Lock, SearchX } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import { StateCard } from '@/components/chrome/StateCard';
+import { useConsole } from '@/components/layout/ConsoleContext';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { Button } from '@/components/ui/Button';
-import { useApi } from '@/lib/api/react';
+import { RoleGate } from '@/components/layout/RoleGate';
+import { ROLE } from '@/lib/access';
+import { useApi, useApiLoad } from '@/lib/api/react';
 import {
   GROUP_READ_ONLY_REASON,
   fetchList,
-  isInternal,
+  listActions,
   listHref,
   renameList,
+  toListRow,
   type MailingList,
 } from '@/lib/mailing-lists';
 import { flashNotice } from './flash';
+import { ListLoadFailure } from './ListLoadFailure';
 import { ListNameForm } from './ListNameForm';
-import { useLoad } from './use-load';
-import { WriteGate } from './WriteGate';
 
 export function MailingListEdit({ id }: { id: string }) {
   return (
-    <WriteGate>
+    <RoleGate role={ROLE.listsWrite}>
       <EditLoader id={id} />
-    </WriteGate>
+    </RoleGate>
   );
 }
 
 function EditLoader({ id }: { id: string }) {
-  const state = useLoad((api, signal) => fetchList(api, id, signal), id);
+  const { roles } = useConsole();
+  const state = useApiLoad((api, signal) => fetchList(api, id, signal), id);
 
   if (state.status === 'loading') return <StateCard isLoading title="Liste yükleniyor" />;
-  if (state.status === 'error') {
-    if (state.error.status === 404) {
-      return (
-        <StateCard
-          Icon={SearchX}
-          title="Liste bulunamadı"
-          description="Bu adreste bir liste yok ya da liste arşivlenmiş. Arşivlenmiş bir listeyi düzenlemek için önce Arşivli filtresinden geri al."
-        >
-          <div className="flex flex-wrap justify-center gap-4 text-sm">
-            <Link href={listHref.index} className="text-skylab-300 hover:underline">
-              Mail listelerine dön
-            </Link>
-            <Link href={listHref.archived} className="text-skylab-300 hover:underline">
-              Arşivli listeler
-            </Link>
-          </div>
-        </StateCard>
-      );
-    }
-    return (
-      <StateCard Icon={AlertTriangle} tone="danger" title="Liste yüklenemedi" description={state.error.message}>
-        <Button variant="secondary" onClick={() => void state.reload()}>
-          Tekrar dene
-        </Button>
-      </StateCard>
-    );
-  }
-  if (!isInternal(state.data)) {
+  if (state.status === 'error') return <ListLoadFailure error={state.error} onRetry={() => void state.reload()} />;
+  if (!listActions(toListRow(state.data), roles).change) {
     return (
       <StateCard Icon={Lock} tone="warning" title="Bu liste düzenlenemez" description={GROUP_READ_ONLY_REASON}>
         <Link href={listHref.show(state.data.id)} className="text-skylab-300 text-sm hover:underline">

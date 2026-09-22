@@ -1,6 +1,8 @@
 'use client';
 
-// Copied from superadmin (ADR-0017).
+// Copied from superadmin (ADR-0017). Unlike the copy, the pager is a labelled
+// <nav> and the current page carries aria-current, so a screen reader can say
+// where it is.
 
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 
@@ -9,6 +11,8 @@ type PaginationProps = {
   totalPages?: number;
   onPageChange?: (page: number) => void;
   className?: string;
+  /** Names the pager for a screen reader, e.g. "Alıcı sayfaları". */
+  ariaLabel?: string;
 };
 
 export function Pagination({
@@ -16,6 +20,7 @@ export function Pagination({
   totalPages = 1,
   onPageChange,
   className = '',
+  ariaLabel = 'Sayfalar',
 }: PaginationProps) {
   const safeTotalPages = Math.max(1, Number(totalPages) || 1);
   const safeCurrent = Math.min(Math.max(1, Number(current) || 1), safeTotalPages);
@@ -52,7 +57,7 @@ export function Pagination({
   })();
 
   return (
-    <div className="sticky bottom-0 z-20 bg-neutral-900">
+    <nav aria-label={ariaLabel} className="sticky bottom-0 z-20 bg-neutral-900">
       <div className={`flex flex-wrap items-center justify-center gap-1 pt-3 ${className}`}>
         <button
           type="button"
@@ -83,6 +88,7 @@ export function Pagination({
                 key={pageNum}
                 onClick={() => goTo(pageNum)}
                 aria-label={`Sayfa ${pageNum}`}
+                aria-current={isCurrentPage ? 'page' : undefined}
                 className={`focus-visible:ring-skylab-400/40 h-7 w-7 rounded-md text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none ${
                   isCurrentPage
                     ? 'border-skylab-400/40 bg-skylab-500/15 text-skylab-300 border'
@@ -108,6 +114,6 @@ export function Pagination({
           <ArrowRight size={14} />
         </button>
       </div>
-    </div>
+    </nav>
   );
 }

@@ -1,10 +1,10 @@
 'use client';
 
-import { useId, useState, type FormEvent } from 'react';
-import { Field } from '@/components/chrome/Field';
+import { useState, type FormEvent } from 'react';
+import { FormField } from '@/components/chrome/FormField';
 import { Button } from '@/components/ui/Button';
 import { FormActions } from '@/components/ui/FormActions';
-import { ApiError } from '@/lib/api/errors';
+import { apiErrorMessage } from '@/lib/api/errors';
 import { validateListName } from '@/lib/mailing-lists';
 import { Notice } from './Notice';
 
@@ -23,7 +23,6 @@ export function ListNameForm({
   /** Resolves when saved (the caller navigates); rejects with the API's error. */
   onSubmit: (name: string) => Promise<void>;
 }) {
-  const ids = { name: useId(), error: useId() };
   const [name, setName] = useState(initialName);
   const [error, setError] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
@@ -39,34 +38,23 @@ export function ListNameForm({
     try {
       await onSubmit(name);
     } catch (reason) {
-      setApiError(reason instanceof ApiError ? reason.message : new ApiError(0, 'network').message);
+      setApiError(apiErrorMessage(reason));
       setSaving(false);
     }
   }
 
   return (
     <form onSubmit={submit} noValidate className="max-w-xl space-y-4">
-      <div className="space-y-1.5">
-        <label htmlFor={ids.name} className="block text-xs font-medium text-neutral-300">
-          Liste adı
-        </label>
-        <Field
-          id={ids.name}
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          placeholder="Örn: Beta kullanıcıları"
-          autoComplete="off"
-          autoFocus
-          aria-invalid={error ? true : undefined}
-          aria-describedby={error ? ids.error : undefined}
-        />
-        {error ? (
-          <p id={ids.error} className="text-xs text-red-300">
-            {error}
-          </p>
-        ) : null}
-      </div>
-      {apiError ? <Notice tone="error">{apiError}</Notice> : null}
+      <FormField
+        label="Liste adı"
+        value={name}
+        onChange={(event) => setName(event.target.value)}
+        placeholder="Örn: Beta kullanıcıları"
+        autoComplete="off"
+        autoFocus
+        error={error}
+      />
+      {apiError ? <Notice notice={{ tone: 'error', text: apiError }} /> : null}
       <FormActions
         cancel={
           <Button variant="secondary" href={cancelHref} disabled={saving}>
