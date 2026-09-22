@@ -69,21 +69,21 @@ export const MailTaskShow = () => {
                             </Col>
                             <Col span={6}>
                                 <Title level={5} style={{ margin: 0 }}>{t("mail_tasks.fields.template")}</Title>
-                                <Text 
-                                    style={{ color: "#1890ff", cursor: "pointer", fontWeight: 500 }}
+                                <Typography.Link
+                                    style={{ fontWeight: 500 }}
                                     onClick={() => show("templates", record?.template_id)}
                                 >
                                     {record?.template_name}
-                                </Text>
+                                </Typography.Link>
                             </Col>
                             <Col span={6}>
                                 <Title level={5} style={{ margin: 0 }}>{t("mail_tasks.fields.mailing_list")}</Title>
-                                <Text 
-                                    style={{ color: "#fa8c16", cursor: "pointer", fontWeight: 500 }}
+                                <Typography.Link
+                                    style={{ fontWeight: 500 }}
                                     onClick={() => show("mailing_lists", record?.mail_list_id)}
                                 >
                                     {record?.mail_list_name}
-                                </Text>
+                                </Typography.Link>
                             </Col>
                             <Col span={6}>
                                 <Title level={5} style={{ margin: 0 }}>{t("mail_tasks.fields.created_at")}</Title>

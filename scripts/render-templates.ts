@@ -42,6 +42,68 @@ function checkBalancedActions(key: string, body: string, problems: string[]): vo
   }
 }
 
+/**
+ * A mail client that darkens a light e-mail on its own — which is most of them,
+ * because an e-mail cannot rely on prefers-color-scheme — darkens what is behind
+ * a translucent surface but leaves the surface, and the mail arrives washed out.
+ * Opaque surfaces invert predictably, so a translucent one is a defect.
+ */
+function checkOpaqueSurfaces(key: string, body: string, problems: string[]): void {
+  const inlineStyles = [...body.matchAll(/style="([^"]*)"/g)].map((match) => match[1]);
+
+  for (const style of inlineStyles) {
+    for (const declaration of style.split(";")) {
+      const [property, value] = declaration.split(":").map((part) => part?.trim());
+      if (!property || !value) {
+        continue;
+      }
+      if (!/^(background|background-color|border(-[a-z]+)?-color|border(-[a-z]+)?)$/.test(property)) {
+        continue;
+      }
+      if (value.includes("rgba(") || value.includes("hsla(")) {
+        problems.push(`${key}: saydam yüzey → ${property}: ${value} — opak renk kullan`);
+      }
+    }
+  }
+}
+
+/**
+ * Dark mode is carried by role classes, so an element that paints a background
+ * without one stays light while everything around it goes dark — and paints
+ * over what is behind it. react-email can introduce such an element on its own:
+ * an inline background on <Body> is copied onto a wrapper cell it generates,
+ * and that cell has no class. Invisible until the mail lands in an inbox.
+ */
+const DARK_AWARE_CLASSES = [
+  "email-bg",
+  "card",
+  "chip",
+  "alert-chip",
+  "note-box",
+  "cta",
+  "code-block",
+];
+
+function checkBackgroundLayersAreThemed(key: string, body: string, problems: string[]): void {
+  for (const match of body.matchAll(/<(body|table|td|div)\b([^>]*?)>/gs)) {
+    const [, tag, attributes] = match;
+
+    const paintsBackground =
+      /background-color:\s*[^;"]+/.test(attributes) || /bgcolor="[^"]+"/.test(attributes);
+    if (!paintsBackground) {
+      continue;
+    }
+
+    const classes = /class="([^"]*)"/.exec(attributes)?.[1] ?? "";
+    const themed = DARK_AWARE_CLASSES.some((name) => classes.split(/\s+/).includes(name));
+    if (!themed) {
+      problems.push(
+        `${key}: <${tag}> arka plan boyuyor ama koyu mod sınıfı yok (class="${classes}") — koyu modda açık kalır`,
+      );
+    }
+  }
+}
+
 function checkSubjectVariables(key: string, subject: string, declared: string[], problems: string[]): void {
   for (const match of subject.matchAll(/\{\{\.(\w+)\}\}/g)) {
     const name = match[1];
@@ -97,6 +159,8 @@ async function main(): Promise<void> {
     const plainText = await render(React.createElement(Component), { plainText: true });
 
     checkBalancedActions(meta.key, html, problems);
+    checkOpaqueSurfaces(meta.key, html, problems);
+    checkBackgroundLayersAreThemed(meta.key, html, problems);
     checkSubjectVariables(meta.key, meta.subject, meta.variables, problems);
 
     await writeFile(join(OUT_DIR, `${meta.key}.html`), html, "utf8");

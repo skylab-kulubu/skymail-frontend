@@ -6,7 +6,7 @@ import {
     ShowButton,
     useTable,
 } from "@refinedev/antd";
-import { Space, Table, Tag } from "antd";
+import { Space, Table, Tag, Typography } from "antd";
 import { useTranslation } from "react-i18next";
 
 export const MailingListList = () => {
@@ -28,17 +28,21 @@ export const MailingListList = () => {
                     dataIndex="name"
                     title={t("mailing_lists.fields.name")}
                     render={(value: string, record: any) => (
-                        <Space size="small">
-                            <span>
-                                {value}
-                                {record.source !== "internal" && record.description && (
-                                    <div style={{ fontSize: 12, color: "rgba(0,0,0,0.45)" }}>{record.description}</div>
+                        <>
+                            <Space size="small">
+                                <span>{value}</span>
+                                {record.source !== "internal" && (
+                                    <Tag color="orange">{t("mailing_lists.fields.external")}</Tag>
                                 )}
-                            </span>
-                            {record.source !== "internal" && (
-                                <Tag color="orange">{t("mailing_lists.fields.external")}</Tag>
+                            </Space>
+                            {record.source !== "internal" && record.description && (
+                                <div>
+                                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                                        {record.description}
+                                    </Typography.Text>
+                                </div>
                             )}
-                        </Space>
+                        </>
                     )}
                 />
                 <Table.Column
@@ -47,7 +51,7 @@ export const MailingListList = () => {
                     render={(value: string, record: any) =>
                         record.source === "internal"
                             ? <DateField value={value} format="LLL" />
-                            : <span style={{ color: "rgba(0,0,0,0.25)" }}>—</span>
+                            : <Typography.Text type="secondary">—</Typography.Text>
                     }
                 />
                 <Table.Column
