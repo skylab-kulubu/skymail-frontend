@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist_Mono, Space_Grotesk } from "next/font/google";
+import Script from "next/script";
+import { ThemeSync } from "@/components/layout/ThemeSync";
 import { themeInitScript } from "@/lib/theme";
 import "./globals.css";
 
@@ -26,12 +28,18 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    // The theme script sets data-theme before React hydrates.
-    <html lang="tr" data-theme="dark" suppressHydrationWarning>
+    // The theme script sets data-theme before React hydrates; without it the
+    // tokens fall back to the dark theme.
+    <html lang="tr" suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <Script id="theme-init" strategy="beforeInteractive">
+          {themeInitScript}
+        </Script>
       </head>
-      <body className={`${spaceGrotesk.variable} ${geistMono.variable} antialiased`}>{children}</body>
+      <body className={`${spaceGrotesk.variable} ${geistMono.variable} antialiased`}>
+        <ThemeSync />
+        {children}
+      </body>
     </html>
   );
 }

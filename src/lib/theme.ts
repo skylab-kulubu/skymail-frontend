@@ -15,6 +15,17 @@ export const themeInitScript = `(function(){try{var s=localStorage.getItem(${JSO
   THEME_STORAGE_KEY,
 )});var t=s==="light"||s==="dark"?s:(window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark");document.documentElement.dataset.theme=t;}catch(e){document.documentElement.dataset.theme="dark";}})();`;
 
+/** The stored choice, or the system's preference when there is none. */
+export function preferredTheme(): Theme {
+  try {
+    const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+    if (stored === "light" || stored === "dark") return stored;
+  } catch {
+    // Storage blocked: fall through to the system preference.
+  }
+  return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+}
+
 export function currentTheme(): Theme {
   return document.documentElement.dataset.theme === "light" ? "light" : "dark";
 }
