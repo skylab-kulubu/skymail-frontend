@@ -52,6 +52,14 @@ eksikleri yazıp kapanır.
 
 * Valid redirect URI: `http://localhost:3000/api/auth/callback/keycloak`
 * Valid post logout redirect URI: `http://localhost:3000`
+* Web origin: `http://localhost:3000`
+
+> **Bugün (2026-09-23) sandbox realm'ında (`e-skylab-sandbox`) `skymail` istemcisi
+> yok** — Keycloak "Client not found" diyor; yani sandbox'a karşı yerel giriş şu an
+> çalışmaz. Production realm'ındaki `skymail` istemcisinde de yerel adresler kayıtlı
+> değil. İnsan adımı, ikisinden biri: sandbox realm'ında `skymail` public istemcisini
+> yukarıdaki adreslerle açmak, ya da bu adresleri production `skymail` istemcisine
+> eklemek.
 
 Canlıda geri dönüş adresi `<AUTH_URL>/api/auth/callback/keycloak`, çıkış dönüşü
 sitenin kök adresidir (Refine uygulamasının kullandığı adres).
@@ -61,7 +69,8 @@ sitenin kök adresidir (Refine uygulamasının kullandığı adres).
 ```sh
 yarn typecheck        # next typegen && tsc --noEmit
 yarn build            # ortam değişkeni gerekmez
-yarn api:check        # Node testleri: HTTP istemcisi, oturum token'ı, roller
+yarn lint             # ESLint (TypeScript, hooks, Next.js kuralları)
+yarn api:check        # Node testleri: HTTP istemcisi, oturum token'ı, roller, tema
 yarn emails:check     # zengin metin dönüştürücüsü
 yarn templates:check  # editörün kaydetme kararı
 yarn emails:render    # repodaki Mail template'leri render edip denetler
