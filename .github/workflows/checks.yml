@@ -1,0 +1,63 @@
+name: Checks
+
+# Every check the repo has, on every PR into a branch that ships. The image is
+# built by release.yml; nothing here publishes or needs a secret.
+on:
+  pull_request:
+    branches: [main, rewrite]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      # The runner's global Yarn hands off to .yarn/releases via yarnPath, so
+      # this is the repo's Yarn 4, not whatever the image ships.
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: yarn
+
+      - name: Install dependencies
+        id: install
+        run: yarn install --immutable
+
+      # Each check runs even when an earlier one failed, so one red run shows
+      # everything that is broken rather than only the first thing.
+      - name: yarn typecheck
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: yarn typecheck
+
+      - name: yarn build
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: yarn build
+
+      - name: yarn emails:render (render every template and check the HTML)
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: yarn emails:render
+
+      - name: yarn emails:check (rich text never becomes markup)
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: yarn emails:check
+
+      - name: yarn api:check (a 204 archive is a success)
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: yarn api:check
+
+      - name: yarn templates:check (never save a body that did not render)
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: yarn templates:check
