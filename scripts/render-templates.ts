@@ -29,8 +29,11 @@ function fillSample(html: string, sample: Record<string, unknown>): string {
 }
 
 function checkBalancedActions(key: string, body: string, problems: string[]): void {
-  const opens = (body.match(/\{\{if /g) ?? []).length;
-  const ends = (body.match(/\{\{end\}\}/g) ?? []).length;
+  // \s after `if`, not a plain space: the pretty printer wraps a long line and
+  // splits an action across it — `{{if\n  .link}}`. Go parses that fine, so
+  // matching only on a space reported a template as unbalanced when it was not.
+  const opens = (body.match(/\{\{\s*if\s/g) ?? []).length;
+  const ends = (body.match(/\{\{\s*end\s*\}\}/g) ?? []).length;
   if (opens !== ends) {
     problems.push(`${key}: ${opens} adet {{if}} var ama ${ends} adet {{end}} — dengesiz`);
   }
