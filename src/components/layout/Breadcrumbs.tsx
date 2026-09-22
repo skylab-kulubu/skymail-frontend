@@ -3,12 +3,12 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ChevronRight } from 'lucide-react';
-import { chromeCrumbs } from '@/lib/chrome-breadcrumbs';
+import { backCrumb, chromeCrumbs } from '@/lib/chrome-breadcrumbs';
 
 export function Breadcrumbs() {
   const pathname = usePathname() || '/';
   const items = chromeCrumbs(pathname);
-  const prev = items.length > 1 ? items[items.length - 2] : null;
+  const prev = backCrumb(items);
   const current = items[items.length - 1];
 
   return (
@@ -24,7 +24,7 @@ export function Breadcrumbs() {
               <span className="max-w-[120px] truncate text-xs">{prev.label}</span>
             </Link>
           ) : null}
-          <ChevronRight className="h-3.5 w-3.5 shrink-0 text-neutral-600" />
+          {prev ? <ChevronRight className="h-3.5 w-3.5 shrink-0 text-neutral-600" /> : null}
           <span
             aria-current="page"
             className="max-w-40 truncate text-xs font-medium text-neutral-200"
@@ -62,6 +62,10 @@ export function Breadcrumbs() {
                   className="max-w-[180px] truncate font-medium text-neutral-200"
                   title={item.label}
                 >
+                  {item.label}
+                </span>
+              ) : !item.isPage ? (
+                <span title={item.label} className="min-w-0 truncate px-1.5 py-1">
                   {item.label}
                 </span>
               ) : (
