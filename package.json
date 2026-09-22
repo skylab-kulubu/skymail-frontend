@@ -55,7 +55,8 @@
     "emails:render": "tsx scripts/render-templates.ts",
     "emails:seed": "tsx scripts/seed-templates.ts",
     "emails:check": "tsx scripts/check-rich-text.ts",
-    "api:check": "tsx scripts/check-delete-response.ts"
+    "api:check": "tsx scripts/check-delete-response.ts",
+    "templates:check": "tsx scripts/check-template-save.ts"
   },
   "browserslist": {
     "production": [

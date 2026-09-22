@@ -1,5 +1,5 @@
 import { Create, useForm } from "@refinedev/antd";
-import { Form, Input, Row, Col, Card, Typography, Alert, theme } from "antd";
+import { Form, Input, Row, Col, Card, Typography, Alert, theme, App as AntdApp } from "antd";
 import Editor from "@monaco-editor/react";
 import { useState, useEffect, useRef } from "react";
 import { render } from "@react-email/render";
@@ -7,6 +7,7 @@ import * as ReactEmail from "@react-email/components";
 import * as Babel from "@babel/standalone";
 import React from "react";
 import { useTranslation } from "react-i18next";
+import { isSavable } from "../../lib/template-render";
 
 const { Text } = Typography;
 const { useToken } = theme;
@@ -105,12 +106,15 @@ export default function Email() {
 
 export const TemplateCreate = () => {
     const { t } = useTranslation();
+    const { message } = AntdApp.useApp();
     const { token: themeToken } = useToken();
     const { formProps, saveButtonProps, onFinish } = useForm();
     const [code, setCode] = useState(DEFAULT_TEMPLATE);
     const [previewHtml, setPreviewHtml] = useState("");
     const [previewPlainText, setPreviewPlainText] = useState("");
     const [error, setError] = useState<string | null>(null);
+    // The code the current preview came from; see lib/template-render.
+    const [renderedCode, setRenderedCode] = useState<string | null>(null);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const editorRef = useRef<any>(null);
 
@@ -162,9 +166,11 @@ export const TemplateCreate = () => {
 
             setPreviewHtml(html);
             setPreviewPlainText(plainText);
+            setRenderedCode(currentCode);
             setError(null);
         } catch (err: any) {
             console.error("Render error:", err);
+            setRenderedCode(null);
             setError(err.message);
         }
     };
@@ -181,7 +187,15 @@ export const TemplateCreate = () => {
         };
     }, [code]);
 
+    const savable = isSavable({ code, renderedCode, previewHtml, error });
+
     const handleFormFinish = async (values: any) => {
+        // A submit can also come from Enter inside a field, so the disabled
+        // save button is not the only way in.
+        if (!savable) {
+            message.error(t("templates.fields.render_required"));
+            return;
+        }
         const finalValues = {
             ...values,
             html_content: previewHtml,
@@ -192,7 +206,7 @@ export const TemplateCreate = () => {
     };
 
     return (
-        <Create saveButtonProps={{ ...saveButtonProps, onClick: () => formProps.form?.submit(), children: t("buttons.save") }} title={t("templates.titles.create")}>
+        <Create saveButtonProps={{ ...saveButtonProps, disabled: !savable, onClick: () => formProps.form?.submit(), children: t("buttons.save") }} title={t("templates.titles.create")}>
             <Form {...formProps} layout="vertical" onFinish={handleFormFinish}>
                 <Row gutter={16}>
                     <Col span={12}>
@@ -237,14 +251,25 @@ export const TemplateCreate = () => {
                 <Form.Item name="plain_text_content" hidden><Input /></Form.Item>
                 <Form.Item name="react_email_content" hidden><Input /></Form.Item>
 
-                <div style={{ minHeight: error ? "auto" : "0", marginBottom: error ? 16 : 0 }}>
-                    {error && (
+                <div style={{ minHeight: savable ? "0" : "auto", marginBottom: savable ? 0 : 16 }}>
+                    {error ? (
                         <Alert
                             message={t("templates.fields.render_error")}
                             description={error}
                             type="error"
                             showIcon
                         />
+                    ) : (
+                        // No error and still not savable: the preview has not
+                        // caught up, or there is no source to render at all.
+                        // Say so, or the disabled save button has no reason.
+                        !savable && (
+                            <Alert
+                                message={t("templates.fields.render_pending")}
+                                type="warning"
+                                showIcon
+                            />
+                        )
                     )}
                 </div>
 

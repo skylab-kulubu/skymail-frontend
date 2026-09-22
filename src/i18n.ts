@@ -34,6 +34,8 @@ i18n
               live_preview: "Canlı Önizleme (HTML Çıktısı)",
               available_variables: "Kullanılabilir Değişkenler",
               render_error: "Render Hatası",
+              render_required: "Şablon derlenmediği için kaydedilmedi. Önizleme hatasını düzeltmeden kaydedersen gövde boş gider.",
+              render_pending: "Önizleme henüz oluşmadı, bu yüzden kaydedilemez. Şablonun kaynağı bu kutuda görünmüyorsa düzenlemesi repodaki emails/ klasöründe yapılır.",
               html_content: "HTML İçeriği",
               plain_text_content: "Düz Metin İçeriği",
               actions: "İşlemler",
