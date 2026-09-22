@@ -11,15 +11,14 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { templates } from "../emails";
-import { fillSampleValues, renderComponent } from "../src/lib/mail-render";
+import { blockBalance, fillSampleValues, referencedVariables, renderComponent } from "../src/lib/mail-render";
 
 const OUT_DIR = join(process.cwd(), "build", "emails");
 
 function checkBalancedActions(key: string, body: string, problems: string[]): void {
-  const opens = (body.match(/\{\{if /g) ?? []).length;
-  const ends = (body.match(/\{\{end\}\}/g) ?? []).length;
+  const { opens, ends } = blockBalance(body);
   if (opens !== ends) {
-    problems.push(`${key}: ${opens} adet {{if}} var ama ${ends} adet {{end}} — dengesiz`);
+    problems.push(`${key}: ${opens} blok ({{if}}, {{range}}, {{with}}…) açılıyor ama ${ends} adet {{end}} var — dengesiz`);
   }
 
   // A brace that survived JSX as a literal, e.g. "{.link}" instead of "{{.link}}".
@@ -129,8 +128,7 @@ function checkPlainTextIsReadable(key: string, html: string, plainText: string, 
 }
 
 function checkSubjectVariables(key: string, subject: string, declared: string[], problems: string[]): void {
-  for (const match of subject.matchAll(/\{\{\.(\w+)\}\}/g)) {
-    const name = match[1];
+  for (const name of referencedVariables(subject)) {
     if (!declared.includes(name)) {
       problems.push(
         `${key}: konu satırı {{.${name}}} kullanıyor ama bu değişken meta.variables içinde yok — gönderen doldurmazsa konuda "<no value>" yazar`,
