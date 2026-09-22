@@ -10,23 +10,10 @@
  */
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import React from "react";
-import { render } from "@react-email/render";
 import { templates } from "../emails";
+import { fillSampleValues, renderComponent } from "../src/lib/mail-render";
 
 const OUT_DIR = join(process.cwd(), "build", "emails");
-
-/** Replaces the Go actions with sample values so a preview reads like a real mail. */
-function fillSample(html: string, sample: Record<string, unknown>): string {
-  let filled = html;
-
-  // Drop the conditionals, keeping the "value is present" branch.
-  filled = filled.replace(/\{\{if [^}]+\}\}/g, "").replace(/\{\{end\}\}/g, "");
-  filled = filled.replace(/\{\{safeHTML \.(\w+)\}\}/g, (_match, name: string) => String(sample[name] ?? ""));
-  filled = filled.replace(/\{\{\.(\w+)\}\}/g, (_match, name: string) => String(sample[name] ?? `«${name}»`));
-
-  return filled;
-}
 
 function checkBalancedActions(key: string, body: string, problems: string[]): void {
   const opens = (body.match(/\{\{if /g) ?? []).length;
@@ -192,8 +179,13 @@ async function main(): Promise<void> {
   const problems: string[] = [];
 
   for (const { meta, Component } of templates) {
-    const html = await render(React.createElement(Component), { pretty: true });
-    const plainText = await render(React.createElement(Component), { plainText: true });
+    // The render module is what the panel renders with too, so what is checked
+    // here is what an operator gets.
+    const rendered = await renderComponent(Component);
+    if (!rendered.ok) {
+      throw new Error(`${meta.key}: ${rendered.message}`);
+    }
+    const { html, plainText } = rendered;
 
     checkBalancedActions(meta.key, html, problems);
     checkOpaqueSurfaces(meta.key, html, problems);
@@ -203,7 +195,7 @@ async function main(): Promise<void> {
 
     await writeFile(join(OUT_DIR, `${meta.key}.html`), html, "utf8");
     await writeFile(join(OUT_DIR, `${meta.key}.txt`), plainText, "utf8");
-    await writeFile(join(OUT_DIR, `${meta.key}.preview.html`), fillSample(html, meta.sample), "utf8");
+    await writeFile(join(OUT_DIR, `${meta.key}.preview.html`), fillSampleValues(html, meta.sample), "utf8");
 
     console.log(`✓ ${meta.key.padEnd(34)} ${String(html.length).padStart(6)} bayt HTML · "${meta.subject}"`);
   }

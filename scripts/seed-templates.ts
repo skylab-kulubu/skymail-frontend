@@ -17,9 +17,8 @@
  * Needs skymail:access + skymail:templates:write. Pass --dry-run to see what
  * would change without touching anything.
  */
-import React from "react";
-import { render } from "@react-email/render";
 import { templates } from "../emails";
+import { renderComponent } from "../src/lib/mail-render";
 
 const BASE_URL = (process.env.SKYMAIL_URL ?? "http://localhost:3000").replace(/\/+$/, "");
 const DRY_RUN = process.argv.includes("--dry-run");
@@ -70,8 +69,11 @@ async function main(): Promise<void> {
   let seeded = 0;
 
   for (const { meta, Component } of templates) {
-    const html = await render(React.createElement(Component), { pretty: true });
-    const plainText = await render(React.createElement(Component), { plainText: true });
+    const rendered = await renderComponent(Component);
+    if (!rendered.ok) {
+      throw new Error(`${meta.key}: ${rendered.message}`);
+    }
+    const { html, plainText } = rendered;
 
     const body = {
       name: meta.name,
@@ -80,7 +82,7 @@ async function main(): Promise<void> {
       plain_text_content: plainText,
       // Not the .tsx source: a pointer back to it. The template's home is this
       // repo, and SkyMail's Monaco pane cannot compile a comment, so the editor
-      // refuses to save one over the rendered body (see lib/template-render).
+      // refuses to save one over the rendered body (see lib/mail-render).
       react_email_content: `// Kaynak: skymail-frontend/emails/${meta.key}.tsx — burada düzenlersen repodaki kaynakla ayrışır.\n`,
       system: meta.system,
     };
