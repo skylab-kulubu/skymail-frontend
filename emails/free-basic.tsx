@@ -38,6 +38,7 @@ export default function FreeBasic() {
     <Shell preview={v("Subject")} brand="skylab">
       {ifSet("Heading")}
       <Heading>{v("Heading")}</Heading>
+      {end}
 
       <div
         className="t-body"
