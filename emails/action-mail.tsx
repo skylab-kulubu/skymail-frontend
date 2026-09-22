@@ -1,8 +1,8 @@
 /**
  * The shape every "click this link" mail shares: Keycloak's verification and
- * password-reset mails, and the personal e-mail confirmation Account center
- * sends. They differ only in wording, so the reassurance, the expiry line and
- * the copy-paste fallback live here and stay consistent across all of them.
+ * password-reset mails. They differ only in wording, so the reassurance, the
+ * expiry line and the copy-paste fallback live here and stay consistent across
+ * all of them. (Account center's personal e-mail proof is a code, see code-mail.)
  */
 import * as React from "react";
 import { Cta, Heading, LinkFallback, Paragraph, Shell, colors, fontStack } from "./theme";
