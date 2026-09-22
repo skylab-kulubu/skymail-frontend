@@ -480,10 +480,11 @@ function Footer({ brand }: { brand: Brand }) {
       <table role="presentation" align="center" cellPadding="0" cellSpacing="0" style={{ margin: "0 auto" }}>
         <tbody>
           <tr>
+            {/* Not a link: a link with no text renders in the plain-text part as
+                a bare URL glued to whatever follows it. The brand name beside it
+                goes to the same place. */}
             <td valign="middle" style={{ paddingRight: "7px", lineHeight: "0" }}>
-              <Link href={href} className="brand-link t-brand" style={{ textDecoration: "none", color: colors.skylab800 }}>
-                <Img src={LOGO} width="24" height="24" alt="SKY LAB" style={{ display: "inline-block", verticalAlign: "middle" }} />
-              </Link>
+              <Img src={LOGO} width="24" height="24" alt="SKY LAB" style={{ display: "inline-block", verticalAlign: "middle" }} />
             </td>
             <td valign="middle" style={{ paddingRight: "8px" }}>
               <Link href={href} className="brand-link" style={{ textDecoration: "none", color: colors.skylab800 }}>
@@ -504,7 +505,7 @@ function Footer({ brand }: { brand: Brand }) {
             </td>
             <td valign="middle">
               <span className="t-faint" style={{ fontSize: "13px", color: colors.textFaint, fontFamily: fontStack }}>
-                by WEBLAB
+                {" by WEBLAB"}
               </span>
             </td>
           </tr>
@@ -519,16 +520,20 @@ function Footer({ brand }: { brand: Brand }) {
                 Kullanım Koşulları
               </Link>
             </td>
-            <td valign="middle" style={{ lineHeight: "0" }}>
-              <span style={{ display: "inline-block", width: "3px", height: "3px", borderRadius: "9999px", backgroundColor: colors.textFaint, verticalAlign: "middle" }} />
+            <td valign="middle">
+              <span className="t-faint" style={{ fontSize: "11px", color: colors.textFaint, fontFamily: fontStack }}>
+                {" · "}
+              </span>
             </td>
             <td valign="middle" style={{ padding: "0 10px" }}>
               <Link href="https://skyl.app/kvkk-metni" className="t-muted legal-link" style={{ fontSize: "11px", color: colors.textMuted, textDecoration: "none", fontFamily: fontStack }}>
                 Gizlilik Politikası
               </Link>
             </td>
-            <td valign="middle" style={{ lineHeight: "0" }}>
-              <span style={{ display: "inline-block", width: "3px", height: "3px", borderRadius: "9999px", backgroundColor: colors.textFaint, verticalAlign: "middle" }} />
+            <td valign="middle">
+              <span className="t-faint" style={{ fontSize: "11px", color: colors.textFaint, fontFamily: fontStack }}>
+                {" · "}
+              </span>
             </td>
             <td valign="middle" style={{ padding: "0 10px" }}>
               <Link
