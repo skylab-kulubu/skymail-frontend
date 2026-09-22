@@ -82,12 +82,19 @@ const darkStarfield = [
   "radial-gradient(900px 700px at 6% 100%, rgba(170,140,200,0.06), transparent 60%)",
 ].join(", ");
 
+// Comments inside this string ship in every message, so the reasoning lives out
+// here instead.
+//
+// There is deliberately no webfont @import. A webfont is close to useless in an
+// e-mail because most clients block remote CSS, and Apple Mail blocks remote
+// content by default — which put a failing remote import at the top of the one
+// stylesheet the dark theme depends on. The font stack falls back to Helvetica,
+// which is what most recipients were seeing anyway.
+//
+// `color-scheme` tells a client that understands it not to apply its own
+// inversion on top of these rules. A client that ignores it falls back to the
+// opaque light theme, which survives its inversion on its own.
 const darkModeCss = `
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
-
-/* Tells a client that understands it not to apply its own inversion on top of
-   the rules below. Clients that ignore it fall back to the opaque light theme,
-   which survives their inversion on its own. */
 :root { color-scheme: light dark; supported-color-schemes: light dark; }
 
 @media (prefers-color-scheme: dark) {
