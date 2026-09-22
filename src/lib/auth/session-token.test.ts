@@ -6,7 +6,13 @@
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { refreshIfExpiring, tokenFromSignIn, type SessionToken } from "./session-token";
+import {
+  createRefreshStore,
+  refreshIfExpiring,
+  tokenFromSignIn,
+  type RefreshOptions,
+  type SessionToken,
+} from "./session-token";
 
 const ISSUER = "https://e.example.test/realms/e-skylab-sandbox";
 const CLIENT_ID = "skymail";
@@ -75,6 +81,11 @@ function tokenEndpoint(answer: () => Response | Promise<Response>) {
   return { fetch, calls };
 }
 
+/** Each test gets its own refresh store, so no test sees another's refreshes. */
+function options(fetch: typeof globalThis.fetch, now: () => number = () => NOW): RefreshOptions {
+  return { issuer: ISSUER, clientId: CLIENT_ID, fetch, now, store: createRefreshStore() };
+}
+
 function signedIn(overrides: Partial<SessionToken> = {}): SessionToken {
   return {
     accessToken: tokenWithRoles(["skymail:access"]),
@@ -92,7 +103,7 @@ describe("reading the session", () => {
     const { fetch, calls } = tokenEndpoint(() => assert.fail("no refresh expected"));
     const token = signedIn();
 
-    const next = await refreshIfExpiring(token, { issuer: ISSUER, clientId: CLIENT_ID, fetch, now: () => NOW });
+    const next = await refreshIfExpiring(token, options(fetch));
 
     assert.equal(next, token);
     assert.equal(calls.length, 0);
@@ -110,12 +121,7 @@ describe("reading the session", () => {
       }),
     );
 
-    const next = await refreshIfExpiring(signedIn({ expiresAt: NOW + 30_000 }), {
-      issuer: ISSUER,
-      clientId: CLIENT_ID,
-      fetch,
-      now: () => NOW,
-    });
+    const next = await refreshIfExpiring(signedIn({ expiresAt: NOW + 30_000 }), options(fetch));
 
     assert.equal(calls.length, 1);
     assert.equal(calls[0].url, `${ISSUER}/protocol/openid-connect/token`);
@@ -137,12 +143,7 @@ describe("reading the session", () => {
       Response.json({ access_token: tokenWithRoles(["skymail:access"]), expires_in: 300 }),
     );
 
-    const next = await refreshIfExpiring(signedIn({ expiresAt: NOW - 1 }), {
-      issuer: ISSUER,
-      clientId: CLIENT_ID,
-      fetch,
-      now: () => NOW,
-    });
+    const next = await refreshIfExpiring(signedIn({ expiresAt: NOW - 1 }), options(fetch));
 
     assert.equal(next.refreshToken, "refresh-1");
     assert.equal(next.idToken, "id-1");
@@ -154,7 +155,7 @@ describe("reading the session", () => {
     );
     const token = signedIn({ expiresAt: NOW - 1 });
 
-    const next = await refreshIfExpiring(token, { issuer: ISSUER, clientId: CLIENT_ID, fetch, now: () => NOW });
+    const next = await refreshIfExpiring(token, options(fetch));
 
     assert.equal(next.error, "RefreshAccessTokenError");
     assert.equal(next.accessToken, token.accessToken);
@@ -165,12 +166,7 @@ describe("reading the session", () => {
       throw new TypeError("fetch failed");
     });
 
-    const next = await refreshIfExpiring(signedIn({ expiresAt: NOW - 1 }), {
-      issuer: ISSUER,
-      clientId: CLIENT_ID,
-      fetch,
-      now: () => NOW,
-    });
+    const next = await refreshIfExpiring(signedIn({ expiresAt: NOW - 1 }), options(fetch));
 
     assert.equal(next.error, "RefreshAccessTokenError");
   });
@@ -184,10 +180,114 @@ describe("reading the session", () => {
 
     const next = await refreshIfExpiring(
       signedIn({ expiresAt: NOW - 1, error: "RefreshAccessTokenError" }),
-      { issuer: ISSUER, clientId: CLIENT_ID, fetch, now: () => NOW },
+      options(fetch),
     );
 
     assert.equal(calls.length, 1);
     assert.equal(next.error, undefined);
+  });
+});
+
+// A page load sends several requests at once — the page, the sidebar's
+// prefetches, other tabs — and each runs the jwt callback. Whether or not the
+// realm revokes a used refresh token, they should not all go to Keycloak, and
+// if it does, the losers must not come back holding a spent token.
+describe("reads that need a refresh at the same moment", () => {
+  function gatedTokenEndpoint() {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    let issued = 0;
+    const endpoint = tokenEndpoint(async () => {
+      issued += 1;
+      await gate;
+      return Response.json({
+        access_token: tokenWithRoles(["skymail:access"]),
+        refresh_token: `refresh-rotated-${issued}`,
+        expires_in: 300,
+      });
+    });
+    return { ...endpoint, release };
+  }
+
+  it("share one refresh", async () => {
+    const { fetch, calls, release } = gatedTokenEndpoint();
+    const shared = { ...options(fetch) };
+    const expiring = signedIn({ expiresAt: NOW + 30_000 });
+
+    const pending = [refreshIfExpiring(expiring, shared), refreshIfExpiring(expiring, shared)];
+    release();
+    const [first, second] = await Promise.all(pending);
+
+    assert.equal(calls.length, 1);
+    assert.equal(first.refreshToken, "refresh-rotated-1");
+    assert.equal(second.refreshToken, "refresh-rotated-1");
+    assert.equal(first.accessToken, second.accessToken);
+  });
+
+  it("hand the fresh token to a read that arrives shortly after with the spent one", async () => {
+    const { fetch, calls, release } = gatedTokenEndpoint();
+    release();
+    let now = NOW;
+    const shared = options(fetch, () => now);
+    const expiring = signedIn({ expiresAt: NOW + 30_000 });
+
+    const first = await refreshIfExpiring(expiring, shared);
+    now += 5_000; // a request the browser sent before the new cookie arrived
+    const late = await refreshIfExpiring(expiring, shared);
+
+    assert.equal(calls.length, 1);
+    assert.equal(late.refreshToken, first.refreshToken);
+    // The expiry counts from when Keycloak issued the token, not from the late read.
+    assert.equal(late.expiresAt, first.expiresAt);
+  });
+
+  it("go back to Keycloak once the shared result is old", async () => {
+    const { fetch, calls, release } = gatedTokenEndpoint();
+    release();
+    let now = NOW;
+    const shared = options(fetch, () => now);
+    const expiring = signedIn({ expiresAt: NOW + 30_000 });
+
+    await refreshIfExpiring(expiring, shared);
+    now += 10 * 60_000;
+    await refreshIfExpiring({ ...expiring, expiresAt: now }, shared);
+
+    assert.equal(calls.length, 2);
+  });
+});
+
+describe("a refused refresh", () => {
+  // The refresh runs a minute before expiry. If Keycloak refuses it then —
+  // a spent refresh token, a blip — the access token still works, and flagging
+  // the session would log the operator out while it is valid.
+  it("keeps a token that still has time left, unflagged", async () => {
+    const { fetch } = tokenEndpoint(() =>
+      Response.json({ error: "invalid_grant", error_description: "Stale token" }, { status: 400 }),
+    );
+    const token = signedIn({ expiresAt: NOW + 30_000 });
+
+    const next = await refreshIfExpiring(token, options(fetch));
+
+    assert.equal(next.error, undefined);
+    assert.equal(next.accessToken, token.accessToken);
+    assert.equal(next.refreshToken, token.refreshToken);
+  });
+
+  it("is tried again on the next read rather than remembered", async () => {
+    let attempts = 0;
+    const { fetch } = tokenEndpoint(() => {
+      attempts += 1;
+      return attempts === 1
+        ? Response.json({ error: "temporarily_unavailable" }, { status: 503 })
+        : Response.json({ access_token: tokenWithRoles(["skymail:access"]), expires_in: 300 });
+    });
+    const shared = options(fetch);
+    const token = signedIn({ expiresAt: NOW + 30_000 });
+
+    await refreshIfExpiring(token, shared);
+    const next = await refreshIfExpiring(token, shared);
+
+    assert.equal(attempts, 2);
+    assert.equal(next.expiresAt, NOW + 300_000);
   });
 });

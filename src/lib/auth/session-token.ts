@@ -99,28 +99,76 @@ export function tokenFromSignIn(
   };
 }
 
+/** A token endpoint answer, with when it arrived. */
+type Issued = { tokens: TokenResponse; receivedAt: number };
+
+/** How long a refresh result is handed to reads still carrying the refresh token it replaced. */
+const SHARED_RESULT_MS = 30_000;
+
+/**
+ * Refreshes in flight, and those that finished moments ago, by the refresh
+ * token they spent.
+ *
+ * One page load runs the jwt callback several times at once — the page, the
+ * sidebar's prefetches, /api/auth/session from the HTTP client, other tabs —
+ * and a request the browser sent before the new cookie arrived still carries
+ * the old refresh token. They all get one refresh's result instead of each
+ * going to Keycloak.
+ *
+ * This matters most if the realm revokes a refresh token once it is used
+ * ("Revoke Refresh Token"): then every read but the first would be refused.
+ * e-skylab-keycloak's reconcile scripts do not set revokeRefreshToken, so
+ * the realm should be on Keycloak's default (off, a used refresh token keeps
+ * working until the SSO session ends) — but the realm is partly managed by
+ * hand, so this does not rely on it. The store lives in one server process;
+ * the image runs one.
+ */
+export type RefreshStore = {
+  run(refreshToken: string, attempt: () => Promise<Issued | null>, now: () => number): Promise<Issued | null>;
+};
+
+export function createRefreshStore(): RefreshStore {
+  const entries = new Map<string, { result: Promise<Issued | null>; staleAt: number | null }>();
+
+  return {
+    run(refreshToken, attempt, now) {
+      for (const [key, entry] of entries) {
+        if (entry.staleAt !== null && entry.staleAt <= now()) entries.delete(key);
+      }
+      const existing = entries.get(refreshToken);
+      if (existing) return existing.result;
+
+      const entry: { result: Promise<Issued | null>; staleAt: number | null } = {
+        result: attempt().then((issued) => {
+          // A refusal is not remembered: the next read tries again.
+          if (issued) entry.staleAt = now() + SHARED_RESULT_MS;
+          else entries.delete(refreshToken);
+          return issued;
+        }),
+        staleAt: null,
+      };
+      entries.set(refreshToken, entry);
+      return entry.result;
+    },
+  };
+}
+
+const processStore = createRefreshStore();
+
 export type RefreshOptions = {
   /** The realm URL, e.g. `https://e.yildizskylab.com/realms/e-skylab`. */
   issuer: string;
   clientId: string;
   fetch?: typeof globalThis.fetch;
   now?: () => number;
+  /** Defaults to one store for the whole server process. */
+  store?: RefreshStore;
 };
 
-/**
- * Returns the token unchanged while it has time left, and otherwise trades the
- * refresh token for a new one. A refusal does not throw: the token comes back
- * flagged, the panel offers a re-login, and the next read tries again — a
- * refusal can be a blip, and a flag that stuck would log out someone whose
- * session is still alive.
- */
-export async function refreshIfExpiring(
-  token: SessionToken,
-  { issuer, clientId, fetch = globalThis.fetch, now = Date.now }: RefreshOptions,
-): Promise<SessionToken> {
-  if (now() < token.expiresAt - EXPIRY_MARGIN_MS) return token;
-  if (!token.refreshToken) return { ...token, error: REFRESH_ERROR };
-
+async function requestTokens(
+  refreshToken: string,
+  { issuer, clientId, fetch, now }: Required<Omit<RefreshOptions, "store">>,
+): Promise<Issued | null> {
   try {
     // A public client authenticates with its client_id alone: no secret in the
     // body and no Basic header.
@@ -130,22 +178,49 @@ export async function refreshIfExpiring(
       body: new URLSearchParams({
         grant_type: "refresh_token",
         client_id: clientId,
-        refresh_token: token.refreshToken,
+        refresh_token: refreshToken,
       }).toString(),
     });
-    if (!response.ok) return { ...token, error: REFRESH_ERROR };
-
-    const fresh = (await response.json()) as TokenResponse;
-    return {
-      ...token,
-      accessToken: fresh.access_token,
-      refreshToken: fresh.refresh_token ?? token.refreshToken,
-      idToken: fresh.id_token ?? token.idToken,
-      expiresAt: now() + (fresh.expires_in ?? DEFAULT_LIFETIME_S) * 1000,
-      roles: clientRoles(fresh.access_token, clientId),
-      error: undefined,
-    };
+    if (!response.ok) return null;
+    return { tokens: (await response.json()) as TokenResponse, receivedAt: now() };
   } catch {
-    return { ...token, error: REFRESH_ERROR };
+    return null;
   }
+}
+
+/**
+ * Returns the token unchanged while it has time left, and otherwise trades the
+ * refresh token for a new one (shared with every read that needs the same
+ * trade, see RefreshStore).
+ *
+ * A refusal does not throw. While the access token is still valid the token
+ * comes back unchanged — flagging it would log out someone whose token still
+ * works — and the next read tries again. Once it has expired the token comes
+ * back flagged and the panel offers a re-login. The flag does not stick
+ * either: a later successful refresh clears it.
+ */
+export async function refreshIfExpiring(
+  token: SessionToken,
+  { issuer, clientId, fetch = globalThis.fetch, now = Date.now, store = processStore }: RefreshOptions,
+): Promise<SessionToken> {
+  if (now() < token.expiresAt - EXPIRY_MARGIN_MS) return token;
+
+  const issued = token.refreshToken
+    ? await store.run(token.refreshToken, () => requestTokens(token.refreshToken!, { issuer, clientId, fetch, now }), now)
+    : null;
+
+  if (!issued) {
+    return now() < token.expiresAt ? token : { ...token, error: REFRESH_ERROR };
+  }
+
+  const { tokens, receivedAt } = issued;
+  return {
+    ...token,
+    accessToken: tokens.access_token,
+    refreshToken: tokens.refresh_token ?? token.refreshToken,
+    idToken: tokens.id_token ?? token.idToken,
+    expiresAt: receivedAt + (tokens.expires_in ?? DEFAULT_LIFETIME_S) * 1000,
+    roles: clientRoles(tokens.access_token, clientId),
+    error: undefined,
+  };
 }

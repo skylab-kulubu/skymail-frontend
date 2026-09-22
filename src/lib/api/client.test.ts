@@ -59,9 +59,8 @@ describe("the bearer token", () => {
     assert.equal(calls[0].url, `${BASE_URL}/templates`);
   });
 
-  // Each session read can refresh the token on the server. Keycloak rotates
-  // refresh tokens, so two refreshes racing each other leave one of them with
-  // a token that was already spent — the operator is logged out mid-page.
+  // Each session read can make the server refresh the token; a page's burst
+  // of requests should cost one read, not one refresh per request.
   it("is read once for requests that start together", async () => {
     let reads = 0;
     let release!: () => void;

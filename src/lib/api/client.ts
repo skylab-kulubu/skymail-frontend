@@ -64,10 +64,12 @@ export function createApiClient({
   getSession,
   fetch = globalThis.fetch,
 }: ApiClientOptions): ApiClient {
-  // Every session read may refresh the access token on the server, and
-  // Keycloak rotates refresh tokens: two refreshes racing each other leave the
-  // loser holding a spent token. Requests that start together therefore share
-  // one read; the next request after it settles reads again.
+  // Every session read may make the server refresh the access token. Requests
+  // that start together share one read, so a page's burst of requests costs
+  // one read and at most one refresh; the next request after it settles reads
+  // again. (The server also shares a refresh between reads that race each
+  // other, for the case where the realm revokes a used refresh token — see
+  // RefreshStore in src/lib/auth/session-token.ts.)
   let inflightSession: Promise<ClientSession | null> | null = null;
   function sharedSession(): Promise<ClientSession | null> {
     inflightSession ??= getSession().finally(() => {
