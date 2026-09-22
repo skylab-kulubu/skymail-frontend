@@ -1,4 +1,5 @@
 import js from "@eslint/js";
+import nextPlugin from "@next/eslint-plugin-next";
 import reactHooks from "eslint-plugin-react-hooks";
 import globals from "globals";
 import tseslint from "typescript-eslint";
@@ -18,5 +19,15 @@ export default tseslint.config(
     rules: {
       ...reactHooks.configs.recommended.rules,
     },
-  }
+  },
+  // Next.js's own rules, as superadmin runs them.
+  {
+    files: ["**/*.{js,jsx,ts,tsx}"],
+    plugins: {
+      "@next/next": nextPlugin,
+    },
+    rules: {
+      ...nextPlugin.configs["core-web-vitals"].rules,
+    },
+  },
 );

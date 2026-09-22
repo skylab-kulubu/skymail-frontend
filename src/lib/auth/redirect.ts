@@ -10,11 +10,17 @@
  */
 const PLACEHOLDER_ORIGIN = "http://skymail.invalid";
 
-// Tab, newline and the other C0 controls, DEL, and the backslash browsers read as "/".
-const UNSAFE = /[\u0000-\u001f\u007f\\]/;
+/** Tab, newline and the other C0 controls, DEL, and the backslash browsers read as "/". */
+function hasUnsafeCharacter(raw: string): boolean {
+  for (let i = 0; i < raw.length; i += 1) {
+    const code = raw.charCodeAt(i);
+    if (code < 0x20 || code === 0x7f || code === 0x5c) return true;
+  }
+  return false;
+}
 
 export function safeCallbackPath(raw: unknown): string {
-  if (typeof raw !== "string" || !raw.startsWith("/") || UNSAFE.test(raw)) return "/";
+  if (typeof raw !== "string" || !raw.startsWith("/") || hasUnsafeCharacter(raw)) return "/";
 
   let url: URL;
   try {
