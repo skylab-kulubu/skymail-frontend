@@ -88,15 +88,17 @@ export function createApiClient({
     options: RequestOptions = {},
   ): Promise<T> {
     const current = await sharedSession();
-    // The server already tried and failed to refresh the token; sending the
-    // stale one would only earn a 401 after the operator filled in a form.
-    if (current?.error) {
+    // No session (signed out in another tab, or the session read failed), or
+    // one the server could no longer refresh: every API route needs a bearer,
+    // so sending the request would only earn a 401 after the operator filled
+    // in a form. Say the session ended instead.
+    if (!current?.accessToken || current.error) {
       announceSessionEnded();
       throw new ApiError(401, "session.ended");
     }
 
     const headers = new Headers({ Accept: "application/json" });
-    if (current?.accessToken) headers.set("Authorization", `Bearer ${current.accessToken}`);
+    headers.set("Authorization", `Bearer ${current.accessToken}`);
     if (body !== undefined) headers.set("Content-Type", "application/json");
 
     let response: Response;

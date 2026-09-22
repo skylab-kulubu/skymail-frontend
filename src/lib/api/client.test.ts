@@ -207,6 +207,26 @@ describe("a failed answer", () => {
     assert.equal(error.serverMessage, "Something new.");
   });
 
+  it("explains a malformed Template key", async () => {
+    const error = await failure(
+      json(400, { code: "template.invalid_key", message: "A template key is 3–64 characters…" }),
+    );
+
+    assert.match(error.message, /Template key/);
+    assert.match(error.message, /3–64/);
+  });
+
+  // A code is looked up by name; "constructor" or "toString" must not find
+  // what every object inherits and print a function as the error.
+  for (const code of ["constructor", "toString", "__proto__", "hasOwnProperty"]) {
+    it(`treats the code "${code}" as unknown`, async () => {
+      const error = await failure(json(409, { code, message: "odd" }));
+
+      assert.equal(typeof error.message, "string");
+      assert.match(error.message, /çakışıyor/);
+    });
+  }
+
   it("does not choke on an error page that is not JSON", async () => {
     const error = await failure(
       new Response("<html><body>Bad Gateway</body></html>", {
@@ -216,7 +236,7 @@ describe("a failed answer", () => {
     );
 
     assert.equal(error.status, 502);
-    assert.match(error.message, /Sunucu/);
+    assert.match(error.message, /yanıt vermiyor/);
   });
 
   it("reports a success whose body is not JSON as an unexpected answer", async () => {
@@ -276,6 +296,29 @@ describe("the end of a session", () => {
     assert.equal(error.code, "session.ended");
     assert.match(error.message, /Oturumun sona erdi/);
   });
+
+  // Signing out in another tab, or /api/auth/session failing, leaves no
+  // session at all. Sending the request anyway would go out without a bearer
+  // and come back as a 401 the operator cannot act on.
+  for (const [name, getSession] of [
+    ["there is no session", async () => null],
+    ["the session has no access token", async () => ({})],
+  ] as const) {
+    it(`is announced without calling the API when ${name}`, async () => {
+      const { fetch, calls } = scriptedFetch();
+      const api = createApiClient({ baseUrl: BASE_URL, fetch, getSession });
+      let announced = 0;
+      api.onSessionEnded(() => (announced += 1));
+
+      const error = await api.get("/templates").catch((reason: unknown) => reason);
+
+      assert.equal(announced, 1);
+      assert.equal(calls.length, 0);
+      assert.ok(error instanceof ApiError);
+      assert.equal(error.code, "session.ended");
+      assert.match(error.message, /Oturumun sona erdi/);
+    });
+  }
 
   it("is not announced for a request the operator is simply not allowed to make", async () => {
     const { fetch } = scriptedFetch(
