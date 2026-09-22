@@ -7,7 +7,7 @@ import * as ReactEmail from "@react-email/components";
 import * as Babel from "@babel/standalone";
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { isSavable } from "../../lib/template-render";
+import { decideSave } from "../../lib/template-render";
 
 const { Text } = Typography;
 const { useToken } = theme;
@@ -108,22 +108,30 @@ export const TemplateEdit = () => {
         };
     }, [code]);
 
-    const savable = isSavable({ code, renderedCode, previewHtml, error });
+    const stored = query?.data?.data as
+        | { html_content?: string; plain_text_content?: string; react_email_content?: string }
+        | undefined;
+    const storedCode = stored?.react_email_content ?? null;
+    const decision = decideSave({ code, renderedCode, previewHtml, error }, storedCode);
+    const savable = decision !== "blocked";
 
     const handleFormFinish = async (values: any) => {
         // A submit can also come from Enter inside a field, so the disabled
         // save button is not the only way in.
-        if (!savable) {
+        if (decision === "blocked") {
             message.error(t("templates.fields.render_required"));
             return;
         }
-        const finalValues = {
-            ...values,
-            html_content: previewHtml,
-            plain_text_content: previewPlainText,
-            react_email_content: code,
-        };
-        return onFinish(finalValues);
+        // "keep": the code was never touched, so the row's own body goes back
+        // untouched and only the wording around it changes.
+        const body = decision === "render"
+            ? { html_content: previewHtml, plain_text_content: previewPlainText, react_email_content: code }
+            : {
+                html_content: stored?.html_content ?? "",
+                plain_text_content: stored?.plain_text_content ?? "",
+                react_email_content: stored?.react_email_content ?? "",
+            };
+        return onFinish({ ...values, ...body });
     };
 
     return (
@@ -181,26 +189,31 @@ export const TemplateEdit = () => {
                 <Form.Item name="plain_text_content" hidden><Input /></Form.Item>
                 <Form.Item name="react_email_content" hidden><Input /></Form.Item>
 
-                <div style={{ minHeight: savable ? "0" : "auto", marginBottom: savable ? 0 : 16 }}>
-                    {error ? (
+                <div style={{ minHeight: decision === "render" ? "0" : "auto", marginBottom: decision === "render" ? 0 : 16 }}>
+                    {decision === "keep" && error ? (
+                        // Saving works, but not from this pane: the row's body
+                        // goes back untouched and only the wording changes.
+                        <Alert
+                            message={t("templates.fields.source_in_repo")}
+                            type="info"
+                            showIcon
+                        />
+                    ) : decision === "blocked" && error ? (
                         <Alert
                             message={t("templates.fields.render_error")}
                             description={error}
                             type="error"
                             showIcon
                         />
-                    ) : (
-                        // No error and still not savable: the preview has not
-                        // caught up, or there is no source to render at all.
-                        // Say so, or the disabled save button has no reason.
-                        !savable && (
-                            <Alert
-                                message={t("templates.fields.render_pending")}
-                                type="warning"
-                                showIcon
-                            />
-                        )
-                    )}
+                    ) : decision === "blocked" ? (
+                        // Blocked with no error to show: the preview has not
+                        // caught up. Say so, or the disabled button has no reason.
+                        <Alert
+                            message={t("templates.fields.render_pending")}
+                            type="warning"
+                            showIcon
+                        />
+                    ) : null}
                 </div>
 
                 <Row gutter={16}>

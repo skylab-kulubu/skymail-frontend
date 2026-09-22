@@ -7,7 +7,7 @@ import * as ReactEmail from "@react-email/components";
 import * as Babel from "@babel/standalone";
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { isSavable } from "../../lib/template-render";
+import { decideSave } from "../../lib/template-render";
 
 const { Text } = Typography;
 const { useToken } = theme;
@@ -187,7 +187,8 @@ export const TemplateCreate = () => {
         };
     }, [code]);
 
-    const savable = isSavable({ code, renderedCode, previewHtml, error });
+    // No row yet, so there is no stored body to keep: render or nothing.
+    const savable = decideSave({ code, renderedCode, previewHtml, error }, null) === "render";
 
     const handleFormFinish = async (values: any) => {
         // A submit can also come from Enter inside a field, so the disabled

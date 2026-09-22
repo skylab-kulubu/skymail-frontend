@@ -36,6 +36,7 @@ i18n
               render_error: "Render Hatası",
               render_required: "Şablon derlenmediği için kaydedilmedi. Önizleme hatasını düzeltmeden kaydedersen gövde boş gider.",
               render_pending: "Önizleme henüz oluşmadı, bu yüzden kaydedilemez. Şablonun kaynağı bu kutuda görünmüyorsa düzenlemesi repodaki emails/ klasöründe yapılır.",
+              source_in_repo: "Bu şablonun kaynağı repoda (emails/ klasörü). Buradan adını ve konusunu değiştirebilirsin; gövdesi olduğu gibi kalır. Gövdeyi değiştirmek için repodaki kaynağı düzenleyip seed'i yeniden çalıştırmak gerekir.",
               html_content: "HTML İçeriği",
               plain_text_content: "Düz Metin İçeriği",
               actions: "İşlemler",
