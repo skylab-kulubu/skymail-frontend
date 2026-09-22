@@ -1,3 +1,5 @@
+import "server-only";
+
 /**
  * Settings that differ between sandbox and production, read from the process
  * environment when a request arrives — never baked in at build time — so the

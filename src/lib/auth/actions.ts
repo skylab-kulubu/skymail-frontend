@@ -1,5 +1,6 @@
 "use server";
 
+import "server-only";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getToken } from "next-auth/jwt";

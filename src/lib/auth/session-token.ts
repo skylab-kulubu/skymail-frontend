@@ -224,3 +224,32 @@ export async function refreshIfExpiring(
     error: undefined,
   };
 }
+
+
+/** What /api/auth/session gives the browser. */
+export type ExposedSession = {
+  expires: string;
+  user: { name?: string | null; email?: string | null };
+  /** Sent as the bearer token to the SkyMail API. */
+  accessToken: string;
+  /** The `skymail` client roles. */
+  roles: string[];
+  /** Set once Keycloak refused to refresh an expired token. */
+  error?: typeof REFRESH_ERROR;
+};
+
+/**
+ * The session Auth.js hands the browser, built field by field from the
+ * cookie's token so nothing is exposed by accident: never the refresh token
+ * or the ID token, which only the server needs.
+ */
+export function sessionFromToken(session: { expires: string }, token: SessionToken): ExposedSession {
+  const exposed: ExposedSession = {
+    expires: session.expires,
+    user: { name: token.user?.name ?? null, email: token.user?.email ?? null },
+    accessToken: token.accessToken,
+    roles: token.roles ?? [],
+  };
+  if (token.error) exposed.error = token.error;
+  return exposed;
+}

@@ -9,6 +9,7 @@ import { describe, it } from "node:test";
 import {
   createRefreshStore,
   refreshIfExpiring,
+  sessionFromToken,
   tokenFromSignIn,
   type RefreshOptions,
   type SessionToken,
@@ -289,5 +290,43 @@ describe("a refused refresh", () => {
 
     assert.equal(attempts, 2);
     assert.equal(next.expiresAt, NOW + 300_000);
+  });
+});
+
+// /api/auth/session answers the browser with this, and the HTTP client reads
+// it on every request. The access token has to be there; the refresh token and
+// the ID token must never be.
+describe("the session the browser sees", () => {
+  const token = signedIn({
+    refreshToken: "secret-refresh-token",
+    idToken: "secret-id-token",
+    roles: ["skymail:access", "skymail:lists:read"],
+    user: { name: "Ada Lovelace", email: "ada@example.test" },
+  });
+  const expires = "2026-10-23T00:00:00.000Z";
+
+  it("carries the access token, the roles and the person", () => {
+    const session = sessionFromToken({ expires }, token);
+
+    assert.equal(session.accessToken, token.accessToken);
+    assert.deepEqual(session.roles, ["skymail:access", "skymail:lists:read"]);
+    assert.equal(session.user.name, "Ada Lovelace");
+    assert.equal(session.user.email, "ada@example.test");
+    assert.equal(session.expires, expires);
+    assert.equal(session.error, undefined);
+  });
+
+  it("never carries the refresh token or the ID token", () => {
+    const exposed = JSON.stringify(sessionFromToken({ expires }, token));
+
+    assert.equal(exposed.includes("secret-refresh-token"), false);
+    assert.equal(exposed.includes("secret-id-token"), false);
+    assert.equal(/refresh|idToken/i.test(exposed), false);
+  });
+
+  it("carries the refresh-error flag so the panel can offer a re-login", () => {
+    const session = sessionFromToken({ expires }, { ...token, error: "RefreshAccessTokenError" });
+
+    assert.equal(session.error, "RefreshAccessTokenError");
   });
 });

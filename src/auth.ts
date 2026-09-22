@@ -11,27 +11,32 @@
  * environment: sandbox and production differ only in the variables Dokploy
  * passes to the container.
  */
+import "server-only";
 import { NextResponse } from "next/server";
-import NextAuth, { type DefaultSession } from "next-auth";
-import type { JWT } from "next-auth/jwt";
+import NextAuth from "next-auth";
 import Keycloak from "next-auth/providers/keycloak";
-import { refreshIfExpiring, tokenFromSignIn, type SessionToken } from "@/lib/auth/session-token";
+import {
+  refreshIfExpiring,
+  sessionFromToken,
+  tokenFromSignIn,
+  type ExposedSession,
+  type SessionToken,
+} from "@/lib/auth/session-token";
 import { keycloakSettings } from "@/lib/runtime-config";
 
 declare module "next-auth" {
-  interface Session {
-    /** Sent as the bearer token to the SkyMail API. */
-    accessToken: string;
-    /** The `skymail` client roles. */
-    roles: string[];
-    /** `RefreshAccessTokenError` once Keycloak refused to refresh the token. */
-    error?: SessionToken["error"];
-    user: DefaultSession["user"];
-  }
+  // What /api/auth/session gives the browser: built by sessionFromToken.
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- the augmentation is the shape itself
+  interface Session extends ExposedSession {}
 }
 
-const asSessionToken = (token: JWT) => token as unknown as SessionToken;
-const asJwt = (token: SessionToken) => token as unknown as JWT;
+declare module "next-auth/jwt" {
+  // What the encrypted session cookie holds once someone has signed in. The
+  // token Auth.js passes the jwt callback on sign-in itself does not have
+  // these fields yet; that call ignores it and builds one from the account.
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- the augmentation is the shape itself
+  interface JWT extends SessionToken {}
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth(() => {
   const { issuer, clientId } = keycloakSettings();
@@ -64,21 +69,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth(() => {
         return NextResponse.redirect(login);
       },
       async jwt({ token, account, profile }) {
-        if (account) {
-          return asJwt(tokenFromSignIn(account, { clientId, profile: profile ?? {} }));
-        }
-        return asJwt(await refreshIfExpiring(asSessionToken(token), { issuer, clientId }));
+        if (account) return tokenFromSignIn(account, { clientId, profile: profile ?? {} });
+        return refreshIfExpiring(token, { issuer, clientId });
       },
       // What reaches the browser: never the refresh or ID token.
       async session({ session, token }) {
-        const current = asSessionToken(token);
-        return {
-          ...session,
-          accessToken: current.accessToken,
-          roles: current.roles ?? [],
-          error: current.error,
-          user: { ...session.user, name: current.user?.name, email: current.user?.email ?? "" },
-        };
+        return sessionFromToken(session, token);
       },
     },
   };
