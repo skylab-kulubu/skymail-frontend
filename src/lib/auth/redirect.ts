@@ -6,7 +6,7 @@
  * `//`, yet a browser drops the tab from a Location header and follows
  * `//evil.example`. So control characters and backslashes are refused
  * outright, and what is left is parsed against a placeholder origin and kept
- * only if it stayed there.
+ * only if it stayed there and its resolved path does not begin with "//".
  */
 const PLACEHOLDER_ORIGIN = "http://skymail.invalid";
 
@@ -29,5 +29,8 @@ export function safeCallbackPath(raw: unknown): string {
     return "/";
   }
   if (url.origin !== PLACEHOLDER_ORIGIN) return "/";
+  // Parsing resolves dot segments, so "/.//evil.example" leaves the parser as
+  // "//evil.example": still this origin here, another host in a Location header.
+  if (url.pathname.startsWith("//")) return "/";
   return `${url.pathname}${url.search}${url.hash}`;
 }

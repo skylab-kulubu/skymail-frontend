@@ -32,6 +32,15 @@ describe("the address after sign-in", () => {
     }
   });
 
+  // Parsing resolves dot segments, so "/.//evil.example" comes out of the URL
+  // parser as the path "//evil.example" — which a Location header reads as
+  // another host.
+  it("is the home screen when dot segments collapse into a second slash", () => {
+    for (const raw of ["/.//evil.example", "/..//evil.example", "/a/..//evil.example", "/%2e//evil.example"]) {
+      assert.equal(safeCallbackPath(raw), "/", `for ${JSON.stringify(raw)}`);
+    }
+  });
+
   it("keeps an encoded control character encoded, on this site", () => {
     assert.equal(safeCallbackPath("/%09/evil.example"), "/%09/evil.example");
   });
