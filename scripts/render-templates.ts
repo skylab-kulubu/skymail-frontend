@@ -67,6 +67,43 @@ function checkOpaqueSurfaces(key: string, body: string, problems: string[]): voi
   }
 }
 
+/**
+ * Dark mode is carried by role classes, so an element that paints a background
+ * without one stays light while everything around it goes dark — and paints
+ * over what is behind it. react-email can introduce such an element on its own:
+ * an inline background on <Body> is copied onto a wrapper cell it generates,
+ * and that cell has no class. Invisible until the mail lands in an inbox.
+ */
+const DARK_AWARE_CLASSES = [
+  "email-bg",
+  "card",
+  "chip",
+  "alert-chip",
+  "note-box",
+  "cta",
+  "code-block",
+];
+
+function checkBackgroundLayersAreThemed(key: string, body: string, problems: string[]): void {
+  for (const match of body.matchAll(/<(body|table|td|div)\b([^>]*?)>/gs)) {
+    const [, tag, attributes] = match;
+
+    const paintsBackground =
+      /background-color:\s*[^;"]+/.test(attributes) || /bgcolor="[^"]+"/.test(attributes);
+    if (!paintsBackground) {
+      continue;
+    }
+
+    const classes = /class="([^"]*)"/.exec(attributes)?.[1] ?? "";
+    const themed = DARK_AWARE_CLASSES.some((name) => classes.split(/\s+/).includes(name));
+    if (!themed) {
+      problems.push(
+        `${key}: <${tag}> arka plan boyuyor ama koyu mod sınıfı yok (class="${classes}") — koyu modda açık kalır`,
+      );
+    }
+  }
+}
+
 function checkSubjectVariables(key: string, subject: string, declared: string[], problems: string[]): void {
   for (const match of subject.matchAll(/\{\{\.(\w+)\}\}/g)) {
     const name = match[1];
@@ -123,6 +160,7 @@ async function main(): Promise<void> {
 
     checkBalancedActions(meta.key, html, problems);
     checkOpaqueSurfaces(meta.key, html, problems);
+    checkBackgroundLayersAreThemed(meta.key, html, problems);
     checkSubjectVariables(meta.key, meta.subject, meta.variables, problems);
 
     await writeFile(join(OUT_DIR, `${meta.key}.html`), html, "utf8");

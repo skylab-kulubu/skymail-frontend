@@ -97,6 +97,15 @@ const darkStarfield = [
 const darkModeCss = `
 :root { color-scheme: light dark; supported-color-schemes: light dark; }
 
+/*
+  The page tint lives here rather than inline on <Body>. react-email copies an
+  inline background from <Body> onto a wrapper cell it generates itself, and
+  that cell carries no class, so it stayed light in dark mode and painted over
+  everything behind it. The full-width table below is classed and carries the
+  tint inline for clients that drop this stylesheet.
+*/
+body { background-color: #f4f1f7; }
+
 @media (prefers-color-scheme: dark) {
   .email-bg   { background-color: #08070b !important; background-image: ${darkStarfield} !important; }
   .card       { background-color: #121115 !important; border-color: #2a292c !important; }
@@ -178,7 +187,7 @@ export function Shell({
       <Preview>{preview}</Preview>
       <Body
         className="email-bg"
-        style={{ margin: 0, padding: 0, backgroundColor: colors.pageBg, fontFamily: fontStack }}
+        style={{ margin: 0, padding: 0, fontFamily: fontStack }}
       >
         <table
           role="presentation"
