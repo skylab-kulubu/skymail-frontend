@@ -25,5 +25,15 @@ export interface TemplateMeta {
   trigger: string;
   /** Variables the sender must provide, beside Email and FullName. */
   variables: string[];
+  /**
+   * The contract Required variables: the few the sending service always passes
+   * and the mail cannot do its job without — a reset link, a certificate's
+   * VerifyURL — not every variable it sends. The Template seed writes them to
+   * SkyMail, which refuses any save or publish whose body stops referencing
+   * one, and the panel shows them locked. Only what the sender's code is known
+   * to pass belongs here. Every System template states its set, empty when
+   * nothing qualifies or nothing sends it yet.
+   */
+  requiredVariables?: string[];
   sample: Record<string, unknown>;
 }

@@ -10,6 +10,8 @@ export const meta: TemplateMeta = {
   brand: "account",
   trigger: "Keycloak, giriş ekranında \"parolamı unuttum\" akışında.",
   variables: ["link", "linkExpirationMinutes", "firstName", "username", "realmDisplayName", "subjectKey"],
+  // The reset link; Keycloak's SkyMail provider always passes it.
+  requiredVariables: ["link"],
   sample: {
     link: "https://e.yildizskylab.com/realms/skylab/login-actions/reset-credentials?key=ornek",
     linkExpirationMinutes: "15",

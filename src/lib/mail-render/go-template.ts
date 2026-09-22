@@ -165,7 +165,8 @@ interface Frame extends Scope {
  * The fields of the mailer's data a body references, each once, sorted: the
  * client's view, for the preview's sample values and the Required variable
  * panel. The server parses the body as a Go template when it checks Required
- * variables (ticket 08), and that check is the one that counts. Here:
+ * variables (ticket 08), and that check is the one that counts; the two are
+ * held to the same cases, testdata/referenced-variables.json. Here:
  *
  *  - only fields count, not functions (`{{now}}`) or a bare `{{.}}`;
  *  - inside `range` and `with`, `.X` is a field of the element, not a variable,

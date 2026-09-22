@@ -15,6 +15,8 @@ export const meta: TemplateMeta = {
   trigger:
     "Account center / sky-account SPI, hesapta güvenlikle ilgili bir şey değiştiğinde: parola değişti, geçiş anahtarı eklendi/silindi, doğrulama uygulaması eklendi/kaldırıldı, yeni cihazdan giriş, tüm oturumlar kapatıldı, kullanıcı adı değişti, kişisel e-posta eklendi/kaldırıldı.",
   variables: ["EventTitle", "EventDetail", "OccurredAt", "DeviceLabel", "IpAddress", "Location", "SecureAccountUrl"],
+  // Nothing yet: no service sends it. Its sender declares the contract (SecureAccountUrl, likely).
+  requiredVariables: [],
   sample: {
     EventTitle: "Yeni geçiş anahtarı eklendi",
     EventDetail: "Hesabına \"MacBook Pro\" adlı yeni bir geçiş anahtarı (passkey) eklendi. Artık bu cihazla parolasız giriş yapabilirsin.",

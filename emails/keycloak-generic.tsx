@@ -13,6 +13,8 @@ export const meta: TemplateMeta = {
   trigger:
     "Keycloak gönderici SPI'ın yedeği: eşlenmemiş bir sistem postası (ileride eklenecek bir required action gibi) bu anahtara düşer. subjectKey hangi posta olduğunu söyler.",
   variables: ["link", "linkExpirationMinutes", "firstName", "username", "realmDisplayName", "subjectKey"],
+  // The action link of the mails that fall back here (required actions above all).
+  requiredVariables: ["link"],
   sample: {
     link: "https://e.yildizskylab.com/realms/skylab/login-actions/action-token?key=ornek",
     linkExpirationMinutes: "15",
