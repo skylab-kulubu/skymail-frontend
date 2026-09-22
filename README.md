@@ -14,11 +14,61 @@
   <img src="https://img.shields.io/github/issues/skylab-kulubu/skymail-frontend.svg?labelColor=003694&color=ffffff" alt="Issues">
 </div>
 
-## Özellikler ✨
+## Özellikler
 
-* **Şablonlar:** React ve Tailwind ile email şablonları oluşturun.
-* **Mail Listeleri:** Kolayca toplu mail gönderin.
+* **Mail template'ler:** kulübün gönderdiği maillerin konusu ve gövdesi.
+* **Mail listeleri:** internal listeler ve Keycloak grupları.
+* **Gönderimler:** bir listeye ya da tek tek kişilere mail gönderme.
 
+Panel Next.js (App Router) + Tailwind 4 + TypeScript. Kabuk ve temel bileşenler
+superadmin'den kopyalandı (ADR-0017); giriş Auth.js v5 ile Keycloak'ın `skymail`
+public istemcisi üzerinden (sır yok, PKCE + `state`). Sayfalar tarayıcıdan
+doğrudan SkyMail API'sine gider; tek HTTP istemcisi `src/lib/api/client.ts`.
+
+## Yerelde çalıştırma
+
+```sh
+cp .env.example .env.local   # AUTH_SECRET'ı doldur: openssl rand -base64 33
+yarn install
+yarn dev                     # http://localhost:3000
+```
+
+Ortam değişkenleri çalışma zamanında okunur; imaj sandbox ve production için aynıdır.
+
+| Değişken | Ne için | Örnek |
+| --- | --- | --- |
+| `AUTH_SECRET` | Auth.js oturum çerezini şifreler; Keycloak'a gitmez | `openssl rand -base64 33` |
+| `AUTH_URL` | Sitenin dış adresi; yerelde boş | `https://mail.yildizskylab.com` |
+| `KEYCLOAK_ISSUER` | Realm adresi | `https://e.yildizskylab.com/realms/e-skylab` |
+| `KEYCLOAK_CLIENT_ID` | Public istemci (varsayılan `skymail`) | `skymail` |
+| `API_URL` | SkyMail API'si | `https://api.yildizskylab.com/api/skymail/v1` |
+| `ADMIN_URL`, `FORMS_ADMIN_URL` | Kulüp değiştiricideki diğer konsollar (boşsa production) | `https://admin.yildizskylab.com` |
+
+`AUTH_SECRET`, `KEYCLOAK_ISSUER` ya da `API_URL` eksikse production sunucusu
+eksikleri yazıp kapanır.
+
+**Keycloak:** yerelde giriş için `skymail` istemcisinde şu adresler kayıtlı olmalı
+(elle eklenir):
+
+* Valid redirect URI: `http://localhost:3000/api/auth/callback/keycloak`
+* Valid post logout redirect URI: `http://localhost:3000`
+
+Canlıda geri dönüş adresi `<AUTH_URL>/api/auth/callback/keycloak`, çıkış dönüşü
+sitenin kök adresidir (Refine uygulamasının kullandığı adres).
+
+## Kontroller
+
+```sh
+yarn typecheck        # next typegen && tsc --noEmit
+yarn build            # ortam değişkeni gerekmez
+yarn api:check        # Node testleri: HTTP istemcisi, oturum token'ı, roller
+yarn emails:check     # zengin metin dönüştürücüsü
+yarn templates:check  # editörün kaydetme kararı
+yarn emails:render    # repodaki Mail template'leri render edip denetler
+```
+
+İmaj: `docker build -t skymail-frontend .` — build argümanı yok; konteyner
+`node server.js` ile başlar ve ayarlarını ortamdan okur.
 
 ## Katkıda Bulunanlar 🧙‍♂️
 
