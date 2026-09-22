@@ -14,7 +14,7 @@ zaman verdiği değişkenler kullanılır.
 | Keycloak · Parola Sıfırlama 🔒 | `keycloak.reset-password` | SKY LAB parola sıfırlama isteği | `link`, `linkExpirationMinutes`, `firstName`, `username`, `realmDisplayName`, `subjectKey` |
 | Keycloak · E-posta Değişikliği Doğrulama 🔒 | `keycloak.update-email` | Yeni e-posta adresini doğrula | `link`, `linkExpirationMinutes`, `firstName`, `username`, `realmDisplayName`, `subjectKey` |
 | Keycloak · YTÜ Hesabı Bağlama 🔒 | `keycloak.idp-link` | YTÜ hesabını SKY LAB hesabına bağla | `link`, `linkExpirationMinutes`, `firstName`, `username`, `realmDisplayName`, `subjectKey` |
-| Keycloak · Kişisel E-posta Onayı 🔒 | `keycloak.personal-email-confirm` | Kişisel e-posta adresini doğrula | `link`, `linkExpirationMinutes`, `firstName`, `username`, `realmDisplayName`, `subjectKey` |
+| Keycloak · Kişisel E-posta Onayı 🔒 | `keycloak.personal-email-confirm` | Kişisel e-posta adresini doğrula | `code`, `codeExpirationMinutes`, `firstName`, `username`, `realmDisplayName`, `subjectKey` |
 | Keycloak · Genel Sistem Postası 🔒 | `keycloak.generic` | SKY LAB hesap bildirimi | `link`, `linkExpirationMinutes`, `firstName`, `username`, `realmDisplayName`, `subjectKey` |
 | Hoş Geldin 🔒 | `core.welcome` | SKY LAB ekosistemine hoş geldin | `FirstName`, `LastName`, `Email`, `SkyNumber`, `CreatedAt` |
 | Katılım Sertifikası 🔒 | `core.certificate` | Katılım sertifikan hazır | `FirstName`, `EventName`, `VerifyURL`, `Serial`, `OwnerTeam` |
@@ -40,7 +40,7 @@ zaman verdiği değişkenler kullanılır.
 - **Keycloak · Parola Sıfırlama** (`keycloak.reset-password`) — Keycloak, giriş ekranında "parolamı unuttum" akışında.
 - **Keycloak · E-posta Değişikliği Doğrulama** (`keycloak.update-email`) — Keycloak, kişi hesabının e-posta adresini değiştirdiğinde — doğrulama YENİ adrese gider.
 - **Keycloak · YTÜ Hesabı Bağlama** (`keycloak.idp-link`) — Keycloak, YTÜ Microsoft kimliği mevcut bir SKY LAB hesabına bağlanırken (IdP link).
-- **Keycloak · Kişisel E-posta Onayı** (`keycloak.personal-email-confirm`) — Account center'da kişisel e-posta eklendiğinde; bağlantı https://my.yildizskylab.com/email/confirm?token=… biçiminde ve 30 dakika geçerli (K3c).
+- **Keycloak · Kişisel E-posta Onayı** (`keycloak.personal-email-confirm`) — Account center'da kişisel e-posta eklendiğinde; 6 haneli kod, 10 dakika geçerli, yalnız isteyen kişinin açık oturumunda çalışır (K3c, ADR-0044 güncellemesi). Keycloak'tan K5 ile gelir.
 - **Keycloak · Genel Sistem Postası** (`keycloak.generic`) — Keycloak gönderici SPI'ın yedeği: eşlenmemiş bir sistem postası (ileride eklenecek bir required action gibi) bu anahtara düşer. subjectKey hangi posta olduğunu söyler.
 - **Hoş Geldin** (`core.welcome`) — core-backend, yeni bir User ilk kez göründüğünde (SKYMAIL_WELCOME_TEMPLATE_ID).
 - **Katılım Sertifikası** (`core.certificate`) — core-backend, yoklama kesinleştikten sonra sertifika üretildiğinde (SKYMAIL_CERTIFICATE_TEMPLATE_ID, certificate/service.go).

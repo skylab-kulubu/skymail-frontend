@@ -18,10 +18,13 @@ import * as React from "react";
 import * as jsxRuntime from "react/jsx-runtime";
 import * as ReactEmail from "@react-email/components";
 import * as actionMail from "../../../emails/action-mail";
+import * as codeMail from "../../../emails/code-mail";
 import * as go from "../../../emails/go";
 import * as theme from "../../../emails/theme";
 import * as types from "../../../emails/types";
 
+// A new shared module in emails/ belongs here too: until it is, every template
+// that imports it fails jsx.test.ts's comparison with the seed's render.
 const MODULES: Record<string, unknown> = {
   react: React,
   "react/jsx-runtime": jsxRuntime,
@@ -29,6 +32,7 @@ const MODULES: Record<string, unknown> = {
   "./theme": theme,
   "./go": go,
   "./action-mail": actionMail,
+  "./code-mail": codeMail,
   "./types": types,
 };
 
