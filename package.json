@@ -53,7 +53,8 @@
     "start": "refine start",
     "refine": "refine",
     "emails:render": "tsx scripts/render-templates.ts",
-    "emails:seed": "tsx scripts/seed-templates.ts"
+    "emails:seed": "tsx scripts/seed-templates.ts",
+    "emails:check": "tsx scripts/check-rich-text.ts"
   },
   "browserslist": {
     "production": [

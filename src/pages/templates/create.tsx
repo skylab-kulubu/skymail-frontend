@@ -215,6 +215,24 @@ export const TemplateCreate = () => {
                     </Col>
                 </Row>
                 
+                <Row gutter={16}>
+                    <Col span={12}>
+                        <Form.Item
+                            label={t("templates.fields.key")}
+                            name="key"
+                            extra={t("templates.fields.key_help")}
+                            rules={[
+                                {
+                                    pattern: /^[a-z0-9][a-z0-9.-]{1,62}[a-z0-9]$/,
+                                    message: t("templates.fields.key_help"),
+                                },
+                            ]}
+                        >
+                            <Input placeholder={t("templates.fields.key_placeholder")} />
+                        </Form.Item>
+                    </Col>
+                </Row>
+
                 <Form.Item name="html_content" hidden><Input /></Form.Item>
                 <Form.Item name="plain_text_content" hidden><Input /></Form.Item>
                 <Form.Item name="react_email_content" hidden><Input /></Form.Item>
