@@ -26,7 +26,7 @@ export default function KeycloakPersonalEmailConfirm() {
     <CodeMail
       preview="Kişisel e-posta adresini SKY LAB hesabına eklemek için doğrulama kodun."
       heading="Kişisel E-postanı Doğrula"
-      intro="Bu adresi SKY LAB hesabına kişisel e-posta olarak eklemek istedin. Aşağıdaki kodu Hesap Merkezi'nde açık olan sayfaya gir. Doğruladıktan sonra bu adresle de giriş yapabilir, istersen birincil adresin olarak seçebilirsin."
+      intro="SKY LAB hesabına bu adresi kişisel e-posta olarak eklemek istedin. Aşağıdaki kodu Hesap Merkezi'nde açık olan sayfaya gir. Doğruladıktan sonra bu adresle de giriş yapabilir, istersen birincil adresin olarak seçebilirsin."
       disclaimer="Bu isteği sen yapmadıysan bu e-postayı yok say: kod girilmeden adres hesabına eklenmez."
     />
   );
