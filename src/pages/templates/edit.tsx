@@ -15,6 +15,10 @@ export const TemplateEdit = () => {
     const { t } = useTranslation();
     const { token: themeToken } = useToken();
     const { formProps, saveButtonProps, query, onFinish } = useForm();
+
+    // A system template's wording is editable; its key is the contract another
+    // service calls it by, and the API refuses to change it.
+    const isSystem = Boolean((query?.data?.data as { system?: boolean } | undefined)?.system);
     const [code, setCode] = useState("");
     const [previewHtml, setPreviewHtml] = useState("");
     const [previewPlainText, setPreviewPlainText] = useState("");
@@ -111,6 +115,15 @@ export const TemplateEdit = () => {
     return (
         <Edit saveButtonProps={{ ...saveButtonProps, onClick: () => formProps.form?.submit(), children: t("buttons.save") }} title={t("templates.titles.edit")}>
             <Form {...formProps} layout="vertical" onFinish={handleFormFinish}>
+                {isSystem && (
+                    <Alert
+                        type="info"
+                        showIcon
+                        style={{ marginBottom: 16 }}
+                        message={t("templates.fields.system_locked")}
+                    />
+                )}
+
                 <Row gutter={16}>
                     <Col span={12}>
                         <Form.Item
@@ -132,6 +145,24 @@ export const TemplateEdit = () => {
                     </Col>
                 </Row>
                 
+                <Row gutter={16}>
+                    <Col span={12}>
+                        <Form.Item
+                            label={t("templates.fields.key")}
+                            name="key"
+                            extra={t("templates.fields.key_help")}
+                            rules={[
+                                {
+                                    pattern: /^[a-z0-9][a-z0-9.-]{1,62}[a-z0-9]$/,
+                                    message: t("templates.fields.key_help"),
+                                },
+                            ]}
+                        >
+                            <Input placeholder={t("templates.fields.key_placeholder")} disabled={isSystem} />
+                        </Form.Item>
+                    </Col>
+                </Row>
+
                 <Form.Item name="html_content" hidden><Input /></Form.Item>
                 <Form.Item name="plain_text_content" hidden><Input /></Form.Item>
                 <Form.Item name="react_email_content" hidden><Input /></Form.Item>
