@@ -36,3 +36,6 @@ _.sln
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+# rendered e-mail output
+build/
