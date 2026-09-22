@@ -1,9 +1,15 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
+import { SendList } from '@/components/sends/SendList';
 import { sectionLabel } from '@/lib/access';
-import { MailTasksInterim } from '@/components/pages/MailTasksInterim';
 
 export const metadata: Metadata = { title: sectionLabel('/mail-tasks') };
 
 export default function Page() {
-  return <MailTasksInterim />;
+  // SendList reads ?status= and ?page= from the address.
+  return (
+    <Suspense>
+      <SendList />
+    </Suspense>
+  );
 }

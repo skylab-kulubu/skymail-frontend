@@ -6,7 +6,7 @@
  */
 import { getSession } from 'next-auth/react';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import { createApiClient, type ApiClient, type RequestOptions } from './client';
+import { createApiClient, type ApiClient, type ApiPage, type RequestOptions } from './client';
 import { asApiError, type ApiError } from './errors';
 
 const ApiContext = createContext<ApiClient | null>(null);
@@ -98,6 +98,16 @@ export function useApiQuery<T>(path: string, query?: RequestOptions['query']): Q
   return useApiLoad<T>(
     (api, signal) =>
       api.get<T>(path, { query: JSON.parse(queryKey) as RequestOptions['query'], signal }),
+    `${path}?${queryKey}`,
+  );
+}
+
+/** Loads one page of a list route (`_start`/`_end`) with its `X-Total-Count`. */
+export function useApiPage<T>(path: string, query?: RequestOptions['query']): Query<ApiPage<T>> {
+  const queryKey = JSON.stringify(query ?? {});
+  return useApiLoad<ApiPage<T>>(
+    (api, signal) =>
+      api.getPage<T>(path, { query: JSON.parse(queryKey) as RequestOptions['query'], signal }),
     `${path}?${queryKey}`,
   );
 }
