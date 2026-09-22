@@ -104,6 +104,43 @@ function checkBackgroundLayersAreThemed(key: string, body: string, problems: str
   }
 }
 
+/**
+ * The plain-text part is derived from the same markup, and html-to-text joins
+ * adjacent table cells with no whitespace at all. A link whose URL lands right
+ * against the next cell's text reads as one mangled word — "…yildizskylab.comby
+ * WEBLAB". Visible only in the text part, which is exactly why it survived.
+ *
+ * Rather than guess at the shape of the damage, this takes the hrefs the
+ * template actually contains and checks that each one ends where it should.
+ */
+function checkPlainTextIsReadable(key: string, html: string, plainText: string, problems: string[]): void {
+  const hrefs = new Set(
+    [...html.matchAll(/href="([^"]+)"/g)]
+      .map((match) => match[1].replace(/&amp;/g, "&"))
+      .filter((href) => /^(https?:|mailto:)/.test(href)),
+  );
+
+  for (const href of hrefs) {
+    let from = 0;
+    for (;;) {
+      const at = plainText.indexOf(href, from);
+      if (at === -1) {
+        break;
+      }
+      from = at + href.length;
+
+      // A letter straight after the URL means the next cell's text was glued on.
+      // Punctuation and path characters are how a longer URL continues, and that
+      // longer URL is its own href and gets checked on its own.
+      const next = plainText[from];
+      if (next && /\p{L}/u.test(next)) {
+        const sample = plainText.slice(at, from + 12);
+        problems.push(`${key}: düz metinde bitişik yazılmış bağlantı → ${sample} — araya boşluk gerekiyor`);
+      }
+    }
+  }
+}
+
 function checkSubjectVariables(key: string, subject: string, declared: string[], problems: string[]): void {
   for (const match of subject.matchAll(/\{\{\.(\w+)\}\}/g)) {
     const name = match[1];
@@ -161,6 +198,7 @@ async function main(): Promise<void> {
     checkBalancedActions(meta.key, html, problems);
     checkOpaqueSurfaces(meta.key, html, problems);
     checkBackgroundLayersAreThemed(meta.key, html, problems);
+    checkPlainTextIsReadable(meta.key, html, plainText, problems);
     checkSubjectVariables(meta.key, meta.subject, meta.variables, problems);
 
     await writeFile(join(OUT_DIR, `${meta.key}.html`), html, "utf8");
