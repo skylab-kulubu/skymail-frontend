@@ -1,5 +1,5 @@
 import { Edit, useForm } from "@refinedev/antd";
-import { Form, Input, Row, Col, Card, Typography, Alert, theme } from "antd";
+import { Form, Input, Row, Col, Card, Typography, Alert, theme, App as AntdApp } from "antd";
 import Editor from "@monaco-editor/react";
 import { useState, useEffect, useRef } from "react";
 import { render } from "@react-email/render";
@@ -7,12 +7,14 @@ import * as ReactEmail from "@react-email/components";
 import * as Babel from "@babel/standalone";
 import React from "react";
 import { useTranslation } from "react-i18next";
+import { decideSave } from "../../lib/template-render";
 
 const { Text } = Typography;
 const { useToken } = theme;
 
 export const TemplateEdit = () => {
     const { t } = useTranslation();
+    const { message } = AntdApp.useApp();
     const { token: themeToken } = useToken();
     const { formProps, saveButtonProps, query, onFinish } = useForm();
 
@@ -23,6 +25,8 @@ export const TemplateEdit = () => {
     const [previewHtml, setPreviewHtml] = useState("");
     const [previewPlainText, setPreviewPlainText] = useState("");
     const [error, setError] = useState<string | null>(null);
+    // The code the current preview came from; see lib/template-render.
+    const [renderedCode, setRenderedCode] = useState<string | null>(null);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const editorRef = useRef<any>(null);
 
@@ -83,9 +87,11 @@ export const TemplateEdit = () => {
 
             setPreviewHtml(html);
             setPreviewPlainText(plainText);
+            setRenderedCode(currentCode);
             setError(null);
         } catch (err: any) {
             console.error("Render error:", err);
+            setRenderedCode(null);
             setError(err.message);
         }
     };
@@ -102,18 +108,34 @@ export const TemplateEdit = () => {
         };
     }, [code]);
 
+    const stored = query?.data?.data as
+        | { html_content?: string; plain_text_content?: string; react_email_content?: string }
+        | undefined;
+    const storedCode = stored?.react_email_content ?? null;
+    const decision = decideSave({ code, renderedCode, previewHtml, error }, storedCode);
+    const savable = decision !== "blocked";
+
     const handleFormFinish = async (values: any) => {
-        const finalValues = {
-            ...values,
-            html_content: previewHtml,
-            plain_text_content: previewPlainText,
-            react_email_content: code,
-        };
-        return onFinish(finalValues);
+        // A submit can also come from Enter inside a field, so the disabled
+        // save button is not the only way in.
+        if (decision === "blocked") {
+            message.error(t("templates.fields.render_required"));
+            return;
+        }
+        // "keep": the code was never touched, so the row's own body goes back
+        // untouched and only the wording around it changes.
+        const body = decision === "render"
+            ? { html_content: previewHtml, plain_text_content: previewPlainText, react_email_content: code }
+            : {
+                html_content: stored?.html_content ?? "",
+                plain_text_content: stored?.plain_text_content ?? "",
+                react_email_content: stored?.react_email_content ?? "",
+            };
+        return onFinish({ ...values, ...body });
     };
 
     return (
-        <Edit saveButtonProps={{ ...saveButtonProps, onClick: () => formProps.form?.submit(), children: t("buttons.save") }} title={t("templates.titles.edit")}>
+        <Edit saveButtonProps={{ ...saveButtonProps, disabled: !savable, onClick: () => formProps.form?.submit(), children: t("buttons.save") }} title={t("templates.titles.edit")}>
             <Form {...formProps} layout="vertical" onFinish={handleFormFinish}>
                 {isSystem && (
                     <Alert
@@ -167,15 +189,31 @@ export const TemplateEdit = () => {
                 <Form.Item name="plain_text_content" hidden><Input /></Form.Item>
                 <Form.Item name="react_email_content" hidden><Input /></Form.Item>
 
-                <div style={{ minHeight: error ? "auto" : "0", marginBottom: error ? 16 : 0 }}>
-                    {error && (
+                <div style={{ minHeight: decision === "render" ? "0" : "auto", marginBottom: decision === "render" ? 0 : 16 }}>
+                    {decision === "keep" && error ? (
+                        // Saving works, but not from this pane: the row's body
+                        // goes back untouched and only the wording changes.
+                        <Alert
+                            message={t("templates.fields.source_in_repo")}
+                            type="info"
+                            showIcon
+                        />
+                    ) : decision === "blocked" && error ? (
                         <Alert
                             message={t("templates.fields.render_error")}
                             description={error}
                             type="error"
                             showIcon
                         />
-                    )}
+                    ) : decision === "blocked" ? (
+                        // Blocked with no error to show: the preview has not
+                        // caught up. Say so, or the disabled button has no reason.
+                        <Alert
+                            message={t("templates.fields.render_pending")}
+                            type="warning"
+                            showIcon
+                        />
+                    ) : null}
                 </div>
 
                 <Row gutter={16}>
