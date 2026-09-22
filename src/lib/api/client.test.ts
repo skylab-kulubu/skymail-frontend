@@ -160,6 +160,62 @@ describe("a successful answer", () => {
   });
 });
 
+describe("a page of a list", () => {
+  const signedIn = async () => session("token");
+
+  function page(body: unknown, headers: Record<string, string> = {}): Response {
+    return new Response(body === undefined ? "" : JSON.stringify(body), {
+      status: 200,
+      headers: { "Content-Type": "application/json", ...headers },
+    });
+  }
+
+  // List routes page with _start/_end and put the size of the whole list in
+  // X-Total-Count, so a pager can say how many pages there are.
+  it("carries the rows and the total the API counted", async () => {
+    const { fetch, calls } = scriptedFetch(page([{ id: "a" }, { id: "b" }], { "X-Total-Count": "42" }));
+    const api = createApiClient({ baseUrl: BASE_URL, fetch, getSession: signedIn });
+
+    const result = await api.getPage("/mail_tasks", { query: { status: "failed", _start: 0, _end: 2 } });
+
+    assert.deepEqual(result, { items: [{ id: "a" }, { id: "b" }], total: 42 });
+    assert.equal(calls[0].url, `${BASE_URL}/mail_tasks?status=failed&_start=0&_end=2`);
+  });
+
+  // A proxy that does not expose the header to the browser hides it; the page
+  // then knows its rows but not how many pages follow.
+  for (const [name, headers] of [
+    ["no total", {}],
+    ["a total that is not a count", { "X-Total-Count": "many" }],
+    ["a negative total", { "X-Total-Count": "-1" }],
+  ] as const) {
+    it(`has no total when the answer carries ${name}`, async () => {
+      const { fetch } = scriptedFetch(page([{ id: "a" }], headers));
+      const api = createApiClient({ baseUrl: BASE_URL, fetch, getSession: signedIn });
+
+      assert.deepEqual(await api.getPage("/mail_tasks"), { items: [{ id: "a" }], total: null });
+    });
+  }
+
+  // skymail-backend encodes an empty sqlc result as null, not [].
+  it("is empty when the API sends null for no rows", async () => {
+    const { fetch } = scriptedFetch(page(null, { "X-Total-Count": "0" }));
+    const api = createApiClient({ baseUrl: BASE_URL, fetch, getSession: signedIn });
+
+    assert.deepEqual(await api.getPage("/mail_tasks/1/queue"), { items: [], total: 0 });
+  });
+
+  it("fails like any other request", async () => {
+    const { fetch } = scriptedFetch(json(403, { code: "server.forbidden", message: "nope" }));
+    const api = createApiClient({ baseUrl: BASE_URL, fetch, getSession: signedIn });
+
+    const error = await api.getPage("/mail_tasks").catch((reason: unknown) => reason);
+
+    assert.ok(error instanceof ApiError);
+    assert.equal(error.status, 403);
+  });
+});
+
 describe("a failed answer", () => {
   const signedIn = async () => session("token");
 

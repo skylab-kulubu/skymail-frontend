@@ -6,7 +6,7 @@
  */
 import { getSession } from 'next-auth/react';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { ApiError, createApiClient, type ApiClient, type RequestOptions } from './client';
+import { ApiError, createApiClient, type ApiClient, type ApiPage, type RequestOptions } from './client';
 
 const ApiContext = createContext<ApiClient | null>(null);
 
@@ -30,6 +30,19 @@ export type QueryState<T> =
 
 /** Loads `path` once per change of path or query. */
 export function useApiQuery<T>(path: string, query?: RequestOptions['query']): QueryState<T> {
+  return useApiLoad<T>('get', path, query);
+}
+
+/** Loads one page of a list route (`_start`/`_end`) with its `X-Total-Count`. */
+export function useApiPage<T>(path: string, query?: RequestOptions['query']): QueryState<ApiPage<T>> {
+  return useApiLoad<ApiPage<T>>('getPage', path, query);
+}
+
+function useApiLoad<T>(
+  method: 'get' | 'getPage',
+  path: string,
+  query?: RequestOptions['query'],
+): QueryState<T> {
   const api = useApi();
   const [state, setState] = useState<QueryState<T>>({ status: 'loading' });
   const queryKey = JSON.stringify(query ?? {});
@@ -37,8 +50,8 @@ export function useApiQuery<T>(path: string, query?: RequestOptions['query']): Q
   useEffect(() => {
     const controller = new AbortController();
     setState({ status: 'loading' });
-    api
-      .get<T>(path, { query: JSON.parse(queryKey) as RequestOptions['query'], signal: controller.signal })
+    const options = { query: JSON.parse(queryKey) as RequestOptions['query'], signal: controller.signal };
+    (method === 'get' ? api.get<T>(path, options) : (api.getPage(path, options) as Promise<T>))
       .then((data) => setState({ status: 'success', data }))
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;
@@ -48,7 +61,7 @@ export function useApiQuery<T>(path: string, query?: RequestOptions['query']): Q
         });
       });
     return () => controller.abort();
-  }, [api, path, queryKey]);
+  }, [api, method, path, queryKey]);
 
   return state;
 }
