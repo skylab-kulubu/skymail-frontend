@@ -67,7 +67,13 @@ export const colors = {
 
 export const fontStack = "'Space Grotesk', Helvetica, Arial, sans-serif";
 
-const LOGO = "https://forms.yildizskylab.com/skylab.svg";
+/*
+  A PNG, not the SVG the app itself uses: Gmail and Outlook do not render SVG at
+  all, so that logo was simply missing for most recipients. This is the same
+  asset the welcome mail has been sending from production, at 280×280 with
+  transparency, so it stays sharp at both sizes and sits on either theme.
+*/
+const LOGO = "https://cdn.yildizskylab.com/images/fe6b25b5-6dc6-4981-ab09-907b304f369a";
 
 const darkStarfield = [
   "radial-gradient(1px 1px at 12% 18%, rgba(255,255,255,0.35), transparent 50%)",
@@ -211,7 +217,7 @@ export function Shell({
               >
                 <Container style={{ margin: "0 auto", maxWidth: "600px", padding: "0 24px" }}>
                   <Section style={{ marginTop: "8px", marginBottom: "32px", textAlign: "center" }}>
-                    <Img src={LOGO} width="56" height="53" alt="SKY LAB" style={{ margin: "0 auto" }} />
+                    <Img src={LOGO} width="56" height="56" alt="SKY LAB" style={{ margin: "0 auto" }} />
                   </Section>
 
                   <Section
@@ -476,7 +482,7 @@ function Footer({ brand }: { brand: Brand }) {
           <tr>
             <td valign="middle" style={{ paddingRight: "7px", lineHeight: "0" }}>
               <Link href={href} className="brand-link t-brand" style={{ textDecoration: "none", color: colors.skylab800 }}>
-                <Img src={LOGO} width="20" height="20" alt="SKY LAB" style={{ display: "inline-block", verticalAlign: "middle" }} />
+                <Img src={LOGO} width="24" height="24" alt="SKY LAB" style={{ display: "inline-block", verticalAlign: "middle" }} />
               </Link>
             </td>
             <td valign="middle" style={{ paddingRight: "8px" }}>
