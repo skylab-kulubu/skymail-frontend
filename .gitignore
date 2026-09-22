@@ -39,3 +39,8 @@ _.sln
 
 # rendered e-mail output
 build/
+
+# Next.js
+.next/
+next-env.d.ts
+*.tsbuildinfo

@@ -4,74 +4,42 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@ant-design/icons": "^5.5.1",
-    "@babel/standalone": "^7.29.1",
-    "@monaco-editor/react": "^4.7.0",
     "@react-email/components": "^1.0.8",
     "@react-email/render": "^2.0.4",
-    "@react-keycloak/web": "^3.4.0",
-    "@refinedev/antd": "^6.0.1",
-    "@refinedev/cli": "^2.16.48",
-    "@refinedev/core": "^5.0.8",
-    "@refinedev/devtools": "^2.0.1",
-    "@refinedev/kbar": "^2.0.0",
-    "@refinedev/react-router": "^2.0.0",
-    "@refinedev/rest": "^2.1.0",
-    "@uiw/react-md-editor": "^4.0.8",
-    "antd": "^5.23.0",
-    "axios": "^1.6.2",
-    "i18next": "^25.8.13",
-    "i18next-browser-languagedetector": "^8.2.1",
-    "i18next-http-backend": "^3.0.2",
-    "keycloak-js": "^25.0.1",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "react-i18next": "^16.5.4",
-    "react-router": "^7.0.2"
+    "lucide-react": "^1.46.0",
+    "next": "^16.1.0",
+    "next-auth": "5.0.0-beta.32",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.25.0",
-    "@types/babel__standalone": "^7.1.9",
-    "@types/node": "^20",
-    "@types/react": "^19.1.0",
-    "@types/react-dom": "^19.1.0",
-    "@typescript-eslint/eslint-plugin": "^5.57.1",
-    "@typescript-eslint/parser": "^5.57.1",
-    "@vitejs/plugin-react": "^4.4.1",
+    "@next/eslint-plugin-next": "^16.1.0",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^22",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
     "eslint": "^9.25.0",
     "eslint-plugin-react-hooks": "^5.2.0",
-    "eslint-plugin-react-refresh": "^0.4.19",
     "globals": "^16.0.0",
+    "tailwindcss": "^4.3.3",
     "tsx": "^4.20.3",
-    "typescript": "^5.8.3",
-    "typescript-eslint": "^8.30.1",
-    "vite": "^6.3.5"
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.30.1"
   },
   "scripts": {
-    "dev": "refine dev",
-    "build": "tsc && refine build",
-    "start": "refine start",
-    "refine": "refine",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "next typegen && tsc --noEmit",
+    "lint": "eslint .",
+    "test": "tsx --test \"src/**/*.test.ts\"",
+    "api:check": "tsx --test \"src/**/*.test.ts\"",
     "emails:render": "tsx scripts/render-templates.ts",
     "emails:seed": "tsx scripts/seed-templates.ts",
     "emails:check": "tsx scripts/check-rich-text.ts",
-    "api:check": "tsx scripts/check-delete-response.ts",
     "templates:check": "tsx scripts/check-template-save.ts"
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
-  },
-  "refine": {
-    "projectId": "J7S1JU-Q2jzuW-nMkn1D"
   },
   "packageManager": "yarn@4.14.1"
 }

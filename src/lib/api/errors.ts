@@ -1,0 +1,113 @@
+/**
+ * What an operator reads when a request to the SkyMail API fails.
+ *
+ * The API answers an error with `{ code, message, params? }` (skymail-backend
+ * `internal/apperrors`). The `message` is English and written for developers,
+ * so the panel shows a Turkish sentence chosen by `code`, falling back to one
+ * chosen by the HTTP status for codes it does not know yet. The server's own
+ * message stays on the error for logs and support.
+ *
+ * The codes below are every one skymail-backend `origin/main` raises
+ * (2026-09-23); a new code the backend adds falls back to its status until it
+ * gets a sentence here.
+ */
+
+const TEXT = {
+  sessionEnded: "Oturumun sona erdi. Devam etmek için yeniden giriş yap.",
+  forbidden: "Bu işlem için yetkin yok.",
+  notFound: "Aradığın kayıt bulunamadı. Silinmiş ya da arşivlenmiş olabilir.",
+  invalid: "Gönderilen bilgiler geçersiz. Alanları kontrol edip tekrar dene.",
+  conflict: "Bu kayıt mevcut bir kayıtla çakışıyor.",
+  tooMany: "Kısa sürede çok fazla istek gönderildi. Biraz bekleyip tekrar dene.",
+  unavailable: "SkyMail şu anda yanıt vermiyor. Biraz sonra tekrar dene.",
+  serverError: "Sunucuda beklenmeyen bir hata oluştu. Tekrar dene; sürerse yöneticine haber ver.",
+  unreachable: "Sunucuya ulaşılamadı. Bağlantını kontrol edip tekrar dene.",
+} as const;
+
+// A Map, not an object literal: a code is untrusted input, and "constructor"
+// or "toString" must not find what every object inherits.
+const BY_CODE: ReadonlyMap<string, string> = new Map([
+  // Raised by the client itself: no session, or one that could not be refreshed.
+  ["session.ended", TEXT.sessionEnded],
+  // Raised by the client itself: a success that carried something other than JSON.
+  ["response.not_json", "Sunucudan beklenmeyen bir yanıt geldi. Sayfayı yenileyip tekrar dene."],
+
+  ["server.unauthorized", TEXT.sessionEnded],
+  ["server.forbidden", TEXT.forbidden],
+  ["server.not_found", TEXT.notFound],
+  ["server.method_not_allowed", "Bu işlem desteklenmiyor."],
+  ["server.too_many_requests", TEXT.tooMany],
+  ["server.service_unavailable", TEXT.unavailable],
+  ["server.internal_server_error", TEXT.serverError],
+  ["server.unknown_error", TEXT.serverError],
+  ["server.conflict", TEXT.conflict],
+  ["validation.error", TEXT.invalid],
+  [
+    "template.system_protected",
+    "System template arşivlenemez: başka bir servis bu maili Template key ile gönderiyor.",
+  ],
+  ["template.system_key_immutable", "Bir System template'in Template key'i değiştirilemez."],
+  [
+    "template.invalid_key",
+    "Template key geçersiz: 3–64 karakter olmalı; küçük harf, rakam, nokta ve tire içerebilir, harf ya da rakamla başlayıp bitmeli.",
+  ],
+  ["mail.template_target_missing", "Gönderim için bir Mail template seçmelisin."],
+]);
+
+function byStatus(status: number): string {
+  if (status === 0) return TEXT.unreachable;
+  if (status === 400 || status === 422) return TEXT.invalid;
+  if (status === 401) return TEXT.sessionEnded;
+  if (status === 403) return TEXT.forbidden;
+  if (status === 404) return TEXT.notFound;
+  if (status === 409) return TEXT.conflict;
+  if (status === 429) return TEXT.tooMany;
+  if (status === 502 || status === 503 || status === 504) return TEXT.unavailable;
+  if (status >= 500) return TEXT.serverError;
+  return `İstek tamamlanamadı (HTTP ${status}).`;
+}
+
+export class ApiError extends Error {
+  override readonly name = "ApiError";
+
+  constructor(
+    /** HTTP status, or 0 when no answer arrived. */
+    readonly status: number,
+    /** The API's error code, or `http.<status>` / `network` when it sent none. */
+    readonly code: string,
+    /** The API's own (English) message, kept for logs and support. */
+    readonly serverMessage?: string,
+    readonly params?: Readonly<Record<string, unknown>>,
+  ) {
+    super(BY_CODE.get(code) ?? byStatus(status));
+  }
+}
+
+type ErrorBody = { code?: unknown; message?: unknown; params?: unknown };
+
+function readErrorBody(text: string): ErrorBody {
+  try {
+    const parsed: unknown = JSON.parse(text);
+    return parsed !== null && typeof parsed === "object" ? (parsed as ErrorBody) : {};
+  } catch {
+    return {};
+  }
+}
+
+/** Builds the error for a non-2xx answer from its status and raw body text. */
+export function apiErrorFromResponse(status: number, text: string): ApiError {
+  const body = readErrorBody(text);
+  const code = typeof body.code === "string" && body.code !== "" ? body.code : `http.${status}`;
+  const serverMessage = typeof body.message === "string" ? body.message : undefined;
+  const params =
+    body.params !== null && typeof body.params === "object"
+      ? (body.params as Record<string, unknown>)
+      : undefined;
+  return new ApiError(status, code, serverMessage, params);
+}
+
+export function networkError(cause: unknown): ApiError {
+  const error = new ApiError(0, "network");
+  (error as { cause?: unknown }).cause = cause;
+  return error;
+}
