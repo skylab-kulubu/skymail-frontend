@@ -111,3 +111,17 @@ export function networkError(cause: unknown): ApiError {
   (error as { cause?: unknown }).cause = cause;
   return error;
 }
+
+/**
+ * Whatever a failed request threw, as the ApiError the panel shows. Anything
+ * that is not one — a TypeError from fetch, a bug in the page — reads like a
+ * request that never reached the server.
+ */
+export function asApiError(error: unknown): ApiError {
+  return error instanceof ApiError ? error : networkError(error);
+}
+
+/** The Turkish sentence for a failed action, whatever it threw. */
+export function apiErrorMessage(error: unknown): string {
+  return asApiError(error).message;
+}
