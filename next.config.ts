@@ -10,6 +10,8 @@ const nextConfig: NextConfig = {
   // traced output has the same shape locally as in the image.
   outputFileTracingRoot: process.cwd(),
   turbopack: { root: process.cwd() },
+  // `next dev` would otherwise write AGENTS.md and CLAUDE.md into the repo on every start.
+  agentRules: false,
 };
 
 export default nextConfig;

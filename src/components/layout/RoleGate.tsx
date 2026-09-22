@@ -5,17 +5,21 @@ import { Lock } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { StateCard } from '@/components/chrome/StateCard';
 import { useConsole } from '@/components/layout/ConsoleContext';
-import { hasRole, requiredRoleFor } from '@/lib/access';
+import { hasRole, requiredRoleFor, type Role } from '@/lib/access';
 
 /**
- * A page opened by its address — a bookmark, a link from superadmin — for a
- * section the menu does not offer this person. Say so instead of letting the
- * page's first request come back 403.
+ * A page opened by its address — a bookmark, a link from superadmin — that
+ * this person may not use. Say so instead of letting the page's first request,
+ * or its save, come back 403.
+ *
+ * Without `role` it guards a section by the read role the menu uses (the
+ * shell wraps every page in one). A page that changes things wraps itself in
+ * another with its write role, e.g. `<RoleGate role={ROLE.listsWrite}>`.
  */
-export function RoleGate({ children }: { children: ReactNode }) {
+export function RoleGate({ role, children }: { role?: Role; children: ReactNode }) {
   const pathname = usePathname() || '/';
   const { roles } = useConsole();
-  const required = requiredRoleFor(pathname);
+  const required = role ?? requiredRoleFor(pathname);
 
   if (required && !hasRole(roles, required)) {
     return (
@@ -23,7 +27,7 @@ export function RoleGate({ children }: { children: ReactNode }) {
         Icon={Lock}
         tone="warning"
         title="Bu sayfayı görme yetkin yok"
-        description={`Bu bölüm için ${required} rolü gerekiyor. Erişime ihtiyacın varsa kulüp yönetimine başvur.`}
+        description={`Bu ${role ? 'sayfa' : 'bölüm'} için ${required} rolü gerekiyor. Erişime ihtiyacın varsa kulüp yönetimine başvur.`}
       />
     );
   }
