@@ -1,10 +1,11 @@
 name: Checks
 
-# Every check the repo has, on every PR into a branch that ships. The image is
+# Every check the repo has, on every PR into main, into production (the release
+# squash), and into rewrite (the Next.js rewrite until its cutover). The image is
 # built by release.yml; nothing here publishes or needs a secret.
 on:
   pull_request:
-    branches: [main, rewrite]
+    branches: [main, production, rewrite]
   workflow_dispatch:
 
 permissions:
