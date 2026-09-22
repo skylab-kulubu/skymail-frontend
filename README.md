@@ -70,9 +70,9 @@ sitenin kök adresidir (Refine uygulamasının kullandığı adres).
 yarn typecheck        # next typegen && tsc --noEmit
 yarn build            # ortam değişkeni gerekmez
 yarn lint             # ESLint (TypeScript, hooks, Next.js kuralları)
-yarn api:check        # Node testleri: HTTP istemcisi, oturum token'ı, roller, tema
+yarn api:check        # bütün Node testleri (src/**/*.test.ts): HTTP istemcisi, oturum token'ı, roller, tema ve render modülü
 yarn emails:check     # zengin metin dönüştürücüsü
-yarn templates:check  # editörün kaydetme kararı
+yarn templates:check  # yalnız render modülünün testleri: repo template'leri JSX modunda, HTML modu, değişkenler, önizleme, kaydetme kararı
 yarn emails:render    # repodaki Mail template'leri render edip denetler
 ```
 
