@@ -65,7 +65,7 @@ export default function KeycloakGeneric() {
             padding: "8px 12px",
             borderRadius: "8px",
             border: `1px solid ${colors.cardBorder}`,
-            backgroundColor: "rgba(143,94,152,0.06)",
+            backgroundColor: colors.noteBg,
             fontSize: "12px",
             color: colors.textBody,
             fontFamily: "'SF Mono', Menlo, Consolas, monospace",
