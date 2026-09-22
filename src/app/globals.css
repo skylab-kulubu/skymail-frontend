@@ -13,8 +13,6 @@
  * keeps later re-copies easy.
  */
 
-@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
-
 :root {
   color-scheme: dark;
   --background: #08070b;

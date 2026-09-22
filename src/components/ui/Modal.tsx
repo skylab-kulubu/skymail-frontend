@@ -3,7 +3,7 @@
 // Copied from superadmin (ADR-0017). The copy painted a light card with
 // tailwind.config colours Tailwind 4 never loads; this one is the chrome's
 // panel, and it behaves like the chrome's Drawer: a labelled modal dialog that
-// takes focus, keeps Tab inside, and closes on Escape when it may be closed.
+// takes focus, keeps Tab inside, and closes on Escape.
 
 import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
@@ -16,14 +16,12 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: ReactNode;
-  /** `false` hides the close button and ignores Escape and backdrop clicks. */
-  dismissible?: boolean;
 }
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-export function Modal({ isOpen, onClose, title, children, dismissible = true }: ModalProps) {
+export function Modal({ isOpen, onClose, title, children }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
@@ -49,7 +47,6 @@ export function Modal({ isOpen, onClose, title, children, dismissible = true }: 
     const onKeyDown = (event: KeyboardEvent) => {
       if (!isTopModalLayer(titleId)) return;
       if (event.key === 'Escape') {
-        if (!dismissible) return;
         event.preventDefault();
         onCloseRef.current();
         return;
@@ -73,7 +70,7 @@ export function Modal({ isOpen, onClose, title, children, dismissible = true }: 
       unregister();
       returnFocus?.focus();
     };
-  }, [isOpen, titleId, dismissible]);
+  }, [isOpen, titleId]);
 
   if (!isOpen || typeof document === 'undefined') return null;
 
@@ -81,7 +78,7 @@ export function Modal({ isOpen, onClose, title, children, dismissible = true }: 
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
         className="fixed inset-0 bg-black/50 backdrop-blur-[1px]"
-        onClick={dismissible ? onClose : undefined}
+        onClick={onClose}
         aria-hidden
       />
       <div
@@ -96,16 +93,14 @@ export function Modal({ isOpen, onClose, title, children, dismissible = true }: 
           <h2 id={titleId} className="min-w-0 flex-1 text-base font-semibold text-neutral-100">
             {title}
           </h2>
-          {dismissible ? (
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Kapat"
-              className="focus-visible:ring-skylab-400/40 rounded-md p-1.5 text-neutral-500 hover:bg-white/5 hover:text-neutral-100 focus-visible:ring-2 focus-visible:outline-none"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          ) : null}
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Kapat"
+            className="focus-visible:ring-skylab-400/40 rounded-md p-1.5 text-neutral-500 hover:bg-white/5 hover:text-neutral-100 focus-visible:ring-2 focus-visible:outline-none"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
         <div ref={contentRef} className="px-5 py-4 text-sm text-neutral-300">
           {children}

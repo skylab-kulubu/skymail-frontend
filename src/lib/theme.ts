@@ -11,19 +11,28 @@ export type Theme = "light" | "dark";
 
 export const THEME_STORAGE_KEY = "colorMode";
 
-export const themeInitScript = `(function(){try{var s=localStorage.getItem(${JSON.stringify(
-  THEME_STORAGE_KEY,
-)});var t=s==="light"||s==="dark"?s:(window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark");document.documentElement.dataset.theme=t;}catch(e){document.documentElement.dataset.theme="dark";}})();`;
-
-/** The stored choice, or the system's preference when there is none. */
-export function preferredTheme(): Theme {
+/**
+ * The stored choice, or the system's preference when there is none or storage
+ * is blocked. It runs twice — as the inline script before the first paint
+ * (from its source text) and after React renders — so it must stay
+ * self-contained: no imports, no names from outside its body.
+ */
+function resolveTheme(storageKey: string): Theme {
   try {
-    const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+    const stored = window.localStorage.getItem(storageKey);
     if (stored === "light" || stored === "dark") return stored;
   } catch {
-    // Storage blocked: fall through to the system preference.
+    // Storage blocked (private mode, site data off): use the system preference.
   }
   return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+}
+
+export const themeInitScript = `document.documentElement.dataset.theme=(${resolveTheme.toString()})(${JSON.stringify(
+  THEME_STORAGE_KEY,
+)});`;
+
+export function preferredTheme(): Theme {
+  return resolveTheme(THEME_STORAGE_KEY);
 }
 
 export function currentTheme(): Theme {
