@@ -72,7 +72,7 @@ yarn build            # ortam değişkeni gerekmez
 yarn lint             # ESLint (TypeScript, hooks, Next.js kuralları)
 yarn api:check        # Node testleri: HTTP istemcisi, oturum token'ı, roller, tema
 yarn emails:check     # zengin metin dönüştürücüsü
-yarn templates:check  # editörün kaydetme kararı
+yarn templates:check  # render modülü: repo template'leri JSX modunda, HTML modu, değişkenler, kaydetme kararı
 yarn emails:render    # repodaki Mail template'leri render edip denetler
 ```
 

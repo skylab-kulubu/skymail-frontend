@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "@babel/standalone": "^7.29.1",
     "@react-email/components": "^1.0.8",
     "@react-email/render": "^2.0.4",
     "lucide-react": "^1.46.0",
@@ -17,6 +18,7 @@
     "@eslint/js": "^9.25.0",
     "@next/eslint-plugin-next": "^16.1.0",
     "@tailwindcss/postcss": "^4.3.3",
+    "@types/babel__standalone": "^7.1.9",
     "@types/node": "^22",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
@@ -39,7 +41,7 @@
     "emails:render": "tsx scripts/render-templates.ts",
     "emails:seed": "tsx scripts/seed-templates.ts",
     "emails:check": "tsx scripts/check-rich-text.ts",
-    "templates:check": "tsx scripts/check-template-save.ts"
+    "templates:check": "tsx --test \"src/lib/mail-render/*.test.ts\""
   },
   "packageManager": "yarn@4.14.1"
 }
