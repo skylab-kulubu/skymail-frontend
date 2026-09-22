@@ -78,8 +78,9 @@ async function main(): Promise<void> {
       subject: meta.subject,
       html_content: html,
       plain_text_content: plainText,
-      // The .tsx source is what an editor sees in SkyMail's Monaco pane, so the
-      // template stays editable there even though its home is this repo.
+      // Not the .tsx source: a pointer back to it. The template's home is this
+      // repo, and SkyMail's Monaco pane cannot compile a comment, so the editor
+      // refuses to save one over the rendered body (see lib/template-render).
       react_email_content: `// Kaynak: skymail-frontend/emails/${meta.key}.tsx — burada düzenlersen repodaki kaynakla ayrışır.\n`,
       system: meta.system,
     };
