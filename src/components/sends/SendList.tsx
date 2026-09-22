@@ -6,36 +6,41 @@
 // the back button all land on the same list.
 
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect } from 'react';
 import { AlertTriangle } from 'lucide-react';
+import { FilterPills } from '@/components/chrome/FilterPills';
+import { Pagination } from '@/components/chrome/Pagination';
 import { StateCard } from '@/components/chrome/StateCard';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { DataTable } from '@/components/tables/DataTable';
+import { Button } from '@/components/ui/Button';
 import { sectionLabel } from '@/lib/access';
-import { useApiPage } from '@/lib/api/react';
+import { useApiLoad } from '@/lib/api/react';
 import {
-  audienceOfSendRow,
+  audienceLabel,
+  fetchSendPage,
   formatCount,
   formatSendTime,
-  pageFromSearch,
+  knownPageCount,
+  readSendListView,
+  recipientsLabel,
   recipientSummary,
-  SEND_LIST_PATH,
+  SEND_PAGE_SIZE,
+  sendHref,
   sendListHref,
-  sendListQuery,
   STATUS_FILTERS,
-  statusFromSearch,
   templateLabel,
-  type SendRow,
+  type Send,
+  type SendFilter,
+  type SendListView,
   type SendStatus,
 } from '@/lib/sends';
 import { Audience } from './Audience';
-import { Pager } from './Pager';
 import { SendItem } from './SendItem';
 import { SendStatusBadge } from './StatusBadge';
 
-const PAGE_SIZE = 20;
-
-const EMPTY_TEXT: Readonly<Record<SendStatus | 'all', string>> = {
+const EMPTY_TEXT: Readonly<Record<SendFilter, string>> = {
   all: 'Henüz gönderim yok.',
   sending: 'Şu anda gönderilmekte olan bir gönderim yok.',
   sent: 'Tamamlanmış gönderim yok.',
@@ -43,10 +48,23 @@ const EMPTY_TEXT: Readonly<Record<SendStatus | 'all', string>> = {
 };
 
 export function SendList() {
-  const search = useSearchParams();
-  const status = statusFromSearch(search.get('status'));
-  const page = pageFromSearch(search.get('page'));
-  const state = useApiPage<SendRow>('/mail_tasks', sendListQuery({ status, page, pageSize: PAGE_SIZE }));
+  const router = useRouter();
+  const view = readSendListView(useSearchParams());
+  const state = useApiLoad((api, signal) => fetchSendPage(api, view, signal), `${view.status}:${view.page}`);
+  const lastPage =
+    state.status === 'success'
+      ? knownPageCount({ total: state.data.total, rows: state.data.items.length }, view.page, SEND_PAGE_SIZE)
+      : null;
+
+  function show(next: SendListView) {
+    router.push(sendListHref(next), { scroll: false });
+  }
+
+  // A stale link past the end moves to the last page there is.
+  const { status, page } = view;
+  useEffect(() => {
+    if (lastPage !== null && page > lastPage) router.replace(sendListHref({ status, page: lastPage }), { scroll: false });
+  }, [lastPage, page, router, status]);
 
   return (
     <div className="space-y-4">
@@ -56,72 +74,61 @@ export function SendList() {
       />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <StatusFilter current={status} />
-        {state.status === 'success' && state.data.total !== null ? (
-          <p className="text-xs text-neutral-500 tabular-nums" aria-live="polite">
-            {formatCount(state.data.total)} gönderim
-          </p>
-        ) : null}
+        <FilterPills
+          ariaLabel="Gösterilen gönderimler"
+          value={view.status}
+          options={STATUS_FILTERS}
+          onChange={(next) => show({ status: next, page: 1 })}
+        />
+        {/* Present from the start, so a screen reader hears the count change with the filter. */}
+        <p className="text-xs text-neutral-500 tabular-nums" aria-live="polite">
+          {state.status === 'success' && state.data.total !== null ? `${formatCount(state.data.total)} gönderim` : ''}
+        </p>
       </div>
 
       {state.status === 'loading' ? (
-        <StateCard isLoading title="Yükleniyor" />
+        <StateCard isLoading title="Gönderimler yükleniyor" />
       ) : state.status === 'error' ? (
-        <StateCard
-          Icon={AlertTriangle}
-          tone="danger"
-          title="Gönderimler yüklenemedi"
-          description={state.error.message}
-        />
-      ) : state.data.items.length === 0 && page > 1 ? (
-        <StateCard title="Bu sayfada gönderim yok" description="Liste bu sayfaya kadar uzanmıyor.">
-          <Link href={sendListHref({ status })} className="text-skylab-300 text-sm hover:underline">
-            İlk sayfaya dön
-          </Link>
+        <StateCard Icon={AlertTriangle} tone="danger" title="Gönderimler yüklenemedi" description={state.error.message}>
+          <Button variant="secondary" onClick={() => void state.reload()}>
+            Tekrar dene
+          </Button>
         </StateCard>
       ) : (
-        <>
+        <div className="space-y-2">
           {/* A phone gets rows it can read without scrolling sideways. */}
           {state.data.items.length > 0 ? (
             <ul className="divide-y divide-white/5 rounded-lg border border-white/5 md:hidden">
-              {state.data.items.map((row) => (
-                <SendItem
-                  key={row.id}
-                  id={row.id}
-                  title={templateLabel(row)}
-                  createdAt={row.created_at}
-                  audience={audienceOfSendRow(row)}
-                  status={row.status}
-                  counts={row.recipient_counts}
-                />
+              {state.data.items.map((send) => (
+                <SendItem key={send.id} send={send} />
               ))}
             </ul>
           ) : (
             <p className="rounded-lg border border-white/5 px-4 py-6 text-center text-sm text-neutral-500 md:hidden">
-              {EMPTY_TEXT[status ?? 'all']}
+              {EMPTY_TEXT[view.status]}
             </p>
           )}
           <div className="hidden md:block">
-            <DataTable<SendRow>
+            <DataTable<Send>
               data={state.data.items}
-              emptyText={EMPTY_TEXT[status ?? 'all']}
+              emptyText={EMPTY_TEXT[view.status]}
               columns={[
                 {
                   key: 'template_name',
                   header: 'Mail template',
-                  render: (_, row) => (
+                  render: (_, send) => (
                     <Link
-                      href={`${SEND_LIST_PATH}/show/${row.id}`}
+                      href={sendHref(send.id)}
                       className="hover:text-skylab-300 block max-w-[16rem] truncate font-medium text-neutral-100 transition-colors"
                     >
-                      {templateLabel(row)}
+                      {templateLabel(send)}
                     </Link>
                   ),
                 },
                 {
-                  key: 'mail_list_name',
+                  key: 'audience',
                   header: 'Kitle',
-                  render: (_, row) => <Audience audience={audienceOfSendRow(row)} className="max-w-[14rem]" />,
+                  render: (_, send) => <Audience audience={audienceLabel(send.audience)} className="max-w-[16rem]" />,
                 },
                 {
                   key: 'status',
@@ -131,64 +138,34 @@ export function SendList() {
                 {
                   key: 'recipient_counts',
                   header: 'Alıcılar',
-                  render: (_, row) => <RecipientCounts row={row} />,
+                  render: (_, send) => <RecipientCounts send={send} />,
                 },
                 {
                   key: 'created_at',
                   header: 'Tarih',
-                  render: (value: string) => (
-                    <span className="text-neutral-400 tabular-nums">{formatSendTime(value)}</span>
-                  ),
+                  render: (value: string) => <span className="text-neutral-400 tabular-nums">{formatSendTime(value)}</span>,
                 },
               ]}
             />
           </div>
-          <Pager
-            page={page}
-            pageSize={PAGE_SIZE}
-            total={state.data.total}
-            rowsOnPage={state.data.items.length}
-            hrefFor={(next) => sendListHref({ status, page: next })}
+          <Pagination
+            ariaLabel="Gönderim sayfaları"
+            current={view.page}
+            totalPages={lastPage ?? 1}
+            onPageChange={(next) => show({ ...view, page: next })}
           />
-        </>
+        </div>
       )}
     </div>
   );
 }
 
-function StatusFilter({ current }: { current: SendStatus | null }) {
-  return (
-    <nav
-      aria-label="Duruma göre süz"
-      className="flex w-full items-center gap-0.5 rounded-md border border-white/10 bg-white/5 p-0.5 sm:w-auto"
-    >
-      {STATUS_FILTERS.map((filter) => {
-        const active = filter.value === current;
-        return (
-          <Link
-            key={filter.label}
-            href={sendListHref({ status: filter.value })}
-            aria-current={active ? 'page' : undefined}
-            className={`flex-1 rounded px-2.5 py-1 text-center text-xs whitespace-nowrap transition sm:flex-none ${
-              active ? 'bg-white/10 font-medium text-neutral-100' : 'text-neutral-500 hover:text-neutral-300'
-            }`}
-          >
-            {filter.label}
-          </Link>
-        );
-      })}
-    </nav>
-  );
-}
-
-function RecipientCounts({ row }: { row: SendRow }) {
-  const { total, parts } = recipientSummary(row.recipient_counts);
+function RecipientCounts({ send }: { send: Send }) {
+  const { total, parts } = recipientSummary(send.recipient_counts);
   return (
     <span className="flex flex-col">
-      <span className="text-neutral-200 tabular-nums">{total === 0 ? 'Alıcı yok' : `${formatCount(total)} alıcı`}</span>
-      {parts.length > 0 ? (
-        <span className="text-2xs text-neutral-500 tabular-nums">{parts.join(' · ')}</span>
-      ) : null}
+      <span className="text-neutral-200 tabular-nums">{recipientsLabel(total)}</span>
+      {parts.length > 0 ? <span className="text-2xs text-neutral-500 tabular-nums">{parts.join(' · ')}</span> : null}
     </span>
   );
 }

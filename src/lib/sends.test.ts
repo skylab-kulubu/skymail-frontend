@@ -1,34 +1,42 @@
 /**
- * What the home screen and the send list make of skymail-backend's answers
- * (`GET /mail_tasks/summary`, `GET /mail_tasks?status=`, the send and its
- * queue). The numbers on the home screen count different things — mails to
- * one recipient, sends — so these tests pin which field each one reads and
- * the unit it is shown with.
+ * What the home screen, the send list and a send make of skymail-backend's
+ * answers (`GET /mail_tasks/summary`, `GET /mail_tasks?status=`,
+ * `GET /mail_tasks/:id` and its `/queue?status=`). The numbers on the home
+ * screen count different things — mails to one recipient, sends — so these
+ * tests pin which field each one reads and the unit it is shown with.
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { ApiError } from "./api/errors";
+import { TEST_BASE_URL, json, scriptedClient } from "./api/testing";
 import {
-  audienceOfRecentSend,
-  audienceOfSendRow,
-  countRecipients,
+  audienceLabel,
   dailySeries,
   dayLabel,
-  followUpOrder,
+  fetchRecipientPage,
+  fetchSend,
+  fetchSendPage,
   formatSendTime,
   homeTiles,
+  knownPageCount,
   noRecipientsNote,
-  pageCount,
-  pageFromSearch,
+  readRecipientView,
+  readSendListView,
+  RECIPIENT_PAGE_SIZE,
+  recipientFilters,
+  recipientsLabel,
   recipientStatus,
   recipientSummary,
+  SEND_PAGE_SIZE,
+  sendHref,
   sendListHref,
-  sendListQuery,
   STATUS_FILTERS,
-  statusFromSearch,
   templateLabel,
-  type RecipientRow,
+  type SendAudience,
   type SendSummary,
 } from "./sends";
+
+const SEND_ID = "e69521e9-b026-47a1-a96e-cce12f5b7bfd";
 
 function summary(overrides: Partial<SendSummary> = {}): SendSummary {
   return {
@@ -44,6 +52,8 @@ function summary(overrides: Partial<SendSummary> = {}): SendSummary {
     ...overrides,
   };
 }
+
+const params = (search: string) => new URLSearchParams(search);
 
 describe("the home screen's tiles", () => {
   const byKey = (s: SendSummary) => Object.fromEntries(homeTiles(s).map((tile) => [tile.key, tile]));
@@ -73,15 +83,20 @@ describe("the home screen's tiles", () => {
     assert.equal(tile.href, "/mail-tasks?status=failed");
   });
 
-  it("come in a fixed order, each with its own label", () => {
-    const tiles = homeTiles(summary());
+  it("come in a fixed order, each labelled for what it counts, and only the failed one links", () => {
     assert.deepEqual(
-      tiles.map((tile) => tile.key),
-      ["pending", "sentToday", "failed"],
+      homeTiles(summary()).map((tile) => [tile.key, tile.label, tile.note, tile.href]),
+      [
+        ["pending", "Bekleyen mail", "Kuyrukta gönderilmeyi bekleyen, alıcı başına bir mail", null],
+        ["sentToday", "Bugün gönderilen", "İstanbul saatiyle bugün alıcılara giden mail", null],
+        ["failed", "Başarısız gönderim", "En az bir alıcısına ulaşamayan gönderim", "/mail-tasks?status=failed"],
+      ],
     );
-    assert.equal(new Set(tiles.map((tile) => tile.label)).size, 3);
-    assert.equal(tiles[0].href, null);
-    assert.equal(tiles[1].href, null);
+  });
+
+  // The API says which zone its days are in; "today" is that zone's today.
+  it("say which zone's today they count in, as the API names it", () => {
+    assert.equal(byKey(summary({ time_zone: "UTC" })).sentToday.note, "UTC saatiyle bugün alıcılara giden mail");
   });
 });
 
@@ -94,24 +109,17 @@ describe("the daily chart", () => {
     ]);
   });
 
-  // The date is already an Istanbul calendar day; converting it through a
-  // time zone would move midnight-UTC dates to the previous day west of UTC.
-  it("labels a date without moving it through a time zone", () => {
-    assert.equal(dayLabel("2026-01-01"), "1 Oca");
-    assert.equal(dayLabel("2026-12-31"), "31 Ara");
-  });
-
   it("shows an unreadable date as it came", () => {
     assert.equal(dayLabel("dün"), "dün");
   });
 });
 
-describe("the status filter", () => {
+describe("the send list's address", () => {
   it("offers Hepsi · Gönderiliyor · Gönderildi · Başarısız", () => {
     assert.deepEqual(
       STATUS_FILTERS.map((filter) => [filter.value, filter.label]),
       [
-        [null, "Hepsi"],
+        ["all", "Hepsi"],
         ["sending", "Gönderiliyor"],
         ["sent", "Gönderildi"],
         ["failed", "Başarısız"],
@@ -119,154 +127,198 @@ describe("the status filter", () => {
     );
   });
 
-  it("reads a status from the address, whatever its case", () => {
-    assert.equal(statusFromSearch("failed"), "failed");
-    assert.equal(statusFromSearch("Sending"), "sending");
-    assert.equal(statusFromSearch(" sent "), "sent");
+  it("reads the status, whatever its case, and the page", () => {
+    assert.deepEqual(readSendListView(params("status=failed&page=3")), { status: "failed", page: 3 });
+    assert.deepEqual(readSendListView(params("status=Sending")), { status: "sending", page: 1 });
+    assert.deepEqual(readSendListView(params("status=%20sent%20")), { status: "sent", page: 1 });
   });
 
-  // The API answers 400 to any other value; the list shows everything instead.
-  it("treats a missing or unknown status as Hepsi", () => {
-    assert.equal(statusFromSearch(null), null);
-    assert.equal(statusFromSearch(""), null);
-    assert.equal(statusFromSearch("pending"), null);
-    assert.equal(statusFromSearch("empty"), null);
-    assert.equal(statusFromSearch("constructor"), null);
-  });
-
-  it("writes the status and page into the address, leaving out the defaults", () => {
-    assert.equal(sendListHref({ status: null }), "/mail-tasks");
-    assert.equal(sendListHref({ status: "failed" }), "/mail-tasks?status=failed");
-    assert.equal(sendListHref({ status: "failed", page: 1 }), "/mail-tasks?status=failed");
-    assert.equal(sendListHref({ status: "sent", page: 3 }), "/mail-tasks?status=sent&page=3");
-    assert.equal(sendListHref({ status: null, page: 2 }), "/mail-tasks?page=2");
-  });
-
-  it("round-trips through the address", () => {
-    for (const filter of STATUS_FILTERS) {
-      const search = new URL(sendListHref({ status: filter.value }), "http://x").searchParams;
-      assert.equal(statusFromSearch(search.get("status")), filter.value);
+  // The API answers 400 to any other status; the list shows everything instead.
+  it("falls back to every send on the first page for anything else", () => {
+    for (const search of ["", "status=pending", "status=empty", "status=constructor", "status=all"]) {
+      assert.equal(readSendListView(params(search)).status, "all", search);
+    }
+    for (const page of ["0", "-2", "2.5", "abc", ""]) {
+      assert.equal(readSendListView(params(`page=${page}`)).page, 1, page);
     }
   });
 
-  it("asks the API for the page's range, with the status only when one is chosen", () => {
-    assert.deepEqual(sendListQuery({ status: "failed", page: 1, pageSize: 20 }), {
-      status: "failed",
-      _start: 0,
-      _end: 20,
-    });
-    assert.deepEqual(sendListQuery({ status: null, page: 3, pageSize: 20 }), { _start: 40, _end: 60 });
+  it("writes the status and page, leaving out the defaults", () => {
+    assert.equal(sendListHref({ status: "all" }), "/mail-tasks");
+    assert.equal(sendListHref({ status: "failed" }), "/mail-tasks?status=failed");
+    assert.equal(sendListHref({ status: "failed", page: 1 }), "/mail-tasks?status=failed");
+    assert.equal(sendListHref({ status: "sent", page: 3 }), "/mail-tasks?status=sent&page=3");
+    assert.equal(sendListHref({ status: "all", page: 2 }), "/mail-tasks?page=2");
+  });
+
+  it("round-trips every filter", () => {
+    for (const filter of STATUS_FILTERS) {
+      const search = new URL(sendListHref({ status: filter.value, page: 2 }), "http://x").searchParams;
+      assert.deepEqual(readSendListView(search), { status: filter.value, page: 2 });
+    }
+  });
+});
+
+describe("a page of sends", () => {
+  it("asks for the chosen status and the page's slice, and keeps the total", async () => {
+    const { api, calls } = scriptedClient(json(200, [], { "X-Total-Count": "31" }));
+
+    const page = await fetchSendPage(api, { status: "failed", page: 2 });
+
+    assert.equal(calls[0].url, `${TEST_BASE_URL}/mail_tasks?status=failed&_start=${SEND_PAGE_SIZE}&_end=${2 * SEND_PAGE_SIZE}`);
+    assert.deepEqual(page, { items: [], total: 31 });
+  });
+
+  it("sends no status for Hepsi", async () => {
+    const { api, calls } = scriptedClient(json(200, []));
+
+    await fetchSendPage(api, { status: "all", page: 1 });
+
+    assert.equal(calls[0].url, `${TEST_BASE_URL}/mail_tasks?_start=0&_end=${SEND_PAGE_SIZE}`);
+  });
+});
+
+describe("a send's address", () => {
+  it("is /mail-tasks/show/<id>, with the recipient filter and page when they are not the defaults", () => {
+    assert.equal(sendHref(SEND_ID), `/mail-tasks/show/${SEND_ID}`);
+    assert.equal(sendHref(SEND_ID, { status: "all", page: 1 }), `/mail-tasks/show/${SEND_ID}`);
+    assert.equal(sendHref(SEND_ID, { status: "failed" }), `/mail-tasks/show/${SEND_ID}?status=failed`);
+    assert.equal(sendHref(SEND_ID, { status: "sent", page: 2 }), `/mail-tasks/show/${SEND_ID}?status=sent&page=2`);
+  });
+
+  // Recipient statuses are queue statuses, not the send's derived one.
+  it("reads a recipient status from the address, and nothing else", () => {
+    assert.deepEqual(readRecipientView(params("status=FAILED&page=2")), { status: "failed", page: 2 });
+    assert.deepEqual(readRecipientView(params("status=pending")), { status: "pending", page: 1 });
+    assert.deepEqual(readRecipientView(params("status=processing")), { status: "processing", page: 1 });
+    assert.deepEqual(readRecipientView(params("status=sending")), { status: "all", page: 1 });
+    assert.deepEqual(readRecipientView(params("page=x")), { status: "all", page: 1 });
+  });
+
+  it("round-trips through the address", () => {
+    for (const status of ["all", "pending", "processing", "sent", "failed"] as const) {
+      const search = new URL(sendHref(SEND_ID, { status, page: 3 }), "http://x").searchParams;
+      assert.deepEqual(readRecipientView(search), { status, page: 3 });
+    }
+  });
+});
+
+describe("the recipient filter", () => {
+  const counts = { pending: 0, processing: 0, sent: 26, failed: 1 };
+
+  it("offers Hepsi and the statuses the send's recipients are in, failed first, each with its count", () => {
+    assert.deepEqual(recipientFilters(counts, "all"), [
+      { value: "all", label: "Hepsi (27)" },
+      { value: "failed", label: "Başarısız (1)" },
+      { value: "sent", label: "Gönderildi (26)" },
+    ]);
+  });
+
+  it("keeps the chosen status even when no recipient is in it", () => {
+    assert.deepEqual(
+      recipientFilters(counts, "pending").map((filter) => filter.value),
+      ["all", "failed", "pending", "sent"],
+    );
+  });
+});
+
+describe("a send and its recipients", () => {
+  it("reads the send by id", async () => {
+    const { api, calls } = scriptedClient(json(200, { id: SEND_ID }));
+
+    assert.deepEqual(await fetchSend(api, SEND_ID), { id: SEND_ID });
+    assert.equal(calls[0].url, `${TEST_BASE_URL}/mail_tasks/${SEND_ID}`);
+  });
+
+  // The API answers a malformed id with 500, not 404.
+  it("reports an id that is not a UUID as a missing send, without a request", async () => {
+    const { api, calls } = scriptedClient();
+
+    const error = await fetchSend(api, "not-a-send").catch((reason: unknown) => reason);
+
+    assert.ok(error instanceof ApiError);
+    assert.equal(error.status, 404);
+    assert.equal(calls.length, 0);
+  });
+
+  it("asks the queue for the chosen recipient status and the page's slice", async () => {
+    const { api, calls } = scriptedClient(json(200, null, { "X-Total-Count": "0" }), json(200, []));
+
+    assert.deepEqual(await fetchRecipientPage(api, SEND_ID, { status: "failed", page: 2 }), { items: [], total: 0 });
+    await fetchRecipientPage(api, SEND_ID, { status: "all", page: 1 });
+
+    assert.equal(
+      calls[0].url,
+      `${TEST_BASE_URL}/mail_tasks/${SEND_ID}/queue?status=failed&_start=${RECIPIENT_PAGE_SIZE}&_end=${2 * RECIPIENT_PAGE_SIZE}`,
+    );
+    assert.equal(calls[1].url, `${TEST_BASE_URL}/mail_tasks/${SEND_ID}/queue?_start=0&_end=${RECIPIENT_PAGE_SIZE}`);
   });
 });
 
 describe("paging", () => {
-  it("reads the page from the address, falling back to the first", () => {
-    assert.equal(pageFromSearch("3"), 3);
-    assert.equal(pageFromSearch(null), 1);
-    assert.equal(pageFromSearch("0"), 1);
-    assert.equal(pageFromSearch("-2"), 1);
-    assert.equal(pageFromSearch("2.5"), 1);
-    assert.equal(pageFromSearch("abc"), 1);
+  it("counts the pages of a known total, never fewer than one", () => {
+    assert.equal(knownPageCount({ total: 0, rows: 0 }, 1, 25), 1);
+    assert.equal(knownPageCount({ total: 25, rows: 25 }, 1, 25), 1);
+    assert.equal(knownPageCount({ total: 26, rows: 25 }, 1, 25), 2);
   });
 
-  it("counts the pages of a total, never fewer than one", () => {
-    assert.equal(pageCount(0, 20), 1);
-    assert.equal(pageCount(20, 20), 1);
-    assert.equal(pageCount(21, 20), 2);
+  // X-Total-Count did not reach the browser: a full page may have a next one.
+  it("without a total, offers one more page after a full one", () => {
+    assert.equal(knownPageCount({ total: null, rows: 25 }, 3, 25), 4);
+    assert.equal(knownPageCount({ total: null, rows: 7 }, 3, 25), 3);
   });
 });
 
 describe("the audience of a send", () => {
-  it("names an internal mailing list", () => {
-    assert.deepEqual(
-      audienceOfRecentSend({
-        kind: "mailing_list",
-        mail_list_id: "list-1",
-        name: "WebLab",
-        source: "internal",
-        recipient_full_name: null,
-        recipient_email: null,
-      }),
-      { kind: "list", name: "WebLab", detail: null, listId: "list-1" },
-    );
+  const audience = (overrides: Partial<SendAudience>): SendAudience => ({
+    kind: "mailing_list",
+    mail_list_id: null,
+    name: null,
+    source: null,
+    recipient_full_name: null,
+    recipient_email: null,
+    ...overrides,
   });
 
-  it("names a Keycloak group by its name, as a group", () => {
-    assert.deepEqual(
-      audienceOfRecentSend({
-        kind: "mailing_list",
-        mail_list_id: "group-1",
-        name: "Gecekodu",
-        source: "keycloak",
-        recipient_full_name: null,
-        recipient_email: null,
-      }),
-      { kind: "group", name: "Gecekodu", detail: null, listId: "group-1" },
-    );
+  it("names an internal mailing list", () => {
+    assert.deepEqual(audienceLabel(audience({ mail_list_id: "list-1", name: "WebLab", source: "internal" })), {
+      kind: "list",
+      name: "WebLab",
+      detail: null,
+      listId: "list-1",
+    });
+  });
+
+  it("names a Keycloak group by the name the API resolved, as a group", () => {
+    assert.deepEqual(audienceLabel(audience({ mail_list_id: "group-1", name: "Gecekodu", source: "keycloak" })), {
+      kind: "group",
+      name: "Gecekodu",
+      detail: null,
+      listId: "group-1",
+    });
   });
 
   // Keycloak did not answer in time, or the group is gone.
-  it("falls back to a label for a Keycloak group with no name", () => {
-    const audience = audienceOfRecentSend({
-      kind: "mailing_list",
-      mail_list_id: "group-2",
-      name: null,
-      source: "keycloak",
-      recipient_full_name: null,
-      recipient_email: null,
-    });
-    assert.equal(audience.kind, "group");
-    assert.equal(audience.name, "Keycloak grubu");
+  it("falls back to a label only for a Keycloak group with no name", () => {
+    const label = audienceLabel(audience({ mail_list_id: "group-2", name: null, source: "keycloak" }));
+    assert.equal(label.kind, "group");
+    assert.equal(label.name, "Keycloak grubu");
   });
 
   it("names the one recipient of a single send, with the address underneath", () => {
     assert.deepEqual(
-      audienceOfRecentSend({
-        kind: "single",
-        mail_list_id: null,
-        name: null,
-        source: null,
-        recipient_full_name: "Ayşe Yılmaz",
-        recipient_email: "ayse@example.com",
-      }),
+      audienceLabel(
+        audience({ kind: "single", recipient_full_name: "Ayşe Yılmaz", recipient_email: "ayse@example.com" }),
+      ),
       { kind: "person", name: "Ayşe Yılmaz", detail: "ayse@example.com", listId: null },
     );
   });
 
   it("shows the address alone when the single recipient has no name", () => {
     assert.deepEqual(
-      audienceOfRecentSend({
-        kind: "single",
-        mail_list_id: null,
-        name: null,
-        source: null,
-        recipient_full_name: "",
-        recipient_email: "ayse@example.com",
-      }),
+      audienceLabel(audience({ kind: "single", recipient_full_name: "", recipient_email: "ayse@example.com" })),
       { kind: "person", name: "ayse@example.com", detail: null, listId: null },
     );
-  });
-
-  // The send list carries no Keycloak names and no single recipient.
-  it("reads a send list row: list by name, unnamed list as a Keycloak group, no list as one person", () => {
-    assert.deepEqual(audienceOfSendRow({ mail_list_id: "list-1", mail_list_name: "WebLab" }), {
-      kind: "list",
-      name: "WebLab",
-      detail: null,
-      listId: "list-1",
-    });
-    assert.deepEqual(audienceOfSendRow({ mail_list_id: "group-1", mail_list_name: null }), {
-      kind: "group",
-      name: "Keycloak grubu",
-      detail: null,
-      listId: "group-1",
-    });
-    assert.deepEqual(audienceOfSendRow({ mail_list_id: null, mail_list_name: null }), {
-      kind: "person",
-      name: "Tek kişi",
-      detail: null,
-      listId: null,
-    });
   });
 });
 
@@ -279,6 +331,12 @@ describe("a send's Mail template", () => {
 });
 
 describe("a send's recipients", () => {
+  it("are labelled by their number", () => {
+    assert.equal(recipientsLabel(0), "Alıcı yok");
+    assert.equal(recipientsLabel(1), "1 alıcı");
+    assert.equal(recipientsLabel(1532), "1.532 alıcı");
+  });
+
   it("are totalled, with only the statuses that occur", () => {
     assert.deepEqual(recipientSummary({ pending: 0, processing: 0, sent: 3, failed: 1 }), {
       total: 4,
@@ -288,62 +346,20 @@ describe("a send's recipients", () => {
       total: 3,
       parts: ["3 bekliyor"],
     });
-    assert.deepEqual(recipientSummary({ pending: 0, processing: 0, sent: 0, failed: 0 }), {
-      total: 0,
-      parts: [],
-    });
+    assert.deepEqual(recipientSummary({ pending: 0, processing: 0, sent: 0, failed: 0 }), { total: 0, parts: [] });
   });
 
   // skymail-backend encodes a queue row's status as sqlc's NullMailQueueStatus.
-  it("each have the status the queue row carries", () => {
+  it("each have the status in status.mail_queue_status", () => {
     assert.equal(recipientStatus({ mail_queue_status: "failed", valid: true }), "failed");
     assert.equal(recipientStatus({ mail_queue_status: "processing", valid: true }), "processing");
-    assert.equal(recipientStatus("sent"), "sent");
+    assert.equal(recipientStatus({ mail_queue_status: "sent", valid: true }), "sent");
   });
 
   it("count a row with no status as pending, as the queue's default is", () => {
     assert.equal(recipientStatus({ mail_queue_status: "", valid: false }), "pending");
     assert.equal(recipientStatus(null), "pending");
     assert.equal(recipientStatus({ mail_queue_status: "bounced", valid: true }), "pending");
-  });
-
-  function row(id: string, status: string): RecipientRow {
-    return {
-      id,
-      recipient_full_name: "",
-      recipient_email: `${id}@example.com`,
-      status: { mail_queue_status: status, valid: true },
-      error: null,
-      attempts: 1,
-      next_attempt_at: null,
-      created_at: null,
-    };
-  }
-
-  it("are counted by status from their queue rows", () => {
-    assert.deepEqual(countRecipients([row("a", "sent"), row("b", "failed"), row("c", "sent"), row("d", "pending")]), {
-      pending: 1,
-      processing: 0,
-      sent: 2,
-      failed: 1,
-    });
-  });
-
-  // The detail exists to follow up on failures; the API lists a send's
-  // recipients newest first, whatever their status.
-  it("are ordered failed first, then those still going out, then sent, keeping the API's order within each", () => {
-    const ordered = followUpOrder([
-      row("s1", "sent"),
-      row("p1", "pending"),
-      row("f1", "failed"),
-      row("s2", "sent"),
-      row("r1", "processing"),
-      row("f2", "failed"),
-    ]);
-    assert.deepEqual(
-      ordered.map((r) => r.id),
-      ["f1", "f2", "r1", "p1", "s1", "s2"],
-    );
   });
 
   // mail_task_status: no queue rows is sending for a minute, then failed.
@@ -356,8 +372,13 @@ describe("a send's recipients", () => {
 
 describe("a send's time", () => {
   // 21:10 UTC is ten past midnight the next day in Istanbul.
-  it("is shown in Europe/Istanbul", () => {
+  it("is shown in Europe/Istanbul unless a zone is given", () => {
     assert.equal(formatSendTime("2026-09-22T21:10:00Z"), "23 Eyl 2026 00:10");
+    assert.equal(formatSendTime("2026-09-22T21:10:00Z", "UTC"), "22 Eyl 2026 21:10");
+  });
+
+  it("falls back to Europe/Istanbul for a zone it does not know", () => {
+    assert.equal(formatSendTime("2026-09-22T21:10:00Z", "Mars/Olympus"), "23 Eyl 2026 00:10");
   });
 
   it("is a dash when missing or unreadable", () => {

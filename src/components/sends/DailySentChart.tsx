@@ -30,7 +30,12 @@ function DailyTooltip({
 export function DailySentChart({ points }: { points: readonly DailyPoint[] }) {
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <AreaChart data={[...points]} margin={{ top: 5, right: 10, bottom: -2, left: 10 }}>
+      {/* The page gives screen readers the days as a table; Recharts' keyboard layer would be a second, focusable copy. */}
+      <AreaChart
+        data={[...points]}
+        margin={{ top: 5, right: 10, bottom: -2, left: 10 }}
+        accessibilityLayer={false}
+      >
         <defs>
           <linearGradient id="dailySentFill" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={ACCENT} stopOpacity={0.35} />

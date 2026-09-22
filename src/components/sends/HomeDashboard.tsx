@@ -6,45 +6,40 @@
 // `src/app/admin/page.js`): stat tiles, a trend section, a recent-items list.
 
 import Link from 'next/link';
-import { AlertTriangle, ArrowRight, Lock, Send } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { AlertTriangle, ArrowRight, Send } from 'lucide-react';
 import { StateCard } from '@/components/chrome/StateCard';
-import { useCan } from '@/components/layout/ConsoleContext';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { RoleGate } from '@/components/layout/RoleGate';
+import { Button } from '@/components/ui/Button';
 import { ROLE, sectionLabel } from '@/lib/access';
 import { useApiQuery } from '@/lib/api/react';
 import {
-  audienceOfRecentSend,
   dailySeries,
+  dayTitle,
   formatCount,
   homeTiles,
   SEND_LIST_PATH,
-  templateLabel,
+  type DailyPoint,
   type HomeTile,
-  type RecentSend,
+  type Send as SendRecord,
   type SendSummary,
 } from '@/lib/sends';
 import { DailySentChart } from './DailySentChart';
+import { SectionTitle } from './SectionTitle';
 import { SendItem } from './SendItem';
+import { TONE, type Tone } from './StatusBadge';
 
 const DAYS = 30;
 const RECENT = 5;
 
 export function HomeDashboard() {
-  const canReadMails = useCan(ROLE.mailsRead);
   return (
     <div className="space-y-6">
       <PageHeader title={sectionLabel('/')} description="Kulübün gönderdiği mailler bir bakışta." />
-      {canReadMails ? (
+      {/* The home screen needs only skymail:access; its summary needs mails:read. */}
+      <RoleGate role={ROLE.mailsRead}>
         <Summary />
-      ) : (
-        <StateCard
-          Icon={Lock}
-          tone="warning"
-          title="Gönderim özetini görme yetkin yok"
-          description={`Gönderimleri görmek için ${ROLE.mailsRead} rolü gerekiyor. Erişime ihtiyacın varsa kulüp yönetimine başvur.`}
-        />
-      )}
+      </RoleGate>
     </div>
   );
 }
@@ -54,12 +49,11 @@ function Summary() {
 
   if (state.status === 'error') {
     return (
-      <StateCard
-        Icon={AlertTriangle}
-        tone="danger"
-        title="Gönderim özeti yüklenemedi"
-        description={state.error.message}
-      />
+      <StateCard Icon={AlertTriangle} tone="danger" title="Gönderim özeti yüklenemedi" description={state.error.message}>
+        <Button variant="secondary" onClick={() => void state.reload()}>
+          Tekrar dene
+        </Button>
+      </StateCard>
     );
   }
 
@@ -75,18 +69,18 @@ function Summary() {
           : Array.from({ length: 3 }, (_, i) => <div key={i} className="shimmer h-[5.25rem] rounded-md" />)}
       </section>
 
-      <section aria-labelledby="daily-sent-title">
+      {/* relative: the visually hidden table is positioned inside the section, not against the page. */}
+      <section aria-labelledby="daily-sent-title" className="relative">
         <SectionTitle id="daily-sent-title" aside={summary ? `Toplam ${formatCount(windowTotal)} mail` : null}>
           Son {DAYS} günde gönderilen mail
         </SectionTitle>
         {summary ? (
-          <div
-            className="h-44 w-full sm:h-52"
-            role="img"
-            aria-label={`Son ${DAYS} günde gün gün gönderilen mail; toplam ${formatCount(windowTotal)} mail.`}
-          >
-            <DailySentChart points={points} />
-          </div>
+          <>
+            <div className="h-44 w-full sm:h-52" aria-hidden>
+              <DailySentChart points={points} />
+            </div>
+            <DailyTable points={points} />
+          </>
         ) : (
           <div className="shimmer h-44 w-full rounded-md sm:h-52" />
         )}
@@ -107,43 +101,62 @@ function Summary() {
         >
           Son gönderimler
         </SectionTitle>
-        {summary ? <RecentSends sends={summary.recent_sends} /> : <RecentSendsSkeleton />}
+        {summary ? (
+          <RecentSends sends={summary.recent_sends} timeZone={summary.time_zone} />
+        ) : (
+          <RecentSendsSkeleton />
+        )}
       </section>
     </div>
   );
 }
 
-function SectionTitle({ id, children, aside }: { id: string; children: ReactNode; aside?: ReactNode }) {
+/**
+ * The chart's days for a screen reader, which the drawing cannot give it. The
+ * wrapper is what hides it: a table grows with its rows whatever height it is
+ * given, so on its own it would still push the page taller.
+ */
+function DailyTable({ points }: { points: readonly DailyPoint[] }) {
   return (
-    <div className="mb-3 flex items-center gap-2">
-      <h2 id={id} className="text-2xs font-medium text-neutral-500">
-        {children}
-      </h2>
-      <span className="h-px flex-1 bg-white/5" aria-hidden />
-      {aside ? <span className="text-2xs shrink-0 text-neutral-500">{aside}</span> : null}
+    <div className="sr-only">
+      <table>
+        <caption>Son {DAYS} günde gün gün gönderilen mail</caption>
+        <thead>
+          <tr>
+            <th scope="col">Gün</th>
+            <th scope="col">Gönderilen mail</th>
+          </tr>
+        </thead>
+        <tbody>
+          {points.map((point) => (
+            <tr key={point.date}>
+              <th scope="row">{dayTitle(point.date)}</th>
+              <td>{formatCount(point.sent)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
 
-const TILE_TONE: Readonly<Record<HomeTile['key'], { dot: string; value: string }>> = {
-  pending: { dot: 'bg-amber-400 shadow-[0_0_6px] shadow-amber-400/40', value: 'text-amber-300' },
-  sentToday: { dot: 'bg-skylab-400 shadow-[0_0_6px] shadow-skylab-400/40', value: 'text-neutral-100' },
-  failed: { dot: 'bg-red-400 shadow-[0_0_6px] shadow-red-400/40', value: 'text-red-300' },
+const TILE_TONE: Readonly<Record<HomeTile['key'], Tone>> = {
+  pending: 'busy',
+  sentToday: 'good',
+  failed: 'bad',
 };
 
 function StatTile({ tile }: { tile: HomeTile }) {
-  // A zero is good news; only a number that asks for attention keeps its colour.
-  const tone = TILE_TONE[tile.key];
-  const quiet = tile.value === 0 && tile.key !== 'sentToday';
+  // A zero is good news for pending and failed; only a number that asks for
+  // attention keeps its colour.
+  const tone = TONE[tile.value === 0 && tile.key !== 'sentToday' ? 'idle' : TILE_TONE[tile.key]];
   const body = (
     <>
-      <span className={`size-1.5 shrink-0 rounded-full ${quiet ? 'bg-neutral-500' : tone.dot}`} aria-hidden />
+      <span className={`size-1.5 shrink-0 rounded-full ${tone.dot}`} aria-hidden />
       <span className="min-w-0 flex-1">
         <span className="text-2xs block truncate text-neutral-500">{tile.label}</span>
         <span className="flex items-baseline gap-1.5">
-          <span
-            className={`text-2xl leading-tight font-semibold tabular-nums ${quiet ? 'text-neutral-100' : tone.value}`}
-          >
+          <span className={`text-2xl leading-tight font-semibold tabular-nums ${tone.text}`}>
             {formatCount(tile.value)}
           </span>
           <span className="text-xs text-neutral-400">{tile.unit}</span>
@@ -173,7 +186,7 @@ function StatTile({ tile }: { tile: HomeTile }) {
   );
 }
 
-function RecentSends({ sends }: { sends: readonly RecentSend[] }) {
+function RecentSends({ sends, timeZone }: { sends: readonly SendRecord[]; timeZone: string }) {
   if (sends.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center gap-1 rounded-md border border-white/5 py-10 text-center">
@@ -185,16 +198,7 @@ function RecentSends({ sends }: { sends: readonly RecentSend[] }) {
   return (
     <ul className="divide-y divide-white/5 rounded-md border border-white/5">
       {sends.map((send) => (
-        <SendItem
-          key={send.id}
-          id={send.id}
-          title={templateLabel(send)}
-          templateKey={send.template_key}
-          createdAt={send.created_at}
-          audience={audienceOfRecentSend(send.audience)}
-          status={send.status}
-          counts={send.recipient_counts}
-        />
+        <SendItem key={send.id} send={send} timeZone={timeZone} />
       ))}
     </ul>
   );

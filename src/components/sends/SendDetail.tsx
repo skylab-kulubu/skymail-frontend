@@ -1,192 +1,224 @@
 'use client';
 
-// One send: what went out, to whom, and each recipient's status and error, so
-// a failure can be followed up. Ported from the old panel's
-// src/pages/mail-tasks/show.tsx (the send, then its queue rows).
+// One send: what went out, to whom, how its recipients fared, and each
+// recipient's status and error, so a failure can be followed up. Ported from
+// the old panel's src/pages/mail-tasks/show.tsx; the recipient filter and page
+// live in the address (`?status=failed&page=2`) and the API filters and pages.
 
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, type ReactNode } from 'react';
 import { AlertTriangle, Inbox, SearchX } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { FilterPills } from '@/components/chrome/FilterPills';
+import { Pagination } from '@/components/chrome/Pagination';
 import { StateCard } from '@/components/chrome/StateCard';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { DataTable } from '@/components/tables/DataTable';
-import { useApiPage, useApiQuery } from '@/lib/api/react';
+import { Button } from '@/components/ui/Button';
+import { useApiLoad } from '@/lib/api/react';
 import {
-  audienceOfSendRow,
-  countRecipients,
-  followUpOrder,
-  formatCount,
+  audienceLabel,
+  fetchRecipientPage,
+  fetchSend,
   formatSendTime,
+  knownPageCount,
   noRecipientsNote,
-  pageFromSearch,
-  pageRange,
+  readRecipientView,
+  RECIPIENT_PAGE_SIZE,
+  recipientFilters,
+  recipientsLabel,
   recipientStatus,
   recipientSummary,
   SEND_LIST_PATH,
+  sendHref,
   templateLabel,
+  type RecipientFilter,
   type RecipientRow,
-  type SendRecord,
+  type RecipientView,
+  type Send,
 } from '@/lib/sends';
 import { Audience } from './Audience';
-import { Pager } from './Pager';
-import { RecipientStatusBadge } from './StatusBadge';
-
-const PAGE_SIZE = 100;
+import { SectionTitle } from './SectionTitle';
+import { RecipientStatusBadge, SendStatusBadge } from './StatusBadge';
 
 export function SendDetail({ id }: { id: string }) {
-  const send = useApiQuery<SendRecord>(`/mail_tasks/${id}`);
+  const send = useApiLoad((api, signal) => fetchSend(api, id, signal), id);
 
-  if (send.status === 'loading') return <StateCard isLoading title="Yükleniyor" />;
+  if (send.status === 'loading') return <StateCard isLoading title="Gönderim yükleniyor" />;
   if (send.status === 'error') {
     return send.error.status === 404 ? (
       <StateCard Icon={SearchX} title="Gönderim bulunamadı" description="Bu adreste bir gönderim yok.">
-        <BackToList />
+        <Link href={SEND_LIST_PATH} className="text-skylab-300 text-sm hover:underline">
+          Gönderimlere dön
+        </Link>
       </StateCard>
     ) : (
       <StateCard Icon={AlertTriangle} tone="danger" title="Gönderim yüklenemedi" description={send.error.message}>
-        <BackToList />
+        <Button variant="secondary" onClick={() => void send.reload()}>
+          Tekrar dene
+        </Button>
       </StateCard>
     );
   }
   return <SendView send={send.data} />;
 }
 
-function BackToList() {
-  return (
-    <Link href={SEND_LIST_PATH} className="text-skylab-300 text-sm hover:underline">
-      Gönderimlere dön
-    </Link>
-  );
-}
-
-function SendView({ send }: { send: SendRecord }) {
-  const search = useSearchParams();
-  const page = pageFromSearch(search.get('page'));
-  const recipients = useApiPage<RecipientRow>(`/mail_tasks/${send.id}/queue`, pageRange(page, PAGE_SIZE));
-  const loaded = recipients.status === 'success' ? recipients.data : null;
-  const rows = loaded ? followUpOrder(loaded.items) : [];
-  // The API does not count a send's recipients by status here; when one page
-  // holds them all, the page's own count is the send's.
-  const whole = loaded !== null && loaded.total !== null && loaded.total <= PAGE_SIZE && page === 1;
-  const counted = recipientSummary(countRecipients(rows));
-  const pageHref = (next: number) =>
-    next > 1 ? `${SEND_LIST_PATH}/show/${send.id}?page=${next}` : `${SEND_LIST_PATH}/show/${send.id}`;
+function SendView({ send }: { send: Send }) {
+  const recipients = recipientSummary(send.recipient_counts);
 
   return (
     <div className="space-y-6">
-      <PageHeader title={templateLabel(send)} description={`Gönderim · ${formatSendTime(send.created_at)}`} />
+      <PageHeader
+        title={templateLabel(send)}
+        description={`Gönderim · ${formatSendTime(send.created_at)}`}
+        meta={
+          <>
+            <SendStatusBadge status={send.status} />
+            {send.template_key ? (
+              <span className="text-2xs font-mono text-neutral-500">{send.template_key}</span>
+            ) : null}
+          </>
+        }
+      />
 
       <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         <Fact term="Kitle" className="col-span-2 sm:col-span-1">
-          <Audience audience={audienceOfSendRow(send)} />
+          <Audience audience={audienceLabel(send.audience)} />
         </Fact>
         <Fact term="Oluşturulma">{formatSendTime(send.created_at)}</Fact>
-        <Fact term="Alıcı sayısı">{loaded?.total == null ? '—' : formatCount(loaded.total)}</Fact>
-      </dl>
-
-      <section aria-labelledby="recipients-title" className="space-y-3">
-        <div className="flex items-center gap-2">
-          <h2 id="recipients-title" className="text-2xs font-medium text-neutral-500">
-            Alıcılar
-          </h2>
-          <span className="h-px flex-1 bg-white/5" aria-hidden />
-          {counted.parts.length > 0 ? (
-            <span className="text-2xs shrink-0 text-neutral-500 tabular-nums">
-              {whole ? '' : 'Bu sayfada: '}
-              {counted.parts.join(' · ')}
+        <Fact term="Alıcılar">
+          <span className="tabular-nums">{recipientsLabel(recipients.total)}</span>
+          {recipients.parts.length > 0 ? (
+            <span className="text-2xs block whitespace-normal text-neutral-500 tabular-nums">
+              {recipients.parts.join(' · ')}
             </span>
           ) : null}
-        </div>
+        </Fact>
+      </dl>
 
-        {recipients.status === 'loading' ? (
-          <StateCard isLoading title="Alıcılar yükleniyor" />
-        ) : recipients.status === 'error' ? (
-          <StateCard
-            Icon={AlertTriangle}
-            tone="danger"
-            title="Alıcılar yüklenemedi"
-            description={recipients.error.message}
-          />
-        ) : rows.length === 0 && page === 1 ? (
+      <section aria-labelledby="recipients-title">
+        <SectionTitle id="recipients-title">Alıcılar</SectionTitle>
+        {recipients.total === 0 ? (
           <StateCard Icon={Inbox} title="Kuyrukta alıcı yok" description={noRecipientsNote(send.created_at)} />
         ) : (
-          <>
-            {!whole && rows.length > 0 ? (
-              <p className="text-2xs text-neutral-500">
-                Her sayfada önce başarısız alıcılar, sonra gönderilmeyi bekleyenler, en son gönderilenler.
-              </p>
-            ) : null}
-            {/* A phone gets each recipient as a block, with the error readable underneath. */}
-            <ul className="divide-y divide-white/5 rounded-lg border border-white/5 md:hidden">
-              {rows.length === 0 ? (
-                <li className="px-4 py-6 text-center text-sm text-neutral-500">Bu sayfada alıcı yok.</li>
-              ) : (
-                rows.map((row) => (
-                  <li key={row.id} className="space-y-1.5 px-3.5 py-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <Recipient row={row} />
-                      </div>
-                      <span className="shrink-0">
-                        <RecipientStatusBadge status={recipientStatus(row.status)} />
-                      </span>
-                    </div>
-                    {row.error ? (
-                      <p className="text-xs break-words text-red-300">{row.error}</p>
-                    ) : null}
-                    <Attempts row={row} inline />
-                  </li>
-                ))
-              )}
-            </ul>
-            <div className="hidden md:block">
-              <DataTable<RecipientRow>
-                data={rows}
-                emptyText="Bu sayfada alıcı yok."
-                columns={[
-                  {
-                    key: 'recipient_email',
-                    header: 'Alıcı',
-                    render: (_, row) => <Recipient row={row} />,
-                  },
-                  {
-                    key: 'status',
-                    header: 'Durum',
-                    render: (_, row) => <RecipientStatusBadge status={recipientStatus(row.status)} />,
-                  },
-                  {
-                    key: 'error',
-                    header: 'Hata',
-                    render: (value: string | null) =>
-                      value ? (
-                        <span className="block max-w-md min-w-[14rem] text-xs break-words whitespace-normal text-red-300">
-                          {value}
-                        </span>
-                      ) : (
-                        <span className="text-neutral-600">—</span>
-                      ),
-                  },
-                  {
-                    key: 'attempts',
-                    header: 'Deneme',
-                    render: (_, row) => <Attempts row={row} />,
-                  },
-                ]}
-              />
-            </div>
-            {loaded ? (
-              <Pager
-                page={page}
-                pageSize={PAGE_SIZE}
-                total={loaded.total}
-                rowsOnPage={loaded.items.length}
-                hrefFor={pageHref}
-              />
-            ) : null}
-          </>
+          <Recipients send={send} />
         )}
       </section>
+    </div>
+  );
+}
+
+const EMPTY_TEXT: Readonly<Record<RecipientFilter, string>> = {
+  all: 'Bu gönderimde alıcı yok.',
+  failed: 'Başarısız alıcı yok.',
+  pending: 'Bekleyen alıcı yok.',
+  processing: 'İşlenen alıcı yok.',
+  sent: 'Gönderilmiş alıcı yok.',
+};
+
+function Recipients({ send }: { send: Send }) {
+  const router = useRouter();
+  const view = readRecipientView(useSearchParams());
+  const state = useApiLoad(
+    (api, signal) => fetchRecipientPage(api, send.id, view, signal),
+    `${send.id}:${view.status}:${view.page}`,
+  );
+  const lastPage =
+    state.status === 'success'
+      ? knownPageCount({ total: state.data.total, rows: state.data.items.length }, view.page, RECIPIENT_PAGE_SIZE)
+      : null;
+
+  function show(next: RecipientView) {
+    router.push(sendHref(send.id, next), { scroll: false });
+  }
+
+  // A stale link past the end moves to the last page there is.
+  const { status, page } = view;
+  useEffect(() => {
+    if (lastPage !== null && page > lastPage) {
+      router.replace(sendHref(send.id, { status, page: lastPage }), { scroll: false });
+    }
+  }, [lastPage, page, router, send.id, status]);
+
+  const emptyText = EMPTY_TEXT[view.status];
+
+  return (
+    <div className="space-y-3">
+      <div className="max-w-full overflow-x-auto">
+        <FilterPills
+          ariaLabel="Gösterilen alıcılar"
+          value={view.status}
+          options={recipientFilters(send.recipient_counts, view.status)}
+          onChange={(next) => show({ status: next, page: 1 })}
+        />
+      </div>
+
+      {state.status === 'loading' ? (
+        <StateCard isLoading title="Alıcılar yükleniyor" />
+      ) : state.status === 'error' ? (
+        <StateCard Icon={AlertTriangle} tone="danger" title="Alıcılar yüklenemedi" description={state.error.message}>
+          <Button variant="secondary" onClick={() => void state.reload()}>
+            Tekrar dene
+          </Button>
+        </StateCard>
+      ) : (
+        <div className="space-y-2">
+          {/* A phone gets each recipient as a block, with the error readable underneath. */}
+          <ul className="divide-y divide-white/5 rounded-lg border border-white/5 md:hidden">
+            {state.data.items.length === 0 ? (
+              <li className="px-4 py-6 text-center text-sm text-neutral-500">{emptyText}</li>
+            ) : (
+              state.data.items.map((row) => (
+                <li key={row.id} className="space-y-1.5 px-3.5 py-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <Recipient row={row} />
+                    </div>
+                    <span className="shrink-0">
+                      <RecipientStatusBadge status={recipientStatus(row.status)} />
+                    </span>
+                  </div>
+                  {row.error ? <p className="text-xs break-words text-red-300">{row.error}</p> : null}
+                  <Attempts row={row} inline />
+                </li>
+              ))
+            )}
+          </ul>
+          <div className="hidden md:block">
+            <DataTable<RecipientRow>
+              data={state.data.items}
+              emptyText={emptyText}
+              columns={[
+                { key: 'recipient_email', header: 'Alıcı', render: (_, row) => <Recipient row={row} /> },
+                {
+                  key: 'status',
+                  header: 'Durum',
+                  render: (_, row) => <RecipientStatusBadge status={recipientStatus(row.status)} />,
+                },
+                {
+                  key: 'error',
+                  header: 'Hata',
+                  render: (value: string | null) =>
+                    value ? (
+                      <span className="block max-w-md min-w-[14rem] text-xs break-words whitespace-normal text-red-300">
+                        {value}
+                      </span>
+                    ) : (
+                      <span className="text-neutral-600">—</span>
+                    ),
+                },
+                { key: 'attempts', header: 'Deneme', render: (_, row) => <Attempts row={row} /> },
+              ]}
+            />
+          </div>
+          <Pagination
+            ariaLabel="Alıcı sayfaları"
+            current={view.page}
+            totalPages={lastPage ?? 1}
+            onPageChange={(next) => show({ ...view, page: next })}
+          />
+        </div>
+      )}
     </div>
   );
 }

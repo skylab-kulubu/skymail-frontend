@@ -1,13 +1,13 @@
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import {
-  formatCount,
+  audienceLabel,
   formatSendTime,
+  recipientsLabel,
   recipientSummary,
-  SEND_LIST_PATH,
-  type AudienceLabel,
-  type RecipientCounts,
-  type SendStatus,
+  sendHref,
+  templateLabel,
+  type Send,
 } from '@/lib/sends';
 import { Audience } from './Audience';
 import { SendStatusBadge } from './StatusBadge';
@@ -18,25 +18,9 @@ import { SendStatusBadge } from './StatusBadge';
  * screen lists recent sends this way; the send list does on a phone, where
  * its table would hide the status off to the side.
  */
-export function SendItem({
-  id,
-  title,
-  templateKey,
-  createdAt,
-  audience,
-  status,
-  counts,
-}: {
-  id: string;
-  title: string;
-  templateKey?: string | null;
-  createdAt: string;
-  audience: AudienceLabel;
-  status: SendStatus;
-  counts: RecipientCounts;
-}) {
-  const href = `${SEND_LIST_PATH}/show/${id}`;
-  const recipients = recipientSummary(counts);
+export function SendItem({ send, timeZone }: { send: Send; timeZone?: string }) {
+  const href = sendHref(send.id);
+  const recipients = recipientSummary(send.recipient_counts);
 
   return (
     <li className="group/row relative transition-colors hover:bg-white/[0.03]">
@@ -49,23 +33,23 @@ export function SendItem({
               href={href}
               className="relative z-10 block truncate text-sm font-medium text-neutral-200 transition-colors group-hover/row:text-neutral-50"
             >
-              {title}
+              {templateLabel(send)}
             </Link>
             <p className="text-2xs truncate text-neutral-500">
-              {templateKey ? (
+              {send.template_key ? (
                 <>
-                  <span className="font-mono">{templateKey}</span> ·{' '}
+                  <span className="font-mono">{send.template_key}</span> ·{' '}
                 </>
               ) : null}
-              {formatSendTime(createdAt)}
+              {formatSendTime(send.created_at, timeZone)}
             </p>
           </div>
-          <Audience audience={audience} className="text-xs" />
+          <Audience audience={audienceLabel(send.audience)} className="text-xs" />
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 sm:flex-col sm:items-end">
             <span className="flex items-center gap-2">
-              <SendStatusBadge status={status} />
+              <SendStatusBadge status={send.status} />
               <span className="text-2xs whitespace-nowrap text-neutral-400 tabular-nums">
-                {recipients.total === 0 ? 'Alıcı yok' : `${formatCount(recipients.total)} alıcı`}
+                {recipientsLabel(recipients.total)}
               </span>
             </span>
             {recipients.parts.length > 0 ? (
