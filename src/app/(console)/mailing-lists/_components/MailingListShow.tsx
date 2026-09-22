@@ -31,7 +31,7 @@ import { flashNotice, useFlashNotice } from './flash';
 import { formatDateTime } from './format';
 import { ListLoadFailure } from './ListLoadFailure';
 import { Notice, type NoticeData } from './Notice';
-import { Tag } from './Tag';
+import { Tag } from '@/components/chrome/Tag';
 
 /** One list: what it is, who is on it, and — for an internal list — changing both. */
 export function MailingListShow({ id }: { id: string }) {

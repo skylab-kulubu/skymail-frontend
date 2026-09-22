@@ -37,7 +37,7 @@ import { ArchiveListDialog, archivedNotice } from './ArchiveListDialog';
 import { useFlashNotice } from './flash';
 import { formatDateTime } from './format';
 import { Notice } from './Notice';
-import { Tag } from './Tag';
+import { Tag } from '@/components/chrome/Tag';
 
 const EMPTY_TEXT: Record<Lifecycle, string> = {
   current: 'Henüz mail listesi yok.',

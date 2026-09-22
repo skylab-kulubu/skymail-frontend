@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { UserRound, Users } from 'lucide-react';
-import { Tag } from '@/app/(console)/mailing-lists/_components/Tag';
+import { Tag } from '@/components/chrome/Tag';
 import { useCan } from '@/components/layout/ConsoleContext';
 import { ROLE } from '@/lib/access';
 import { listHref } from '@/lib/mailing-lists';
