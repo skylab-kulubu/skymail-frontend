@@ -6,7 +6,7 @@
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { renderSource } from ".";
+import { renderSource, type SourceInput } from ".";
 
 async function renderHtml(source: string) {
   const result = await renderSource({ mode: "html", source });
@@ -106,4 +106,14 @@ describe("HTML mode", () => {
       assert.equal(result.reason, "empty");
     });
   }
+});
+
+describe("a mode the module does not render", () => {
+  // Visual arrives with ticket 15. Until its case is written, a Visual source
+  // must not be compiled as JSX and reported as broken code.
+  it("is refused as a caller's mistake, not taken for JSX", async () => {
+    const input = { mode: "visual", source: '{"type":"doc","content":[]}' } as unknown as SourceInput;
+
+    await assert.rejects(renderSource(input), /visual/);
+  });
 });

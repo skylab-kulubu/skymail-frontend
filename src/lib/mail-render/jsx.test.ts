@@ -71,6 +71,63 @@ describe("JSX mode", () => {
     assert.match(result.plainText, /Eski editör/);
   });
 
+  // React Email's Heading is an <h1>, and html-to-text upper-cases a heading —
+  // {{.FirstName}} would reach the mailer as {{.FIRSTNAME}}. A source that
+  // imports gets what it imports and nothing besides, so forgetting the
+  // theme's Heading is an error rather than a different component.
+  it("does not stand React Email in for a club component a source forgot to import", async () => {
+    const result = await renderSource({
+      mode: "jsx",
+      source:
+        'import { Text } from "@react-email/components";\nimport { v } from "./go";\n\nexport default () => <Heading>Merhaba {v("FirstName")}</Heading>;\n',
+    });
+
+    assert.equal(result.ok, false);
+    assert.ok(!result.ok);
+    assert.equal(result.reason, "compile", result.message);
+    assert.match(result.message, /"Heading"/);
+    assert.match(result.message, /\.\/theme/);
+  });
+
+  it("names every value a source uses without importing it", async () => {
+    const result = await renderSource({
+      mode: "jsx",
+      source: 'import { Heading } from "./theme";\n\nexport default () => <Heading>{v("FirstName")}<Undefined /></Heading>;\n',
+    });
+
+    assert.ok(!result.ok);
+    assert.equal(result.reason, "compile", result.message);
+    assert.match(result.message, /"v"/);
+    assert.match(result.message, /\.\/go/);
+    assert.match(result.message, /"Undefined"/);
+  });
+
+  // The plain text of whichever mode is main is sent (story 30), and the
+  // mailer parses it as a template: an action in it must survive html-to-text.
+  it("keeps Go actions intact in the plain text, even inside React Email's heading", async () => {
+    const result = await renderSource({
+      mode: "jsx",
+      source:
+        'import { Heading, Text } from "@react-email/components";\n\nexport default () => (\n  <>\n    <Heading>Merhaba {"{{.FirstName}}"}</Heading>\n    <Text>{"{{ if  .Link }}"}Bağlantı{"{{ end }}"}</Text>\n  </>\n);\n',
+    });
+
+    assert.equal(result.ok, true, result.ok ? "" : result.message);
+    assert.match(result.plainText, /^MERHABA \{\{\.FirstName\}\}$/m);
+    assert.match(result.plainText, /\{\{ if {2}\.Link \}\}Bağlantı\{\{ end \}\}/);
+  });
+
+  for (const wrapper of ["memo", "forwardRef"]) {
+    it(`renders a default export wrapped in ${wrapper}`, async () => {
+      const result = await renderSource({
+        mode: "jsx",
+        source: `import { ${wrapper} } from "react";\nimport { Text } from "@react-email/components";\n\nexport default ${wrapper}(() => <Text>Sarılı</Text>);\n`,
+      });
+
+      assert.equal(result.ok, true, result.ok ? "" : result.message);
+      assert.equal(result.plainText, "Sarılı");
+    });
+  }
+
   it("lets a source name its own component after a React Email one", async () => {
     const result = await renderSource({
       mode: "jsx",
@@ -102,6 +159,11 @@ describe("JSX mode", () => {
     {
       name: "a default export that is not a component",
       source: 'export default "Merhaba";',
+      reason: "no-component",
+    },
+    {
+      name: "a default export that is an element rather than a component",
+      source: 'import { Text } from "@react-email/components";\nexport default <Text>Merhaba</Text>;',
       reason: "no-component",
     },
     {
@@ -143,4 +205,22 @@ describe("JSX mode", () => {
       }
     });
   }
+
+  // emails:render and the seed await every render; one that never settles
+  // would hang them, and the editor's preview with them.
+  it("gives up on a component that waits for ever, once the deadline passes", { timeout: 10_000 }, async () => {
+    const result = await renderSource(
+      {
+        mode: "jsx",
+        source:
+          'import { use } from "react";\nexport default function Email() {\n  use(new Promise(() => {}));\n  return <p>Merhaba</p>;\n}\n',
+      },
+      { deadlineMs: 300 },
+    );
+
+    assert.equal(result.ok, false);
+    assert.ok(!result.ok);
+    assert.equal(result.reason, "render", result.message);
+    assert.match(result.message, /bitmedi/);
+  });
 });

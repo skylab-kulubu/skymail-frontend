@@ -6,7 +6,7 @@
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { renderSource } from ".";
+import { blockBalance, referencedVariables, renderSource } from ".";
 
 async function variablesOf(mode: "jsx" | "html", source: string): Promise<string[]> {
   const result = await renderSource({ mode, source });
@@ -57,6 +57,16 @@ describe("the variables a body references", () => {
       expect: ["FallbackName", "Organizer"],
     },
     {
+      name: "nothing inside a define, whose data its caller decides",
+      source: '{{define "footer"}}{{.Team}} {{$.Year}}{{end}}{{.Name}}',
+      expect: ["Name"],
+    },
+    {
+      name: "a block given dot, read like the text around it",
+      source: '{{block "footer" .}}{{.Team}}{{end}}{{block "other" .Org}}{{.Inner}}{{end}}',
+      expect: ["Org", "Team"],
+    },
+    {
       name: "each name once, sorted",
       source: "{{.Name}} {{.Email}} {{if .Name}}{{.Name}}{{end}}",
       expect: ["Email", "Name"],
@@ -101,5 +111,18 @@ describe("the variables a body references", () => {
     `;
 
     assert.deepEqual(await variablesOf("jsx", source), ["Decision", "FirstName", "TicketUrl"]);
+  });
+});
+
+describe("reading actions outside a render", () => {
+  // emails:render checks a subject's variables and a body's blocks with the
+  // same scanner, rather than with regexes of its own.
+  it("finds the variables of a subject", () => {
+    assert.deepEqual(referencedVariables("{{ .EventName }} için {{if .Venue}}{{.Venue}}{{end}}"), ["EventName", "Venue"]);
+  });
+
+  it("counts the blocks a body opens and the ends that close them, past comments and strings", () => {
+    assert.deepEqual(blockBalance('{{if .A}}{{- range .B}}{{end}}'), { opens: 2, ends: 1 });
+    assert.deepEqual(blockBalance('{{/* {{if .X}} */}}{{if eq .K "{{end}}"}}x{{ end }}'), { opens: 1, ends: 1 });
   });
 });

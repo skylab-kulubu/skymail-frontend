@@ -7,10 +7,21 @@
  * It runs in the browser and in Node alike and knows nothing of Next.js. Babel
  * and the modules a JSX source may import are loaded on the first JSX render,
  * not with the module.
+ *
+ * Compiling a JSX source runs its code. In the browser that code runs with the
+ * rights of whoever is looking at it, so one operator's template could act
+ * with another operator's session. The editor must therefore render JSX in an
+ * isolated context — an iframe with an opaque origin (`sandbox="allow-scripts"`
+ * without `allow-same-origin`) or equivalent — never in the page itself. The
+ * module assumes nothing of Next.js or of the page's globals so that it can be
+ * hosted there.
  */
 import { createElement, type ComponentType } from "react";
 import { referencedVariables } from "./go-template";
-import { plainTextFromHtml, renderElement } from "./render";
+import { DeadlineError, plainTextFromHtml, renderElement } from "./render";
+
+export { blockBalance, referencedVariables } from "./go-template";
+export { fillSampleValues, type FillOptions, type SampleValues } from "./preview";
 
 /** The ways a Mail template's body is written (CONTEXT.md). Visual comes with the Visual editor. */
 export type AuthoringMode = "jsx" | "html";
@@ -55,8 +66,16 @@ export type RenderResult = Rendered | RenderFailure;
 /** A render remembered with the source it was made from, which is what decideSave compares. */
 export type SourceRender = RenderResult & SourceInput;
 
-/** Sample values by field name, as a template's `meta.sample` holds them. */
-export type SampleValues = Record<string, unknown>;
+export interface RenderOptions {
+  /**
+   * How long a render may take before it counts as failed, in milliseconds.
+   * A repo template renders in tens of milliseconds; the default leaves room
+   * for a slow browser tab.
+   */
+  deadlineMs?: number;
+}
+
+const DEFAULT_DEADLINE_MS = 10_000;
 
 const failure = (reason: RenderFailureReason, message: string): RenderFailure => ({ ok: false, reason, message });
 
@@ -77,12 +96,27 @@ const isBlank = (markup: string) =>
 const EMPTY = failure("empty", "Şablon boş bir gövde üretti; kaydedilecek bir şey yok.");
 
 /**
- * Renders a source. Never rejects: whatever goes wrong comes back as a
+ * Renders a source. Whatever is wrong with the source comes back as a
  * RenderFailure, and a failure carries no body, so there is nothing to save.
+ * It rejects only for a mode it has no renderer for, which is the caller's
+ * mistake rather than the operator's.
  */
-export async function renderSource(input: SourceInput): Promise<SourceRender> {
-  const result = input.mode === "html" ? renderHtml(input.source) : await renderJsx(input.source);
-  return { ...result, mode: input.mode, source: input.source };
+export async function renderSource(input: SourceInput, options: RenderOptions = {}): Promise<SourceRender> {
+  return { ...(await renderByMode(input, options)), mode: input.mode, source: input.source };
+}
+
+async function renderByMode({ mode, source }: SourceInput, options: RenderOptions): Promise<RenderResult> {
+  switch (mode) {
+    case "jsx":
+      return renderJsx(source, options);
+    case "html":
+      return renderHtml(source);
+    default: {
+      // A new Authoring mode fails to compile here until it has its case.
+      const unhandled: never = mode;
+      throw new Error(`Render modülü "${String(unhandled)}" modunu tanımıyor.`);
+    }
+  }
 }
 
 /**
@@ -90,19 +124,26 @@ export async function renderSource(input: SourceInput): Promise<SourceRender> {
  * and emails:render's way in; the panel compiles its component from the source
  * text first and then comes through here too.
  */
-export async function renderComponent(Component: ComponentType): Promise<RenderResult> {
+export async function renderComponent(Component: ComponentType, options: RenderOptions = {}): Promise<RenderResult> {
+  const deadlineMs = options.deadlineMs ?? DEFAULT_DEADLINE_MS;
   try {
-    const { html, plainText, markup } = await renderElement(createElement(Component));
+    const { html, plainText, markup } = await renderElement(createElement(Component), deadlineMs);
     if (isBlank(markup)) {
       return EMPTY;
     }
     return { ok: true, html, plainText, variables: referencedVariables(html) };
   } catch (error) {
+    if (error instanceof DeadlineError) {
+      return failure(
+        "render",
+        `Şablon ${deadlineMs} ms içinde render edilip bitmedi; hiç sonuçlanmayan bir bekleme (ör. çözülmeyen bir Promise) olabilir.`,
+      );
+    }
     return failure("render", `Şablon render edilirken hata verdi: ${messageOf(error)}`);
   }
 }
 
-async function renderJsx(source: string): Promise<RenderResult> {
+async function renderJsx(source: string, options: RenderOptions): Promise<RenderResult> {
   let jsx: typeof import("./jsx");
   try {
     jsx = await import("./jsx");
@@ -123,7 +164,7 @@ async function renderJsx(source: string): Promise<RenderResult> {
     }
     return failure("render", `Kod çalışırken hata verdi: ${messageOf(error)}`);
   }
-  return renderComponent(Component);
+  return renderComponent(Component, options);
 }
 
 /** Raw markup is the body as written; only its plain-text part is derived. */
@@ -136,27 +177,6 @@ function renderHtml(source: string): RenderResult {
   } catch (error) {
     return failure("render", `Düz metin türetilemedi: ${messageOf(error)}`);
   }
-}
-
-/**
- * A stored body, or a subject, with sample values in place of its actions, so
- * a preview reads like a real mail. For display only; never saved. It takes
- * the rendered string rather than the source, so changing a sample value does
- * not need a new render.
- *
- * It is the approximation emails:render has always written its previews with:
- * every conditional section shows as if its value were present (an `{{else}}`
- * and its branch stay in), and a value goes in unescaped.
- */
-export function fillSampleValues(body: string, sample: SampleValues): string {
-  let filled = body;
-
-  // Drop the conditionals, keeping the "value is present" branch.
-  filled = filled.replace(/\{\{if [^}]+\}\}/g, "").replace(/\{\{end\}\}/g, "");
-  filled = filled.replace(/\{\{safeHTML \.(\w+)\}\}/g, (_match, name: string) => String(sample[name] ?? ""));
-  filled = filled.replace(/\{\{\.(\w+)\}\}/g, (_match, name: string) => String(sample[name] ?? `«${name}»`));
-
-  return filled;
 }
 
 /**
@@ -181,9 +201,10 @@ export type SaveDecision =
 
 /**
  * `editing` is the source in the editor now, `lastRender` the render it last
- * finished, and `storedSource` the source of the same Authoring mode the row
- * was loaded with — null when there is none yet, which is why creating a
- * template can only ever reach "render" or "blocked".
+ * finished, and `storedSource` the source of that Authoring mode the row was
+ * loaded with — null when there is none yet, which is why creating a template
+ * can only ever reach "render" or "blocked". Keeping the stored body takes the
+ * same mode as well as the same text.
  *
  * Comparing the render's source with the editor's is what keeps a save from
  * riding on a stale render: the one a since-broken edit left on screen, and
@@ -192,10 +213,13 @@ export type SaveDecision =
 export function decideSave(
   editing: SourceInput,
   lastRender: SourceRender | null,
-  storedSource: string | null,
+  storedSource: SourceInput | null,
 ): SaveDecision {
-  if (lastRender?.ok && lastRender.mode === editing.mode && lastRender.source === editing.source) {
+  const sameAs = (other: SourceInput | null) =>
+    other !== null && other.mode === editing.mode && other.source === editing.source;
+
+  if (lastRender?.ok && sameAs(lastRender)) {
     return "render";
   }
-  return storedSource !== null && editing.source === storedSource ? "keep" : "blocked";
+  return sameAs(storedSource) ? "keep" : "blocked";
 }

@@ -10,7 +10,8 @@
  * template compiled there.
  *
  * This file is loaded only when a JSX source is rendered, because Babel is
- * most of the weight the editor adds to a page.
+ * most of the weight the editor adds to a page. What it compiles, it runs: in
+ * the browser, only inside the isolated context index.ts describes.
  */
 import { transform } from "@babel/standalone";
 import * as React from "react";
@@ -32,17 +33,73 @@ const MODULES: Record<string, unknown> = {
 };
 
 /**
- * The editor before this module offered React and every React Email component
- * without an import, so a body written there may lean on that. They stay in
- * scope; an import of the same name shadows them.
+ * The editor before this module stripped every import and offered React and
+ * every React Email component in their place, and bodies written there lean on
+ * that. A source with no import at all still gets them. One that imports gets
+ * what it imports and nothing besides: offering React Email's Heading to a
+ * source that forgot the theme's would render a different component, one
+ * whose <h1> upper-cases the Go actions in the plain text.
  */
-const AMBIENT: Record<string, unknown> = { React, ...ReactEmail };
+const LEGACY_SCOPE: Record<string, unknown> = { React, ...ReactEmail };
+
+/** Which of the importable modules export a name, for the error that says where to import it from. */
+function providersOf(name: string): string[] {
+  return Object.entries(MODULES)
+    .filter(([specifier, exports]) => Object.hasOwn(exports as object, name) || (specifier === "react" && name === "React"))
+    .map(([specifier]) => specifier)
+    .filter((specifier) => specifier !== "react/jsx-runtime")
+    // The club's own module first: its Heading is the one a template means.
+    .sort((a, b) => Number(b.startsWith("./")) - Number(a.startsWith("./")));
+}
 
 export class CompileError extends Error {}
 
 export class NoComponentError extends Error {}
 
-function toCommonJs(source: string): string {
+/** The bits of Babel's Program path read here. */
+interface ProgramPath {
+  node: { body: { type: string; source?: unknown }[] };
+  scope: { globals: Record<string, { type: string }> };
+}
+
+interface Compiled {
+  code: string;
+  /** Whether the source imports anything; one that does not gets LEGACY_SCOPE. */
+  imports: boolean;
+}
+
+/**
+ * Babel's own scope analysis says which names a source uses without declaring
+ * them. Among those, one a module here exports, or a component used in JSX, is
+ * an import that was forgotten; anything else (Math, a typo) is left to fail
+ * when it runs.
+ */
+function missingImports(program: ProgramPath): string[] {
+  return Object.entries(program.scope.globals)
+    .filter(([name, node]) => node.type === "JSXIdentifier" || providersOf(name).length > 0)
+    .map(([name]) => {
+      const providers = providersOf(name);
+      return providers.length > 0
+        ? `"${name}" import edilmemiş; ${providers.map((specifier) => `"${specifier}"`).join(" ya da ")} içinden import et.`
+        : `"${name}" tanımlı değil.`;
+    });
+}
+
+function toCommonJs(source: string): Compiled {
+  let imports = false;
+  let missing: string[] = [];
+  const readImports = () => ({
+    visitor: {
+      Program(path: ProgramPath) {
+        imports = path.node.body.some(
+          (statement) => statement.type === "ImportDeclaration" || (statement.type.startsWith("Export") && statement.source),
+        );
+        missing = imports ? missingImports(path) : [];
+      },
+    },
+  });
+
+  let code: string;
   try {
     const output = transform(source, {
       filename: "template.tsx",
@@ -52,12 +109,17 @@ function toCommonJs(source: string): string {
         // The runtime tsconfig.json compiles the repo's templates with.
         ["react", { runtime: "automatic" }],
       ],
-      plugins: ["transform-modules-commonjs"],
+      plugins: [readImports, "transform-modules-commonjs"],
     });
-    return output.code ?? "";
+    code = output.code ?? "";
   } catch (error) {
     throw new CompileError(error instanceof Error ? error.message : String(error));
   }
+
+  if (missing.length > 0) {
+    throw new CompileError(missing.join(" "));
+  }
+  return { code, imports };
 }
 
 function requireModule(specifier: string): unknown {
@@ -80,25 +142,34 @@ function requireModule(specifier: string): unknown {
  * runs.
  */
 export function compileComponent(source: string): React.ComponentType {
-  const code = toCommonJs(source);
+  const { code, imports } = toCommonJs(source);
 
   const compiled = { exports: {} as Record<string, unknown> };
-  const ambientNames = Object.keys(AMBIENT);
+  const scope = imports ? {} : LEGACY_SCOPE;
+  const scopeNames = Object.keys(scope);
   // The module runs in a function of its own inside the one that receives the
-  // ambient names, so a top-level `const Heading` in the source shadows the
-  // ambient Heading instead of colliding with it.
-  const run = new Function(
-    "require",
-    "module",
-    "exports",
-    ...ambientNames,
-    `(function () {\n${code}\n})();`,
-  );
-  run(requireModule, compiled, compiled.exports, ...ambientNames.map((name) => AMBIENT[name]));
+  // legacy scope, so a top-level `const Heading` in the source shadows the
+  // offered Heading instead of colliding with it.
+  const run = new Function("require", "module", "exports", ...scopeNames, `(function () {\n${code}\n})();`);
+  run(requireModule, compiled, compiled.exports, ...scopeNames.map((name) => scope[name]));
 
   const component = compiled.exports.default;
-  if (typeof component !== "function") {
+  if (!isComponent(component)) {
     throw new NoComponentError("Kod varsayılan olarak (export default) bir bileşen dışa aktarmıyor.");
   }
-  return component as React.ComponentType;
+  return component;
+}
+
+/** Wrappers React renders as a component; an element (`export default <Text/>`) is not one. */
+const COMPONENT_WRAPPERS = [Symbol.for("react.memo"), Symbol.for("react.forward_ref")];
+
+function isComponent(value: unknown): value is React.ComponentType {
+  if (typeof value === "function") {
+    return true;
+  }
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    COMPONENT_WRAPPERS.includes((value as { $$typeof?: symbol }).$$typeof as symbol)
+  );
 }

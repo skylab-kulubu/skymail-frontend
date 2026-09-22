@@ -7,7 +7,7 @@
  * is the server's to say.
  */
 
-interface Action {
+export interface Action {
   /** Offset of the opening `{{`. */
   start: number;
   /** Offset just past the closing `}}`. */
@@ -58,7 +58,7 @@ function actionEnd(text: string, from: number): number {
 }
 
 /** Every action in the text, in order. An unclosed `{{` ends the search. */
-function findActions(text: string): Action[] {
+export function findActions(text: string): Action[] {
   const actions: Action[] = [];
   let from = 0;
   for (;;) {
@@ -95,7 +95,7 @@ function tokenMarks(text: string): [string, string] {
  * of that, and put back afterwards byte for byte. The same action text gets the
  * same token, so a link whose text is its own address still reads once.
  */
-export function sparingActions(text: string, transform: (masked: string) => string): string {
+export function preservingGoActions(text: string, transform: (masked: string) => string): string {
   const actions = findActions(text);
   if (actions.length === 0) {
     return transform(text);
@@ -121,7 +121,7 @@ export function sparingActions(text: string, transform: (masked: string) => stri
 }
 
 /** What is between the delimiters, trim markers dropped; null for a comment. */
-function actionInside(action: string): string | null {
+export function actionInside(action: string): string | null {
   let inside = action.slice(OPEN.length, -CLOSE.length);
   if (/^-\s/.test(inside)) {
     inside = inside.slice(1);
@@ -134,11 +134,11 @@ function actionInside(action: string): string | null {
 }
 
 /** Strings and characters emptied, so a ".Name" inside one is not read as a field. */
-const blankLiterals = (code: string) => code.replace(/"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`[^`]*`/g, '""');
+export const blankLiterals = (code: string) => code.replace(/"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`[^`]*`/g, '""');
 
 const KEYWORDS = new Set(["if", "else", "end", "range", "with", "define", "block", "template", "break", "continue"]);
 
-function splitKeyword(code: string): [keyword: string, rest: string] {
+export function splitKeyword(code: string): [keyword: string, rest: string] {
   const match = /^([a-z]+)(?![\w.])\s*([\s\S]*)$/.exec(code);
   return match && KEYWORDS.has(match[1]) ? [match[1], match[2]] : ["", code];
 }
@@ -170,9 +170,10 @@ interface Frame extends Scope {
  *  - only fields count, not functions (`{{now}}`) or a bare `{{.}}`;
  *  - inside `range` and `with`, `.X` is a field of the element, not a variable,
  *    while `$.X` still is; their `else` branch runs with the outer dot again;
- *  - a `define` body counts only its `$.X` and `.X` as nothing, since whoever
- *    calls it decides its data; a `block` is read the same way unless it is
- *    given `.` itself;
+ *  - nothing inside a `define` body counts, neither `.X` nor `$.X`: whoever
+ *    calls the template decides its data. A `block` body is read the same
+ *    way, unless the block is given `.` itself, when it reads like the text
+ *    around it;
  *  - an action React escaped (a `"` written as `&quot;`) is read as written,
  *    which is also how the mailer would fail to parse it.
  */
@@ -237,4 +238,25 @@ export function referencedVariables(text: string): string[] {
   }
 
   return [...found].sort();
+}
+
+const OPENS_BLOCK = new Set(["if", "range", "with", "define", "block"]);
+
+/** How many blocks the actions open and how many `end`s close them; equal when balanced. */
+export function blockBalance(text: string): { opens: number; ends: number } {
+  let opens = 0;
+  let ends = 0;
+  for (const { start, end } of findActions(text)) {
+    const inside = actionInside(text.slice(start, end));
+    if (inside === null) {
+      continue;
+    }
+    const [keyword] = splitKeyword(blankLiterals(inside));
+    if (OPENS_BLOCK.has(keyword)) {
+      opens += 1;
+    } else if (keyword === "end") {
+      ends += 1;
+    }
+  }
+  return { opens, ends };
 }

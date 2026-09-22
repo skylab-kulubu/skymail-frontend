@@ -25,8 +25,8 @@ const cases: {
   editing: SourceInput;
   /** Which source the editor last finished rendering, if any. */
   rendered: SourceInput | null;
-  /** The source the row was loaded with; null while creating. */
-  stored: string | null;
+  /** The source of the same mode the row was loaded with; null while creating. */
+  stored: SourceInput | null;
   expect: SaveDecision;
 }[] = [
   {
@@ -34,7 +34,7 @@ const cases: {
     name: "seed stub'ı düzenlendi, derlenmiyor",
     editing: jsx(SEEDED_STUB + "bozuk"),
     rendered: jsx(SEEDED_STUB + "bozuk"),
-    stored: SEEDED_STUB,
+    stored: jsx(SEEDED_STUB),
     expect: "blocked",
   },
   {
@@ -43,14 +43,14 @@ const cases: {
     name: "seed stub'ına dokunulmadı, sadece konu değişti",
     editing: jsx(SEEDED_STUB),
     rendered: jsx(SEEDED_STUB),
-    stored: SEEDED_STUB,
+    stored: jsx(SEEDED_STUB),
     expect: "keep",
   },
   {
     name: "derlenen şablon",
     editing: jsx(GOOD_CODE),
     rendered: jsx(GOOD_CODE),
-    stored: GOOD_CODE,
+    stored: jsx(GOOD_CODE),
     expect: "render",
   },
   {
@@ -58,14 +58,14 @@ const cases: {
     name: "önce derlendi, sonra bozuldu (önizleme eskisinde)",
     editing: jsx(GOOD_CODE + " oops"),
     rendered: jsx(GOOD_CODE),
-    stored: GOOD_CODE,
+    stored: jsx(GOOD_CODE),
     expect: "blocked",
   },
   {
     name: "önce derlendi, sonra bozuldu (bozuk hali render edildi)",
     editing: jsx(GOOD_CODE + " oops"),
     rendered: jsx(GOOD_CODE + " oops"),
-    stored: GOOD_CODE,
+    stored: jsx(GOOD_CODE),
     expect: "blocked",
   },
   {
@@ -73,7 +73,7 @@ const cases: {
     name: "debounce henüz koşmadı",
     editing: jsx(GOOD_CODE + "\n"),
     rendered: jsx(GOOD_CODE),
-    stored: GOOD_CODE,
+    stored: jsx(GOOD_CODE),
     expect: "blocked",
   },
   {
@@ -95,14 +95,14 @@ const cases: {
     name: "bileşen render sırasında hata veriyor",
     editing: jsx('export default () => { throw new Error("hata"); };'),
     rendered: jsx('export default () => { throw new Error("hata"); };'),
-    stored: GOOD_CODE,
+    stored: jsx(GOOD_CODE),
     expect: "blocked",
   },
   {
     name: "bileşen boş render ediyor",
     editing: jsx("export default () => null;"),
     rendered: jsx("export default () => null;"),
-    stored: GOOD_CODE,
+    stored: jsx(GOOD_CODE),
     expect: "blocked",
   },
   {
@@ -111,6 +111,15 @@ const cases: {
     editing: { mode: "html", source: GOOD_CODE },
     rendered: jsx(GOOD_CODE),
     stored: null,
+    expect: "blocked",
+  },
+  {
+    // Keeping a body is only safe when it is the same source: the same text
+    // stored for another mode says nothing about this one.
+    name: "aynı metin başka modda saklı, dokunulmadı sanılmasın",
+    editing: { mode: "html", source: SEEDED_STUB },
+    rendered: null,
+    stored: jsx(SEEDED_STUB),
     expect: "blocked",
   },
   {
@@ -124,7 +133,7 @@ const cases: {
     name: "HTML kaynağı boşaltıldı",
     editing: { mode: "html", source: "" },
     rendered: { mode: "html", source: "" },
-    stored: "<p>Merhaba</p>",
+    stored: { mode: "html", source: "<p>Merhaba</p>" },
     expect: "blocked",
   },
 ];

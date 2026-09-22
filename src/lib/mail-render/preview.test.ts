@@ -1,6 +1,8 @@
 /**
  * A preview is the stored body with sample values in place of its actions, so
- * a template is judged the way a recipient reads it. It is never saved.
+ * a template is judged the way a recipient reads it. It is never saved, and it
+ * is not the mailer: it reads the actions the club's templates use and leaves
+ * the rest as written.
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
@@ -17,6 +19,20 @@ describe("a preview with sample values", () => {
     );
   });
 
+  it("reads a field however the action is spaced or trimmed, and through $", () => {
+    assert.equal(
+      fillSampleValues("<p>{{ .A }}|{{$.B}}|x   {{- .C -}}   y</p>", { A: "1", B: "2", C: "3" }),
+      "<p>1|2|x3y</p>",
+    );
+  });
+
+  it("escapes a value, as the mailer's html/template does", () => {
+    assert.equal(
+      fillSampleValues("<p>{{.Team}}</p>", { Team: `<b>"R&D"</b> 'ekip'` }),
+      "<p>&lt;b&gt;&quot;R&amp;D&quot;&lt;/b&gt; &#39;ekip&#39;</p>",
+    );
+  });
+
   it("names a field that has no sample value rather than leaving it blank", () => {
     assert.equal(fillSampleValues("<p>{{.EventName}}</p>", {}), "<p>«EventName»</p>");
   });
@@ -30,14 +46,71 @@ describe("a preview with sample values", () => {
     );
   });
 
-  it("shows a conditional section as if its value were present", () => {
-    assert.equal(
-      fillSampleValues("{{if .CtaUrl}}<a href=\"{{.CtaUrl}}\">Git</a>{{end}}", { CtaUrl: "https://skyl.app" }),
-      '<a href="https://skyl.app">Git</a>',
-    );
+  const conditions: { name: string; body: string; sample: Record<string, unknown>; expect: string }[] = [
+    {
+      name: "an if whose field has a value",
+      body: '{{if .CtaUrl}}<a href="{{.CtaUrl}}">Git</a>{{end}}',
+      sample: { CtaUrl: "https://skyl.app" },
+      expect: '<a href="https://skyl.app">Git</a>',
+    },
+    {
+      name: "an if whose field is empty or missing",
+      body: "a{{if .CtaUrl}}<a>Git</a>{{end}}b{{if .Note}}n{{end}}",
+      sample: { CtaUrl: "" },
+      expect: "ab",
+    },
+    {
+      name: "the else of an unset field",
+      body: "{{if .FirstName}}Merhaba {{.FirstName}}{{else}}Merhaba{{end}},",
+      sample: {},
+      expect: "Merhaba,",
+    },
+    {
+      name: "an eq comparison, with its else",
+      body: "{{if eq .Decision `approved`}}Onaylandı{{else}}Reddedildi{{end}}",
+      sample: { Decision: "rejected" },
+      expect: "Reddedildi",
+    },
+    {
+      name: "an else if chain",
+      body: '{{if eq .Kind "a"}}A{{else if .Fallback}}F{{else}}-{{end}}',
+      sample: { Kind: "b", Fallback: "var" },
+      expect: "F",
+    },
+    {
+      name: "a nested if in a branch that is not taken",
+      body: "{{if .A}}{{if .B}}ab{{else}}a{{end}}{{else}}none{{end}}",
+      sample: { B: "x" },
+      expect: "none",
+    },
+    {
+      name: "a string holding the closing delimiter",
+      body: '{{if eq .K "}}"}}kapanış{{end}}.',
+      sample: { K: "}}" },
+      expect: "kapanış.",
+    },
+  ];
+
+  for (const { name, body, sample, expect } of conditions) {
+    it(`shows the branch the sample values select: ${name}`, () => {
+      assert.equal(fillSampleValues(body, sample), expect);
+    });
+  }
+
+  it("drops a comment, as the mailer does", () => {
+    assert.equal(fillSampleValues("<p>{{/* not */}}Merhaba{{- /* iki */ -}} !</p>", {}), "<p>Merhaba!</p>");
   });
 
-  it("fills a subject the same way", () => {
-    assert.equal(fillSampleValues("{{.Subject}}", { Subject: "GECEKODU başvuruları açıldı" }), "GECEKODU başvuruları açıldı");
+  it("leaves range and with, and what they contain, as written", () => {
+    const body = "<ul>{{range .Items}}<li>{{.Title}}{{if .Done}}✓{{end}}</li>{{end}}</ul>{{with .Org}}{{.Name}}{{end}}";
+
+    assert.equal(fillSampleValues(body, { Items: ["a"], Title: "x", Done: true, Org: "o", Name: "n" }), body);
+  });
+
+  it("fills a subject as text, without escaping", () => {
+    assert.equal(
+      fillSampleValues("{{.EventName}} başvuruları açıldı", { EventName: "R&D <Kış>" }, { as: "text" }),
+      "R&D <Kış> başvuruları açıldı",
+    );
   });
 });
