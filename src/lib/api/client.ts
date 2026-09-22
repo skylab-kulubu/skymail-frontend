@@ -31,12 +31,21 @@ export type RequestOptions = {
 type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 /**
+ * One page of a list route (`_start`/`_end`): its rows, and the size of the
+ * whole list from `X-Total-Count` — `null` when the answer did not carry one
+ * (a proxy that does not expose the header hides it from the browser).
+ */
+export type ApiPage<T> = { items: T[]; total: number | null };
+
+/**
  * Every method resolves to the parsed JSON body, or to `undefined` when the
  * answer has no body (204 on archive, restore and recipient removal) — pass
  * `void` as the type for those.
  */
 export type ApiClient = {
   get<T>(path: string, options?: RequestOptions): Promise<T>;
+  /** GETs a list route and keeps its `X-Total-Count`. */
+  getPage<T>(path: string, options?: RequestOptions): Promise<ApiPage<T>>;
   post<T = void>(path: string, body?: unknown, options?: RequestOptions): Promise<T>;
   put<T = void>(path: string, body?: unknown, options?: RequestOptions): Promise<T>;
   patch<T = void>(path: string, body?: unknown, options?: RequestOptions): Promise<T>;
@@ -57,6 +66,10 @@ function withQuery(url: string, query: RequestOptions["query"]): string {
   }
   const search = params.toString();
   return search ? `${url}?${search}` : url;
+}
+
+function totalCount(header: string | null): number | null {
+  return header !== null && /^\d+$/.test(header.trim()) ? Number(header) : null;
 }
 
 export function createApiClient({
@@ -83,12 +96,12 @@ export function createApiClient({
     for (const listener of [...sessionEndedListeners]) listener();
   }
 
-  async function request<T>(
+  async function send<T>(
     method: Method,
     path: string,
     body: unknown,
     options: RequestOptions = {},
-  ): Promise<T> {
+  ): Promise<{ data: T; headers: Headers }> {
     const current = await sharedSession();
     // No session (signed out in another tab, or the session read failed), or
     // one the server could no longer refresh: every API route needs a bearer,
@@ -124,16 +137,30 @@ export function createApiClient({
       if (response.status === 401) announceSessionEnded();
       throw apiErrorFromResponse(response.status, text);
     }
-    if (text === "") return undefined as T;
+    if (text === "") return { data: undefined as T, headers: response.headers };
     try {
-      return JSON.parse(text) as T;
+      return { data: JSON.parse(text) as T, headers: response.headers };
     } catch {
       throw new ApiError(response.status, "response.not_json");
     }
   }
 
+  async function request<T>(
+    method: Method,
+    path: string,
+    body: unknown,
+    options?: RequestOptions,
+  ): Promise<T> {
+    return (await send<T>(method, path, body, options)).data;
+  }
+
   return {
     get: (path, options) => request("GET", path, undefined, options),
+    async getPage<T>(path: string, options?: RequestOptions): Promise<ApiPage<T>> {
+      const { data, headers } = await send<T[] | null | undefined>("GET", path, undefined, options);
+      // skymail-backend encodes a list with no rows as null.
+      return { items: data ?? [], total: totalCount(headers.get("X-Total-Count")) };
+    },
     post: (path, body, options) => request("POST", path, body, options),
     put: (path, body, options) => request("PUT", path, body, options),
     patch: (path, body, options) => request("PATCH", path, body, options),

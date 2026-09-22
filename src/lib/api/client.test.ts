@@ -8,34 +8,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { ApiError, createApiClient, type ClientSession } from "./client";
+import { TEST_BASE_URL, json, scriptedFetch } from "./testing";
 
-const BASE_URL = "https://api.example.test/api/skymail/v1";
-
-type Call = { url: string; method: string; headers: Headers; body: string | null };
-
-/** A fetch double that records every call and answers with the next scripted response. */
-function scriptedFetch(...responses: Array<Response | (() => Response | Promise<Response>)>) {
-  const calls: Call[] = [];
-  const fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    calls.push({
-      url: String(input),
-      method: init?.method ?? "GET",
-      headers: new Headers(init?.headers),
-      body: typeof init?.body === "string" ? init.body : null,
-    });
-    const next = responses.shift();
-    if (!next) throw new Error("unexpected request");
-    return typeof next === "function" ? next() : next;
-  };
-  return { fetch, calls };
-}
-
-function json(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
+const BASE_URL = TEST_BASE_URL;
 
 function session(accessToken: string): ClientSession {
   return { accessToken };
@@ -157,6 +132,55 @@ describe("a successful answer", () => {
     assert.equal(calls[0].url, `${BASE_URL}/mailing_lists?lifecycle=all&limit=20`);
     assert.equal(calls[0].headers.get("Content-Type"), "application/json");
     assert.equal(calls[0].body, JSON.stringify({ name: "Duyurular" }));
+  });
+});
+
+describe("a page of a list", () => {
+  const signedIn = async () => session("token");
+
+  // List routes page with _start/_end and put the size of the whole list in
+  // X-Total-Count, so a pager can say how many pages there are.
+  it("carries the rows and the total the API counted", async () => {
+    const { fetch, calls } = scriptedFetch(json(200, [{ id: "a" }, { id: "b" }], { "X-Total-Count": "42" }));
+    const api = createApiClient({ baseUrl: BASE_URL, fetch, getSession: signedIn });
+
+    const result = await api.getPage("/mail_tasks", { query: { status: "failed", _start: 0, _end: 2 } });
+
+    assert.deepEqual(result, { items: [{ id: "a" }, { id: "b" }], total: 42 });
+    assert.equal(calls[0].url, `${BASE_URL}/mail_tasks?status=failed&_start=0&_end=2`);
+  });
+
+  // A proxy that does not expose the header to the browser hides it; the page
+  // then knows its rows but not how many pages follow.
+  for (const [name, headers] of [
+    ["no total", {}],
+    ["a total that is not a count", { "X-Total-Count": "many" }],
+    ["a negative total", { "X-Total-Count": "-1" }],
+  ] as const) {
+    it(`has no total when the answer carries ${name}`, async () => {
+      const { fetch } = scriptedFetch(json(200, [{ id: "a" }], headers));
+      const api = createApiClient({ baseUrl: BASE_URL, fetch, getSession: signedIn });
+
+      assert.deepEqual(await api.getPage("/mail_tasks"), { items: [{ id: "a" }], total: null });
+    });
+  }
+
+  // skymail-backend encodes an empty sqlc result as null, not [].
+  it("is empty when the API sends null for no rows", async () => {
+    const { fetch } = scriptedFetch(json(200, null, { "X-Total-Count": "0" }));
+    const api = createApiClient({ baseUrl: BASE_URL, fetch, getSession: signedIn });
+
+    assert.deepEqual(await api.getPage("/mail_tasks/1/queue"), { items: [], total: 0 });
+  });
+
+  it("fails like any other request", async () => {
+    const { fetch } = scriptedFetch(json(403, { code: "server.forbidden", message: "nope" }));
+    const api = createApiClient({ baseUrl: BASE_URL, fetch, getSession: signedIn });
+
+    const error = await api.getPage("/mail_tasks").catch((reason: unknown) => reason);
+
+    assert.ok(error instanceof ApiError);
+    assert.equal(error.status, 403);
   });
 });
 
