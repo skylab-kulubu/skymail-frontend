@@ -1,13 +1,14 @@
 'use client';
 
 import { InterimList } from '@/components/pages/InterimList';
+import { sectionLabel } from '@/lib/access';
 
 type TemplateRow = { id: string; name: string; key: string | null; subject: string; system: boolean };
 
 export function TemplatesInterim() {
   return (
     <InterimList<TemplateRow>
-      title="Mail template'ler"
+      title={sectionLabel('/templates')}
       description="Kulübün gönderdiği her mailin konusu ve gövdesi."
       path="/templates"
       columns={[

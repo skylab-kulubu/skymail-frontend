@@ -5,7 +5,7 @@
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { hasAccess, requiredRoleFor, visibleNavigation } from "./access";
+import { hasAccess, requiredRoleFor, sectionLabel, visibleNavigation } from "./access";
 
 const hrefs = (roles: string[]) => visibleNavigation(roles).map((item) => item.href);
 
@@ -47,6 +47,7 @@ describe("the menu", () => {
       ]).map((item) => item.label),
       ["Ana sayfa", "Mail template'ler", "Mail listeleri", "Gönderimler"],
     );
+    assert.equal(sectionLabel("/mailing-lists"), "Mail listeleri");
   });
 });
 

@@ -1,13 +1,10 @@
-// Copied from superadmin (ADR-0017); labels are SkyMail's sections.
-export const CHROME_CRUMB_LABELS: Readonly<Record<string, string>> = {
-  '/': 'Ana sayfa',
-  '/templates': "Mail template'ler",
-  '/templates/create': "Yeni Mail template",
-  '/mailing-lists': 'Mail listeleri',
-  '/mailing-lists/create': 'Yeni mail listesi',
-  '/mail-tasks': 'Gönderimler',
-  '/mail-tasks/create': 'Yeni gönderim',
-};
+// Copied from superadmin (ADR-0017); the labels are SkyMail's sections, from
+// the one list the menu uses.
+import { NAVIGATION } from '@/lib/access';
+
+export const CHROME_CRUMB_LABELS: Readonly<Record<string, string>> = Object.fromEntries(
+  NAVIGATION.map((item) => [item.href, item.label]),
+);
 
 export type ChromeCrumb = Readonly<{ href: string; label: string }>;
 

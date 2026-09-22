@@ -1,6 +1,7 @@
 'use client';
 
 import { InterimList } from '@/components/pages/InterimList';
+import { sectionLabel } from '@/lib/access';
 
 type TaskRow = { id: string; created_at: string; mail_list_id: string | null };
 
@@ -9,7 +10,7 @@ const dateTime = new Intl.DateTimeFormat('tr-TR', { dateStyle: 'medium', timeSty
 export function MailTasksInterim() {
   return (
     <InterimList<TaskRow>
-      title="Gönderimler"
+      title={sectionLabel('/mail-tasks')}
       description="Gönderilen ve kuyrukta bekleyen mailler."
       path="/mail_tasks"
       columns={[

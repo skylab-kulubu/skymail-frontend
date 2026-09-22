@@ -2,13 +2,14 @@ import type { Metadata } from 'next';
 import { LayoutDashboard } from 'lucide-react';
 import { StateCard } from '@/components/chrome/StateCard';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { sectionLabel } from '@/lib/access';
 
-export const metadata: Metadata = { title: 'Ana sayfa' };
+export const metadata: Metadata = { title: sectionLabel('/') };
 
 export default function HomePage() {
   return (
     <div className="space-y-6">
-      <PageHeader title="Ana sayfa" description="Kulübün gönderdiği mailler bir bakışta." />
+      <PageHeader title={sectionLabel('/')} description="Kulübün gönderdiği mailler bir bakışta." />
       <StateCard
         Icon={LayoutDashboard}
         tone="brand"

@@ -34,6 +34,15 @@ export const NAVIGATION: readonly NavItem[] = [
   { href: "/mail-tasks", label: "Gönderimler", requires: ROLE.mailsRead },
 ];
 
+export type SectionHref = "/" | "/templates" | "/mailing-lists" | "/mail-tasks";
+
+/** A section's label, for the menu, the breadcrumbs, the tab title and the page header. */
+export function sectionLabel(href: SectionHref): string {
+  const section = NAVIGATION.find((item) => item.href === href);
+  if (!section) throw new Error(`no section at ${href}`);
+  return section.label;
+}
+
 export function hasAccess(roles: readonly string[]): boolean {
   return roles.includes(ROLE.access);
 }
