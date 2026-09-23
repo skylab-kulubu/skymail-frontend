@@ -1,12 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { Modal } from '@/components/ui/Modal';
-import { ModalDangerActions } from '@/components/ui/modal-actions';
-import { apiErrorMessage } from '@/lib/api/errors';
+import { ArchiveDialog } from '@/components/chrome/ArchiveDialog';
+import type { NoticeData } from '@/lib/notice';
 import { useApi } from '@/lib/api/react';
 import { archiveList } from '@/lib/mailing-lists';
-import type { NoticeData } from './Notice';
 
 type ListRef = Readonly<{ id: string; name: string }>;
 
@@ -19,10 +16,7 @@ export function archivedNotice(list: ListRef): NoticeData {
   };
 }
 
-/**
- * Asks before archiving `list`, archives it, and hands it to `onArchived`; the
- * dialog stays open, with the API's sentence, if the archive fails.
- */
+/** Asks before archiving `list`, archives it, and hands it to `onArchived`. */
 export function ArchiveListDialog({
   list,
   onClose,
@@ -32,66 +26,22 @@ export function ArchiveListDialog({
   onClose: () => void;
   onArchived: (list: ListRef) => Promise<void> | void;
 }) {
-  const [pending, setPending] = useState(false);
-  return (
-    <Modal isOpen={list !== null} onClose={() => (pending ? undefined : onClose())} title="Listeyi arşivle">
-      {list ? (
-        // Keyed by list, so an earlier attempt's error does not carry over.
-        <ArchiveConfirm key={list.id} list={list} onCancel={onClose} onArchived={onArchived} onPending={setPending} />
-      ) : null}
-    </Modal>
-  );
-}
-
-function ArchiveConfirm({
-  list,
-  onCancel,
-  onArchived,
-  onPending,
-}: {
-  list: ListRef;
-  onCancel: () => void;
-  onArchived: (list: ListRef) => Promise<void> | void;
-  onPending: (pending: boolean) => void;
-}) {
   const api = useApi();
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function archive() {
-    setPending(true);
-    onPending(true);
-    setError(null);
-    try {
-      await archiveList(api, list.id);
-      await onArchived(list);
-    } catch (reason) {
-      setError(apiErrorMessage(reason));
-    } finally {
-      setPending(false);
-      onPending(false);
-    }
-  }
-
   return (
-    <>
-      <p className="leading-relaxed">
-        <strong className="font-medium text-neutral-100">“{list.name}”</strong> arşivlenecek. Alıcıları ve geçmiş
-        gönderimleri silinmez; listeyi Mail listeleri ekranındaki Arşivli filtresinden geri alabilirsin. Arşivdeki bir
-        listeye gönderim yapılamaz.
-      </p>
-      {error ? (
-        <p role="alert" className="mt-3 text-red-300">
-          {error}
+    <ArchiveDialog
+      record={list}
+      title="Listeyi arşivle"
+      archive={(target) => archiveList(api, target.id)}
+      onClose={onClose}
+      onArchived={onArchived}
+    >
+      {(target) => (
+        <p className="leading-relaxed">
+          <strong className="font-medium text-neutral-100">“{target.name}”</strong> arşivlenecek. Alıcıları ve geçmiş
+          gönderimleri silinmez; listeyi Mail listeleri ekranındaki Arşivli filtresinden geri alabilirsin. Arşivdeki
+          bir listeye gönderim yapılamaz.
         </p>
-      ) : null}
-      <ModalDangerActions
-        onCancel={onCancel}
-        onConfirm={() => void archive()}
-        confirmLabel="Arşivle"
-        pendingLabel="Arşivleniyor…"
-        isPending={pending}
-      />
-    </>
+      )}
+    </ArchiveDialog>
   );
 }

@@ -94,6 +94,7 @@ function signedIn(overrides: Partial<SessionToken> = {}): SessionToken {
     idToken: "id-1",
     expiresAt: NOW + 10 * 60_000,
     roles: ["skymail:access"],
+    subject: "user-1",
     user: { name: "Ada Lovelace" },
     ...overrides,
   };
@@ -328,5 +329,44 @@ describe("the session the browser sees", () => {
     const session = sessionFromToken({ expires }, { ...token, error: "RefreshAccessTokenError" });
 
     assert.equal(session.error, "RefreshAccessTokenError");
+  });
+});
+
+// The API records who wrote a Mail template version by the token's subject;
+// the panel compares it with the viewer's to tell their own draft apart. It
+// is read once, with the roles, not on every page.
+describe("who the session belongs to", () => {
+  const signIn = (access_token: string) =>
+    tokenFromSignIn({ access_token, expires_at: NOW / 1000 + 300 }, { clientId: CLIENT_ID, profile: {} });
+
+  it("is the access token's subject, kept at sign-in", () => {
+    assert.equal(signIn(tokenWithRoles(["skymail:access"])).subject, "user-1");
+  });
+
+  it("is unknown when the token carries no usable subject", () => {
+    assert.equal(signIn(accessToken({ resource_access: {} })).subject, null);
+    assert.equal(signIn(accessToken({ sub: "" })).subject, null);
+    assert.equal(signIn(accessToken({ sub: 42 })).subject, null);
+    assert.equal(signIn("not-a-jwt").subject, null);
+  });
+
+  // A cookie written before the subject was kept gets it with its next token.
+  it("is read again from a refreshed token", async () => {
+    const { fetch } = tokenEndpoint(() =>
+      Response.json({ access_token: tokenWithRoles(["skymail:access"]), expires_in: 300 }),
+    );
+    const older = signedIn({ expiresAt: NOW + 30_000 });
+    delete older.subject;
+
+    const next = await refreshIfExpiring(older, options(fetch));
+
+    assert.equal(next.subject, "user-1");
+  });
+
+  it("reaches the browser with the person", () => {
+    const expires = "2026-10-23T00:00:00.000Z";
+
+    assert.equal(sessionFromToken({ expires }, signedIn({ subject: "user-1" })).subject, "user-1");
+    assert.equal(sessionFromToken({ expires }, signedIn({ subject: null })).subject, null);
   });
 });

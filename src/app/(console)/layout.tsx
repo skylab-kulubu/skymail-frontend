@@ -21,7 +21,7 @@ export default async function ConsoleLayout({ children }: Readonly<{ children: R
   return (
     <ConsoleShell
       roles={session.roles}
-      user={{ name: session.user?.name, email: session.user?.email }}
+      user={{ name: session.user?.name, email: session.user?.email, sub: session.subject }}
       config={config}
     >
       {children}
