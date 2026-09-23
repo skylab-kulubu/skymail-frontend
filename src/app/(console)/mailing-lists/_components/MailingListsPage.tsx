@@ -34,9 +34,9 @@ import {
   type ListRow,
 } from '@/lib/mailing-lists';
 import { ArchiveListDialog, archivedNotice } from './ArchiveListDialog';
-import { useFlashNotice } from './flash';
-import { formatDateTime } from './format';
-import { Notice } from './Notice';
+import { useFlashNotice } from '@/components/chrome/flash';
+import { formatDateTime } from '@/lib/format';
+import { Notice } from '@/components/chrome/Notice';
 import { Tag } from '@/components/chrome/Tag';
 
 const EMPTY_TEXT: Record<Lifecycle, string> = {

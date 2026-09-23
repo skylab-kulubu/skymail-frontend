@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { FormActions } from '@/components/ui/FormActions';
 import { apiErrorMessage } from '@/lib/api/errors';
 import { validateListName } from '@/lib/mailing-lists';
-import { Notice } from './Notice';
+import { Notice } from '@/components/chrome/Notice';
 
 /** The one field an internal list has: its name. Used to create a list and to rename one. */
 export function ListNameForm({

@@ -27,10 +27,10 @@ import {
 } from '@/lib/mailing-lists';
 import { AddRecipientModal } from './AddRecipientModal';
 import { ArchiveListDialog, archivedNotice } from './ArchiveListDialog';
-import { flashNotice, useFlashNotice } from './flash';
-import { formatDateTime } from './format';
+import { flashNotice, useFlashNotice } from '@/components/chrome/flash';
+import { formatDateTime } from '@/lib/format';
 import { ListLoadFailure } from './ListLoadFailure';
-import { Notice, type NoticeData } from './Notice';
+import { Notice, type NoticeData } from '@/components/chrome/Notice';
 import { Tag } from '@/components/chrome/Tag';
 
 /** One list: what it is, who is on it, and — for an internal list — changing both. */

@@ -18,7 +18,7 @@ import {
   toListRow,
   type MailingList,
 } from '@/lib/mailing-lists';
-import { flashNotice } from './flash';
+import { flashNotice } from '@/components/chrome/flash';
 import { ListLoadFailure } from './ListLoadFailure';
 import { ListNameForm } from './ListNameForm';
 
