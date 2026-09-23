@@ -35,6 +35,11 @@ export type TemplateVersionSummary = {
   id: string;
   template_id: string;
   seq: number;
+  /**
+   * The template's name as this version has it; a publish copies it onto the
+   * row. Absent from a backend where the name is not a version field yet.
+   */
+  name?: string | null;
   subject: string;
   requested_subject: string | null;
   main_mode: AuthoringMode;
@@ -53,17 +58,28 @@ export type TemplateVersionSummary = {
  * Authoring mode, and the Main source's render — what the version sends.
  */
 export type TemplateVersion = TemplateVersionSummary & {
-  /**
-   * The template's name as this version has it; a publish copies it onto the
-   * row. Absent from a backend where the name is not a version field yet.
-   */
-  name?: string | null;
   jsx_source: string | null;
   /** The Visual editor's document (ticket 15). */
   visual_source: unknown;
   html_source: string | null;
   html_content: string;
   plain_text_content: string;
+};
+
+/** A conflict rule the Template seed was refused by (`database.SeedConflictRule`, ticket 09). */
+export type SeedConflictRule = "published_by_operator" | "newer_operator_version" | "operator_subject";
+
+/**
+ * A Template seed refused since the last one that went through, because an
+ * operator changed the template (ADR-0047, `handlers.SeedRefusal`): a repo
+ * change waiting on a decision.
+ */
+export type SeedRefusal = {
+  /** The first refusal of the content the seed asked for last. */
+  refused_at: string;
+  /** The rules that held; a newer backend may name one the panel does not know. */
+  rules: readonly string[];
+  payload_sha256: string;
 };
 
 /** A Required variable from the sending service's contract, and why the mail needs it. */
@@ -96,6 +112,8 @@ export type MailTemplate = {
   contract_required_variables?: ContractRequiredVariable[];
   /** Required variables operators marked (ticket 08). */
   operator_required_variables?: string[];
+  /** Null when no Template seed is refused. Absent from a backend before ticket 09. */
+  seed_refusal?: SeedRefusal | null;
 };
 
 export const TEMPLATE_PAGE_SIZE = 25;
@@ -106,6 +124,8 @@ export const templateHref = {
   create: "/templates/create",
   edit: (id: string) => `/templates/edit/${encodeURIComponent(id)}`,
   show: (id: string) => `/templates/show/${encodeURIComponent(id)}`,
+  /** The version history (ticket 14), for anyone who may read the template. */
+  history: (id: string) => `/templates/history/${encodeURIComponent(id)}`,
   archived: "/templates?lifecycle=inactive",
 } as const;
 
@@ -313,6 +333,24 @@ export function fetchVersion(api: ApiClient, templateId: string, versionId: stri
   return api.get<TemplateVersion>(`/templates/${templateId}/versions/${versionId}`, { signal });
 }
 
+/** What `GET /templates/{id}/versions` takes: which versions, and the page's slice. */
+export type VersionPageQuery = { state: "all" | "published" | "draft"; _start: number; _end: number };
+
+/**
+ * One page of a template's history, newest first, with how many versions are
+ * in that state — null when X-Total-Count did not reach the browser; the page
+ * then counts its pages with `knownPageCount`.
+ */
+export async function fetchVersionPage(
+  api: ApiClient,
+  templateId: string,
+  query: VersionPageQuery,
+  signal?: AbortSignal,
+): Promise<{ versions: TemplateVersionSummary[]; total: number | null }> {
+  const page = await api.getPage<TemplateVersionSummary>(`/templates/${templateId}/versions`, { query, signal });
+  return { versions: page.items, total: page.total };
+}
+
 /** Creates a template; the API publishes its first version at once. */
 export function createTemplate(api: ApiClient, body: CreateBody): Promise<MailTemplate> {
   return api.post<MailTemplate>("/templates", body);
@@ -325,6 +363,22 @@ export function saveDraft(api: ApiClient, templateId: string, body: DraftBody): 
 
 export function discardDraft(api: ApiClient, templateId: string, versionId: string): Promise<TemplateVersion> {
   return api.post<TemplateVersion>(`/templates/${templateId}/versions/${versionId}/discard`);
+}
+
+/**
+ * Copies any version into a new draft by the caller, started from what is
+ * published now; nothing that is sent changes. 201 with the draft, or 200
+ * with the version the copy would have repeated: the caller's draft in
+ * progress, or the published version. The status is kept: it alone says
+ * which of the two happened.
+ */
+export async function restoreVersion(
+  api: ApiClient,
+  templateId: string,
+  versionId: string,
+): Promise<{ status: number; version: TemplateVersion }> {
+  const { status, data } = await api.postForStatus<TemplateVersion>(`/templates/${templateId}/versions/${versionId}/restore`);
+  return { status, version: data };
 }
 
 /** A draft someone else's publish overtook (409 `template.stale_base`). */

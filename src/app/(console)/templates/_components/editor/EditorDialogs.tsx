@@ -9,8 +9,9 @@ import type { SourceRender } from '@/lib/mail-render';
 import type { MailScheme } from '@/lib/template-editor/preview';
 import { AUTHORING_MODE_LABEL, type TemplateVersion } from '@/lib/templates';
 import type { EditableMode } from '@/lib/template-editor/editor-state';
-import { EditorNote, RefusalNotice, versionLine, type Refusal } from './EditorParts';
+import { EditorNote, RefusalNotice, type Refusal } from './EditorParts';
 import { MailFrame, SchemeToggle, SubjectPreview } from './MailPreview';
+import { VersionSideBySide } from './VersionSideBySide';
 
 export function PublishDialog({
   name,
@@ -135,41 +136,6 @@ export function MainSourceDialog({
   );
 }
 
-function VersionColumn({
-  label,
-  version,
-  viewerSub,
-  sample,
-  scheme,
-}: {
-  label: string;
-  version: TemplateVersion | null;
-  viewerSub: string | null;
-  sample: SampleValues;
-  scheme: MailScheme;
-}) {
-  return (
-    <section aria-label={label} className="min-w-0 space-y-2">
-      <div>
-        <h3 className="text-sm font-medium text-neutral-100">{label}</h3>
-        {version ? (
-          <p className="text-xs text-neutral-500">
-            {versionLine(version, viewerSub)} · Main source {AUTHORING_MODE_LABEL[version.main_mode]}
-          </p>
-        ) : null}
-      </div>
-      {version ? (
-        <>
-          <SubjectPreview subject={version.subject} sample={sample} />
-          <MailFrame title={label} html={version.html_content} sample={sample} scheme={scheme} className="h-[50vh] min-h-[320px]" />
-        </>
-      ) : (
-        <p className="text-xs text-neutral-500">Yayımlanmış bir sürüm yok.</p>
-      )}
-    </section>
-  );
-}
-
 /**
  * A draft someone else's publish overtook (ADR-0047, the other way round):
  * the draft and what is sent now, side by side as rendered mail. Publishing
@@ -196,7 +162,6 @@ export function StaleComparison({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
-  const [scheme, setScheme] = useState<MailScheme>('light');
   return (
     <Modal isOpen onClose={onCancel} title="Bu taslak bayat" size="wide">
       <div className="space-y-4">
@@ -209,13 +174,14 @@ export function StaleComparison({
             Sen karşılaştırırken bir sürüm daha yayımlandı; karşılaştırma onunla yenilendi. Hiçbir şey yayımlanmadı.
           </EditorNote>
         ) : null}
-        <div className="flex justify-end">
-          <SchemeToggle value={scheme} onChange={setScheme} />
-        </div>
-        <div className="grid gap-4 md:grid-cols-2">
-          <VersionColumn label="Senin taslağın" version={draft} viewerSub={viewerSub} sample={sample} scheme={scheme} />
-          <VersionColumn label="Şu an gönderilen" version={published} viewerSub={viewerSub} sample={sample} scheme={scheme} />
-        </div>
+        <VersionSideBySide
+          sides={[
+            { label: 'Senin taslağın', version: draft },
+            { label: 'Şu an gönderilen', version: published },
+          ]}
+          viewerSub={viewerSub}
+          sample={sample}
+        />
         <ModalDangerActions
           onCancel={onCancel}
           onConfirm={onConfirm}

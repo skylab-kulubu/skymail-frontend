@@ -27,7 +27,7 @@ import {
 import { DailySentChart } from './DailySentChart';
 import { SectionTitle } from './SectionTitle';
 import { SendItem } from './SendItem';
-import { TONE, type Tone } from './StatusBadge';
+import { TONE, type Tone } from '@/components/chrome/ToneBadge';
 
 const DAYS = 30;
 const RECENT = 5;

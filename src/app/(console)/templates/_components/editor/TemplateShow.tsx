@@ -17,6 +17,7 @@ import { ROLE } from '@/lib/access';
 import { useApiLoad } from '@/lib/api/react';
 import { isEditableMode, storedFromVersion, type EditableMode } from '@/lib/template-editor/editor-state';
 import { useRepoSample } from '@/lib/template-editor/use-repo-sample';
+import { versionLine } from '@/lib/template-history/history';
 import {
   AUTHORING_MODE_LABEL,
   fetchTemplate,
@@ -25,11 +26,12 @@ import {
   type MailTemplate,
   type TemplateVersion,
 } from '@/lib/templates';
-import { TemplateKey, versionLine } from './EditorParts';
+import { TemplateKey } from './EditorParts';
 import { PreviewPane, useSample } from './PreviewPane';
 import { RequiredVariablesPanel } from './RequiredVariablesPanel';
 import { SourceTabs } from './SourcePane';
 import { TemplateLoadFailure } from './TemplateLoadFailure';
+import { HistoryLinks } from '../history/HistoryParts';
 
 export function TemplateShow({ id }: { id: string }) {
   const router = useRouter();
@@ -69,7 +71,12 @@ function Show({ template, version }: { template: MailTemplate; version: Template
       <PageHeader
         title={template.name}
         description={`Gönderilen sürüm ${versionLine(version, user.sub ?? null)}. Main source: ${AUTHORING_MODE_LABEL[stored.mainMode]}.`}
-        meta={template.system ? <Tag tone="system">System</Tag> : undefined}
+        meta={
+          <>
+            {template.system ? <Tag tone="system">System</Tag> : null}
+            <HistoryLinks template={template} />
+          </>
+        }
       />
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-1.5">

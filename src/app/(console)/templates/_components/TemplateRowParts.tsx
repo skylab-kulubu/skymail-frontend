@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Lock } from 'lucide-react';
 import { Tag } from '@/components/chrome/Tag';
-import { formatDateTime } from '@/lib/format';
+import { formatClubTime } from '@/lib/format';
 import {
   SYSTEM_TEMPLATE_NOTE,
   mainSourceLabel,
@@ -45,7 +45,7 @@ export function TemplateName({ row, actions }: { row: TemplateRow; actions: Temp
         </p>
       ) : null}
       {row.archivedAt ? (
-        <p className="mt-0.5 text-xs text-neutral-500">Arşivlendi: {formatDateTime(row.archivedAt)}</p>
+        <p className="mt-0.5 text-xs text-neutral-500">Arşivlendi: {formatClubTime(row.archivedAt)}</p>
       ) : null}
     </div>
   );
