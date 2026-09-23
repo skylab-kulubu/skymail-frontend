@@ -53,6 +53,30 @@
  *    `{id}`, and the send can be read back — alone, with its recipients'
  *    queue, or in `GET /mail_tasks`, newest first.
  *
+ * Mail onayı's routes (ticket 20), as skymail-backend `origin/main` answers
+ * them (ticket 19, internal/handlers/mail_approval*.go):
+ *
+ *  - `POST /mail_approvals` takes the send form's body, to a list or to one
+ *    person; refuses an archived template (422 template_unavailable), an
+ *    unknown list (422 audience_unavailable) and an empty Required variable
+ *    (422 required_variables_missing); pins the request to the version
+ *    published now and gives it seven days;
+ *  - an approver (`mails:approve`) lists and reads everyone's requests,
+ *    anyone else only their own (404 for another's); a request past its
+ *    deadline reads as expired; an action on it records the expiry and
+ *    answers 409 mail_approval.expired;
+ *  - approve (as it is, or with `body_variables`, recorded as an edit),
+ *    return (an edit that must differ, 422 no_edit; seven days again),
+ *    reject (a reason), accept and decline (the submitter's), resubmit (a
+ *    rejected or declined request, pinned again). Another state is 409
+ *    state_conflict; a template published again since the request is 409
+ *    template_republished on approve and accept. An approval or acceptance
+ *    opens a send, readable like any other;
+ *  - the preview is the pinned version filled with the values
+ *    (fillSampleValues), rendered for the single recipient or the submitter;
+ *  - what a test set with `refuseApproval` answers the next such action, and
+ *    `failApprovalNotifications` names a notification problem.
+ *
  * A test can hold a request (`hold`) to put two in the order it needs.
  *
  * Every request is recorded, with whether it carried the minted session's
@@ -61,9 +85,10 @@
  */
 import type { Page, Route } from "@playwright/test";
 import { referencedVariables } from "../../../src/lib/mail-render/go-template";
+import { fillSampleValues } from "../../../src/lib/mail-render/preview";
 import { isVariableName } from "../../../src/lib/template-editor/required-variables";
 import { E2E_API_URL } from "./env";
-import { ROLES, VIEWER, accessToken, type Profile } from "./session";
+import { ROLES, VIEWER, accessToken, personOf, type Person, type Profile } from "./session";
 
 type Mode = "jsx" | "visual" | "html";
 
@@ -160,6 +185,44 @@ type SendRecord = {
 
 const PLAUSIBLE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+export type ApprovalState = "pending" | "returned" | "approved" | "rejected" | "declined" | "expired";
+
+type ApprovalChange = { field: "variable" | "template" | "audience"; name: string | null; before: unknown; after: unknown };
+
+export type ApprovalEventRecord = {
+  seq: number;
+  kind: "submitted" | "resubmitted" | "edited" | "returned" | "accepted" | "declined" | "approved" | "rejected" | "expired";
+  actor: { sub: string; name: string } | null;
+  note: string | null;
+  changes: ApprovalChange[];
+  task_id: string | null;
+  at: string;
+};
+
+/** A request for approval as the mock keeps it. */
+export type ApprovalRecord = {
+  id: string;
+  state: ApprovalState;
+  submitter: Person;
+  templateId: string;
+  /** The version published when it was last submitted. */
+  versionId: string;
+  listId: string | null;
+  recipient: { full_name: string; email: string } | null;
+  body_variables: Record<string, unknown>;
+  created_at: string;
+  submitted_at: string;
+  deadline_at: string;
+  updated_at: string;
+  task_id: string | null;
+  history: ApprovalEventRecord[];
+};
+
+type Decided = { kind: ApprovalEventRecord["kind"]; actor: Person | null; note?: string; changes?: ApprovalChange[] };
+
+const WEEK = 7 * 24 * 3600_000;
+const MAILER_FILLS = ["FullName", "Email"];
+
 export const OTHER_OPERATOR: Author = { kind: "operator", sub: "1b7e2d94-3c5a-4f08-8e61-2d9c4a7b3f10", name: "Mehmet Kaya" };
 export const TEMPLATE_SEED: Author = { kind: "template_seed", sub: null, name: "service-account-skymail-seed" };
 const ME: Author = { kind: "operator", sub: VIEWER.sub, name: VIEWER.name };
@@ -205,6 +268,9 @@ export class MockSkymail {
   private readonly sends = new Map<string, SendRecord>();
   private readonly singleRefusals = new Map<string, Answer>();
   private listRefusal: Answer | null = null;
+  private readonly approvals = new Map<string, ApprovalRecord>();
+  private readonly approvalRefusals = new Map<string, Answer>();
+  private notificationProblem: string | null = null;
   private clock = Date.parse("2026-09-23T06:00:00Z");
   private ids = 0;
 
@@ -329,6 +395,78 @@ export class MockSkymail {
   /** Archives a template behind the page's back. */
   archiveTemplate(id: string) {
     this.row(id).archived_at = this.now();
+  }
+
+  /**
+   * A request for approval, submitted `submittedAgo` ago (23 hours by default)
+   * with the version its template publishes now, then left in `state` by
+   * `decided` — the approver's rejection, say. Its times are the real
+   * clock's: the page counts its deadline from the browser's.
+   */
+  addApproval(input: {
+    templateId: string;
+    listId?: string;
+    recipient?: { full_name: string; email: string };
+    variables: Record<string, unknown>;
+    submitter: Person;
+    state?: ApprovalState;
+    submittedAgo?: number;
+    /** From now; seven days after submission by default. */
+    deadlineIn?: number;
+    /** What happened after the submission, in order: an approver's edit and its return, say. */
+    decided?: Decided | Decided[];
+  }): string {
+    const id = this.nextId("5d1e7c2a");
+    const submitted = Date.now() - (input.submittedAgo ?? 23 * 3600_000);
+    const at = new Date(submitted).toISOString();
+    const record: ApprovalRecord = {
+      id,
+      state: input.state ?? "pending",
+      submitter: input.submitter,
+      templateId: input.templateId,
+      versionId: this.row(input.templateId).published_version_id!,
+      listId: input.listId ?? null,
+      recipient: input.recipient ?? null,
+      body_variables: { ...input.variables },
+      created_at: at,
+      submitted_at: at,
+      deadline_at: new Date(input.deadlineIn === undefined ? submitted + WEEK : Date.now() + input.deadlineIn).toISOString(),
+      updated_at: at,
+      task_id: null,
+      history: [],
+    };
+    this.record(record, "submitted", input.submitter, { at });
+    const decided = input.decided === undefined ? [] : Array.isArray(input.decided) ? input.decided : [input.decided];
+    decided.forEach((event, index) =>
+      this.record(record, event.kind, event.actor, {
+        note: event.note ?? null,
+        changes: event.changes ?? [],
+        at: new Date(submitted + (index + 1) * 3600_000).toISOString(),
+      }),
+    );
+    this.approvals.set(id, record);
+    return id;
+  }
+
+  approval(id: string): ApprovalRecord {
+    const record = this.approvals.get(id);
+    if (!record) throw new Error(`no approval ${id}`);
+    return record;
+  }
+
+  /** The next `action` (submit, resubmit, approve, return, reject, accept, decline) gets this answer instead. */
+  refuseApproval(action: string, answer: Answer) {
+    this.approvalRefusals.set(action, answer);
+  }
+
+  /** Every notification an approval action sends reports this problem. */
+  failApprovalNotifications(problem: string | null) {
+    this.notificationProblem = problem;
+  }
+
+  /** What the page asked of Mail onayı that writes, in order. */
+  approvalRequests(): Recorded[] {
+    return this.requests.filter((request) => request.method === "POST" && request.path.startsWith("/mail_approvals"));
   }
 
   /** The sends the page asked to open, in order. */
@@ -492,6 +630,10 @@ export class MockSkymail {
     if (!profile) return refuse(401, "server.unauthorized");
     const can = (...roles: string[]) => roles.some((role) => (ROLES[profile] as readonly string[]).includes(role));
     const query = new URLSearchParams(request.search ?? "");
+
+    if (path === "/mail_approvals" || path.startsWith("/mail_approvals/")) {
+      return this.approvalRoute(method, path, body, query, personOf(profile), can("skymail:mails:approve"));
+    }
 
     const templateMatch = /^\/templates\/([^/]+)$/.exec(path);
     const requiredMatch = /^\/templates\/([^/]+)\/required-variables(?:\/([^/]+))?$/.exec(path);
@@ -667,6 +809,298 @@ export class MockSkymail {
         recipient_counts: { pending: send.recipients.length, processing: 0, sent: 0, failed: 0 },
       },
     };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Mail onayı
+
+  private record(
+    record: ApprovalRecord,
+    kind: ApprovalEventRecord["kind"],
+    actor: Person | null,
+    extra: { note?: string | null; changes?: ApprovalChange[]; task_id?: string | null; at?: string } = {},
+  ) {
+    const at = extra.at ?? new Date().toISOString();
+    record.history.push({
+      seq: record.history.length + 1,
+      kind,
+      actor: actor && { sub: actor.sub, name: actor.name },
+      note: extra.note ?? null,
+      changes: extra.changes ?? [],
+      task_id: extra.task_id ?? null,
+      at,
+    });
+    record.updated_at = at;
+  }
+
+  /** The state as the API reads it: pending or returned past the deadline is expired. */
+  private stateOf(record: ApprovalRecord): ApprovalState {
+    return (record.state === "pending" || record.state === "returned") && Date.parse(record.deadline_at) <= Date.now() ? "expired" : record.state;
+  }
+
+  private approvalView(record: ApprovalRecord, whole: boolean) {
+    const row = this.row(record.templateId);
+    const list = record.listId ? (this.lists.get(record.listId) ?? null) : null;
+    const item = {
+      id: record.id,
+      state: this.stateOf(record),
+      submitter: { sub: record.submitter.sub, name: record.submitter.name, email: record.submitter.email },
+      template: {
+        id: row.id,
+        version_id: record.versionId,
+        name: row.name,
+        key: row.key,
+        republished: row.published_version_id !== record.versionId,
+      },
+      audience: list
+        ? { kind: "mailing_list", mail_list_id: list.id, name: list.name, source: list.source, recipient_full_name: null, recipient_email: null }
+        : { kind: "single", mail_list_id: null, name: null, source: null, recipient_full_name: record.recipient!.full_name, recipient_email: record.recipient!.email },
+      body_variables: record.body_variables,
+      created_at: record.created_at,
+      submitted_at: record.submitted_at,
+      deadline_at: record.deadline_at,
+      updated_at: record.updated_at,
+      task_id: record.task_id,
+      last_event: record.history.at(-1) ?? null,
+    };
+    if (!whole) return item;
+    const version = this.version(record.versionId);
+    const renderedFor = record.recipient ?? { full_name: record.submitter.name, email: record.submitter.email };
+    const values = { ...record.body_variables, FullName: renderedFor.full_name, Email: renderedFor.email };
+    return {
+      ...item,
+      recipient_count: list ? list.recipients.length : 1,
+      preview: {
+        subject: fillSampleValues(version.subject, values, { as: "text" }),
+        html: fillSampleValues(version.html_content, values),
+        plain_text: fillSampleValues(version.plain_text_content, values, { as: "text" }),
+        rendered_for: renderedFor,
+      },
+      preview_error: null,
+      history: record.history,
+    };
+  }
+
+  private notified(templateKey: string) {
+    return { template_key: templateKey, notified: this.notificationProblem ? 0 : 1, problem: this.notificationProblem };
+  }
+
+  /** A submission's body checked as the API checks it: the template, exactly one audience, the Required variables. */
+  private checkSubmission(
+    body: Record<string, unknown>,
+  ): { ok: true; row: Row; list: ListFixture | null; recipient: ApprovalRecord["recipient"]; variables: Record<string, unknown> } | { ok: false; answer: Answer } {
+    if (typeof body.template_id !== "string" || body.template_id === "") {
+      return { ok: false, answer: refuse(400, "validation.error", { errors: [{ field: "template_id", code: "required" }] }) };
+    }
+    const row = this.sendableTemplate(body.template_id);
+    if (!row || !row.published_version_id) return { ok: false, answer: refuse(422, "mail_approval.template_unavailable") };
+    const listId = typeof body.mail_list_id === "string" && body.mail_list_id !== "" ? body.mail_list_id : null;
+    const email = typeof body.recipient_email === "string" && body.recipient_email !== "" ? body.recipient_email : null;
+    if ((listId === null) === (email === null)) {
+      return { ok: false, answer: refuse(400, "validation.error", { errors: [{ field: "mail_list_id", code: "required_without" }] }) };
+    }
+    if (email !== null && !PLAUSIBLE_EMAIL.test(email)) {
+      return { ok: false, answer: refuse(400, "validation.error", { errors: [{ field: "recipient_email", code: "invalid_email" }] }) };
+    }
+    const list = listId ? this.lists.get(listId) : null;
+    if (listId && (!list || list.archived_at !== null)) return { ok: false, answer: refuse(422, "mail_approval.audience_unavailable") };
+    const variables = asFields(body.body_variables);
+    const missing = this.emptyRequired(row, variables);
+    if (missing.length > 0) return { ok: false, answer: refuse(422, "mail_approval.required_variables_missing", { missing }) };
+    const name = typeof body.recipient_full_name === "string" ? body.recipient_full_name : "";
+    return { ok: true, row, list: list ?? null, recipient: email ? { full_name: name, email } : null, variables };
+  }
+
+  private emptyRequired(row: Row, variables: Record<string, unknown>) {
+    return [
+      ...row.contract_required_variables.map(({ name, reason }) => ({ name, source: "contract", reason })),
+      ...row.operator_required_variables.map((name) => ({ name, source: "operator", reason: null })),
+    ].filter(({ name }) => !MAILER_FILLS.includes(name) && (typeof variables[name] !== "string" || (variables[name] as string).trim() === ""));
+  }
+
+  private variableChanges(before: Record<string, unknown>, after: Record<string, unknown>): ApprovalChange[] {
+    return [...new Set([...Object.keys(before), ...Object.keys(after)])]
+      .filter((name) => JSON.stringify(before[name] ?? null) !== JSON.stringify(after[name] ?? null))
+      .map((name) => ({ field: "variable" as const, name, before: before[name] ?? null, after: after[name] ?? null }));
+  }
+
+  /** Opens the send an approval or an acceptance queues. */
+  private sendOf(record: ApprovalRecord): string {
+    const list = record.listId ? this.lists.get(record.listId)! : null;
+    const recipients = list ? list.recipients : [record.recipient!];
+    const answer = this.open(this.row(record.templateId), list, recipients, { body_variables: record.body_variables });
+    return (answer.body as { id: string }).id;
+  }
+
+  private approvalRoute(method: string, path: string, body: unknown, query: URLSearchParams, caller: Person, approver: boolean): Answer {
+    const fields = asFields(body);
+    const refused = (action: string) => {
+      const answer = this.approvalRefusals.get(action);
+      if (answer) this.approvalRefusals.delete(action);
+      return answer ?? null;
+    };
+
+    if (path === "/mail_approvals" && method === "POST") {
+      const early = refused("submit");
+      if (early) return early;
+      const check = this.checkSubmission(fields);
+      if (!check.ok) return check.answer;
+      const now = Date.now();
+      const at = new Date(now).toISOString();
+      const record: ApprovalRecord = {
+        id: this.nextId("5d1e7c2a"),
+        state: "pending",
+        submitter: caller,
+        templateId: check.row.id,
+        versionId: check.row.published_version_id!,
+        listId: check.list?.id ?? null,
+        recipient: check.recipient,
+        body_variables: check.variables,
+        created_at: at,
+        submitted_at: at,
+        deadline_at: new Date(now + WEEK).toISOString(),
+        updated_at: at,
+        task_id: null,
+        history: [],
+      };
+      this.record(record, "submitted", caller, { at });
+      this.approvals.set(record.id, record);
+      return { status: 201, body: { ...this.approvalView(record, true), notification: this.notified("mail.approval-requested") } };
+    }
+
+    if (path === "/mail_approvals" && method === "GET") {
+      const state = query.get("state");
+      if (state && !["pending", "returned", "approved", "rejected", "declined", "expired"].includes(state)) {
+        return refuse(400, "validation.error", { errors: [{ field: "state", code: "oneof" }] });
+      }
+      const own = !approver || query.get("mine") === "true";
+      const listed = [...this.approvals.values()]
+        .filter((record) => !own || record.submitter.sub === caller.sub)
+        .filter((record) => !state || this.stateOf(record) === state)
+        .sort((a, b) => b.submitted_at.localeCompare(a.submitted_at))
+        .map((record) => this.approvalView(record, false));
+      return this.page(listed, query);
+    }
+
+    const match = /^\/mail_approvals\/([^/]+)(?:\/(approve|return|reject|accept|decline|resubmit))?$/.exec(path);
+    if (!match) return refuse(404, "server.not_found");
+    const [, id, action] = match;
+    const record = this.approvals.get(id);
+    if (!record || (!approver && record.submitter.sub !== caller.sub)) return refuse(404, "server.not_found");
+    if (method === "GET" && !action) return { status: 200, body: this.approvalView(record, true) };
+    if (method !== "POST" || !action) return refuse(405, "server.method_not_allowed");
+
+    const approverAction = ["approve", "return", "reject"].includes(action);
+    if (approverAction && !approver) return refuse(403, "server.forbidden");
+    if (!approverAction && record.submitter.sub !== caller.sub) return refuse(403, "mail_approval.not_submitter");
+    const early = refused(action);
+    if (early) return early;
+
+    const state = this.stateOf(record);
+    const allowed = approverAction ? ["pending"] : action === "resubmit" ? ["rejected", "declined"] : ["returned"];
+    if (state === "expired" && record.state !== "expired" && action !== "resubmit") {
+      record.state = "expired";
+      this.record(record, "expired", null);
+      return refuse(409, "mail_approval.expired", { deadline_at: record.deadline_at });
+    }
+    if (action === "approve" && state === "approved" && fields.body_variables === undefined) {
+      return { status: 200, body: this.approvalView(record, true) };
+    }
+    if (!allowed.includes(state)) return refuse(409, "mail_approval.state_conflict", { state, allowed });
+    const row = this.row(record.templateId);
+    const republished = row.published_version_id !== record.versionId;
+    if ((action === "approve" || action === "accept") && republished) {
+      return refuse(409, "mail_approval.template_republished", {
+        submitted_version_id: record.versionId,
+        published_version_id: row.published_version_id,
+      });
+    }
+    const note = typeof fields.note === "string" && fields.note.trim() !== "" ? fields.note : null;
+    const resolved = () => ({ status: 200, body: { ...this.approvalView(record, true), notification: this.notified("mail.approval-resolved") } });
+
+    /** An approver's edit, recorded; or what refuses it. */
+    const edit = (): Answer | null => {
+      const variables = asFields(fields.body_variables);
+      const missing = this.emptyRequired(row, variables);
+      if (missing.length > 0) return refuse(422, "mail_approval.required_variables_missing", { missing });
+      const changes = this.variableChanges(record.body_variables, variables);
+      if (changes.length === 0) return action === "return" ? refuse(422, "mail_approval.no_edit") : null;
+      record.body_variables = variables;
+      this.record(record, "edited", caller, { changes });
+      return null;
+    };
+
+    switch (action) {
+      case "approve": {
+        if (fields.body_variables !== undefined) {
+          const refusal = edit();
+          if (refusal) return refusal;
+        }
+        record.task_id = this.sendOf(record);
+        record.state = "approved";
+        this.record(record, "approved", caller, { note, task_id: record.task_id });
+        return resolved();
+      }
+      case "return": {
+        if (!isObject(fields.body_variables)) return refuse(400, "validation.error", { errors: [{ field: "body_variables", code: "required" }] });
+        const refusal = edit();
+        if (refusal) return refusal;
+        record.state = "returned";
+        record.deadline_at = new Date(Date.now() + WEEK).toISOString();
+        this.record(record, "returned", caller, { note });
+        return resolved();
+      }
+      case "reject": {
+        if (typeof fields.reason !== "string" || fields.reason.trim() === "") {
+          return refuse(400, "validation.error", { errors: [{ field: "reason", code: "required" }] });
+        }
+        record.state = "rejected";
+        this.record(record, "rejected", caller, { note: fields.reason });
+        return resolved();
+      }
+      case "accept": {
+        record.task_id = this.sendOf(record);
+        record.state = "approved";
+        this.record(record, "accepted", caller, { task_id: record.task_id });
+        return resolved();
+      }
+      case "decline": {
+        record.state = "declined";
+        this.record(record, "declined", caller, { note });
+        return { status: 200, body: this.approvalView(record, true) };
+      }
+      default: {
+        const check = this.checkSubmission(fields);
+        if (!check.ok) return check.answer;
+        const changes: ApprovalChange[] = [];
+        if (check.row.id !== record.templateId || check.row.published_version_id !== record.versionId) {
+          changes.push({
+            field: "template",
+            name: null,
+            before: { id: record.templateId, version_id: record.versionId },
+            after: { id: check.row.id, version_id: check.row.published_version_id },
+          });
+        }
+        const audienceBefore = record.listId ? { mail_list_id: record.listId } : { ...record.recipient };
+        const audienceAfter = check.list ? { mail_list_id: check.list.id } : { ...check.recipient };
+        if (JSON.stringify(audienceBefore) !== JSON.stringify(audienceAfter)) {
+          changes.push({ field: "audience", name: null, before: audienceBefore, after: audienceAfter });
+        }
+        changes.push(...this.variableChanges(record.body_variables, check.variables));
+        Object.assign(record, {
+          state: "pending",
+          templateId: check.row.id,
+          versionId: check.row.published_version_id!,
+          listId: check.list?.id ?? null,
+          recipient: check.recipient,
+          body_variables: check.variables,
+          submitted_at: new Date().toISOString(),
+          deadline_at: new Date(Date.now() + WEEK).toISOString(),
+        });
+        this.record(record, "resubmitted", caller, { changes });
+        return { status: 200, body: { ...this.approvalView(record, true), notification: this.notified("mail.approval-requested") } };
+      }
+    }
   }
 
   private saveDraft(templateId: string, body: Record<string, unknown>): Answer {

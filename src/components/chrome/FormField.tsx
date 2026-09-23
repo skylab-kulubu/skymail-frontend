@@ -1,7 +1,7 @@
-import { useId, type InputHTMLAttributes, type ReactNode } from 'react';
-import { Field } from '@/components/chrome/Field';
+import { useId, type InputHTMLAttributes, type ReactNode, type TextareaHTMLAttributes } from 'react';
+import { Field, TextArea } from '@/components/chrome/Field';
 
-type FormFieldProps = InputHTMLAttributes<HTMLInputElement> & {
+type Labelling = {
   label: ReactNode;
   /** The label is for a screen reader only: the field's place says what it is (a row of a table, a search). */
   labelHidden?: boolean;
@@ -11,8 +11,23 @@ type FormFieldProps = InputHTMLAttributes<HTMLInputElement> & {
   error?: string | null;
 };
 
-/** A labelled Field with what it needs said under it, and its error. */
-export function FormField({ label, labelHidden = false, hint, error, ...input }: FormFieldProps) {
+/** What a control needs from its label: its id, and its hint, error and requiredness for a screen reader. */
+type Wiring = {
+  id: string;
+  'aria-invalid'?: true;
+  'aria-describedby'?: string;
+  'aria-required'?: true;
+};
+
+/** A label, the control it names, and what is said under it, all tied together. */
+function Labelled({
+  label,
+  labelHidden = false,
+  hint,
+  error,
+  required,
+  children,
+}: Labelling & { required?: boolean; children: (wiring: Wiring) => ReactNode }) {
   const id = useId();
   const hintId = useId();
   const errorId = useId();
@@ -22,7 +37,12 @@ export function FormField({ label, labelHidden = false, hint, error, ...input }:
       <label htmlFor={id} className={labelHidden ? 'sr-only' : 'block text-xs font-medium text-neutral-300'}>
         {label}
       </label>
-      <Field id={id} aria-invalid={error ? true : undefined} aria-describedby={describedBy} {...input} />
+      {children({
+        id,
+        'aria-invalid': error ? true : undefined,
+        'aria-describedby': describedBy,
+        'aria-required': required ? true : undefined,
+      })}
       {hint ? (
         <div id={hintId} className="space-y-0.5 text-xs text-neutral-500">
           {hint}
@@ -34,5 +54,27 @@ export function FormField({ label, labelHidden = false, hint, error, ...input }:
         </p>
       ) : null}
     </div>
+  );
+}
+
+type FormFieldProps = InputHTMLAttributes<HTMLInputElement> & Labelling;
+
+/** A labelled Field with what it needs said under it, and its error. */
+export function FormField({ label, labelHidden, hint, error, ...input }: FormFieldProps) {
+  return (
+    <Labelled label={label} labelHidden={labelHidden} hint={hint} error={error} required={input.required}>
+      {(wiring) => <Field {...wiring} {...input} />}
+    </Labelled>
+  );
+}
+
+type FormTextAreaProps = TextareaHTMLAttributes<HTMLTextAreaElement> & Labelling;
+
+/** A labelled TextArea, wired as FormField wires a Field. */
+export function FormTextArea({ label, labelHidden, hint, error, ...textarea }: FormTextAreaProps) {
+  return (
+    <Labelled label={label} labelHidden={labelHidden} hint={hint} error={error} required={textarea.required}>
+      {(wiring) => <TextArea {...wiring} {...textarea} />}
+    </Labelled>
   );
 }

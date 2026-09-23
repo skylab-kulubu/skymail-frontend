@@ -53,7 +53,8 @@ const EMPTY_TEXT: Readonly<Record<SendFilter, string>> = {
 
 export function SendList() {
   const router = useRouter();
-  const canSend = sendAccess(useConsole().roles).people;
+  // Anyone who can pick a template may compose: what they cannot send goes for approval.
+  const canCompose = sendAccess(useConsole().roles).people;
   const view = readSendListView(useSearchParams());
   const state = useApiLoad((api, signal) => fetchSendPage(api, view, signal), `${view.status}:${view.page}`);
   const lastPage =
@@ -73,7 +74,7 @@ export function SendList() {
       <PageHeader
         title={sectionLabel('/mail-tasks')}
         description="Her gönderimin durumu alıcılarının kuyruktaki durumundan çıkar: bir alıcısı bile başarısızsa gönderim başarısızdır."
-        actions={canSend ? <CreatePageButton href={composeHref()}>Yeni gönderim</CreatePageButton> : undefined}
+        actions={canCompose ? <CreatePageButton href={composeHref()}>Yeni gönderim</CreatePageButton> : undefined}
       />
 
       <div className="flex flex-wrap items-center justify-between gap-3">

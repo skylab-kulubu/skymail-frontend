@@ -98,8 +98,9 @@ export type ListActions = Readonly<{
   restore: boolean;
   /**
    * Start a send to it, where the send form would offer a list
-   * (send-form/access.ts): the API sends to an internal list and to a
-   * Keycloak group's members, never to an archived list.
+   * (send-form/access.ts) — sent at once or submitted for approval: the API
+   * sends to an internal list and to a Keycloak group's members, never to an
+   * archived list.
    */
   compose: boolean;
   /** A Keycloak group: no one can change it in SkyMail, and every viewer is told so. */
