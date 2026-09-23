@@ -178,10 +178,10 @@ function notRendered(mode: EditableMode, source: string, render: SourceRender | 
 }
 
 /**
- * The Main source's body as it stands: its render, or the stored render when
- * the source is untouched and was already main.
+ * The Main source's body as it stands — what a save would send: its render,
+ * or the stored render when the source is untouched and was already main.
  */
-function mainBody(state: EditorState): { html: string; plainText: string } | null {
+export function mainBody(state: EditorState): { html: string; plainText: string } | null {
   const { editing, stored } = state;
   const main = editing.mainMode;
   if (!isEditableMode(main)) {
