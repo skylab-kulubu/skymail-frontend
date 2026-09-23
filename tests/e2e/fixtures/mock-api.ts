@@ -25,7 +25,10 @@
  *  - an operator marks a variable (`POST …/required-variables`) only when the
  *    published body references it, and releases one (`DELETE
  *    …/required-variables/{name}`) unless the contract holds it (409); both
- *    answer with the template, need the write role and write no version.
+ *    answer with the template, need the write role, write no version, and
+ *    answer 404 for an archived template.
+ *
+ * A test can hold a request (`hold`) to put two in the order it needs.
  *
  * Every request is recorded, with whether it carried the minted session's
  * bearer token and which frame sent it. Anything else answers 501, so a test
@@ -33,6 +36,7 @@
  */
 import type { Page, Route } from "@playwright/test";
 import { referencedVariables } from "../../../src/lib/mail-render/go-template";
+import { isVariableName } from "../../../src/lib/template-editor/required-variables";
 import { E2E_API_URL } from "./env";
 import { VIEWER, accessToken } from "./session";
 
@@ -71,12 +75,26 @@ type Row = {
   react_email_content: string;
   created_at: string;
   updated_at: string;
-  archived_at: null;
-  archived_by: null;
+  /** Set by a test that archives the template behind the page's back. */
+  archived_at: string | null;
+  archived_by: string | null;
   published_version_id: string | null;
   contract_required_variables: { name: string; reason: string | null }[];
   operator_required_variables: string[];
 };
+
+/**
+ * A request a test holds, to put two requests in the order it wants: at
+ * `request` before the mock answers it (as if the server had not got to it
+ * yet), at `answer` after (the server acted; the answer is on its way).
+ */
+export type Hold = {
+  /** Settles when the request reaches the hold. */
+  readonly reached: Promise<void>;
+  release(): void;
+};
+
+type HeldRequest = { method: string; path: string; stage: "request" | "answer"; used: boolean; reach: () => void; gate: Promise<void> };
 
 export type Recorded = {
   method: string;
@@ -116,6 +134,7 @@ const sourceOf = (content: Content, mode: Mode) =>
 export class MockSkymail {
   readonly requests: Recorded[] = [];
   private readonly rows = new Map<string, Row>();
+  private readonly holds: HeldRequest[] = [];
   private readonly versions = new Map<string, Version>();
   private clock = Date.parse("2026-09-23T06:00:00Z");
   private ids = 0;
@@ -219,6 +238,16 @@ export class MockSkymail {
     return this.requests.filter((request) => request.method !== "GET");
   }
 
+  /** Holds the next `method` request to `path` (after the API base) at `stage`, until released. */
+  hold(method: string, path: string, stage: "request" | "answer"): Hold {
+    let reach = () => {};
+    let release = () => {};
+    const reached = new Promise<void>((resolve) => (reach = resolve));
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    this.holds.push({ method, path, stage, used: false, reach, gate });
+    return { reached, release };
+  }
+
   async attach(page: Page) {
     await page.route(`${E2E_API_URL}/**`, (route) => this.handle(route));
   }
@@ -305,13 +334,16 @@ export class MockSkymail {
     } catch {
       // A request from no frame (a worker) has none.
     }
-    const answer = this.respond({
-      method: request.method(),
-      path: new URL(request.url()).pathname.slice(new URL(E2E_API_URL).pathname.length),
-      body,
-      authorization: request.headers().authorization,
-      frameUrl,
-    });
+    const method = request.method();
+    const path = new URL(request.url()).pathname.slice(new URL(E2E_API_URL).pathname.length);
+    const held = this.holds.find((hold) => !hold.used && hold.method === method && hold.path === path);
+    if (held) {
+      held.used = true;
+      held.reach();
+      if (held.stage === "request") await held.gate;
+    }
+    const answer = this.respond({ method, path, body, authorization: request.headers().authorization, frameUrl });
+    if (held?.stage === "answer") await held.gate;
     await route.fulfill({
       status: answer.status,
       contentType: "application/json",
@@ -415,20 +447,24 @@ export class MockSkymail {
       .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
   }
 
-  /** The server's variable name rule (validator.IsVariableName). */
-  private static isVariableName(name: unknown): name is string {
-    return typeof name === "string" && /^[A-Za-z_][A-Za-z0-9_]{0,63}$/.test(name);
+  /** A template the two routes act on: an archived one is as good as unknown. */
+  private inUse(templateId: string): Row | null {
+    const row = this.rows.get(templateId);
+    return row && row.archived_at === null ? row : null;
   }
 
   private markRequired(templateId: string, name: unknown): Answer {
-    const row = this.rows.get(templateId);
+    const row = this.inUse(templateId);
     if (!row) return refuse(404, "server.not_found");
-    if (!MockSkymail.isVariableName(name)) {
+    if (typeof name !== "string" || !isVariableName(name)) {
       return refuse(400, "validation.error", { errors: [{ field: "name", code: "invalid_variable_name" }] });
     }
     // One the contract holds is required already, and stays the contract's.
     const inContract = row.contract_required_variables.some((variable) => variable.name === name);
-    const operator = inContract || row.operator_required_variables.includes(name) ? row.operator_required_variables : [...row.operator_required_variables, name].sort();
+    const operator =
+      inContract || row.operator_required_variables.includes(name)
+        ? row.operator_required_variables
+        : [...row.operator_required_variables, name].sort();
     // The published body must reference every Required variable, the new one too.
     const missing = this.missingRequired(templateId, row.html_content, operator);
     if (missing.length > 0) return refuse(422, "template.required_variables_missing", { missing });
@@ -437,9 +473,9 @@ export class MockSkymail {
   }
 
   private releaseRequired(templateId: string, name: string): Answer {
-    const row = this.rows.get(templateId);
+    const row = this.inUse(templateId);
     if (!row) return refuse(404, "server.not_found");
-    if (!MockSkymail.isVariableName(name)) return refuse(400, "template.invalid_variable_name");
+    if (!isVariableName(name)) return refuse(400, "template.invalid_variable_name");
     if (row.contract_required_variables.some((variable) => variable.name === name)) {
       return refuse(409, "template.required_variable_in_contract", { name });
     }
