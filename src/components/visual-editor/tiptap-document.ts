@@ -20,6 +20,7 @@ function marksTo(marks: readonly VisualMark[] | undefined): JSONContent["marks"]
 }
 
 function inlineTo(node: VisualInline): JSONContent {
+  if (node.type === "hardBreak") return { type: "hardBreak" };
   const marks = marksTo(node.marks);
   const content: JSONContent =
     node.type === "text" ? { type: "text", text: node.text } : { type: "variable", attrs: { name: node.name } };
@@ -31,6 +32,15 @@ function blockTo(block: VisualBlock): JSONContent {
     case "heading":
     case "paragraph":
       return block.content.length > 0 ? { type: block.type, content: block.content.map(inlineTo) } : { type: block.type };
+    case "list":
+      return {
+        type: block.ordered ? "orderedList" : "bulletList",
+        // The schema wants at least one item; an empty list gets a line to type in.
+        content: (block.items.length > 0 ? block.items : [[]]).map((item) => ({
+          type: "listItem",
+          content: [item.length > 0 ? { type: "paragraph", content: item.map(inlineTo) } : { type: "paragraph" }],
+        })),
+      };
     case "button":
       return {
         type: "button",
@@ -80,9 +90,20 @@ function inlineFrom(node: JSONContent): VisualInline {
       return buildVisual.text(text(node.text), marksFrom(node.marks));
     case "variable":
       return buildVisual.variable(text(node.attrs?.name), marksFrom(node.marks));
+    case "hardBreak":
+      return buildVisual.hardBreak();
     default:
       throw new Error(`Visual editörde bilinmeyen satır içi öğe "${node.type}"`);
   }
+}
+
+/** A list item: the one line of text the schema lets it hold. */
+function itemFrom(node: JSONContent): VisualInline[] {
+  const [line, ...more] = node.content ?? [];
+  if (node.type !== "listItem" || more.length > 0 || (line && line.type !== "paragraph")) {
+    throw new Error("Visual editörde liste maddesi tek satır metin olmalı");
+  }
+  return (line?.content ?? []).map(inlineFrom);
 }
 
 function blockFrom(node: JSONContent): VisualBlock {
@@ -92,6 +113,9 @@ function blockFrom(node: JSONContent): VisualBlock {
       return buildVisual.heading((node.content ?? []).map(inlineFrom));
     case "paragraph":
       return buildVisual.paragraph((node.content ?? []).map(inlineFrom));
+    case "bulletList":
+    case "orderedList":
+      return buildVisual.list(node.type === "orderedList", (node.content ?? []).map(itemFrom));
     case "button":
       return buildVisual.button(
         text(attrs.label),

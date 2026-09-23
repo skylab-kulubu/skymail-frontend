@@ -21,7 +21,7 @@
  * cannot show.
  */
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
-import { NodeSelection } from '@tiptap/pm/state';
+import { NodeSelection, TextSelection } from '@tiptap/pm/state';
 import { EditorContent, useEditor, useEditorState, type Editor } from '@tiptap/react';
 import {
   Bold,
@@ -30,6 +30,8 @@ import {
   Heading2,
   Image as ImageIcon,
   Italic,
+  List,
+  ListOrdered,
   Link2,
   Minus,
   MousePointerClick,
@@ -42,7 +44,7 @@ import { FormField } from '@/components/chrome/FormField';
 import { NoticeBox } from '@/components/chrome/Notice';
 import { Button } from '@/components/ui/Button';
 import {
-  EVERY_VISUAL_FEATURE,
+  TEMPLATE_BODY_ALLOWANCE,
   isVariableName,
   linkAddressProblem,
   parseVisualSource,
@@ -139,7 +141,17 @@ function LinkPanel({ editor, onClose }: { editor: Editor; onClose: () => void })
       onSubmit={(event) => {
         event.preventDefault();
         if (problem || nothingSelected) return;
-        editor.chain().focus().extendMarkRange('link').setLink({ href }).run();
+        // The link's text is left behind, not selected: what is typed next follows it, and does not replace it.
+        editor
+          .chain()
+          .focus()
+          .extendMarkRange('link')
+          .setLink({ href })
+          .command(({ tr }) => {
+            tr.setSelection(TextSelection.create(tr.doc, tr.selection.to));
+            return true;
+          })
+          .run();
         onClose();
       }}
     >
@@ -192,6 +204,8 @@ function Toolbar({
     editor,
     selector: ({ editor: current }) => ({
       heading: current.isActive('heading'),
+      bulletList: current.isActive('bulletList'),
+      orderedList: current.isActive('orderedList'),
       paragraph: current.isActive('paragraph'),
       bold: current.isActive('bold'),
       italic: current.isActive('italic'),
@@ -238,6 +252,12 @@ function Toolbar({
         ]
       : []),
   ];
+  const lists: Tool[] = blocks.has('list')
+    ? [
+        { icon: List, label: 'Madde listesi', pressed: state.bulletList, onClick: () => chain().toggleBulletList().run() },
+        { icon: ListOrdered, label: 'Numaralı liste', pressed: state.orderedList, onClick: () => chain().toggleOrderedList().run() },
+      ]
+    : [];
   const inserts: Tool[] = [
     ...(allow.variables
       ? [
@@ -290,7 +310,7 @@ function Toolbar({
 
   const buttons = useRef<(HTMLButtonElement | null)[]>([]);
   const [tabStop, setTabStop] = useState(0);
-  const groups = [kinds, styles, inserts, history].filter((group) => group.length > 0);
+  const groups = [kinds, styles, lists, inserts, history].filter((group) => group.length > 0);
   const count = groups.reduce((total, group) => total + group.length, 0);
   let index = 0;
   const button = (tool: Tool, role?: 'radio') => {
@@ -354,6 +374,7 @@ const CONTENT_CLASS = [
   'min-h-[320px] px-4 py-3 text-sm leading-relaxed text-neutral-200 focus:outline-none',
   '[&_h2]:mt-4 [&_h2]:mb-2 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:text-neutral-100 [&_h2:first-child]:mt-1',
   '[&_p]:my-2',
+  '[&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_li_p]:my-0.5',
   '[&_a]:text-skylab-300 [&_a]:underline [&_a]:underline-offset-2',
   '[&_strong]:font-semibold [&_strong]:text-neutral-100',
   '[&_hr]:my-4 [&_hr]:border-white/20 [&_hr.ProseMirror-selectednode]:border-skylab-400',
@@ -366,9 +387,11 @@ export function VisualEditor({
   variables = [],
   label,
   editable = true,
-  allow = EVERY_VISUAL_FEATURE,
+  allow = TEMPLATE_BODY_ALLOWANCE,
   wording,
   footer,
+  describedBy,
+  invalid = false,
 }: {
   /** A Visual source: the document's JSON text. A new one from outside replaces what is in the editor. */
   value: string;
@@ -385,6 +408,10 @@ export function VisualEditor({
   wording?: Partial<VisualEditorWording>;
   /** Shown under the editing area. */
   footer?: ReactNode;
+  /** The id of what describes the text area — its error, say — for a screen reader. */
+  describedBy?: string;
+  /** What is written does not pass where the editor is mounted (aria-invalid). */
+  invalid?: boolean;
 }) {
   // Which values coming back are the editor's own (echoes.ts); only another one replaces the content.
   const [echoes] = useState(() => createEchoes(value));
@@ -401,19 +428,24 @@ export function VisualEditor({
   const [used, setUsed] = useState<string[]>(opened.ok ? visualDocumentVariables(opened.document) : []);
   const [panel, setPanel] = useState<Panel>(null);
 
+  const attributes = useMemo(
+    () => ({
+      class: CONTENT_CLASS,
+      role: 'textbox',
+      'aria-multiline': 'true',
+      'aria-label': label,
+      ...(describedBy ? { 'aria-describedby': describedBy } : {}),
+      ...(invalid ? { 'aria-invalid': 'true' } : {}),
+    }),
+    [label, describedBy, invalid],
+  );
+
   const editor = useEditor({
     immediatelyRender: false,
     extensions,
     content: opened.ok ? toEditorContent(opened.document) : undefined,
     editable,
-    editorProps: {
-      attributes: {
-        class: CONTENT_CLASS,
-        role: 'textbox',
-        'aria-multiline': 'true',
-        'aria-label': label,
-      },
-    },
+    editorProps: { attributes },
     onUpdate: ({ editor: current }) => {
       const { text, variables: inDocument } = sourceOf(current);
       setUsed(inDocument);
@@ -427,6 +459,10 @@ export function VisualEditor({
   useEffect(() => {
     editor?.setEditable(editable);
   }, [editor, editable]);
+
+  useEffect(() => {
+    editor?.setOptions({ editorProps: { attributes } });
+  }, [editor, attributes]);
 
   // A value from outside — a change set back, a reload — replaces the content.
   useEffect(() => {

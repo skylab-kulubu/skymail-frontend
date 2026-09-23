@@ -9,6 +9,7 @@
     "@react-email/components": "^1.0.8",
     "@react-email/render": "^2.0.4",
     "@tiptap/core": "^3.12.1",
+    "@tiptap/extension-list": "^3.12.1",
     "@tiptap/extensions": "^3.12.1",
     "@tiptap/pm": "^3.12.1",
     "@tiptap/react": "^3.12.1",
@@ -51,7 +52,7 @@
     "api:check": "tsx --test \"src/**/*.test.ts\"",
     "emails:render": "tsx scripts/render-templates.ts",
     "emails:seed": "tsx scripts/seed-templates.ts",
-    "emails:check": "tsx --test src/lib/mail-render/free-body.test.ts src/lib/mail-render/server-allowlist.test.ts",
+    "emails:check": "tsx --test src/lib/mail-render/free-body.test.ts src/lib/mail-render/go-url.test.ts",
     "templates:check": "tsx --test \"src/lib/mail-render/*.test.ts\"",
     "editor:assets": "tsx scripts/build-editor-assets.ts",
     "test:e2e": "playwright test"

@@ -11,7 +11,7 @@ import { join } from "node:path";
 import { describe, it } from "node:test";
 import {
   EMPTY_VISUAL_SOURCE,
-  EVERY_VISUAL_FEATURE,
+  TEMPLATE_BODY_ALLOWANCE,
   parseVisualSource,
   readVisualDocument,
   visualDocumentVariables,
@@ -271,7 +271,7 @@ describe("a Visual document that is refused", () => {
 // reader refuses what a narrower allowance leaves out, as the editor offers
 // only what it allows.
 describe("a Visual document read with a narrower allowance", () => {
-  const plain: VisualAllowance = { blocks: ["heading", "paragraph", "button"], marks: ["bold", "italic"], variables: false };
+  const plain: VisualAllowance = { blocks: ["heading", "paragraph", "button"], marks: ["bold", "italic"], variables: false, lineBreaks: false };
 
   it("reads what the allowance keeps", () => {
     const read = readVisualDocument(
@@ -301,7 +301,62 @@ describe("a Visual document read with a narrower allowance", () => {
   }
 
   it("is everything for a Mail template's own body", () => {
-    assert.ok(readVisualDocument(EVERY_BLOCK, EVERY_VISUAL_FEATURE).ok);
+    assert.ok(readVisualDocument(EVERY_BLOCK, TEMPLATE_BODY_ALLOWANCE).ok);
     assert.equal(parseVisualSource(visualSource(EVERY_BLOCK), plain).ok, false);
   });
 });
+
+// A free announcement's body (ticket 16) has lists and line breaks, as the
+// markdown it replaces had; a Mail template's body does not, since the club's
+// mail components draw neither yet.
+describe("a list and a line break", () => {
+  const announcement: VisualAllowance = {
+    blocks: ["heading", "paragraph", "list"],
+    marks: ["bold", "italic", "link"],
+    variables: false,
+    lineBreaks: true,
+  };
+  const list = {
+    type: "list",
+    ordered: false,
+    items: [
+      [{ type: "text", text: "12–13 Nisan" }],
+      [{ type: "text", text: "Davutpaşa", marks: [{ type: "bold" }] }, { type: "hardBreak" }, { type: "text", text: "D-Blok" }],
+    ],
+  };
+  const broken = { type: "paragraph", content: [{ type: "text", text: "Birinci satır" }, { type: "hardBreak" }, { type: "text", text: "ikinci satır" }] };
+
+  it("read where the allowance has them, keys in their one order", () => {
+    const read = readVisualDocument(reversedKeys(withBlocks([list, broken, { ...list, ordered: true }])), announcement);
+    assert.ok(read.ok, read.ok ? "" : read.problems.join("\n"));
+    assert.equal(JSON.stringify(read.document.blocks[0]), JSON.stringify(list));
+    assert.equal(JSON.stringify(read.document.blocks[1]), JSON.stringify(broken));
+    assert.equal(visualSource(read.document), JSON.stringify(withBlocks([list, broken, { ...list, ordered: true }])));
+  });
+
+  it("are not a Mail template's: its body refuses them, saying they are not used here", () => {
+    const read = readVisualDocument(withBlocks([list, broken]), TEMPLATE_BODY_ALLOWANCE);
+    assert.ok(!read.ok);
+    assert.deepEqual(read.problems, ['blocks[0]: "list" bloğu burada kullanılamaz', "blocks[1].content[1]: satır sonu burada kullanılamaz"]);
+  });
+
+  it("keep a heading on one line, and say what is wrong with a list", () => {
+    const read = readVisualDocument(
+      withBlocks([
+        { type: "heading", content: [{ type: "text", text: "a" }, { type: "hardBreak" }] },
+        { type: "list", ordered: "evet", items: [] },
+        { type: "list", ordered: true, items: "a" },
+        { type: "list", ordered: true, items: [[{ type: "hardBreak", marks: [] }]] },
+      ]),
+      announcement,
+    );
+    assert.ok(!read.ok);
+    assert.deepEqual(read.problems, [
+      "blocks[0].content[1]: başlıkta satır sonu olmaz",
+      'blocks[1].ordered: numaralı (true) ya da madde işaretli (false) olmalı',
+      "blocks[2].items: maddeler bir liste olmalı",
+      'blocks[3].items[0][0]: bilinmeyen alan "marks"',
+    ]);
+  });
+});
+

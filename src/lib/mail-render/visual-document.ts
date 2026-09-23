@@ -31,7 +31,9 @@ export type VisualMark = { type: "bold" } | { type: "italic" } | { type: "link";
 export type VisualInline =
   | { type: "text"; text: string; marks?: VisualMark[] }
   /** `{{.name}}` when rendered. */
-  | { type: "variable"; name: string; marks?: VisualMark[] };
+  | { type: "variable"; name: string; marks?: VisualMark[] }
+  /** A new line inside a paragraph or a list item. */
+  | { type: "hardBreak" };
 
 /** Where a button goes: an address, or the value of a variable, when the send has one. */
 export type ButtonLink = { url: string } | { variable: string };
@@ -40,6 +42,8 @@ export type VisualBlock =
   /** The house Heading: plain text and variables, no marks. */
   | { type: "heading"; content: VisualInline[] }
   | { type: "paragraph"; content: VisualInline[] }
+  /** A bulleted or numbered list, an item a line of inline content. */
+  | { type: "list"; ordered: boolean; items: VisualInline[][] }
   | { type: "button"; label: string; link: ButtonLink }
   /** An image over https (imageAddressProblem); a width in pixels, or the width of the mail. */
   | { type: "image"; src: string; alt: string; width?: number }
@@ -60,23 +64,42 @@ export type VisualBlockType = VisualBlock["type"];
 export type VisualMarkType = VisualMark["type"];
 
 /**
- * What a document may use. A Mail template's body may use all of it; a body
- * that goes through another gate — ticket 16's free announcement, which the
- * server's allow-list sanitizes — only what survives it. The reader refuses
- * what an allowance leaves out, and the editor offers only what it allows.
+ * What a document may use. A Mail template's body may use what the club's
+ * mail components draw (TEMPLATE_BODY_ALLOWANCE); a body that goes through
+ * another gate — ticket 16's free announcement, which the server's allow-list
+ * sanitizes — what survives it (free-body.ts). The reader refuses what an
+ * allowance leaves out, and the editor offers only what it allows.
  * `variables` covers inline variables and a button linking to one; a
- * conditional section needs them too.
+ * conditional section needs them too. `lineBreaks` is a new line inside a
+ * paragraph or a list item.
  */
 export type VisualAllowance = Readonly<{
   blocks: readonly VisualBlockType[];
   marks: readonly VisualMarkType[];
   variables: boolean;
+  lineBreaks: boolean;
 }>;
 
-export const EVERY_VISUAL_FEATURE: VisualAllowance = {
+/** Every block the model knows, whatever a body may use of them. */
+export const VISUAL_BLOCK_TYPES: readonly VisualBlockType[] = ["heading", "paragraph", "list", "button", "image", "divider", "conditional"];
+
+/**
+ * What a Mail template's body may use: every block the club's mail
+ * components draw. They draw no list or line break yet.
+ */
+export const TEMPLATE_BODY_ALLOWANCE: VisualAllowance = {
   blocks: ["heading", "paragraph", "button", "image", "divider", "conditional"],
   marks: ["bold", "italic", "link"],
   variables: true,
+  lineBreaks: false,
+};
+
+/** All of the model: what a document's source text may hold, whichever body it is. */
+const WHOLE_MODEL: VisualAllowance = {
+  blocks: VISUAL_BLOCK_TYPES,
+  marks: ["bold", "italic", "link"],
+  variables: true,
+  lineBreaks: true,
 };
 
 export { isVariableName };
@@ -108,8 +131,10 @@ export const buildVisual = {
   document: (blocks: VisualBlock[]): VisualDocument => ({ type: VISUAL_DOCUMENT_TYPE, version: VISUAL_DOCUMENT_VERSION, blocks }),
   text: (text: string, marks?: readonly VisualMark[]): VisualInline => ({ type: "text", text, ...withMarks(marks) }),
   variable: (name: string, marks?: readonly VisualMark[]): VisualInline => ({ type: "variable", name, ...withMarks(marks) }),
+  hardBreak: (): VisualInline => ({ type: "hardBreak" }),
   heading: (content: VisualInline[]): VisualBlock => ({ type: "heading", content }),
   paragraph: (content: VisualInline[]): VisualBlock => ({ type: "paragraph", content }),
+  list: (ordered: boolean, items: VisualInline[][]): VisualBlock => ({ type: "list", ordered, items }),
   button: (label: string, link: ButtonLink): VisualBlock => ({
     type: "button",
     label,
@@ -259,7 +284,7 @@ class Reader {
     return ok ? marks : null;
   }
 
-  inlines(value: unknown, path: string, { marksAllowed }: { marksAllowed: boolean }): VisualInline[] {
+  inlines(value: unknown, path: string, { marksAllowed, breaksAllowed }: { marksAllowed: boolean; breaksAllowed: boolean }): VisualInline[] {
     if (!Array.isArray(value)) {
       this.problem(path, "içerik bir liste olmalı");
       return [];
@@ -269,6 +294,13 @@ class Reader {
       const at = `${path}[${index}]`;
       if (!isFields(item)) {
         this.problem(at, "bir metin ya da değişken değil");
+        return;
+      }
+      if (item.type === "hardBreak") {
+        this.only(item, ["type"], at);
+        if (!this.allowance.lineBreaks) this.problem(at, "satır sonu burada kullanılamaz");
+        else if (!breaksAllowed) this.problem(at, "başlıkta satır sonu olmaz");
+        else inlines.push(buildVisual.hardBreak());
         return;
       }
       if (item.type !== "text" && item.type !== "variable") {
@@ -336,7 +368,7 @@ class Reader {
       return null;
     }
     const type = item.type as VisualBlockType;
-    if (!EVERY_VISUAL_FEATURE.blocks.includes(type)) {
+    if (!VISUAL_BLOCK_TYPES.includes(type)) {
       this.problem(path, `bilinmeyen blok ${JSON.stringify(item.type)}`);
       return null;
     }
@@ -348,8 +380,22 @@ class Reader {
       case "heading":
       case "paragraph": {
         this.only(item, ["type", "content"], path);
-        const content = this.inlines(item.content, `${path}.content`, { marksAllowed: type === "paragraph" });
-        return type === "heading" ? buildVisual.heading(content) : buildVisual.paragraph(content);
+        const paragraph = type === "paragraph";
+        const content = this.inlines(item.content, `${path}.content`, { marksAllowed: paragraph, breaksAllowed: paragraph });
+        return paragraph ? buildVisual.paragraph(content) : buildVisual.heading(content);
+      }
+      case "list": {
+        this.only(item, ["type", "ordered", "items"], path);
+        const orderedOk = typeof item.ordered === "boolean";
+        if (!orderedOk) this.problem(`${path}.ordered`, "numaralı (true) ya da madde işaretli (false) olmalı");
+        if (!Array.isArray(item.items)) {
+          this.problem(`${path}.items`, "maddeler bir liste olmalı");
+          return null;
+        }
+        const items = item.items.map((entry, index) =>
+          this.inlines(entry, `${path}.items[${index}]`, { marksAllowed: true, breaksAllowed: true }),
+        );
+        return orderedOk ? buildVisual.list(item.ordered as boolean, items) : null;
       }
       case "button": {
         this.only(item, ["type", "label", "link"], path);
@@ -390,10 +436,10 @@ class Reader {
 /**
  * A document as the API or the editor hands it over, read into the model:
  * every problem it has, or the document with its keys and marks in their one
- * order. `allowance` narrows what it may use; a Mail template's body may use
- * everything.
+ * order. `allowance` says what it may use: by default what a Mail
+ * template's body may.
  */
-export function readVisualDocument(value: unknown, allowance: VisualAllowance = EVERY_VISUAL_FEATURE): VisualRead {
+export function readVisualDocument(value: unknown, allowance: VisualAllowance = TEMPLATE_BODY_ALLOWANCE): VisualRead {
   const reader = new Reader(allowance);
   if (!isFields(value)) {
     reader.problem("belge", "bir Visual belge değil (bir JSON nesnesi bekleniyordu)");
@@ -414,7 +460,7 @@ export function readVisualDocument(value: unknown, allowance: VisualAllowance = 
 }
 
 /** A Visual source, which is the document's JSON text. */
-export function parseVisualSource(source: string, allowance: VisualAllowance = EVERY_VISUAL_FEATURE): VisualRead {
+export function parseVisualSource(source: string, allowance: VisualAllowance = TEMPLATE_BODY_ALLOWANCE): VisualRead {
   let value: unknown;
   try {
     value = JSON.parse(source);
@@ -427,10 +473,11 @@ export function parseVisualSource(source: string, allowance: VisualAllowance = E
 /**
  * The source text of a document: its JSON, keys and marks in their one order,
  * so the same document is always the same text. A document the model would
- * refuse is never written; that is a caller's mistake.
+ * refuse — whichever body it is for — is never written; that is a caller's
+ * mistake.
  */
 export function visualSource(document: VisualDocument): string {
-  const read = readVisualDocument(document);
+  const read = readVisualDocument(document, WHOLE_MODEL);
   if (!read.ok) throw new Error(`Geçersiz Visual belge: ${read.problems.join("; ")}`);
   return JSON.stringify(read.document);
 }
@@ -447,6 +494,9 @@ export function visualDocumentVariables(document: VisualDocument): string[] {
         case "heading":
         case "paragraph":
           for (const inline of block.content) if (inline.type === "variable") found.add(inline.name);
+          break;
+        case "list":
+          for (const inline of block.items.flat()) if (inline.type === "variable") found.add(inline.name);
           break;
         case "button":
           if ("variable" in block.link) found.add(block.link.variable);
