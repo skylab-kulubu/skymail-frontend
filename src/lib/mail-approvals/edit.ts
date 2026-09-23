@@ -17,7 +17,7 @@
  */
 import { freeBodyFromSource } from "../mail-render/free-body";
 import { readFreeBody } from "../mail-render/free-body-read";
-import { visualSource } from "../mail-render/visual-document";
+import { visualSource, type VisualInline } from "../mail-render/visual-document";
 import type { ListRow } from "../mailing-lists";
 import type { SendAccess } from "../send-form/access";
 import type { PersonRow } from "../send-form/audience";
@@ -32,8 +32,9 @@ import {
 } from "../send-form/fields";
 import { FREE_BODY_VARIABLE, FREE_TEMPLATE_KEY, type SendPlan } from "../send-form/send";
 import { audienceLabel } from "../sends";
-import type { MailTemplate } from "../templates";
-import type { ApprovalChange, ApprovalEvent, ApprovalPerson, MailApproval } from "./approvals";
+import type { ApiClient } from "../api/client";
+import { fetchTemplate, fetchVersion, type MailTemplate } from "../templates";
+import type { ApprovalChange, ApprovalEvent, ApprovalPerson, ApprovalTemplate, MailApproval } from "./approvals";
 
 type Variables = Readonly<Record<string, unknown>>;
 
@@ -60,6 +61,28 @@ export function approvalFields(source: FieldSource | null, variables: Variables 
     return [...fields, ...names.filter((name) => !fields.some((field) => field.name === name)).map((name) => namedField(name))];
   }
   return names.map((name) => namedField(name, templateKey === FREE_TEMPLATE_KEY && name === FREE_BODY_VARIABLE ? "rich" : undefined));
+}
+
+/**
+ * The version a request is pinned to, as the fields are built from it: its
+ * subject and body, with the template's Required variables — none known when
+ * the template cannot be read (archived since). Null when the version cannot
+ * be read either: the fields are then the request's values by name.
+ */
+export async function fetchPinnedSource(
+  api: ApiClient,
+  template: Pick<ApprovalTemplate, "id" | "version_id">,
+  signal?: AbortSignal,
+): Promise<FieldSource | null> {
+  const [row, version] = await Promise.allSettled([fetchTemplate(api, template.id, signal), fetchVersion(api, template.id, template.version_id, signal)]);
+  if (version.status !== "fulfilled") return null;
+  const required = row.status === "fulfilled" ? row.value : null;
+  return {
+    subject: version.value.subject,
+    html_content: version.value.html_content,
+    contract_required_variables: required?.contract_required_variables ?? [],
+    operator_required_variables: required?.operator_required_variables ?? [],
+  };
 }
 
 /**
@@ -123,6 +146,28 @@ export function editedVariables(fields: readonly VariableField[], original: Vari
   }
   const problems = fieldProblems(touched, current);
   return Object.keys(problems).length > 0 ? { ok: false, problems } : { ok: true, variables, changed };
+}
+
+/**
+ * A value as the page shows it, or null for none: a text as it is, a free
+ * announcement's body as its words — a line a block, a list's items marked —
+ * never as markup (the preview shows it as mail).
+ */
+export function valueText(value: unknown, kind: VariableField["kind"]): string | null {
+  if (value === undefined || value === null) return null;
+  const text = asText(value);
+  if (kind !== "rich") return text;
+  const line = (content: readonly VisualInline[]) =>
+    content.map((node) => (node.type === "text" ? node.text : node.type === "hardBreak" ? "\n" : "")).join("");
+  return readFreeBody(text)
+    .document.blocks.map((block) =>
+      block.type === "list"
+        ? block.items.map((item) => `• ${line(item)}`).join("\n")
+        : "content" in block
+          ? line(block.content)
+          : "",
+    )
+    .join("\n");
 }
 
 export type VariableChange = Readonly<{ name: string; before: unknown; after: unknown }>;

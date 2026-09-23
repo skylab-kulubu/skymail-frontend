@@ -4,10 +4,12 @@ import { useEffect, useState } from 'react';
 
 /**
  * The outcome of an action, as a page says it (`components/chrome/Notice`):
- * a success as a success, an error as the API's Turkish sentence.
+ * a success as a success, an error as the API's Turkish sentence, and a
+ * success with something left undone — an approval request no approver was
+ * told of — as a warning.
  */
 export type NoticeData = Readonly<{
-  tone: 'success' | 'error';
+  tone: 'success' | 'warning' | 'error';
   text: string;
   /** An archived record — a mailing list, a Mail template — the notice can bring back ("Geri al"). */
   restore?: Readonly<{ id: string; name: string }>;

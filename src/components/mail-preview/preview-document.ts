@@ -42,7 +42,11 @@ export function forceColorScheme(html: string, scheme: MailScheme): string {
   });
 }
 
-/** The document a preview frame shows for `body`. */
-export function previewDocument(body: string, { scheme, sample }: { scheme: MailScheme; sample: SampleValues }): string {
-  return forceColorScheme(fillSampleValues(body, sample), scheme);
+/**
+ * The document a preview frame shows for `body`: filled with `sample`, or,
+ * without one, a mail the server already rendered (a request for approval's
+ * preview), shown as it is.
+ */
+export function previewDocument(body: string, { scheme, sample }: { scheme: MailScheme; sample?: SampleValues }): string {
+  return forceColorScheme(sample ? fillSampleValues(body, sample) : body, scheme);
 }

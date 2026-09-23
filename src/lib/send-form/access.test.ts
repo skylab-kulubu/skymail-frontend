@@ -10,7 +10,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { ROLE } from "../access";
-import { directSend, sendAccess } from "./access";
+import { approvalNote, directSend, sendAccess } from "./access";
 
 const roles = (...granted: string[]) => [ROLE.access, ...granted];
 
@@ -65,5 +65,25 @@ describe("whether the audience chosen is sent at once or submitted for approval"
     const member = sendAccess(roles(ROLE.templatesRead, ROLE.listsRead));
     assert.equal(directSend(member, "people"), false);
     assert.equal(directSend(member, "list"), false);
+  });
+});
+
+describe("what the form says when a send goes for approval", () => {
+  it("names the role a direct send would take, and says one person at most goes for approval", () => {
+    const member = sendAccess(roles(ROLE.templatesRead, ROLE.listsRead));
+    assert.equal(
+      approvalNote(member, "list"),
+      "Bu hesap bir mail listesine doğrudan gönderemez (skymail:mails:write rolü gerekiyor): gönderim onaya sunulur, bir onaycı onaylayınca gider.",
+    );
+    assert.equal(
+      approvalNote(member, "people"),
+      "Bu hesap mail gönderemez (skymail:mails:send ya da skymail:mails:write rolü gerekiyor): gönderim onaya sunulur, bir onaycı onaylayınca gider. Onaya tek bir kişi sunulur.",
+    );
+  });
+
+  it("says nothing where the viewer sends at once", () => {
+    const sender = sendAccess(roles(ROLE.templatesRead, ROLE.listsRead, ROLE.mailsWrite));
+    assert.equal(approvalNote(sender, "list"), null);
+    assert.equal(approvalNote(sender, "people"), null);
   });
 });

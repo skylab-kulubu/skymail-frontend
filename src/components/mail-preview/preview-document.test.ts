@@ -56,3 +56,15 @@ describe("the preview document", () => {
     assert.match(previewDocument("<p>{{.FirstName}}</p>", { scheme: "light", sample: {} }), /«FirstName»/);
   });
 });
+
+// A mail the server already rendered — a request for approval's preview
+// (ticket 20) — holds no Go actions any more: what looks like one is what the
+// sender typed, and stays as it is.
+describe("a mail already rendered", () => {
+  it("is shown as it is, only its theme forced", () => {
+    const rendered = MAIL.replace("{{.FirstName}}", "Ayşe, {{.Gizli}} yazdım");
+    const document = previewDocument(rendered, { scheme: "dark" });
+    assert.match(document, /Merhaba Ayşe, \{\{\.Gizli\}\} yazdım/);
+    assert.match(document, /@media all/);
+  });
+});

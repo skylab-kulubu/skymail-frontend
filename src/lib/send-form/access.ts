@@ -47,3 +47,11 @@ export function sendAccess(roles: readonly string[]): SendAccess {
 export function directSend(access: SendAccess, audience: "list" | "people"): boolean {
   return audience === "list" ? access.send.list : access.send.people;
 }
+
+/** What the form says when a send to `audience` goes for approval: the role a direct send takes. Null when it goes at once. */
+export function approvalNote(access: SendAccess, audience: "list" | "people"): string | null {
+  if (directSend(access, audience)) return null;
+  return audience === "list"
+    ? `Bu hesap bir mail listesine doğrudan gönderemez (${ROLE.mailsWrite} rolü gerekiyor): gönderim onaya sunulur, bir onaycı onaylayınca gider.`
+    : `Bu hesap mail gönderemez (${ROLE.mailsSend} ya da ${ROLE.mailsWrite} rolü gerekiyor): gönderim onaya sunulur, bir onaycı onaylayınca gider. Onaya tek bir kişi sunulur.`;
+}

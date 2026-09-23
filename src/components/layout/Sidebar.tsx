@@ -1,14 +1,18 @@
 'use client';
 
-// Copied from superadmin (ADR-0017). SkyMail's menu is four flat links gated
-// by role (src/lib/access.ts), so the nav groups, the command palette hooks and
+// Copied from superadmin (ADR-0017). SkyMail's menu is flat links gated by
+// role (src/lib/access.ts), so the nav groups, the command palette hooks and
 // the club role label are gone; the theme toggle and the brand row are new.
+// An approver's Mail onayları carries how many requests wait for them
+// (ticket 20): one small request per page load, read again when the viewer
+// changes a request.
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useId, useRef } from 'react';
 import {
   ChevronRight,
+  ClipboardCheck,
   FileText,
   Home,
   List,
@@ -23,8 +27,11 @@ import { BrandMark } from '@/components/layout/BrandMark';
 import { ClubSwitcher } from '@/components/layout/ClubSwitcher';
 import { useConsole } from '@/components/layout/ConsoleContext';
 import { ThemeToggle } from '@/components/layout/ThemeToggle';
-import { visibleNavigation, type NavItem as NavLink } from '@/lib/access';
+import { isApprover, visibleNavigation, type NavItem as NavLink } from '@/lib/access';
+import { useApiLoad } from '@/lib/api/react';
 import { signOutOfKeycloak } from '@/lib/auth/actions';
+import { APPROVAL_LIST_PATH, pendingCount } from '@/lib/mail-approvals/approvals';
+import { onApprovalsChanged } from '@/lib/mail-approvals/changes';
 import { displayPersonName } from '@/lib/chrome-role';
 import { isTopModalLayer, registerModalLayer } from '@/lib/ui/modal-layer';
 
@@ -33,7 +40,19 @@ const NAV_ICON = {
   '/templates': FileText,
   '/mailing-lists': List,
   '/mail-tasks': Send,
+  '/mail-approvals': ClipboardCheck,
 } as const;
+
+/** How many requests wait for an approver; null for anyone else, or while it is not known. */
+function usePendingApprovals(approver: boolean): number | null {
+  const count = useApiLoad(
+    (api, signal) => (approver ? pendingCount(api, signal) : Promise.resolve(null)),
+    approver ? 'pending-approvals' : 'none',
+  );
+  const { reload } = count;
+  useEffect(() => (approver ? onApprovalsChanged(() => void reload()) : undefined), [approver, reload]);
+  return count.status === 'success' ? count.data : null;
+}
 
 type SidebarProps = Readonly<{
   isMobileOpen?: boolean;
@@ -52,21 +71,26 @@ function NavItem({
   pathname,
   onClick,
   collapsed = false,
+  badge = null,
 }: {
   item: NavLink;
   pathname: string;
   onClick?: () => void;
   collapsed?: boolean;
+  /** How many wait there; nothing is shown for none. */
+  badge?: number | null;
 }) {
   const Icon = NAV_ICON[item.href as keyof typeof NAV_ICON] ?? ChevronRight;
   const active = isActive(pathname, item.href);
+  const waiting = badge !== null && badge > 0 ? `${badge} bekleyen` : null;
+  const name = waiting ? `${item.label} (${waiting})` : item.label;
   return (
     <Link
       href={item.href}
       onClick={onClick}
       aria-current={active ? 'page' : undefined}
-      aria-label={collapsed ? item.label : undefined}
-      title={collapsed ? item.label : undefined}
+      aria-label={collapsed || waiting ? name : undefined}
+      title={collapsed ? name : undefined}
       className={`focus-visible:ring-skylab-400/40 group flex min-h-10 items-center rounded-md py-2 text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none ${
         collapsed ? 'justify-center px-1' : 'gap-3 px-3'
       } ${
@@ -75,8 +99,19 @@ function NavItem({
           : 'text-neutral-400 hover:bg-neutral-800/60 hover:text-neutral-100'
       }`}
     >
-      <Icon className="h-5 w-5 shrink-0" strokeWidth={1.75} />
+      <span className="relative shrink-0">
+        <Icon className="h-5 w-5" strokeWidth={1.75} />
+        {collapsed && waiting ? <span className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-amber-400" aria-hidden /> : null}
+      </span>
       {collapsed ? null : <span className="truncate font-medium">{item.label}</span>}
+      {!collapsed && waiting ? (
+        <span
+          className="text-2xs ml-auto rounded-full border border-amber-400/30 bg-amber-400/10 px-1.5 py-px font-medium text-amber-300 tabular-nums"
+          aria-hidden
+        >
+          {badge}
+        </span>
+      ) : null}
     </Link>
   );
 }
@@ -85,10 +120,12 @@ function SidebarContent({
   onItemClick,
   collapsed = false,
   onCollapsedChange,
+  pendingApprovals = null,
 }: {
   onItemClick?: () => void;
   collapsed?: boolean;
   onCollapsedChange?: (collapsed: boolean) => void;
+  pendingApprovals?: number | null;
 }) {
   const pathname = usePathname() || '/';
   const { roles, user, config } = useConsole();
@@ -116,6 +153,7 @@ function SidebarContent({
             pathname={pathname}
             onClick={onItemClick}
             collapsed={collapsed}
+            badge={item.href === APPROVAL_LIST_PATH ? pendingApprovals : null}
           />
         ))}
       </nav>
@@ -175,6 +213,7 @@ export function Sidebar({
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const onMobileCloseRef = useRef(onMobileClose);
   const mobileLayerId = useId();
+  const pendingApprovals = usePendingApprovals(isApprover(useConsole().roles));
 
   useEffect(() => {
     onMobileCloseRef.current = onMobileClose;
@@ -228,6 +267,7 @@ export function Sidebar({
         <SidebarContent
           collapsed={isDesktopCollapsed}
           onCollapsedChange={onDesktopCollapsedChange}
+          pendingApprovals={pendingApprovals}
         />
       </aside>
       {isMobileOpen ? (
@@ -254,7 +294,7 @@ export function Sidebar({
             >
               <X className="h-4 w-4" />
             </button>
-            <SidebarContent onItemClick={() => onMobileClose?.()} />
+            <SidebarContent onItemClick={() => onMobileClose?.()} pendingApprovals={pendingApprovals} />
           </aside>
         </div>
       ) : null}

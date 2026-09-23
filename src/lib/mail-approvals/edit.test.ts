@@ -22,13 +22,16 @@ import type { FieldSource } from "../send-form/fields";
 import { FREE_TEMPLATE_KEY, sendPlan, type SendDraft } from "../send-form/send";
 import type { MailTemplate } from "../templates";
 import { ROLE } from "../access";
+import { TEST_BASE_URL, json, scriptedClient } from "../api/testing";
 import type { ApprovalEvent, MailApproval } from "./approvals";
 import {
   approvalFields,
   approvalRequest,
   composePrefill,
   editedVariables,
+  fetchPinnedSource,
   inputFromVariables,
+  valueText,
   valuesBeforeEdit,
   variableChanges,
 } from "./edit";
@@ -383,5 +386,59 @@ describe("the send form filled from a request", () => {
 
     const odd = composePrefill(approval({ body_variables: { ...SUBMITTED, BodyHtml: "<div>x</div>" } }), { templates: [FREE], lists, access: member });
     assert.deepEqual(odd.notes, ["Gövde Visual editöre birebir aktarılamadı: gönderilmeden önce bak."]);
+  });
+});
+
+describe("a value as the page shows it", () => {
+  it("is a text as it is, and none as nothing", () => {
+    assert.equal(valueText("GECEKODU", "text"), "GECEKODU");
+    assert.equal(valueText(3, "text"), "3");
+    assert.equal(valueText(null, "text"), null);
+    assert.equal(valueText(undefined, "rich"), null);
+  });
+
+  // A body is shown as its words, a line a block; the preview shows it as mail.
+  it("is a free announcement's body as its text, never as markup", () => {
+    assert.equal(
+      valueText('<h2>Başvurular</h2><p>a &amp; b<br>c <a href="https://x.co">d</a></p><ul><li>e</li><li>f</li></ul><script>x</script>', "rich"),
+      "Başvurular\na & b\nc d\n• e\n• f\nx",
+    );
+  });
+});
+
+describe("the version a request is pinned to, read for its fields", () => {
+  const pinned = { id: FREE_ID, version_id: "9a1b2c00-0000-4000-8000-000000000002" };
+
+  it("is the version's subject and body, with the template's Required variables", async () => {
+    const { api, calls } = scriptedClient(
+      json(200, { ...FREE, operator_required_variables: ["Subject"] }),
+      json(200, { id: pinned.version_id, subject: "{{.Subject}} (v1)", html_content: "<p>{{.Subject}}</p>" }),
+    );
+    assert.deepEqual(await fetchPinnedSource(api, pinned), {
+      subject: "{{.Subject}} (v1)",
+      html_content: "<p>{{.Subject}}</p>",
+      contract_required_variables: [],
+      operator_required_variables: ["Subject"],
+    });
+    assert.deepEqual(
+      calls.map((call) => call.url),
+      [`${TEST_BASE_URL}/templates/${FREE_ID}`, `${TEST_BASE_URL}/templates/${FREE_ID}/versions/${pinned.version_id}`],
+    );
+  });
+
+  // An archived template answers 404 to every read but its versions'.
+  it("is the version alone when the template cannot be read, and nothing when the version cannot", async () => {
+    const archived = scriptedClient(
+      json(404, { code: "server.not_found" }),
+      json(200, { id: pinned.version_id, subject: "S", html_content: "H" }),
+    );
+    assert.deepEqual(await fetchPinnedSource(archived.api, pinned), {
+      subject: "S",
+      html_content: "H",
+      contract_required_variables: [],
+      operator_required_variables: [],
+    });
+    const gone = scriptedClient(json(404, { code: "server.not_found" }), json(404, { code: "server.not_found" }));
+    assert.equal(await fetchPinnedSource(gone.api, pinned), null);
   });
 });

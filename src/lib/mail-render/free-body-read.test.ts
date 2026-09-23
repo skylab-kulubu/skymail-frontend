@@ -77,7 +77,7 @@ describe("reading a free announcement's body back", () => {
 
   it("decodes named and numbered character references", () => {
     const read = readFreeBody("<p>&lt;a&gt; &quot;b&quot; &#39;c&#x27; d&nbsp;e &copy;</p>");
-    assert.deepEqual(read.document.blocks, [b.paragraph([b.text(`<a> "b" 'c' d e &copy;`)])]);
+    assert.deepEqual(read.document.blocks, [b.paragraph([b.text(`<a> "b" 'c' d\u00a0e &copy;`)])]);
   });
 });
 
