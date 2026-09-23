@@ -128,9 +128,18 @@ function ApprovalView({
   };
   const edit = editing ? editedVariables(fields, approval.body_variables, editing.initial, editing.current) : null;
 
-  // The approval mails link to #preview; the page draws it once the request has loaded.
+  // The approval mails link to #preview; the page draws it once the request has
+  // loaded, then takes the reader — and the focus, for a keyboard or a screen reader — there.
   useEffect(() => {
-    if (window.location.hash === '#preview') document.getElementById('preview')?.scrollIntoView();
+    const toPreview = () => {
+      if (window.location.hash !== '#preview') return;
+      const preview = document.getElementById('preview');
+      preview?.scrollIntoView();
+      preview?.focus({ preventScroll: true });
+    };
+    toPreview();
+    window.addEventListener('hashchange', toPreview);
+    return () => window.removeEventListener('hashchange', toPreview);
   }, []);
 
   function startEditing() {
@@ -558,7 +567,7 @@ function PreviewSection({ approval }: { approval: MailApproval }) {
   const who = preview ? `${preview.rendered_for.full_name || preview.rendered_for.email} <${preview.rendered_for.email}>` : '';
   return (
     // Scrolled to from the mail's #preview link: clear of the phone's sticky top bar.
-    <section id="preview" aria-labelledby="preview-title" className="scroll-mt-20 space-y-3 md:scroll-mt-4">
+    <section id="preview" tabIndex={-1} aria-labelledby="preview-title" className="scroll-mt-20 space-y-3 outline-none md:scroll-mt-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 id="preview-title" className="text-sm font-medium text-neutral-100">
           Önizleme

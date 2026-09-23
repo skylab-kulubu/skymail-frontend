@@ -181,6 +181,10 @@ test("an approver finds a pending request in the menu and the list, and approves
 
   await expect(page).toHaveURL(`/mail-approvals/show/${id}`);
   await expect(decision(page)).toContainText("Bu istek onayını bekliyor");
+
+  // The approval mail's PreviewUrl lands on the preview, focus and all.
+  await page.goto(`/mail-approvals/show/${id}#preview`);
+  await expect(page.getByRole("region", { name: "Önizleme" })).toBeFocused();
   await expect(preview(page, "İsteğin önizlemesi").locator(".t-body")).toHaveText("Başvurular 5 Nisan'a kadar açık.");
   await expect(page.getByText("Listedeki her alıcı kendi adıyla alır")).toBeVisible();
 
