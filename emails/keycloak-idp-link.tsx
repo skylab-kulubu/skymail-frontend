@@ -11,7 +11,7 @@ export const meta: TemplateMeta = {
   trigger: "Keycloak, YTÜ Microsoft kimliği mevcut bir SKY LAB hesabına bağlanırken (IdP link).",
   variables: ["link", "linkExpirationMinutes", "firstName", "username", "realmDisplayName", "subjectKey"],
   // The link that confirms the account link; Keycloak's SkyMail provider always passes it.
-  requiredVariables: ["link"],
+  requiredVariables: [{ name: "link", reason: "YTÜ hesabını bağlamayı onaylama bağlantısı; kaldırılırsa hesaplar bağlanamaz." }],
   sample: {
     link: "https://e.yildizskylab.com/realms/skylab/login-actions/action-token?key=ornek",
     linkExpirationMinutes: "15",

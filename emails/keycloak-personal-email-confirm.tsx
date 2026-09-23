@@ -12,7 +12,7 @@ export const meta: TemplateMeta = {
     "Account center'da kişisel e-posta eklendiğinde; 6 haneli kod, 10 dakika geçerli, yalnız isteyen kişinin açık oturumunda çalışır (K3c, ADR-0044 güncellemesi). Keycloak'tan K5 ile gelir.",
   variables: ["code", "codeExpirationMinutes", "firstName", "username", "realmDisplayName", "subjectKey"],
   // The code the member types into Account center; Keycloak's SkyMail provider always passes it.
-  requiredVariables: ["code"],
+  requiredVariables: [{ name: "code", reason: "Account center'a girilecek doğrulama kodu; kaldırılırsa kişisel e-posta onaylanamaz." }],
   sample: {
     code: "048213",
     codeExpirationMinutes: "10",

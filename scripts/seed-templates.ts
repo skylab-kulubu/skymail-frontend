@@ -7,7 +7,8 @@
  * live service still calls is how mail silently stops.
  *
  * Each template's contract Required variables (meta.requiredVariables) go
- * with it; SkyMail refuses a body that does not reference them.
+ * with it, each with why the mail needs it; SkyMail refuses a body that does
+ * not reference them and shows the reasons in its panel.
  *
  * One field is not overwritten: a subject is seeded when the key is new and
  * then belongs to the row, so an operator can reword it without a release

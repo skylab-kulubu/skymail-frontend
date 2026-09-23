@@ -11,7 +11,7 @@ export const meta: TemplateMeta = {
   trigger: "Keycloak, kişi hesabının e-posta adresini değiştirdiğinde — doğrulama YENİ adrese gider.",
   variables: ["link", "linkExpirationMinutes", "firstName", "username", "realmDisplayName", "subjectKey"],
   // The link that confirms the new address; Keycloak's SkyMail provider always passes it.
-  requiredVariables: ["link"],
+  requiredVariables: [{ name: "link", reason: "Yeni e-posta adresini onaylama bağlantısı; kaldırılırsa adres değişikliği tamamlanamaz." }],
   sample: {
     link: "https://e.yildizskylab.com/realms/skylab/login-actions/action-token?key=ornek",
     linkExpirationMinutes: "15",

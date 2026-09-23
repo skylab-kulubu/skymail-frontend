@@ -30,10 +30,22 @@ export interface TemplateMeta {
    * and the mail cannot do its job without — a reset link, a certificate's
    * VerifyURL — not every variable it sends. The Template seed writes them to
    * SkyMail, which refuses any save or publish whose body stops referencing
-   * one, and the panel shows them locked. Only what the sender's code is known
-   * to pass belongs here. Every System template states its set, empty when
-   * nothing qualifies or nothing sends it yet.
+   * one, and the panel shows them locked, with their reason. Only what the
+   * sender's code is known to pass, always, belongs here. Every System
+   * template states its set, empty when nothing qualifies or nothing sends it
+   * yet.
    */
-  requiredVariables?: string[];
+  requiredVariables?: RequiredVariable[];
   sample: Record<string, unknown>;
+}
+
+/** A contract Required variable and why the mail needs it. */
+export interface RequiredVariable {
+  /** The variable, as the body reaches it with `.name`. */
+  name: string;
+  /**
+   * Why the mail cannot do without it, in one Turkish sentence an operator
+   * reads in the panel and in a refused save. At most 300 characters.
+   */
+  reason: string;
 }

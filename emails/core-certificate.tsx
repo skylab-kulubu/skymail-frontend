@@ -15,7 +15,7 @@ export const meta: TemplateMeta = {
   // core-backend/internal/certificate/service.go:161 gönderdiği set.
   variables: ["FirstName", "EventName", "VerifyURL", "Serial", "OwnerTeam"],
   // The only way to the certificate page and its check; core always passes it.
-  requiredVariables: ["VerifyURL"],
+  requiredVariables: [{ name: "VerifyURL", reason: "Sertifika sayfasının ve doğrulamasının adresi; kaldırılırsa katılımcı sertifikasına ulaşamaz." }],
   sample: {
     FirstName: "Yusuf",
     EventName: "GECEKODU 2026",
