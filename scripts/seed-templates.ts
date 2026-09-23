@@ -1,19 +1,21 @@
 /**
  * Puts the templates in emails/ into a SkyMail instance, addressed by key.
  *
- * Seeding is an upsert, so running it twice is the same as running it once, and
- * a template that was archived comes back. Nothing is deleted: a key that is no
- * longer in emails/ is left alone and reported, because archiving something a
- * live service still calls is how mail silently stops.
+ * Seeding is an upsert: a template that was archived comes back, and nothing
+ * is deleted — a key that is no longer in emails/ is left alone, because
+ * archiving something a live service still calls is how mail silently stops.
+ * Each template goes with its .tsx source as its JSX source, the render of
+ * that source, its subject and its contract Required variables.
  *
- * Each template's contract Required variables (meta.requiredVariables) go
- * with it, each with why the mail needs it; SkyMail refuses a body that does
- * not reference them and shows the reasons in its panel.
+ * SkyMail refuses a template an operator changed since the last seed
+ * (ADR-0047). The run goes on with the others, lists the refused ones with
+ * why and the command that forces each, and exits non-zero. Forcing writes
+ * over the operator's change; their versions stay in the template's history.
+ * What the run does is src/lib/template-seed; this is its command line:
  *
- * One field is not overwritten: a subject is seeded when the key is new and
- * then belongs to the row, so an operator can reword it without a release
- * (ADR-0045). A run that finds a reworded subject says so rather than leaving
- * it to look like the repo's wording quietly failed to apply.
+ *   --dry-run                       nothing is sent; lists what would be
+ *   --force=<key>[,<key>]           writes these even over an operator's change
+ *   --force-all                     writes every template so
  *
  * Credentials come from the environment and are never printed:
  *
@@ -23,14 +25,14 @@
  *   KEYCLOAK_CLIENT_ID
  *   KEYCLOAK_CLIENT_SECRET
  *
- * Needs skymail:access + skymail:templates:write. Pass --dry-run to see what
- * would change without touching anything.
+ * Needs skymail:access + skymail:templates:write, and a skymail-backend that
+ * knows the conflict rule (ticket 09): an older one ignores --force and keeps
+ * an operator's subject without a word.
  */
 import { templates } from "../emails";
-import { renderComponent } from "../src/lib/mail-render";
+import { parseSeedArgs, runSeed, templateSources } from "../src/lib/template-seed";
 
 const BASE_URL = (process.env.SKYMAIL_URL ?? "http://localhost:3000").replace(/\/+$/, "");
-const DRY_RUN = process.argv.includes("--dry-run");
 
 async function resolveToken(): Promise<string> {
   const direct = process.env.SKYMAIL_TOKEN;
@@ -69,85 +71,35 @@ async function resolveToken(): Promise<string> {
   return payload.access_token;
 }
 
-async function main(): Promise<void> {
-  if (DRY_RUN) {
-    console.log(`[kuru çalışma] ${BASE_URL} üzerine hiçbir şey yazılmayacak.\n`);
+async function main(): Promise<number> {
+  const args = parseSeedArgs(
+    process.argv.slice(2),
+    templates.map(({ meta }) => meta.key),
+  );
+  if (!args.ok) {
+    console.error(args.message);
+    return 2;
   }
 
-  const token = DRY_RUN ? "" : await resolveToken();
-  let seeded = 0;
-  const kept: { key: string; subject: string }[] = [];
-
-  for (const { meta, Component } of templates) {
-    const rendered = await renderComponent(Component);
-    if (!rendered.ok) {
-      throw new Error(`${meta.key}: ${rendered.message}`);
-    }
-    const { html, plainText } = rendered;
-
-    const body = {
-      name: meta.name,
-      subject: meta.subject,
-      html_content: html,
-      plain_text_content: plainText,
-      // Not the .tsx source: a pointer back to it. The template's home is this
-      // repo, and SkyMail's Monaco pane cannot compile a comment, so the editor
-      // refuses to save one over the rendered body (see lib/mail-render).
-      react_email_content: `// Kaynak: skymail-frontend/emails/${meta.key}.tsx — burada düzenlersen repodaki kaynakla ayrışır.\n`,
-      system: meta.system,
-      // The repo is where the sending service's contract is known, so the seed
-      // always sends it: none declared is an empty set, not a set left alone.
-      contract_required_variables: meta.requiredVariables ?? [],
-    };
-
-    if (DRY_RUN) {
-      console.log(`· ${meta.key.padEnd(34)} ${meta.system ? "[sistem]" : "        "} "${meta.subject}"`);
-      continue;
-    }
-
-    const response = await fetch(`${BASE_URL}/v1/templates/by-key/${encodeURIComponent(meta.key)}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(body),
-    });
-
-    if (!response.ok) {
-      const detail = await response.text();
-      throw new Error(`${meta.key} yazılamadı: HTTP ${response.status} ${detail.slice(0, 200)}`);
-    }
-
-    const saved = (await response.json()) as { id: string; subject: string };
-    seeded += 1;
-
-    // A subject is seeded once and then belongs to the row, so an operator can
-    // reword it without a release. Saying so here is what keeps that from
-    // looking like the seed silently failed to apply the repo's wording.
-    const keptSubject = saved.subject !== meta.subject;
-    if (keptSubject) {
-      kept.push({ key: meta.key, subject: saved.subject });
-    }
-    console.log(`✓ ${meta.key.padEnd(34)} ${saved.id}${keptSubject ? "  · konu korundu" : ""}`);
-  }
-
-  if (!DRY_RUN) {
-    console.log(`\n${seeded} şablon ${BASE_URL} üzerine yazıldı.`);
-    if (kept.length > 0) {
-      console.log(
-        `\n${kept.length} şablonun konusu arayüzden değiştirilmiş, dokunulmadı — gövdeleri yine de güncellendi:`,
-      );
-      for (const { key, subject } of kept) {
-        console.log(`  ${key.padEnd(34)} "${subject}"`);
-      }
-      console.log("Repodaki konuyu dayatmak istersen şablonu arayüzden düzenle; seed bunu yapmaz.");
-    }
-    console.log("Repoda olmayan anahtarlar silinmedi — canlı bir servisin çağırdığı şablonu arşivlemek postayı sessizce durdurur.");
-  }
+  const sources = await templateSources(templates);
+  const token = args.dryRun ? "" : await resolveToken();
+  return runSeed({
+    baseUrl: BASE_URL,
+    token,
+    templates: sources,
+    dryRun: args.dryRun,
+    force: args.force,
+    fetch,
+    print: (line) => console.log(line),
+  });
 }
 
-main().catch((error: unknown) => {
-  console.error(error instanceof Error ? error.message : error);
-  process.exit(1);
-});
+main().then(
+  (exitCode) => {
+    process.exitCode = exitCode;
+  },
+  (error: unknown) => {
+    console.error(error instanceof Error ? error.message : error);
+    process.exitCode = 1;
+  },
+);

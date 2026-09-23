@@ -5,44 +5,26 @@
  * Template seed would have written.
  */
 import assert from "node:assert/strict";
-import { readFile, readdir } from "node:fs/promises";
-import { join } from "node:path";
 import { describe, it } from "node:test";
 import { createElement } from "react";
 import { render } from "@react-email/render";
 import { templates } from "../../../emails";
+import { templateSources } from "../template-seed";
 import { renderSource } from ".";
 
-const EMAILS_DIR = join(import.meta.dirname, "..", "..", "..", "emails");
-
-/** Each template's file, found by the key it declares rather than by its name. */
-async function sourcesByKey(): Promise<Map<string, string>> {
-  const sources = new Map<string, string>();
-  for (const file of await readdir(EMAILS_DIR)) {
-    if (!file.endsWith(".tsx")) {
-      continue;
-    }
-    const text = await readFile(join(EMAILS_DIR, file), "utf8");
-    const key = /\bkey:\s*"([^"]+)"/.exec(text)?.[1];
-    if (key) {
-      sources.set(key, text);
-    }
-  }
-  return sources;
-}
-
+// The Template seed sends each template's file as its JSX source, and the
+// render of that text as its body (lib/template-seed). Compiled here as the
+// panel's JSX mode compiles it, the text must give the mail the component
+// gives — what the seed wrote before it sent the source, and what
+// emails:render shows.
 describe("a template from the repo, compiled from its file as it is", async () => {
-  const sources = await sourcesByKey();
+  const sources = await templateSources(templates);
 
-  for (const { meta, Component } of templates) {
+  for (const [index, { meta, Component }] of templates.entries()) {
     it(`${meta.key} comes out as the Template seed has always written it`, async () => {
-      const source = sources.get(meta.key);
-      assert.ok(source, `emails/ içinde key: "${meta.key}" tanımlayan bir .tsx yok`);
-
-      const result = await renderSource({ mode: "jsx", source });
+      const result = await renderSource({ mode: "jsx", source: sources[index].source });
 
       assert.equal(result.ok, true, result.ok ? "" : result.message);
-      // What scripts/seed-templates.ts wrote before it rendered through this module.
       assert.equal(result.html, await render(createElement(Component), { pretty: true }));
       assert.equal(result.plainText, await render(createElement(Component), { plainText: true }));
     });
