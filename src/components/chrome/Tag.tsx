@@ -5,9 +5,13 @@ import type { ReactNode } from 'react';
 const TONES = {
   external: 'border-amber-400/40 bg-amber-400/10 text-amber-300',
   archived: 'border-white/15 bg-white/5 text-neutral-400',
+  system: 'border-skylab-400/40 bg-skylab-400/10 text-skylab-300',
 } as const;
 
-/** A small label beside a name: Harici for a Keycloak group, Arşivli for an archived record. */
+/**
+ * A small label beside a name: Harici for a Keycloak group, Arşivli for an
+ * archived record, System for a System template.
+ */
 export function Tag({ tone, children }: { tone: keyof typeof TONES; children: ReactNode }) {
   return (
     <span
