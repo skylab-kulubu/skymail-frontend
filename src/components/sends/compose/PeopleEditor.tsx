@@ -1,52 +1,30 @@
 'use client';
 
-import { useId, useState } from 'react';
+import { useId, useState, type KeyboardEvent } from 'react';
 import { ClipboardPaste, Plus, Trash2 } from 'lucide-react';
-import { Field } from '@/components/chrome/Field';
+import { FormField } from '@/components/chrome/FormField';
 import { Button } from '@/components/ui/Button';
 import { formatCount } from '@/lib/sends';
-import { parsePeople, type PersonRow, type RowProblems } from '@/lib/send-form/audience';
+import { parsePeople, type PeopleCheck, type PersonRow } from '@/lib/send-form/audience';
 
-const EMPTY: PersonRow = { name: '', email: '' };
+/** A row of the editor: a person, and an id that stays with the row while others come and go. */
+export type PersonEntry = PersonRow & Readonly<{ id: string }>;
 
-/** One input of a person's row, with its error under it and tied to it. */
-function RowField({
-  label,
-  value,
-  onChange,
-  error,
-  type = 'text',
-  placeholder,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  error?: string;
-  type?: 'text' | 'email';
-  placeholder: string;
-}) {
-  const errorId = useId();
-  return (
-    <div className="min-w-0 space-y-1">
-      <Field
-        type={type}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        aria-label={label}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={error ? errorId : undefined}
-        placeholder={placeholder}
-        autoComplete="off"
-        inputMode={type === 'email' ? 'email' : undefined}
-      />
-      {error ? (
-        <p id={errorId} className="text-xs text-red-300">
-          {error}
-        </p>
-      ) : null}
-    </div>
-  );
+let lastRow = 0;
+
+/** A new row, empty unless a person is given. */
+export function personEntry(person: PersonRow = { name: '', email: '' }): PersonEntry {
+  lastRow += 1;
+  return { id: `kisi-${lastRow}`, ...person };
 }
+
+/** Enter in a single-line field sends, as it did in the old form. */
+export const enterSends = (onSend: () => void) => (event: KeyboardEvent<HTMLInputElement>) => {
+  if (event.key === 'Enter' && !event.nativeEvent.isComposing) {
+    event.preventDefault();
+    onSend();
+  }
+};
 
 /**
  * Individual people to send to: a name and an address a row, each sent on
@@ -56,57 +34,62 @@ function RowField({
 export function PeopleEditor({
   rows,
   onChange,
-  problems,
-  none,
+  check,
+  onSend,
 }: {
-  rows: readonly PersonRow[];
-  onChange: (rows: PersonRow[]) => void;
-  /** One entry per row; shown once the sender has tried to send. */
-  problems: readonly RowProblems[] | null;
-  /** No row names anyone, said once the sender has tried to send. */
-  none: boolean;
+  rows: readonly PersonEntry[];
+  onChange: (rows: PersonEntry[]) => void;
+  /** What is wrong with the rows, shown once the sender has tried to send; what may be a slip, always. */
+  check: { shown: PeopleCheck | null; warnings: readonly (string | null)[] };
+  onSend: () => void;
 }) {
   const [pasting, setPasting] = useState(false);
   const [pasted, setPasted] = useState('');
   const pasteId = useId();
   const filled = rows.filter((row) => row.name.trim() !== '' || row.email.trim() !== '').length;
-  const set = (index: number, change: Partial<PersonRow>) =>
-    onChange(rows.map((row, at) => (at === index ? { ...row, ...change } : row)));
+  const set = (id: string, change: Partial<PersonRow>) => onChange(rows.map((row) => (row.id === id ? { ...row, ...change } : row)));
+  const none = check.shown?.none ?? false;
 
   return (
     <div className="space-y-3">
-      <div className="hidden grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-2 text-xs font-medium text-neutral-300 sm:grid">
+      <div className="hidden grid-cols-[minmax(0,1fr)_minmax(0,1fr)_5.5rem] gap-2 text-xs font-medium text-neutral-300 sm:grid" aria-hidden>
         <span>Ad soyad</span>
         <span>E-posta</span>
-        <span className="w-[5.5rem]" aria-hidden />
       </div>
       <ol className="space-y-2">
         {rows.map((row, index) => (
           <li
-            key={index}
-            className="grid grid-cols-1 gap-2 rounded-lg border border-white/5 p-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:border-0 sm:p-0"
+            key={row.id}
+            className="grid grid-cols-1 gap-2 rounded-lg border border-white/5 p-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_5.5rem] sm:border-0 sm:p-0"
           >
-            <RowField
+            <FormField
               label={`${index + 1}. kişinin adı soyadı`}
+              labelHidden
               value={row.name}
-              onChange={(name) => set(index, { name })}
-              error={problems?.[index]?.name}
+              onChange={(event) => set(row.id, { name: event.target.value })}
+              onKeyDown={enterSends(onSend)}
+              hint={check.warnings[index] ? <span className="text-amber-300">{check.warnings[index]}</span> : null}
               placeholder="Ayşe Yılmaz"
+              autoComplete="off"
             />
-            <RowField
+            <FormField
               label={`${index + 1}. kişinin e-posta adresi`}
+              labelHidden
               type="email"
+              inputMode="email"
               value={row.email}
-              onChange={(email) => set(index, { email })}
-              error={problems?.[index]?.email}
+              onChange={(event) => set(row.id, { email: event.target.value })}
+              onKeyDown={enterSends(onSend)}
+              error={check.shown?.rows[index]?.email ?? (none && index === 0 ? 'En az bir kişi ekle.' : null)}
               placeholder="ayse@ornek.com"
+              autoComplete="off"
             />
             <Button
               variant="secondary"
-              onClick={() => onChange(rows.length === 1 ? [EMPTY] : rows.filter((_, at) => at !== index))}
+              onClick={() => onChange(rows.length === 1 ? [personEntry()] : rows.filter((other) => other.id !== row.id))}
               aria-label={`${index + 1}. kişiyi çıkar`}
               title="Çıkar"
-              className="h-8 justify-self-start px-2.5 py-0 sm:w-[5.5rem]"
+              className="h-8 justify-self-start px-2.5 py-0 sm:w-full"
             >
               <Trash2 className="h-3.5 w-3.5" aria-hidden />
               <span className="sm:hidden">Çıkar</span>
@@ -114,9 +97,8 @@ export function PeopleEditor({
           </li>
         ))}
       </ol>
-      {none ? <p className="text-xs text-red-300">En az bir kişi ekle.</p> : null}
       <div className="flex flex-wrap items-center gap-2">
-        <Button variant="secondary" onClick={() => onChange([...rows, EMPTY])} className="h-8 py-0">
+        <Button variant="secondary" onClick={() => onChange([...rows, personEntry()])} className="h-8 py-0">
           <Plus className="h-3.5 w-3.5" aria-hidden />
           Kişi ekle
         </Button>
@@ -150,7 +132,7 @@ export function PeopleEditor({
               disabled={pasted.trim() === ''}
               onClick={() => {
                 const kept = rows.filter((row) => row.name.trim() !== '' || row.email.trim() !== '');
-                onChange([...kept, ...parsePeople(pasted)]);
+                onChange([...kept, ...parsePeople(pasted).map(personEntry)]);
                 setPasted('');
                 setPasting(false);
               }}

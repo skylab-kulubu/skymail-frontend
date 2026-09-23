@@ -5,7 +5,7 @@ import { Loader2 } from 'lucide-react';
 import { NoticeBox } from '@/components/chrome/Notice';
 import { referencedVariables } from '@/lib/mail-render/go-template';
 import type { SampleValues } from '@/lib/mail-render/preview';
-import type { MailScheme } from '@/lib/template-editor/preview';
+import type { MailScheme } from '@/components/mail-preview/preview-document';
 import { readTypedSamples, sampleNames, sampleValues, writeTypedSamples } from '@/lib/template-editor/samples';
 import { EditorNote, RenderWarnings, SamplePanel } from './EditorParts';
 import { MailFrame, SchemeToggle, SubjectPreview } from '@/components/mail-preview/MailPreview';

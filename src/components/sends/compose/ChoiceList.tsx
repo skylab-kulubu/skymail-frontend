@@ -1,14 +1,14 @@
 'use client';
 
 import { useId, useState, type ReactNode } from 'react';
-import { Search } from 'lucide-react';
-import { Field } from '@/components/chrome/Field';
+import { FormField } from '@/components/chrome/FormField';
 
 /**
  * One of many, picked from a list that can be searched: a Mail template, a
  * mailing list. Native radios in a fieldset, so the arrow keys move between
  * them and a screen reader hears the group; the chosen one stays in view
- * whatever the search.
+ * whatever the search. With an error, the radios are marked invalid, so the
+ * form can take the sender to the first of them.
  */
 export function ChoiceList<T extends { id: string }>({
   legend,
@@ -49,22 +49,17 @@ export function ChoiceList<T extends { id: string }>({
       ) : (
         <>
           {items.length > 6 ? (
-            <div className="relative">
-              <Search className="pointer-events-none absolute top-2 left-2.5 h-3.5 w-3.5 text-neutral-500" aria-hidden />
-              <Field
-                type="search"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                aria-label={searchLabel}
-                placeholder={searchLabel}
-                className="pl-8"
-                autoComplete="off"
-              />
-            </div>
+            <FormField
+              label={searchLabel}
+              labelHidden
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={searchLabel}
+              autoComplete="off"
+            />
           ) : null}
-          <div
-            className={`max-h-72 space-y-1 overflow-y-auto rounded-lg border p-1 ${error ? 'border-red-400/50' : 'border-white/10'}`}
-          >
+          <div className={`max-h-72 space-y-1 overflow-y-auto rounded-lg border p-1 ${error ? 'border-red-400/50' : 'border-white/10'}`}>
             {shown.map((item) => (
               <label
                 key={item.id}
@@ -76,6 +71,7 @@ export function ChoiceList<T extends { id: string }>({
                   value={item.id}
                   checked={item.id === value}
                   onChange={() => onChange(item.id)}
+                  aria-invalid={error ? true : undefined}
                   className="accent-skylab-400 mt-0.5 shrink-0 focus:outline-none"
                 />
                 <span className="min-w-0 flex-1">{render(item)}</span>

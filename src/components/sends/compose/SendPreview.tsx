@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { MailFrame, SchemeToggle, SubjectPreview } from '@/components/mail-preview/MailPreview';
 import type { SampleValues } from '@/lib/mail-render/preview';
-import type { MailScheme } from '@/lib/template-editor/preview';
+import type { MailScheme } from '@/components/mail-preview/preview-document';
 import type { MailTemplate } from '@/lib/templates';
 
 /**
@@ -24,8 +24,7 @@ export function SendPreview({ template, sample }: { template: MailTemplate | nul
       {template ? (
         <>
           <p className="text-xs text-neutral-500">
-            Yayımlanmış sürüm, bu gönderimin değerleriyle. Boş bir alan «Ad» olarak görünür; alıcının adı ve adresi her alıcı için
-            doldurulur.
+            Yayımlanmış sürüm, bu gönderimin değerleriyle: boş bir alan mailde de boş. Alıcının adı ve adresi her alıcı için doldurulur.
           </p>
           <SubjectPreview subject={template.subject} sample={sample} />
           <MailFrame title="Gönderim önizlemesi" html={template.html_content} sample={sample} scheme={scheme} className="h-[70vh] min-h-[420px]" />

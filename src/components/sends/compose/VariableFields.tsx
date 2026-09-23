@@ -2,11 +2,12 @@
 
 import dynamic from 'next/dynamic';
 import { useId } from 'react';
-import { Field } from '@/components/chrome/Field';
+import { FormField } from '@/components/chrome/FormField';
 import { FREE_BODY_ALLOWANCE } from '@/lib/mail-render/free-body';
 import { variableAction } from '@/lib/mail-render/go-template';
 import { EMPTY_VISUAL_SOURCE } from '@/lib/mail-render/visual-document';
 import type { FieldInput, VariableField } from '@/lib/send-form/fields';
+import { enterSends } from './PeopleEditor';
 
 const VisualEditor = dynamic(() => import('@/components/visual-editor/VisualEditor'), {
   ssr: false,
@@ -15,22 +16,22 @@ const VisualEditor = dynamic(() => import('@/components/visual-editor/VisualEdit
 
 /** The Visual editor speaks of the announcement it writes. */
 const BODY_WORDING = {
-  placeholder: 'Duyurunun metnini yaz; başlık, kalın, italik, bağlantı ve butonu üstteki çubuktan ekle.',
+  placeholder: 'Duyurunun metnini yaz; başlık, kalın, italik, bağlantı ve listeleri üstteki çubuktan ekle.',
 };
 
 /** What the body may hold, said under the editor: the server keeps nothing else. */
 function BodyNote() {
   return (
     <p className="border-t border-white/10 px-4 py-2 text-xs leading-relaxed text-neutral-500">
-      Gövdede başlık, paragraf, kalın, italik, bağlantı ve buton kullanılır: sunucu gönderenin yazdığı gövdeden bunların dışındakini
-      düşürür. Buton mailde kalın bir bağlantı olarak görünür; değişken ve görsel burada yok.
+      Gövdede başlık, paragraf, madde ve numaralı liste, kalın, italik ve bağlantı kullanılır; satır içinde alt satıra geçmek için
+      Shift+Enter. Sunucu gönderenin yazdığı gövdeden bunların dışındakini düşürür; buton için aşağıdaki buton alanlarını kullan.
     </p>
   );
 }
 
-/** A field's name, a mark when it is required, and the variable it fills; a label when there is an input to point at. */
-function FieldLabel({ field, htmlFor }: { field: VariableField; htmlFor?: string }) {
-  const text = (
+/** A field's name, a mark when it is a Required variable, and the variable it fills. */
+function FieldLabel({ field }: { field: VariableField }) {
+  return (
     <>
       {field.label}
       {field.required ? (
@@ -39,58 +40,56 @@ function FieldLabel({ field, htmlFor }: { field: VariableField; htmlFor?: string
           *
         </span>
       ) : null}
-      {field.required ? <span className="sr-only"> (zorunlu)</span> : null}
+      {field.required ? <span className="sr-only"> (Required variable)</span> : null}
+      {field.label !== field.name ? <code className="text-2xs ml-2 font-normal text-neutral-500">{variableAction(field.name)}</code> : null}
     </>
-  );
-  return (
-    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-      {htmlFor ? (
-        <label htmlFor={htmlFor} className="text-xs font-medium text-neutral-300">
-          {text}
-        </label>
-      ) : (
-        <p className="text-xs font-medium text-neutral-300">{text}</p>
-      )}
-      {field.label !== field.name ? <code className="text-2xs text-neutral-500">{variableAction(field.name)}</code> : null}
-    </div>
   );
 }
 
-function TextField({
+/** Why a field is asked for and what may be a slip in it, under the field. */
+function Hint({ why, warning }: { why: string | null; warning: string | null }) {
+  if (!why && !warning) return null;
+  return (
+    <>
+      {why ? <p>{why}</p> : null}
+      {warning ? <p className="text-amber-300">{warning}</p> : null}
+    </>
+  );
+}
+
+function RichField({
   field,
-  value,
+  source,
   onChange,
   error,
+  warning,
 }: {
   field: VariableField;
-  value: string;
-  onChange: (value: string) => void;
+  source: string | undefined;
+  onChange: (source: string) => void;
   error: string | null;
+  warning: string | null;
 }) {
-  const id = useId();
-  const whyId = useId();
+  const hintId = useId();
   const errorId = useId();
-  const described = [field.why ? whyId : null, error ? errorId : null].filter(Boolean).join(' ') || undefined;
   return (
-    <div className="min-w-0 space-y-1.5">
-      <FieldLabel field={field} htmlFor={id} />
-      <Field
-        id={id}
-        type={field.kind === 'url' ? 'url' : 'text'}
-        inputMode={field.kind === 'url' ? 'url' : undefined}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        required={field.required}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={described}
-        placeholder={field.kind === 'url' ? 'https://' : undefined}
-        autoComplete="off"
+    <div className="min-w-0 space-y-1.5 md:col-span-2">
+      <p className="text-xs font-medium text-neutral-300">
+        <FieldLabel field={field} />
+      </p>
+      <VisualEditor
+        value={source ?? EMPTY_VISUAL_SOURCE}
+        onChange={onChange}
+        label={field.label}
+        allow={FREE_BODY_ALLOWANCE}
+        wording={BODY_WORDING}
+        footer={<BodyNote />}
+        describedBy={`${hintId} ${errorId}`}
+        invalid={error !== null}
       />
-      {field.why ? (
-        <p id={whyId} className="text-xs text-neutral-500">
-          {field.why}
-        </p>
-      ) : null}
+      <div id={hintId} className="space-y-0.5 text-xs text-neutral-500">
+        <Hint why={field.why} warning={warning} />
+      </div>
       {error ? (
         <p id={errorId} className="text-xs text-red-300">
           {error}
@@ -100,39 +99,12 @@ function TextField({
   );
 }
 
-function RichField({
-  field,
-  source,
-  onChange,
-  error,
-  required,
-}: {
-  field: VariableField;
-  source: string | undefined;
-  onChange: (source: string) => void;
-  error: string | null;
-  required: boolean;
-}) {
-  return (
-    <div className="min-w-0 space-y-1.5 md:col-span-2">
-      <FieldLabel field={{ ...field, required: field.required || required }} />
-      <VisualEditor
-        value={source ?? EMPTY_VISUAL_SOURCE}
-        onChange={onChange}
-        label={field.label}
-        allow={FREE_BODY_ALLOWANCE}
-        wording={BODY_WORDING}
-        footer={<BodyNote />}
-      />
-      {error ? <p className="text-xs text-red-300">{error}</p> : null}
-    </div>
-  );
-}
-
 /**
  * The fields a send fills in: one per variable of the Mail template it
  * sends, a markup one (free.basic's BodyHtml) in the Visual editor with only
- * what the server's allow-list keeps.
+ * what the server's allow-list keeps. Only a Required variable is marked and
+ * holds the send back when empty; anything else that may be a slip is said
+ * under its field. Enter in a single-line field sends.
  */
 export function VariableFields({
   fields,
@@ -140,7 +112,8 @@ export function VariableFields({
   onValue,
   onRich,
   problems,
-  require = [],
+  warnings,
+  onSend,
 }: {
   fields: readonly VariableField[];
   input: FieldInput;
@@ -148,8 +121,8 @@ export function VariableFields({
   onRich: (name: string, source: string) => void;
   /** Shown once the sender has tried to send. */
   problems: Readonly<Record<string, string>> | null;
-  /** Fields the form needs beyond the template's own. */
-  require?: readonly string[];
+  warnings: Readonly<Record<string, string>>;
+  onSend: () => void;
 }) {
   return (
     <div className="grid gap-4 md:grid-cols-2">
@@ -161,14 +134,20 @@ export function VariableFields({
             source={input.rich[field.name]}
             onChange={(source) => onRich(field.name, source)}
             error={problems?.[field.name] ?? null}
-            required={require.includes(field.name)}
+            warning={warnings[field.name] ?? null}
           />
         ) : (
-          <TextField
+          <FormField
             key={field.name}
-            field={field}
+            label={<FieldLabel field={field} />}
+            type={field.kind === 'url' ? 'url' : 'text'}
+            inputMode={field.kind === 'url' ? 'url' : undefined}
             value={input.values[field.name] ?? ''}
-            onChange={(value) => onValue(field.name, value)}
+            onChange={(event) => onValue(field.name, event.target.value)}
+            onKeyDown={enterSends(onSend)}
+            placeholder={field.kind === 'url' ? 'https://' : undefined}
+            autoComplete="off"
+            hint={field.why || warnings[field.name] ? <Hint why={field.why} warning={warnings[field.name] ?? null} /> : null}
             error={problems?.[field.name] ?? null}
           />
         ),

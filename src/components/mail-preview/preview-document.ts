@@ -9,7 +9,7 @@
  * always apply, in the light one never. Only the preview is rewritten; what is
  * stored and sent is the body as rendered.
  */
-import { fillSampleValues, type SampleValues } from "../mail-render/preview";
+import { fillSampleValues, type SampleValues } from "@/lib/mail-render/preview";
 
 export type MailScheme = "light" | "dark";
 

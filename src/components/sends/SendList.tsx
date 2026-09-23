@@ -53,7 +53,7 @@ const EMPTY_TEXT: Readonly<Record<SendFilter, string>> = {
 
 export function SendList() {
   const router = useRouter();
-  const canSend = sendAccess(useConsole().roles).blocked === null;
+  const canSend = sendAccess(useConsole().roles).people;
   const view = readSendListView(useSearchParams());
   const state = useApiLoad((api, signal) => fetchSendPage(api, view, signal), `${view.status}:${view.page}`);
   const lastPage =
