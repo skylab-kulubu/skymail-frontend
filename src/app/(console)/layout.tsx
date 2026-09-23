@@ -3,6 +3,7 @@ import { auth } from '@/auth';
 import { AccessDenied } from '@/components/auth/AccessDenied';
 import { ConsoleShell } from '@/components/layout/ConsoleShell';
 import { hasAccess } from '@/lib/access';
+import { tokenSubject } from '@/lib/auth/session-token';
 import { publicConfig } from '@/lib/runtime-config';
 
 // Every render reads the session and the runtime environment.
@@ -21,7 +22,7 @@ export default async function ConsoleLayout({ children }: Readonly<{ children: R
   return (
     <ConsoleShell
       roles={session.roles}
-      user={{ name: session.user?.name, email: session.user?.email }}
+      user={{ name: session.user?.name, email: session.user?.email, sub: tokenSubject(session.accessToken) }}
       config={config}
     >
       {children}

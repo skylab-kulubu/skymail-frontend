@@ -11,6 +11,7 @@ import {
   refreshIfExpiring,
   sessionFromToken,
   tokenFromSignIn,
+  tokenSubject,
   type RefreshOptions,
   type SessionToken,
 } from "./session-token";
@@ -328,5 +329,21 @@ describe("the session the browser sees", () => {
     const session = sessionFromToken({ expires }, { ...token, error: "RefreshAccessTokenError" });
 
     assert.equal(session.error, "RefreshAccessTokenError");
+  });
+});
+
+// The API records who wrote a Mail template version by the token's subject;
+// the panel compares it with the viewer's to tell their own draft apart.
+describe("who the session belongs to", () => {
+  it("is the access token's subject", () => {
+    assert.equal(tokenSubject(tokenWithRoles(["skymail:access"])), "user-1");
+  });
+
+  it("is unknown when the token carries no usable subject", () => {
+    assert.equal(tokenSubject(accessToken({ resource_access: {} })), null);
+    assert.equal(tokenSubject(accessToken({ sub: "" })), null);
+    assert.equal(tokenSubject(accessToken({ sub: 42 })), null);
+    assert.equal(tokenSubject("not-a-jwt"), null);
+    assert.equal(tokenSubject(""), null);
   });
 });

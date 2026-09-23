@@ -4,7 +4,12 @@ import { createContext, useContext, type ReactNode } from 'react';
 import { hasRole, type Role } from '@/lib/access';
 import type { PublicConfig } from '@/lib/runtime-config';
 
-export type ConsoleUser = Readonly<{ name?: string | null; email?: string | null }>;
+export type ConsoleUser = Readonly<{
+  name?: string | null;
+  email?: string | null;
+  /** The Keycloak subject; the API records it as the author of what this person writes. */
+  sub?: string | null;
+}>;
 
 type ConsoleContextValue = Readonly<{
   roles: readonly string[];

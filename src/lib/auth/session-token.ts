@@ -72,6 +72,16 @@ export function clientRoles(accessToken: string, clientId: string): string[] {
   return Array.isArray(roles) ? roles.filter((role): role is string => typeof role === "string") : [];
 }
 
+/**
+ * The Keycloak subject the access token was issued to, read like the roles.
+ * skymail-backend records it as the author of a Mail template version, so the
+ * panel tells the viewer's own draft apart by it.
+ */
+export function tokenSubject(accessToken: string): string | null {
+  const sub = claims(accessToken).sub;
+  return typeof sub === "string" && sub !== "" ? sub : null;
+}
+
 function pickUser(profile: { name?: unknown; email?: unknown }): SessionUser {
   const user: SessionUser = {};
   if (typeof profile.name === "string" && profile.name !== "") user.name = profile.name;
