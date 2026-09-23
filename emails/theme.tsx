@@ -112,6 +112,14 @@ const darkModeCss = `
 */
 body { background-color: #f4f1f7; }
 
+/*
+  The free-form body is the one place markup comes from the sender, so its links
+  are plain <a> with nothing on them — a client colours those its own default
+  blue, which is close to unreadable on the dark card. The rule cannot live on
+  the element: the server's allowlist drops style and class inside that body.
+*/
+.free-body a { color: #6e4576; }
+
 @media (prefers-color-scheme: dark) {
   .email-bg   { background-color: #08070b !important; background-image: ${darkStarfield} !important; }
   .card       { background-color: #121115 !important; border-color: #2a292c !important; }
@@ -129,6 +137,7 @@ body { background-color: #f4f1f7; }
   .alert-chip { background-color: #2b272b !important; border-color: #51484c !important; color: #f3e8ea !important; }
   .alert-note { border-left-color: #c0848f !important; }
   .code-block { background-color: #201f23 !important; color: #f3e8f5 !important; border-color: #2a292c !important; }
+  .free-body a { color: #e0c8e5 !important; }
 }
 
 /*
@@ -154,6 +163,7 @@ body { background-color: #f4f1f7; }
 [data-ogsc] .cta, .cta[data-ogsc] { color: #ffffff !important; }
 [data-ogsb] .code-block, .code-block[data-ogsb] { background-color: #201f23 !important; }
 [data-ogsc] .code-block, .code-block[data-ogsc] { color: #f3e8f5 !important; }
+[data-ogsc] .free-body a { color: #e0c8e5 !important; }
 
 .brand-link:hover { opacity: 0.85; }
 .dev-link:hover   { color: #e0c8e5 !important; }
@@ -480,10 +490,11 @@ function Footer({ brand }: { brand: Brand }) {
       <table role="presentation" align="center" cellPadding="0" cellSpacing="0" style={{ margin: "0 auto" }}>
         <tbody>
           <tr>
+            {/* Not a link: a link with no text renders in the plain-text part as
+                a bare URL glued to whatever follows it. The brand name beside it
+                goes to the same place. */}
             <td valign="middle" style={{ paddingRight: "7px", lineHeight: "0" }}>
-              <Link href={href} className="brand-link t-brand" style={{ textDecoration: "none", color: colors.skylab800 }}>
-                <Img src={LOGO} width="24" height="24" alt="SKY LAB" style={{ display: "inline-block", verticalAlign: "middle" }} />
-              </Link>
+              <Img src={LOGO} width="24" height="24" alt="SKY LAB" style={{ display: "inline-block", verticalAlign: "middle" }} />
             </td>
             <td valign="middle" style={{ paddingRight: "8px" }}>
               <Link href={href} className="brand-link" style={{ textDecoration: "none", color: colors.skylab800 }}>
@@ -504,7 +515,7 @@ function Footer({ brand }: { brand: Brand }) {
             </td>
             <td valign="middle">
               <span className="t-faint" style={{ fontSize: "13px", color: colors.textFaint, fontFamily: fontStack }}>
-                by WEBLAB
+                {" by WEBLAB"}
               </span>
             </td>
           </tr>
@@ -519,16 +530,20 @@ function Footer({ brand }: { brand: Brand }) {
                 Kullanım Koşulları
               </Link>
             </td>
-            <td valign="middle" style={{ lineHeight: "0" }}>
-              <span style={{ display: "inline-block", width: "3px", height: "3px", borderRadius: "9999px", backgroundColor: colors.textFaint, verticalAlign: "middle" }} />
+            <td valign="middle">
+              <span className="t-faint" style={{ fontSize: "11px", color: colors.textFaint, fontFamily: fontStack }}>
+                {" · "}
+              </span>
             </td>
             <td valign="middle" style={{ padding: "0 10px" }}>
               <Link href="https://skyl.app/kvkk-metni" className="t-muted legal-link" style={{ fontSize: "11px", color: colors.textMuted, textDecoration: "none", fontFamily: fontStack }}>
                 Gizlilik Politikası
               </Link>
             </td>
-            <td valign="middle" style={{ lineHeight: "0" }}>
-              <span style={{ display: "inline-block", width: "3px", height: "3px", borderRadius: "9999px", backgroundColor: colors.textFaint, verticalAlign: "middle" }} />
+            <td valign="middle">
+              <span className="t-faint" style={{ fontSize: "11px", color: colors.textFaint, fontFamily: fontStack }}>
+                {" · "}
+              </span>
             </td>
             <td valign="middle" style={{ padding: "0 10px" }}>
               <Link
