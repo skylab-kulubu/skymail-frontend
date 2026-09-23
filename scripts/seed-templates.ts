@@ -27,8 +27,9 @@
  *   KEYCLOAK_CLIENT_SECRET
  *
  * The seed renders from the working tree, so before the first request it
- * refuses a checkout that is missing a commit of origin/main in the templates
- * or in what renders them (src/lib/template-seed/freshness).
+ * refuses a checkout that is behind origin/main in the templates or in what
+ * renders them, and warns about one that has diverged from it
+ * (src/lib/template-seed/freshness).
  *
  * Needs skymail:access + skymail:templates:write, and a skymail-backend that
  * knows the conflict rule (ticket 09): an older one ignores --force and keeps
@@ -37,7 +38,7 @@
 import { execFileSync } from "node:child_process";
 import { templates } from "../emails";
 import { SEED_COMMAND, parseSeedArgs, runSeed, templateSources } from "../src/lib/template-seed";
-import { checkFreshness, staleMessage } from "../src/lib/template-seed/freshness";
+import { checkFreshness, divergedMessage, staleMessage } from "../src/lib/template-seed/freshness";
 
 const BASE_URL = (process.env.SKYMAIL_URL ?? "http://localhost:3000").replace(/\/+$/, "");
 
@@ -111,6 +112,9 @@ async function main(): Promise<number> {
     if (freshness.state === "stale") {
       console.error(staleMessage(freshness.commits, SEED_COMMAND));
       return 1;
+    }
+    if (freshness.state === "diverged") {
+      console.log(`${divergedMessage(freshness.commits)}\n`);
     }
   }
 
