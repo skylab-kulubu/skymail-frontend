@@ -361,6 +361,34 @@ test("a template published again since the request is explained, and only reject
   expect(skymail.approval(id).state).toBe("pending");
 });
 
+test("an approval refused because someone else is acting on the request says so and reads it again, the edit kept", async ({ page, skymail, signIn }) => {
+  await signIn("approver");
+  const { id } = submitted(skymail);
+  skymail.refuseApproval("approve", { status: 409, body: { code: "mail_approval.busy", message: "busy" } });
+
+  await page.goto(`/mail-approvals/show/${id}`);
+  await decision(page).getByRole("button", { name: "Düzenle" }).click();
+  await page.getByLabel("Konu").fill("GECEKODU 2026 başvuruları açıldı");
+  await decision(page).getByRole("button", { name: "Düzenlemeyle gönder…" }).click();
+  await dialog(page, "Düzenlemeyle gönder").getByRole("button", { name: "Düzenlemeyle gönder" }).click();
+
+  await expect(page.getByRole("alert").filter({ hasText: "başka biri" })).toHaveText(
+    "Şu anda başka biri bu istek üzerinde işlem yapıyor. İstek yeniden yüklendi; son hâline bakıp tekrar dene.",
+  );
+  const reads = skymail.requests.filter((request) => request.method === "GET" && request.path === `/mail_approvals/${id}`);
+  expect(reads.length).toBeGreaterThan(1);
+  await expect(page.getByLabel("Konu")).toHaveValue("GECEKODU 2026 başvuruları açıldı");
+
+  await decision(page).getByRole("button", { name: "Düzenlemeyle gönder…" }).click();
+  await dialog(page, "Düzenlemeyle gönder").getByRole("button", { name: "Düzenlemeyle gönder" }).click();
+  await expect(notice(page, "Düzenlemeyle onaylandı")).toBeVisible();
+  const approved = skymail.approvalRequests().at(-1)!;
+  expect(approved.body).toEqual({ body_variables: { ...SUBMITTED, Subject: "GECEKODU 2026 başvuruları açıldı" } });
+  await expect(page.getByRole("list").filter({ hasText: "değişkenleri düzenledi" })).toContainText(
+    "Zeynep Arslan değişkenleri düzenledi",
+  );
+});
+
 test("someone without an approver's role sees only their own requests", async ({ page, skymail, signIn }) => {
   await signIn("member");
   const free = freeBasic(skymail);

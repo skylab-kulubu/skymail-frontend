@@ -125,7 +125,9 @@ function ApprovalView({
   const source = pinned.status === 'success' ? pinned.data : null;
   const fields = useMemo(() => approvalFields(source, approval.body_variables, approval.template.key), [source, approval]);
 
-  const [editing, setEditing] = useState<Editing | null>(null);
+  const [started, setEditing] = useState<Editing | null>(null);
+  // An edit shows only while the request can still be edited: one that moved on under it (reloaded after a refusal) drops it.
+  const editing = started && actions.actions.includes('edit') ? started : null;
   const [tried, setTried] = useState(false);
   const [decision, setDecision] = useState<Decision | null>(null);
   const [busy, setBusy] = useState(false);
@@ -176,10 +178,7 @@ function ApprovalView({
       setNotice({ tone: problem ? 'warning' : 'success', text: problem ? `${DONE[chosen]} ${problem}` : DONE[chosen] });
     } catch (error) {
       const refusal = approvalRefusal(error, chosen);
-      if (refusal.reload) {
-        await reload();
-        setEditing(null);
-      }
+      if (refusal.reload) await reload();
       setNotice({ tone: 'error', text: refusal.text });
     } finally {
       setDecision(null);
