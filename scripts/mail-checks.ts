@@ -8,6 +8,7 @@
  * Moved here unchanged from render-templates.ts; do not loosen them.
  */
 import { blockBalance, referencedVariables } from "../src/lib/mail-render";
+import { gluedLinks } from "../src/lib/mail-render/warnings";
 
 export function checkBalancedActions(key: string, body: string, problems: string[]): void {
   const { opens, ends } = blockBalance(body);
@@ -94,30 +95,9 @@ export function checkBackgroundLayersAreThemed(key: string, body: string, proble
  * template actually contains and checks that each one ends where it should.
  */
 export function checkPlainTextIsReadable(key: string, html: string, plainText: string, problems: string[]): void {
-  const hrefs = new Set(
-    [...html.matchAll(/href="([^"]+)"/g)]
-      .map((match) => match[1].replace(/&amp;/g, "&"))
-      .filter((href) => /^(https?:|mailto:)/.test(href)),
-  );
-
-  for (const href of hrefs) {
-    let from = 0;
-    for (;;) {
-      const at = plainText.indexOf(href, from);
-      if (at === -1) {
-        break;
-      }
-      from = at + href.length;
-
-      // A letter straight after the URL means the next cell's text was glued on.
-      // Punctuation and path characters are how a longer URL continues, and that
-      // longer URL is its own href and gets checked on its own.
-      const next = plainText[from];
-      if (next && /\p{L}/u.test(next)) {
-        const sample = plainText.slice(at, from + 12);
-        problems.push(`${key}: düz metinde bitişik yazılmış bağlantı → ${sample} — araya boşluk gerekiyor`);
-      }
-    }
+  // The rule lives in the render module, which also warns an operator of it in every mode.
+  for (const sample of gluedLinks(html, plainText)) {
+    problems.push(`${key}: düz metinde bitişik yazılmış bağlantı → ${sample} — araya boşluk gerekiyor`);
   }
 }
 

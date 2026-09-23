@@ -39,7 +39,7 @@ export type VisualBlock =
   | { type: "heading"; content: VisualInline[] }
   | { type: "paragraph"; content: VisualInline[] }
   | { type: "button"; label: string; link: ButtonLink }
-  /** A PNG or JPG over https; a width in pixels, or the width of the mail. */
+  /** An image over https (imageAddressProblem); a width in pixels, or the width of the mail. */
   | { type: "image"; src: string; alt: string; width?: number }
   | { type: "divider" }
   /** Its blocks show only when the variable is set (`{{if .X}}`), or only when it is not (`{{if not .X}}`). */
@@ -78,11 +78,24 @@ export function linkAddressProblem(href: string): string | null {
   return LINK_PROTOCOLS.includes(url.protocol) ? null : "adres https://, http:// ya da mailto: ile başlamalı";
 }
 
+/** The club's own image host: its addresses name no extension, and it serves the mails' own logo. */
+export const CLUB_IMAGE_HOST = "cdn.yildizskylab.com";
+
+/** Formats a mail cannot count on being shown, and why. */
+const UNSHOWN_FORMATS: readonly { extensions: readonly string[]; why: string }[] = [
+  { extensions: [".svg", ".svgz"], why: "SVG kabul edilmez: Gmail ve Outlook SVG göstermez. PNG ya da JPG kullan" },
+  { extensions: [".webp"], why: "WebP kabul edilmez: Outlook ve Gmail'in bazı uygulamaları WebP göstermez. PNG ya da JPG kullan" },
+];
+
+const SHOWN_EXTENSIONS = [".png", ".jpg", ".jpeg", ".gif"];
+
 /**
- * Why an address cannot be an image's, or null when it can. Gmail and Outlook
- * do not show SVG at all, and a mail's images come over https, so a PNG or
- * JPG over https is all a Visual image may be; the address has to say which
- * it is, since nothing else here can tell.
+ * Why an address cannot be an image's, or null when it can. A mail's images
+ * come over https, never inside the mail (`data:`). SVG and WebP are refused
+ * by name: Gmail and Outlook do not show them. The club's CDN is taken as it
+ * is, since its addresses name no extension; any other address has to say
+ * it is a PNG, JPG or GIF. What an address really serves is only known by
+ * fetching it — that check belongs to the server.
  */
 export function imageAddressProblem(src: string): string | null {
   if (hasGoAction(src)) return "görsel adresi Go aksiyonu ({{ … }}) içeremez";
@@ -92,13 +105,14 @@ export function imageAddressProblem(src: string): string | null {
   } catch {
     return `"${src}" bir adres değil`;
   }
+  if (url.protocol === "data:") return "görsel maile data: adresiyle gömülemez; https:// ile başlayan bir adres ver";
   if (url.protocol !== "https:") return "görsel adresi https:// ile başlamalı";
   const path = url.pathname.toLowerCase();
-  if (path.endsWith(".svg") || path.endsWith(".svgz")) {
-    return "SVG kabul edilmez: Gmail ve Outlook SVG göstermez. PNG ya da JPG kullan";
-  }
-  if (![".png", ".jpg", ".jpeg"].some((extension) => path.endsWith(extension))) {
-    return "görsel PNG ya da JPG olmalı: adresi .png, .jpg ya da .jpeg ile bitmeli";
+  const unshown = UNSHOWN_FORMATS.find(({ extensions }) => extensions.some((extension) => path.endsWith(extension)));
+  if (unshown) return unshown.why;
+  if (url.hostname === CLUB_IMAGE_HOST) return null;
+  if (!SHOWN_EXTENSIONS.some((extension) => path.endsWith(extension))) {
+    return `görsel ${CLUB_IMAGE_HOST} üzerinde değilse adresi .png, .jpg, .jpeg ya da .gif ile bitmeli`;
   }
   return null;
 }

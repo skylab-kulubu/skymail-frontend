@@ -179,19 +179,34 @@ describe("a Visual document that is refused", () => {
       says: /SVG/,
     },
     {
-      name: "an image that is neither PNG nor JPG",
-      value: withBlocks([{ type: "image", src: "https://cdn.yildizskylab.com/afis.gif", alt: "afiş" }]),
-      says: /PNG ya da JPG/,
+      name: "an SVG image on the club CDN too",
+      value: withBlocks([{ type: "image", src: "https://cdn.yildizskylab.com/images/logo.svgz", alt: "logo" }]),
+      says: /SVG/,
     },
     {
-      name: "an image whose address does not say what it is",
-      value: withBlocks([{ type: "image", src: "https://cdn.yildizskylab.com/images/fe6b25b5", alt: "afiş" }]),
-      says: /PNG ya da JPG/,
+      name: "a WebP image",
+      value: withBlocks([{ type: "image", src: "https://example.com/afis.webp?w=600", alt: "afiş" }]),
+      says: /WebP.*Outlook/,
+    },
+    {
+      name: "an image elsewhere whose address does not say what it is",
+      value: withBlocks([{ type: "image", src: "https://example.com/images/fe6b25b5", alt: "afiş" }]),
+      says: /\.png, \.jpg, \.jpeg ya da \.gif/,
+    },
+    {
+      name: "an image elsewhere that is neither PNG, JPG nor GIF",
+      value: withBlocks([{ type: "image", src: "https://example.com/afis.bmp", alt: "afiş" }]),
+      says: /\.png, \.jpg, \.jpeg ya da \.gif/,
     },
     {
       name: "an image over plain http",
       value: withBlocks([{ type: "image", src: "http://cdn.yildizskylab.com/afis.png", alt: "afiş" }]),
       says: /https/,
+    },
+    {
+      name: "an image written into the mail as data",
+      value: withBlocks([{ type: "image", src: "data:image/png;base64,iVBORw0KGgo=", alt: "afiş" }]),
+      says: /data:/,
     },
     {
       name: "an image wider than a mail",
@@ -232,10 +247,17 @@ describe("a Visual document that is refused", () => {
     assert.match(parsed.problems[0], /JSON/);
   });
 
-  it("accepts an image address with a query after its extension", () => {
-    const read = readVisualDocument(withBlocks([{ type: "image", src: "https://cdn.example.com/a.JPG?w=600", alt: "" }]));
-    assert.ok(read.ok, read.ok ? "" : read.problems.join("\n"));
-  });
+  for (const [name, src] of [
+    ["the club CDN's, which names no extension (the mails' own logo)", "https://cdn.yildizskylab.com/images/fe6b25b5-6dc6-4981-ab09-907b304f369a"],
+    ["another host's PNG, with a query after its extension", "https://cdn.example.com/a.PNG?w=600"],
+    ["another host's JPG", "https://example.com/afis.jpeg"],
+    ["another host's GIF", "https://example.com/afis.gif"],
+  ]) {
+    it(`accepts an image address: ${name}`, () => {
+      const read = readVisualDocument(withBlocks([{ type: "image", src, alt: "" }]));
+      assert.ok(read.ok, read.ok ? "" : read.problems.join("\n"));
+    });
+  }
 
   it("will not serialise a document it would refuse to read", () => {
     assert.throws(() => visualSource(withBlocks([{ type: "quote" }]) as unknown as VisualDocument), /quote/);

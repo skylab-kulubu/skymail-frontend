@@ -17,23 +17,21 @@
  */
 import * as React from "react";
 import type { ComponentType, ReactNode } from "react";
-import { end, ifSet, v } from "../../../emails/go";
-import { Cta, Divider, Figure, Heading, Paragraph, Shell, Strong, TextLink } from "../../../emails/theme";
+import { end, ifNotSet, ifSet, v } from "../../../emails/go";
+import { Cta, Divider, Em, Figure, Heading, Paragraph, Shell, Strong, TextLink } from "../../../emails/theme";
 import type { VisualBlock, VisualDocument, VisualInline } from "./visual-document";
 
-/** `{{if not .X}}`: a section for when a variable is not set. */
-const ifNotSet = (name: string) => `{{if not .${name}}}`;
-
-/** The space above a heading that is not the first thing in the mail. */
-const HEADING_SPACING: React.CSSProperties = { marginTop: "28px" };
+/** The action that prints one `{`: a raw string, since React writes `"` as `&quot;` and the mailer cannot parse that. */
+const TYPED_BRACE = "{{`{`}}";
 
 /**
  * What an operator typed, as the mailer will print it. Here text is only
- * text, and a `{{` in it would open a Go action, so it is written as the
- * action that prints two braces. As a raw string, not a quoted one: React
- * writes `"` as `&quot;`, and the mailer cannot parse an action written so.
+ * text, so every `{` in it is written as the action that prints it: a brace
+ * left bare could meet another — at the end of one piece of text and the
+ * start of the next, which the plain text and the preview line run together
+ * — and open an action nobody wrote, or one the mailer cannot parse.
  */
-export const asText = (typed: string) => typed.replaceAll("{{", "{{`{{`}}");
+export const asText = (typed: string) => typed.replaceAll("{", TYPED_BRACE);
 
 /** An inline node, its marks around it: a link inside, then italic, then bold. */
 function inline(node: VisualInline, key: number): ReactNode {
@@ -42,7 +40,7 @@ function inline(node: VisualInline, key: number): ReactNode {
   const link = marks.find((mark) => mark.type === "link");
   const wrapped: ((inner: ReactNode) => ReactNode)[] = [];
   if (link) wrapped.push((inner) => <TextLink href={link.href}>{inner}</TextLink>);
-  if (marks.some((mark) => mark.type === "italic")) wrapped.push((inner) => <em>{inner}</em>);
+  if (marks.some((mark) => mark.type === "italic")) wrapped.push((inner) => <Em>{inner}</Em>);
   if (marks.some((mark) => mark.type === "bold")) wrapped.push((inner) => <Strong>{inner}</Strong>);
   for (const wrap of wrapped) content = wrap(content);
   return typeof content === "string" ? content : <React.Fragment key={key}>{content}</React.Fragment>;
@@ -52,9 +50,6 @@ const inlines = (content: readonly VisualInline[]) => content.map(inline);
 
 /** How much of a preview line React Email keeps; it drops the rest wherever that falls. */
 const PREVIEW_LENGTH = 150;
-
-/** The escaped pair of braces asText writes, which must not be split either. */
-const TYPED_BRACES = asText("{{");
 
 /**
  * The inline content as the inbox's preview line: as much as fits, cut
@@ -68,10 +63,7 @@ function previewLine(content: readonly VisualInline[]): string {
       pieces.push(v(node.name));
       continue;
     }
-    for (const [index, part] of node.text.split("{{").entries()) {
-      if (index > 0) pieces.push(TYPED_BRACES);
-      pieces.push(...part);
-    }
+    for (const character of node.text) pieces.push(asText(character));
   }
   let line = "";
   for (const piece of pieces) {
@@ -93,7 +85,7 @@ function blocks(list: readonly VisualBlock[], above: boolean): ReactNode[] {
       case "heading":
         if (block.content.length === 0) return;
         nodes.push(
-          <Heading key={key} style={above ? HEADING_SPACING : undefined}>
+          <Heading key={key} spaced={above}>
             {inlines(block.content)}
           </Heading>,
         );

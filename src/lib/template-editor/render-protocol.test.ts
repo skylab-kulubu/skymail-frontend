@@ -59,6 +59,7 @@ describe("a sandbox message, as the editor reads it", () => {
         html: "<p>{{.FirstName}}</p>",
         plainText: "{{.FirstName}}",
         variables: ["FirstName"],
+        warnings: ["Bağlantıdan sonra bir boşluk bırak."],
         // A sandbox cannot say which source it rendered: the editor knows.
         mode: "html",
         source: "something else",
@@ -69,7 +70,13 @@ describe("a sandbox message, as the editor reads it", () => {
       channel: RENDER_CHANNEL,
       type: "rendered",
       id: "r1",
-      result: { ok: true, html: "<p>{{.FirstName}}</p>", plainText: "{{.FirstName}}", variables: ["FirstName"] },
+      result: {
+        ok: true,
+        html: "<p>{{.FirstName}}</p>",
+        plainText: "{{.FirstName}}",
+        variables: ["FirstName"],
+        warnings: ["Bağlantıdan sonra bir boşluk bırak."],
+      },
     });
   });
 
@@ -100,7 +107,10 @@ describe("a sandbox message, as the editor reads it", () => {
       rendered({ ok: true, plainText: "", variables: [] }),
       rendered({ ok: true, html: "<p/>", plainText: 1, variables: [] }),
       rendered({ ok: true, html: "<p/>", plainText: "", variables: "FirstName" }),
-      rendered({ ok: true, html: "<p/>", plainText: "", variables: [1] }),
+      rendered({ ok: true, html: "<p/>", plainText: "", variables: [1], warnings: [] }),
+      rendered({ ok: true, html: "<p/>", plainText: "", variables: [] }),
+      rendered({ ok: true, html: "<p/>", plainText: "", variables: [], warnings: "boşluk bırak" }),
+      rendered({ ok: true, html: "<p/>", plainText: "", variables: [], warnings: [{ text: "x" }] }),
       rendered({ ok: false, reason: "pwned", message: "x" }),
       rendered({ ok: false, reason: "render" }),
     ]) {

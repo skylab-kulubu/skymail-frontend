@@ -44,6 +44,7 @@ import { versionProblem } from '@/lib/template-editor/refusals';
 import { useRepoSample } from '@/lib/template-editor/use-repo-sample';
 import { useRenderBridge, useSourceRenders } from '@/lib/template-editor/use-renders';
 import { offeredVariables } from '@/lib/template-editor/visual-variables';
+import { renderWarnings } from '@/lib/mail-render/warnings';
 import {
   AUTHORING_MODE_LABEL,
   discardDraft,
@@ -168,6 +169,8 @@ function Editor({
   const previewHtml = lastGood?.html ?? (untouchedMain || shown === null ? stored.html : null);
   const current = shown && shownSource !== undefined ? renderOf(renders[shown], { mode: shown, source: shownSource }) : null;
   const failure = current && !current.ok ? current.message : null;
+  const storedWarnings = useMemo(() => renderWarnings(stored.html, stored.plainText), [stored.html, stored.plainText]);
+  const previewWarnings = lastGood?.warnings ?? (previewHtml === stored.html ? storedWarnings : []);
 
   const variables = useMemo(
     () => offeredVariables(template, { storedHtml: stored.html, renders, subject: editing.subject }),
@@ -449,12 +452,15 @@ function Editor({
           }
           subject={editing.subject}
           samples={samples}
+          warnings={previewWarnings}
         />
       </div>
 
       {dialog?.kind === 'publish' ? (
         <PublishDialog
           name={editing.name}
+          // What is published is the stored draft: a publish waits for a save.
+          warnings={storedWarnings}
           busy={busy === 'publish'}
           onConfirm={() => void publish()}
           onCancel={() => setDialog(null)}

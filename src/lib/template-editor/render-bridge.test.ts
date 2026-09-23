@@ -18,7 +18,7 @@ type Frame = {
   answer: (request: RenderRequest, result: RenderResult) => void;
 };
 
-const OK = (html: string): RenderResult => ({ ok: true, html, plainText: html, variables: [] });
+const OK = (html: string): RenderResult => ({ ok: true, html, plainText: html, variables: [], warnings: [] });
 
 /**
  * Frames that stay silent until the test speaks for them, or — with
@@ -128,6 +128,7 @@ describe("what a render says", () => {
       html: "<p>mail</p>",
       plainText: "<p>mail</p>",
       variables: [],
+      warnings: [],
       mode: "jsx",
       source: "export default Mail",
     });

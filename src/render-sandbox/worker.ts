@@ -26,7 +26,7 @@ async function render(input: SourceInput): Promise<RenderResult> {
   try {
     const rendered = await renderSource(input, { deadlineMs: RENDER_DEADLINE_MS });
     return rendered.ok
-      ? { ok: true, html: rendered.html, plainText: rendered.plainText, variables: rendered.variables }
+      ? { ok: true, html: rendered.html, plainText: rendered.plainText, variables: rendered.variables, warnings: rendered.warnings }
       : { ok: false, reason: rendered.reason, message: rendered.message };
   } catch (error) {
     return { ok: false, reason: "render", message: error instanceof Error ? error.message : String(error) };

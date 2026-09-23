@@ -244,11 +244,8 @@ export function Shell({
   );
 }
 
-/**
- * The mail's heading. `style` is for spacing, as Paragraph's is: a heading
- * further down a mail (the Visual editor writes those) needs room above it.
- */
-export function Heading({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+/** The mail's heading; `spaced` gives one further down the mail room above it. */
+export function Heading({ children, spaced }: { children: React.ReactNode; spaced?: boolean }) {
   // A <Text> rather than a <Heading>: react-email upper-cases headings in the
   // plain-text part, which would mangle a Go template action inside one.
   return (
@@ -263,7 +260,7 @@ export function Heading({ children, style }: { children: React.ReactNode; style?
         lineHeight: "1.25",
         color: colors.textPrimary,
         fontFamily: fontStack,
-        ...style,
+        ...(spaced ? { marginTop: "28px" } : {}),
       }}
     >
       {children}
@@ -297,6 +294,11 @@ export function Strong({ children }: { children: React.ReactNode }) {
       {children}
     </strong>
   );
+}
+
+/** Italic inside running text; it keeps the colour of the text around it. */
+export function Em({ children }: { children: React.ReactNode }) {
+  return <em>{children}</em>;
 }
 
 /** A link inside running text, in the brand colour both themes read. */

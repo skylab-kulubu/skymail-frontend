@@ -48,6 +48,24 @@ export function TemplateKey({ template }: { template: MailTemplate }) {
   );
 }
 
+/**
+ * A render's warnings (src/lib/mail-render/warnings.ts): each says what to
+ * fix. They stop nothing; a repo template fails emails:render for the same.
+ */
+export function RenderWarnings({ warnings, when }: { warnings: readonly string[]; when: string }) {
+  if (warnings.length === 0) return null;
+  return (
+    <NoticeBox tone="warning">
+      <p className="font-medium">{when}</p>
+      <ul className="mt-1 list-disc space-y-1 pl-4">
+        {warnings.map((warning) => (
+          <li key={warning}>{warning}</li>
+        ))}
+      </ul>
+    </NoticeBox>
+  );
+}
+
 /** A note beside the editor: a stale draft, someone else's draft, what the preview shows. */
 export function EditorNote({ tone = 'info', children }: { tone?: 'info' | 'warning'; children: ReactNode }) {
   return <NoticeBox tone={tone}>{children}</NoticeBox>;

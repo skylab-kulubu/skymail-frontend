@@ -7,7 +7,7 @@ import { referencedVariables } from '@/lib/mail-render/go-template';
 import type { SampleValues } from '@/lib/mail-render/preview';
 import type { MailScheme } from '@/lib/template-editor/preview';
 import { readTypedSamples, sampleNames, sampleValues, writeTypedSamples } from '@/lib/template-editor/samples';
-import { EditorNote, SamplePanel } from './EditorParts';
+import { EditorNote, RenderWarnings, SamplePanel } from './EditorParts';
 import { MailFrame, SchemeToggle, SubjectPreview } from './MailPreview';
 
 /** The variables of a stored body, for a preview that has no render of its own yet. */
@@ -76,6 +76,7 @@ export function PreviewPane({
   note,
   subject,
   samples,
+  warnings = [],
 }: {
   html: string | null;
   pending: boolean;
@@ -88,6 +89,8 @@ export function PreviewPane({
   note?: ReactNode;
   subject: string;
   samples: ReturnType<typeof useSample>;
+  /** The shown render's warnings: said here, and again before a publish. */
+  warnings?: readonly string[];
 }) {
   const [scheme, setScheme] = useState<MailScheme>('light');
   return (
@@ -116,6 +119,7 @@ export function PreviewPane({
           {html !== null ? <p className="mt-1 text-xs">Aşağıda son başarılı render duruyor.</p> : null}
         </NoticeBox>
       ) : null}
+      <RenderWarnings warnings={warnings} when="Bu mail gönderilebilir, ama düzeltmen iyi olur:" />
       <SubjectPreview subject={subject} sample={samples.sample} />
       <MailFrame
         title="Mail önizlemesi"

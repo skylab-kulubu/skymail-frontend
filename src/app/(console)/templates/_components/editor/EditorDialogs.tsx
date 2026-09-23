@@ -9,16 +9,19 @@ import type { SourceRender } from '@/lib/mail-render';
 import type { MailScheme } from '@/lib/template-editor/preview';
 import { AUTHORING_MODE_LABEL, type TemplateVersion } from '@/lib/templates';
 import type { EditableMode } from '@/lib/template-editor/editor-state';
-import { EditorNote, RefusalNotice, versionLine, type Refusal } from './EditorParts';
+import { EditorNote, RefusalNotice, RenderWarnings, versionLine, type Refusal } from './EditorParts';
 import { MailFrame, SchemeToggle, SubjectPreview } from './MailPreview';
 
 export function PublishDialog({
   name,
+  warnings,
   busy,
   onConfirm,
   onCancel,
 }: {
   name: string;
+  /** The draft's warnings, said again now that it is about to be sent. */
+  warnings: readonly string[];
   busy: boolean;
   onConfirm: () => void;
   onCancel: () => void;
@@ -29,6 +32,11 @@ export function PublishDialog({
         Taslağın yayımlanınca “{name}” bundan sonra bu sürümle gönderilir. Şu an gönderilen sürüm geçmişte kalır ve geri
         getirilebilir.
       </p>
+      {warnings.length > 0 ? (
+        <div className="mt-4">
+          <RenderWarnings warnings={warnings} when="Yayımlamadan önce bak: bu taslakta düzeltilmesi iyi olacak şeyler var." />
+        </div>
+      ) : null}
       <ModalPrimaryActions
         onCancel={onCancel}
         onConfirm={onConfirm}

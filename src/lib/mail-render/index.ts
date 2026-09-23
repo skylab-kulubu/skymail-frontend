@@ -20,10 +20,12 @@ import { createElement, type ComponentType } from "react";
 import { referencedVariables } from "./go-template";
 import { DeadlineError, plainTextFromHtml, renderElement, type ElementOptions } from "./render";
 import { parseVisualSource } from "./visual-document";
+import { renderWarnings } from "./warnings";
 
 export { blockBalance, referencedVariables } from "./go-template";
 export { fillSampleValues, type FillOptions, type SampleValues } from "./preview";
 export { decideSave, renderOf, type SaveDecision } from "./save";
+export { renderWarnings } from "./warnings";
 
 /** The ways a Mail template's body is written (CONTEXT.md). */
 export type AuthoringMode = "jsx" | "visual" | "html";
@@ -45,6 +47,11 @@ export interface Rendered {
    * view; see referencedVariables in go-template.ts for how far it goes.
    */
   variables: string[];
+  /**
+   * What the bodies may still get wrong, each worded as what to do; none of it
+   * stops a save (warnings.ts).
+   */
+  warnings: string[];
 }
 
 export type RenderFailureReason =
@@ -142,7 +149,7 @@ async function renderMail(Component: ComponentType, options: RenderOptions, elem
     if (isBlank(markup)) {
       return EMPTY;
     }
-    return { ok: true, html, plainText, variables: referencedVariables(html) };
+    return { ok: true, html, plainText, variables: referencedVariables(html), warnings: renderWarnings(html, plainText) };
   } catch (error) {
     if (error instanceof DeadlineError) {
       return failure(
@@ -206,7 +213,8 @@ function renderHtml(source: string): RenderResult {
     return EMPTY;
   }
   try {
-    return { ok: true, html: source, plainText: plainTextFromHtml(source), variables: referencedVariables(source) };
+    const plainText = plainTextFromHtml(source);
+    return { ok: true, html: source, plainText, variables: referencedVariables(source), warnings: renderWarnings(source, plainText) };
   } catch (error) {
     return failure("render", `Düz metin türetilemedi: ${messageOf(error)}`);
   }

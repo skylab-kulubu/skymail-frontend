@@ -20,7 +20,7 @@
     { "type": "heading", "content": [{ "type": "text", "text": "Program" }] },
     { "type": "paragraph", "content": [{ "type": "text", "text": "Açılış 10.00'da, kapanış ertesi gün 10.00'da." }] },
     { "type": "button", "label": "Programı gör", "link": { "url": "https://skyl.app/gecekodu/program" } },
-    { "type": "image", "src": "https://cdn.yildizskylab.com/images/gecekodu-afis.png", "alt": "GECEKODU afişi", "width": 480 },
+    { "type": "image", "src": "https://cdn.yildizskylab.com/images/3f9b6c2e-8d41-4a7e-b5c0-1e2d7a9f4c68", "alt": "GECEKODU afişi", "width": 480 },
     { "type": "divider" },
     {
       "type": "conditional",
