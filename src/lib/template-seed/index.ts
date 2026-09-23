@@ -322,6 +322,14 @@ const who = (version: ConflictVersion) => version.author.name ?? "adı bilinmiyo
 
 const DAY = new Intl.DateTimeFormat("tr-TR", { day: "numeric", month: "short", timeZone: "Europe/Istanbul" });
 
+// A report must not be more fragile than what it reports on: a missing or
+// malformed timestamp says so instead of throwing (and losing the list of
+// refused templates) or printing 1 January 1970 for a null.
+function dayOf(value: string | null | undefined): string {
+  const at = value ? new Date(value) : null;
+  return at && !Number.isNaN(at.getTime()) ? DAY.format(at) : "tarih yok";
+}
+
 /**
  * What a forced seed says it wrote over: each operator version by number,
  * state, author and day, and an operator's subject — or that it overrode
@@ -343,7 +351,7 @@ function forceNote(overrode: Override | null): string {
     .sort((a, b) => a.seq - b.seq)
     .map((version) => {
       const state = version.published_at === null ? "taslak" : "yayımlanmış sürüm";
-      const day = DAY.format(new Date(version.published_at ?? version.created_at));
+      const day = dayOf(version.published_at ?? version.created_at);
       return `#${version.seq} ${state}, ${who(version)}, ${day}`;
     });
   if (overrode.rules.includes("operator_subject") && published) {

@@ -240,6 +240,33 @@ describe("the Template seed", () => {
     assert.ok(all.calls.every(({ url }) => url.endsWith("?force=true")), "--force-all forces every template");
   });
 
+  // A report must not be more fragile than what it reports on: one malformed
+  // timestamp in an answer must not throw away the list of refused templates.
+  it("says a missing or malformed date instead of losing the report to it", async () => {
+    const templates = [template("core.welcome", "Hoş geldin"), template("core.certificate", "Sertifika")];
+    const scripted = scriptedFetch(
+      json(200, {
+        id: "id-core.welcome",
+        overrode: {
+          rules: ["published_by_operator"],
+          published_version: summary(3, operator("Can Demir"), "bozuk", "Konu", ""),
+          operator_versions: [summary(4, operator("Ada Yılmaz"), null, "Taslak", "")],
+        },
+      }),
+      refused("core.certificate", { rules: ["published_by_operator"] }),
+    );
+
+    const { exitCode, output } = await run({
+      templates,
+      fetch: scripted.fetch,
+      force: { all: false, keys: ["core.welcome"] },
+    });
+
+    assert.equal(exitCode, 1, output);
+    assert.match(output, /#3 yayımlanmış sürüm, Can Demir, tarih yok; #4 taslak, Ada Yılmaz, tarih yok/);
+    assert.match(output, /core\.certificate/, "the refused template is still reported");
+  });
+
   it("stops at an answer that is not a refusal, says why, and still lists what was refused before it", async () => {
     const templates = [template("free.basic", "Serbest"), template("core.welcome", "Hoş geldin"), template("core.certificate", "Sertifika")];
     const { fetch, calls } = scriptedFetch(
