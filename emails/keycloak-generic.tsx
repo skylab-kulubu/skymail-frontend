@@ -42,10 +42,19 @@ export default function KeycloakGeneric() {
 
       <Paragraph>
         {ifSet("firstName")}Merhaba {v("firstName")}, {end}
-        SKY LAB hesabınla ilgili tamamlanması gereken bir işlem var. Devam etmek için aşağıdaki bağlantıyı kullan.
+        SKY LAB hesabınla ilgili bir işlem gerçekleşti.
+        {ifSet("link")} Devam etmek için aşağıdaki bağlantıyı kullan.{end}
       </Paragraph>
 
+      {/*
+        Unlike the other Keycloak templates, this one runs for mails that have no
+        action to take — the sender passes an empty link for those. An
+        unconditional button would render with href="" and the sentence above
+        would promise a link that is not there.
+      */}
+      {ifSet("link")}
       <Cta href={link}>Devam Et</Cta>
+      {end}
 
       {ifSet("linkExpirationMinutes")}
       <Text
@@ -56,7 +65,9 @@ export default function KeycloakGeneric() {
       </Text>
       {end}
 
+      {ifSet("link")}
       <LinkFallback href={link} />
+      {end}
 
       {ifSet("subjectKey")}
       <div style={{ marginTop: "24px" }}>

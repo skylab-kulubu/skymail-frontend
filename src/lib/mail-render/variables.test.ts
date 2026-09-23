@@ -93,4 +93,13 @@ describe("reading actions outside a render", () => {
     assert.deepEqual(blockBalance('{{if .A}}{{- range .B}}{{end}}'), { opens: 2, ends: 1 });
     assert.deepEqual(blockBalance('{{/* {{if .X}} */}}{{if eq .K "{{end}}"}}x{{ end }}'), { opens: 1, ends: 1 });
   });
+
+  // The pretty printer wraps a long line inside an action — `{{if\n  .link}}`.
+  // Go parses that fine, so neither the block count nor the variables may
+  // depend on a plain space after the keyword (main #33 hit this with a regex).
+  it("reads an action the pretty printer wrapped across lines", () => {
+    const wrapped = '<a href="{{if\n        .link}}{{.link}}{{end\n}}">x</a>{{\n  range .Items}}{{.Name}}{{\tend}}';
+    assert.deepEqual(blockBalance(wrapped), { opens: 2, ends: 2 });
+    assert.deepEqual(referencedVariables(wrapped), ["Items", "link"]);
+  });
 });
