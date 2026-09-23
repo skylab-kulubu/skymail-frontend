@@ -154,6 +154,20 @@ export function fieldProblems(
   return problems;
 }
 
+/**
+ * What each field would carry now, whether or not the send may go: a text
+ * trimmed, a markup field as its render, or "" while it cannot render. The
+ * preview shows this.
+ */
+export function fieldValues(fields: readonly VariableField[], input: FieldInput): Record<string, string> {
+  const values: Record<string, string> = {};
+  for (const field of fields) {
+    const body = field.kind === "rich" ? richBody(input, field.name) : null;
+    values[field.name] = body ? (body.ok ? body.html : "") : (input.values[field.name] ?? "").trim();
+  }
+  return values;
+}
+
 /** The send's `body_variables`: every field, trimmed, a markup field as its render; or what is wrong. */
 export function bodyVariables(
   fields: readonly VariableField[],
@@ -161,11 +175,5 @@ export function bodyVariables(
   options: { require?: readonly string[] } = {},
 ): { ok: true; variables: Record<string, string> } | { ok: false; problems: Record<string, string> } {
   const problems = fieldProblems(fields, input, options);
-  if (Object.keys(problems).length > 0) return { ok: false, problems };
-  const variables: Record<string, string> = {};
-  for (const field of fields) {
-    const body = field.kind === "rich" ? richBody(input, field.name) : null;
-    variables[field.name] = body?.ok ? body.html : (input.values[field.name] ?? "").trim();
-  }
-  return { ok: true, variables };
+  return Object.keys(problems).length > 0 ? { ok: false, problems } : { ok: true, variables: fieldValues(fields, input) };
 }

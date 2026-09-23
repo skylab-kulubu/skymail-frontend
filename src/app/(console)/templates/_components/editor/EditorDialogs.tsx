@@ -10,7 +10,7 @@ import type { MailScheme } from '@/lib/template-editor/preview';
 import { AUTHORING_MODE_LABEL, type TemplateVersion } from '@/lib/templates';
 import type { EditableMode } from '@/lib/template-editor/editor-state';
 import { EditorNote, RefusalNotice, RenderWarnings, type Refusal } from './EditorParts';
-import { MailFrame, SchemeToggle, SubjectPreview } from './MailPreview';
+import { MailFrame, SchemeToggle, SubjectPreview } from '@/components/mail-preview/MailPreview';
 import { VersionSideBySide } from './VersionSideBySide';
 
 export function PublishDialog({

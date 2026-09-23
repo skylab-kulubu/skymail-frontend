@@ -5,7 +5,7 @@ import type { SampleValues } from '@/lib/mail-render/preview';
 import type { MailScheme } from '@/lib/template-editor/preview';
 import { versionLine } from '@/lib/template-history/history';
 import { AUTHORING_MODE_LABEL, type TemplateVersion } from '@/lib/templates';
-import { MailFrame, SchemeToggle, SubjectPreview } from './MailPreview';
+import { MailFrame, SchemeToggle, SubjectPreview } from '@/components/mail-preview/MailPreview';
 
 /** One column of a side-by-side comparison. */
 export type VersionSide = Readonly<{

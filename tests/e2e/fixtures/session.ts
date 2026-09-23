@@ -17,6 +17,12 @@ export const VIEWER = {
 export const ROLES = {
   writer: ["skymail:access", "skymail:templates:read", "skymail:templates:write"],
   reader: ["skymail:access", "skymail:templates:read"],
+  /** Sends to lists and people, and reads sends and lists (ticket 16). */
+  sender: ["skymail:access", "skymail:templates:read", "skymail:lists:read", "skymail:mails:read", "skymail:mails:write"],
+  /** Sends to people only (`mails:send`), and reads nothing of sends. */
+  individual: ["skymail:access", "skymail:templates:read", "skymail:mails:send"],
+  /** Reads sends, sends nothing. */
+  watcher: ["skymail:access", "skymail:templates:read", "skymail:mails:read"],
 } as const;
 
 export type Profile = keyof typeof ROLES;

@@ -8,7 +8,7 @@ import type { SampleValues } from '@/lib/mail-render/preview';
 import type { MailScheme } from '@/lib/template-editor/preview';
 import { readTypedSamples, sampleNames, sampleValues, writeTypedSamples } from '@/lib/template-editor/samples';
 import { EditorNote, RenderWarnings, SamplePanel } from './EditorParts';
-import { MailFrame, SchemeToggle, SubjectPreview } from './MailPreview';
+import { MailFrame, SchemeToggle, SubjectPreview } from '@/components/mail-preview/MailPreview';
 
 /** The variables of a stored body, for a preview that has no render of its own yet. */
 function storedVariables(html: string | null): string[] {

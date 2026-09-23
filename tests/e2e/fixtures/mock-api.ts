@@ -36,6 +36,22 @@
  *    repeat (the caller's draft in progress on the published version, else
  *    the published one); a template carries `seed_refusal`.
  *
+ * The send form's routes (ticket 16), as skymail-backend `origin/main`
+ * answers them (internal/handlers/mail.go, list.go):
+ *
+ *  - `GET /templates` lists templates by `lifecycle` (default current), paged
+ *    with `_start`/`_end` and X-Total-Count;
+ *  - `GET /mailing_lists` pages internal lists and appends every Keycloak
+ *    group to each page; a list, and its recipients (a group's members all
+ *    at once);
+ *  - `POST /mail_tasks` needs mails:write, and answers 404 for an archived
+ *    template, an archived or unknown list, or a group without members;
+ *    `POST /mail_tasks/single` needs mails:send or mails:write, answers 404
+ *    for an archived template and 400 for an address that is not one — or
+ *    what a test set for that address (`refuseSingle`). Both answer 201
+ *    `{id}`, and the send can be read back — alone, with its recipients'
+ *    queue, or in `GET /mail_tasks`, newest first.
+ *
  * A test can hold a request (`hold`) to put two in the order it needs.
  *
  * Every request is recorded, with whether it carried the minted session's
@@ -46,7 +62,7 @@ import type { Page, Route } from "@playwright/test";
 import { referencedVariables } from "../../../src/lib/mail-render/go-template";
 import { isVariableName } from "../../../src/lib/template-editor/required-variables";
 import { E2E_API_URL } from "./env";
-import { VIEWER, accessToken } from "./session";
+import { ROLES, VIEWER, accessToken, type Profile } from "./session";
 
 type Mode = "jsx" | "visual" | "html";
 
@@ -118,6 +134,31 @@ export type Recorded = {
   frameUrl: string;
 };
 
+/** A mailing list: an internal one, or a Keycloak group whose members are its recipients. */
+export type ListFixture = {
+  id: string;
+  name: string;
+  source: "internal" | "keycloak";
+  /** A group's path. */
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+  archived_at: string | null;
+  recipients: { id: string; full_name: string; email: string; created_at: string; updated_at: string }[];
+};
+
+/** A send the mock opened, as the send routes read it back. */
+type SendRecord = {
+  id: string;
+  created_at: string;
+  template: Row;
+  list: ListFixture | null;
+  recipients: { full_name: string; email: string }[];
+  body_variables: Record<string, unknown>;
+};
+
+const PLAUSIBLE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export const OTHER_OPERATOR: Author = { kind: "operator", sub: "1b7e2d94-3c5a-4f08-8e61-2d9c4a7b3f10", name: "Mehmet Kaya" };
 export const TEMPLATE_SEED: Author = { kind: "template_seed", sub: null, name: "service-account-skymail-seed" };
 const ME: Author = { kind: "operator", sub: VIEWER.sub, name: VIEWER.name };
@@ -159,6 +200,9 @@ export class MockSkymail {
   private readonly rows = new Map<string, Row>();
   private readonly holds: HeldRequest[] = [];
   private readonly versions = new Map<string, Version>();
+  private readonly lists = new Map<string, ListFixture>();
+  private readonly sends = new Map<string, SendRecord>();
+  private readonly singleRefusals = new Map<string, Answer>();
   private clock = Date.parse("2026-09-23T06:00:00Z");
   private ids = 0;
 
@@ -246,6 +290,43 @@ export class MockSkymail {
   /** A Template seed refused for the template (ticket 09): the record the API keeps until a seed goes through. */
   refuseSeed(templateId: string, rules: string[], refusedAt = "2026-09-22T21:10:00Z") {
     this.row(templateId).seed_refusal = { refused_at: refusedAt, rules, payload_sha256: "e3".repeat(32) };
+  }
+
+  /** A mailing list: internal unless it is a Keycloak group, with its recipients. */
+  addList(input: {
+    name: string;
+    source?: "internal" | "keycloak";
+    groupPath?: string;
+    recipients?: { full_name: string; email: string }[];
+  }): string {
+    const id = this.nextId("3f0c1a52");
+    const at = this.now();
+    this.lists.set(id, {
+      id,
+      name: input.name,
+      source: input.source ?? "internal",
+      description: input.groupPath ?? null,
+      created_at: at,
+      updated_at: at,
+      archived_at: null,
+      recipients: (input.recipients ?? []).map((recipient) => ({ id: this.nextId("5e1d7c00"), created_at: at, updated_at: at, ...recipient })),
+    });
+    return id;
+  }
+
+  /** The next single send to `email` gets this answer instead of opening. */
+  refuseSingle(email: string, answer: Answer) {
+    this.singleRefusals.set(email, answer);
+  }
+
+  /** Archives a template behind the page's back. */
+  archiveTemplate(id: string) {
+    this.row(id).archived_at = this.now();
+  }
+
+  /** The sends the page asked to open, in order. */
+  sendRequests(): Recorded[] {
+    return this.requests.filter((request) => request.method === "POST" && request.path.startsWith("/mail_tasks"));
   }
 
   row(id: string): Row {
@@ -398,10 +479,12 @@ export class MockSkymail {
     frameUrl?: string;
   }): Answer {
     const { method, path, body } = request;
-    const authorized =
-      request.authorization === `Bearer ${accessToken("writer")}` || request.authorization === `Bearer ${accessToken("reader")}`;
+    const profile = (Object.keys(ROLES) as Profile[]).find((candidate) => request.authorization === `Bearer ${accessToken(candidate)}`);
+    const authorized = profile !== undefined;
     this.requests.push({ method, path, body, authorized, frameUrl: request.frameUrl ?? "" });
-    if (!authorized) return refuse(401, "server.unauthorized");
+    if (!profile) return refuse(401, "server.unauthorized");
+    const can = (...roles: string[]) => roles.some((role) => (ROLES[profile] as readonly string[]).includes(role));
+    const query = new URLSearchParams(request.search ?? "");
 
     const templateMatch = /^\/templates\/([^/]+)$/.exec(path);
     const requiredMatch = /^\/templates\/([^/]+)\/required-variables(?:\/([^/]+))?$/.exec(path);
@@ -409,9 +492,27 @@ export class MockSkymail {
     const historyMatch = /^\/templates\/([^/]+)\/versions$/.exec(path);
     const draftsMatch = /^\/templates\/([^/]+)\/drafts$/.exec(path);
 
+    if (method === "GET" && path === "/templates") return this.templateList(query);
+    if (method === "GET" && path === "/mailing_lists") return this.listPage(query);
+    const listMatch = /^\/mailing_lists\/([^/]+)(\/recipients)?$/.exec(path);
+    if (method === "GET" && listMatch) return this.listOrRecipients(listMatch[1], Boolean(listMatch[2]), query);
+    if (method === "POST" && path === "/mail_tasks") {
+      return can("skymail:mails:write") ? this.openListSend(asFields(body)) : refuse(403, "server.forbidden");
+    }
+    if (method === "POST" && path === "/mail_tasks/single") {
+      return can("skymail:mails:send", "skymail:mails:write") ? this.openSingleSend(asFields(body)) : refuse(403, "server.forbidden");
+    }
+    if (method === "GET" && path === "/mail_tasks") {
+      const sends = [...this.sends.keys()].reverse().map((id) => this.readSend(id, false).body);
+      return this.page(sends, query);
+    }
+    const sendMatch = /^\/mail_tasks\/([^/]+)(\/queue)?$/.exec(path);
+    if (method === "GET" && sendMatch) return this.readSend(sendMatch[1], Boolean(sendMatch[2]));
+
     if (method === "GET" && templateMatch) {
+      // Every read of an archived template answers 404.
       const row = this.rows.get(templateMatch[1]);
-      return row ? { status: 200, body: this.served(row) } : refuse(404, "server.not_found");
+      return row && row.archived_at === null ? { status: 200, body: this.served(row) } : refuse(404, "server.not_found");
     }
     if (method === "POST" && path === "/templates") return this.create(asFields(body));
     if (method === "GET" && historyMatch) return this.history(historyMatch[1], new URLSearchParams(request.search ?? ""));
@@ -438,6 +539,122 @@ export class MockSkymail {
     }
 
     return refuse(501, "e2e.not_mocked", { method, path });
+  }
+
+  private page<T>(items: T[], query: URLSearchParams, total = items.length): Answer {
+    const start = Number(query.get("_start") ?? 0);
+    const end = Number(query.get("_end") ?? start + 10);
+    return { status: 200, body: items.slice(start, end), headers: { "X-Total-Count": String(total) } };
+  }
+
+  private templateList(query: URLSearchParams): Answer {
+    const lifecycle = query.get("lifecycle") ?? "current";
+    const rows = [...this.rows.values()].filter(
+      (row) => lifecycle === "all" || (lifecycle === "inactive") === (row.archived_at !== null),
+    );
+    return this.page(rows.map((row) => this.served(row)), query);
+  }
+
+  /** Internal lists paged, every group on every page; X-Total-Count counts both. */
+  private listPage(query: URLSearchParams): Answer {
+    const current = [...this.lists.values()].filter((list) => list.archived_at === null);
+    const internal = current.filter((list) => list.source === "internal");
+    const groups = current.filter((list) => list.source === "keycloak");
+    const start = Number(query.get("_start") ?? 0);
+    const end = Number(query.get("_end") ?? start + 10);
+    const shown = (list: ListFixture) => ({ ...list, recipients: undefined });
+    return {
+      status: 200,
+      body: [...internal.slice(start, end), ...groups].map(shown),
+      headers: { "X-Total-Count": String(internal.length + groups.length) },
+    };
+  }
+
+  private listOrRecipients(id: string, recipients: boolean, query: URLSearchParams): Answer {
+    const list = this.lists.get(id);
+    if (!list || list.archived_at !== null) return refuse(404, "server.not_found");
+    if (!recipients) return { status: 200, body: { ...list, recipients: undefined } };
+    if (list.source === "keycloak") return { status: 200, body: list.recipients };
+    return this.page(list.recipients, query);
+  }
+
+  private sendableTemplate(id: unknown): Row | null {
+    const row = typeof id === "string" ? this.rows.get(id) : undefined;
+    return row && row.archived_at === null ? row : null;
+  }
+
+  private open(template: Row, list: ListFixture | null, recipients: SendRecord["recipients"], body: Record<string, unknown>): Answer {
+    const id = this.nextId("b1c2d3e4");
+    const variables = asFields(body.body_variables);
+    this.sends.set(id, { id, created_at: this.now(), template, list, recipients, body_variables: variables });
+    return { status: 201, body: { id } };
+  }
+
+  private openListSend(body: Record<string, unknown>): Answer {
+    const template = this.sendableTemplate(body.template_id);
+    const list = typeof body.mail_list_id === "string" ? this.lists.get(body.mail_list_id) : undefined;
+    if (!template || !list || list.archived_at !== null) return refuse(404, "server.not_found");
+    if (list.source === "keycloak" && list.recipients.length === 0) return refuse(404, "server.not_found");
+    return this.open(template, list, list.recipients, body);
+  }
+
+  private openSingleSend(body: Record<string, unknown>): Answer {
+    const email = typeof body.recipient_email === "string" ? body.recipient_email : "";
+    const refused = this.singleRefusals.get(email);
+    if (refused) {
+      this.singleRefusals.delete(email);
+      return refused;
+    }
+    if (!PLAUSIBLE_EMAIL.test(email)) {
+      return refuse(400, "validation.error", { errors: [{ field: "recipient_email", code: "invalid_email" }] });
+    }
+    const template = this.sendableTemplate(body.template_id);
+    if (!template) return refuse(404, "server.not_found");
+    const name = typeof body.recipient_full_name === "string" ? body.recipient_full_name : "";
+    return this.open(template, null, [{ full_name: name, email }], body);
+  }
+
+  /** A send as the list, the detail and the summary give it (`Send`), or its recipients' queue. */
+  private readSend(id: string, queue: boolean): Answer {
+    const send = this.sends.get(id);
+    if (!send) return refuse(404, "server.not_found");
+    if (queue) {
+      const rows = send.recipients.map((recipient, index) => ({
+        id: `${send.id}-${index}`,
+        recipient_full_name: recipient.full_name,
+        recipient_email: recipient.email,
+        status: { mail_queue_status: "pending", valid: true },
+        error: null,
+        attempts: 0,
+        next_attempt_at: null,
+        created_at: send.created_at,
+      }));
+      return { status: 200, body: rows, headers: { "X-Total-Count": String(rows.length) } };
+    }
+    const single = send.list === null ? send.recipients[0] : null;
+    return {
+      status: 200,
+      body: {
+        id: send.id,
+        created_at: send.created_at,
+        sent_by: VIEWER.sub,
+        template_id: send.template.id,
+        template_name: send.template.name,
+        template_key: send.template.key,
+        mail_list_id: send.list?.id ?? null,
+        mail_list_name: send.list?.name ?? null,
+        audience: {
+          kind: send.list ? "mailing_list" : "single",
+          mail_list_id: send.list?.id ?? null,
+          name: send.list?.name ?? null,
+          source: send.list?.source ?? null,
+          recipient_full_name: single?.full_name ?? null,
+          recipient_email: single?.email ?? null,
+        },
+        status: "sending",
+        recipient_counts: { pending: send.recipients.length, processing: 0, sent: 0, failed: 0 },
+      },
+    };
   }
 
   private saveDraft(templateId: string, body: Record<string, unknown>): Answer {

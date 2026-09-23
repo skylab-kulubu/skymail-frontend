@@ -30,6 +30,7 @@ import { AddRecipientModal } from './AddRecipientModal';
 import { ArchiveListDialog, archivedNotice } from './ArchiveListDialog';
 import { flashNotice, useFlashNotice, type NoticeData } from '@/lib/notice';
 import { formatDateTime } from '@/lib/format';
+import { composeHref } from '@/lib/sends';
 import { ListLoadFailure } from './ListLoadFailure';
 import { Notice } from '@/components/chrome/Notice';
 import { Tag } from '@/components/chrome/Tag';
@@ -69,7 +70,7 @@ function ListDetail({ list }: { list: MailingList }) {
         {actions.compose || actions.change ? (
           <div className="flex flex-wrap gap-2">
             {actions.compose ? (
-              <Button href={`/mail-tasks/create?mail_list_id=${encodeURIComponent(list.id)}`}>
+              <Button href={composeHref(list.id)}>
                 <Send className="h-4 w-4" aria-hidden />
                 Yeni gönderim
               </Button>

@@ -9,7 +9,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { buildVisual as b, visualSource } from "../mail-render/visual-document";
-import { bodyVariables, fieldProblems, usesRecipientName, variableFields, type FieldInput } from "./fields";
+import { bodyVariables, fieldProblems, fieldValues, usesRecipientName, variableFields, type FieldInput } from "./fields";
 
 /** free.basic as the Template seed publishes it, trimmed to its actions. */
 const FREE_BASIC = {
@@ -82,6 +82,17 @@ describe("the values a send carries", () => {
         CtaUrl: "https://skyl.app/g",
         CtaLabel: "",
       },
+    });
+  });
+
+  it("are what each field would carry now, a body that cannot go out as none, for the preview", () => {
+    const broken = visualSource(b.document([b.paragraph([b.text("x", [{ type: "link", href: "https://ornek.com/%zz" }])])]));
+    assert.deepEqual(fieldValues(fields, { values: { Subject: " Duyuru ", Heading: "x" }, rich: { BodyHtml: broken } }), {
+      Subject: "Duyuru",
+      Heading: "x",
+      BodyHtml: "",
+      CtaUrl: "",
+      CtaLabel: "",
     });
   });
 
