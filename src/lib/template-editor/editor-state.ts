@@ -11,11 +11,12 @@
  *
  * What may be sent is decided here: every source sent has a render of its own
  * text, or is untouched (the render module's decideSave), and the body is the
- * Main source's render. JSX and HTML are the modes the editor writes; a Visual
- * source (ticket 15) is carried by the API, never sent from here.
+ * Main source's render. A Visual source is held as its document's JSON text,
+ * which is what the render module renders, and sent as the document itself.
  */
 import { decideSave, renderOf } from "../mail-render/save";
 import type { AuthoringMode as EditableMode, SourceRender } from "../mail-render";
+import { EMPTY_VISUAL_SOURCE, readVisualDocument } from "../mail-render/visual-document";
 import {
   AUTHORING_MODE_LABEL,
   writtenBy,
@@ -28,8 +29,8 @@ import {
 
 export type { EditableMode };
 
-/** The Authoring modes the editor writes, in tab order. Visual joins with ticket 15. */
-export const EDITABLE_MODES: readonly EditableMode[] = ["jsx", "html"];
+/** The Authoring modes the editor writes, in tab order. */
+export const EDITABLE_MODES: readonly EditableMode[] = ["jsx", "visual", "html"];
 
 export function isEditableMode(mode: AuthoringMode): mode is EditableMode {
   return (EDITABLE_MODES as readonly AuthoringMode[]).includes(mode);
@@ -58,8 +59,6 @@ export type Stored = Content &
     /** The Main source's render as stored. */
     html: string;
     plainText: string;
-    /** The version has a Visual source, which the API keeps. */
-    hasVisual: boolean;
   }>;
 
 /** The last render the editor has of each mode's source. */
@@ -123,10 +122,35 @@ export function versionToOpen(template: MailTemplate, viewerSub: string | null):
   return mine?.id ?? template.published_version_id;
 }
 
+/**
+ * A stored Visual document as the text the editor holds: in the model's one
+ * key order when the model reads it, so the order jsonb gives back is not an
+ * edit; as it came when it does not, so its render says what is wrong and a
+ * save that leaves it alone sends it back unchanged.
+ */
+function visualSourceFrom(document: unknown): string {
+  const read = readVisualDocument(document);
+  return JSON.stringify(read.ok ? read.document : document);
+}
+
+/** Where each mode's source goes in a draft: code and markup as text, a Visual source as the document itself. */
+function sourceField(mode: EditableMode, source: string): Pick<DraftBody, "jsx_source" | "visual_source" | "html_source"> {
+  switch (mode) {
+    case "jsx":
+      return { jsx_source: source };
+    case "visual":
+      // Always JSON: what storedFromVersion, addSource and the Visual editor put here.
+      return { visual_source: JSON.parse(source) as Record<string, unknown> };
+    case "html":
+      return { html_source: source };
+  }
+}
+
 export function storedFromVersion(version: TemplateVersion, rowName: string): Stored {
   const draftId = version.published_at === null ? version.id : null;
   const sources: Partial<Record<EditableMode, string>> = {};
   if (version.jsx_source !== null) sources.jsx = version.jsx_source;
+  if (version.visual_source !== null && version.visual_source !== undefined) sources.visual = visualSourceFrom(version.visual_source);
   if (version.html_source !== null) sources.html = version.html_source;
   return {
     name: version.name ?? rowName,
@@ -140,7 +164,6 @@ export function storedFromVersion(version: TemplateVersion, rowName: string): St
     baseVersionId: draftId ? version.base_version_id : version.id,
     html: version.html_content,
     plainText: version.plain_text_content,
-    hasVisual: version.visual_source !== null && version.visual_source !== undefined,
   };
 }
 
@@ -206,7 +229,7 @@ export function planSave(state: EditorState): SavePlan {
   const { editing, renders, stored } = state;
   const blockers = wordingBlockers(editing);
 
-  const body: Omit<DraftBody, "html_content" | "plain_text_content"> = {
+  let body: Omit<DraftBody, "html_content" | "plain_text_content"> = {
     name: editing.name,
     subject: editing.subject,
     main_mode: editing.mainMode,
@@ -218,7 +241,7 @@ export function planSave(state: EditorState): SavePlan {
     const kept = stored.sources[mode];
     const decision = decideSave({ mode, source }, renders[mode] ?? null, kept === undefined ? null : { mode, source: kept });
     if (decision === "blocked") blockers.push(notRendered(mode, source, renders[mode]));
-    body[mode === "jsx" ? "jsx_source" : "html_source"] = source;
+    body = { ...body, ...sourceField(mode, source) };
   }
 
   const main = mainBody(state);
@@ -258,7 +281,7 @@ export function planMainChange(candidate: EditableMode, state: EditorState): Sav
     body: {
       subject: stored.subject,
       main_mode: candidate,
-      [candidate === "jsx" ? "jsx_source" : "html_source"]: source,
+      ...sourceField(candidate, source),
       html_content: render.html,
       plain_text_content: render.plainText,
       base_version_id: stored.baseVersionId,
@@ -269,15 +292,28 @@ export function planMainChange(candidate: EditableMode, state: EditorState): Sav
 /**
  * A source added in a mode the template has none in. It never replaces one,
  * and nothing is converted: HTML starts from the Main source's rendered HTML,
- * so the operator edits the real mail; JSX starts from the starter. Null when
- * there is a source already, or HTML has no rendered Main source to start from.
+ * so the operator edits the real mail; JSX starts from the starter; Visual
+ * starts empty. Null when there is a source already, or HTML has no rendered
+ * Main source to start from.
  */
 export function addSource(mode: EditableMode, state: EditorState): Content | null {
   const { editing } = state;
   if (editing.sources[mode] !== undefined) return null;
-  const start = mode === "jsx" ? JSX_STARTER : mainBody(state)?.html;
+  const start = startOf(mode, state);
   if (start === undefined) return null;
   return { ...editing, sources: { ...editing.sources, [mode]: start } };
+}
+
+/** Where a new source in `mode` starts; undefined when it has nothing to start from. */
+function startOf(mode: EditableMode, state: EditorState): string | undefined {
+  switch (mode) {
+    case "jsx":
+      return JSX_STARTER;
+    case "visual":
+      return EMPTY_VISUAL_SOURCE;
+    case "html":
+      return mainBody(state)?.html;
+  }
 }
 
 /**

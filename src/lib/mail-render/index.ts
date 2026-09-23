@@ -18,17 +18,21 @@
  */
 import { createElement, type ComponentType } from "react";
 import { referencedVariables } from "./go-template";
-import { DeadlineError, plainTextFromHtml, renderElement } from "./render";
+import { DeadlineError, plainTextFromHtml, renderElement, type ElementOptions } from "./render";
+import { parseVisualSource } from "./visual-document";
+import { renderWarnings } from "./warnings";
 
 export { blockBalance, referencedVariables } from "./go-template";
 export { fillSampleValues, type FillOptions, type SampleValues } from "./preview";
 export { decideSave, renderOf, type SaveDecision } from "./save";
+export { renderWarnings } from "./warnings";
 
-/** The ways a Mail template's body is written (CONTEXT.md). Visual comes with the Visual editor. */
-export type AuthoringMode = "jsx" | "html";
+/** The ways a Mail template's body is written (CONTEXT.md). */
+export type AuthoringMode = "jsx" | "visual" | "html";
 
 export interface SourceInput {
   mode: AuthoringMode;
+  /** The code or markup as written; for Visual, the document's JSON text (visual-document.ts). */
   source: string;
 }
 
@@ -43,6 +47,11 @@ export interface Rendered {
    * view; see referencedVariables in go-template.ts for how far it goes.
    */
   variables: string[];
+  /**
+   * What the bodies may still get wrong, each worded as what to do; none of it
+   * stops a save (warnings.ts).
+   */
+  warnings: string[];
 }
 
 export type RenderFailureReason =
@@ -53,7 +62,9 @@ export type RenderFailureReason =
   /** Running or rendering it threw. */
   | "render"
   /** It rendered, and there is nothing in it. */
-  | "empty";
+  | "empty"
+  /** The Visual document is not one the model reads: an unknown block, mark or field, or a value it refuses. */
+  | "invalid";
 
 export interface RenderFailure {
   ok: false;
@@ -110,6 +121,8 @@ async function renderByMode({ mode, source }: SourceInput, options: RenderOption
   switch (mode) {
     case "jsx":
       return renderJsx(source, options);
+    case "visual":
+      return renderVisual(source, options);
     case "html":
       return renderHtml(source);
     default: {
@@ -126,13 +139,17 @@ async function renderByMode({ mode, source }: SourceInput, options: RenderOption
  * text first and then comes through here too.
  */
 export async function renderComponent(Component: ComponentType, options: RenderOptions = {}): Promise<RenderResult> {
+  return renderMail(Component, options, {});
+}
+
+async function renderMail(Component: ComponentType, options: RenderOptions, element: ElementOptions): Promise<RenderResult> {
   const deadlineMs = options.deadlineMs ?? DEFAULT_DEADLINE_MS;
   try {
-    const { html, plainText, markup } = await renderElement(createElement(Component), deadlineMs);
+    const { html, plainText, markup } = await renderElement(createElement(Component), deadlineMs, element);
     if (isBlank(markup)) {
       return EMPTY;
     }
-    return { ok: true, html, plainText, variables: referencedVariables(html) };
+    return { ok: true, html, plainText, variables: referencedVariables(html), warnings: renderWarnings(html, plainText) };
   } catch (error) {
     if (error instanceof DeadlineError) {
       return failure(
@@ -168,13 +185,36 @@ async function renderJsx(source: string, options: RenderOptions): Promise<Render
   return renderComponent(Component, options);
 }
 
+const EMPTY_VISUAL = failure("empty", "Visual belgede gösterilecek bir şey yok; bir başlık, paragraf ya da buton ekle.");
+
+/**
+ * A Visual document is read strictly before anything renders: what the model
+ * does not know is reported, never dropped. It runs no code of its own.
+ */
+async function renderVisual(source: string, options: RenderOptions): Promise<RenderResult> {
+  const read = parseVisualSource(source);
+  if (!read.ok) {
+    return failure("invalid", `Visual belge okunamadı: ${read.problems.join("; ")}`);
+  }
+  let visual: typeof import("./visual");
+  try {
+    visual = await import("./visual");
+  } catch (error) {
+    return failure("render", `Visual render yüklenemedi: ${messageOf(error)}`);
+  }
+  const Mail = visual.visualMail(read.document);
+  // Visual has no seed output to match, so its actions stay exactly as it wrote them.
+  return Mail ? renderMail(Mail, options, { keepActionsWhole: true }) : EMPTY_VISUAL;
+}
+
 /** Raw markup is the body as written; only its plain-text part is derived. */
 function renderHtml(source: string): RenderResult {
   if (isBlank(source)) {
     return EMPTY;
   }
   try {
-    return { ok: true, html: source, plainText: plainTextFromHtml(source), variables: referencedVariables(source) };
+    const plainText = plainTextFromHtml(source);
+    return { ok: true, html: source, plainText, variables: referencedVariables(source), warnings: renderWarnings(source, plainText) };
   } catch (error) {
     return failure("render", `Düz metin türetilemedi: ${messageOf(error)}`);
   }

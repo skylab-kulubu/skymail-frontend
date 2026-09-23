@@ -5,10 +5,10 @@
  * worker (src/render-sandbox/), so a frame renders at most one JSX source and
  * is thrown away after it: that source cannot leave anything behind for the
  * next — patch the renderer so a later source renders as it likes, keep a
- * timer running. HTML is only read, never run, so HTML renders share a frame
- * until it runs JSX. While the editor is open, a clean frame is kept loading
- * for the next render, so a render waits for the frame to load only the
- * first time.
+ * timer running. HTML and a Visual document are only read, never run, so
+ * their renders share a frame until it runs JSX. While the editor is open, a
+ * clean frame is kept loading for the next render, so a render waits for the
+ * frame to load only the first time.
  *
  * A render that never finishes is stopped in the frame, which terminates its
  * worker at a deadline and answers with a failure. A frame that does not

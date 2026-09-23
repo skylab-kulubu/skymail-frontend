@@ -1,7 +1,8 @@
 'use client';
 
 /**
- * The code editor for a JSX or HTML source: Monaco, as the old panel had.
+ * The code editor for a JSX or HTML source: Monaco, as the old panel had. A
+ * Visual source has an editor of its own (src/components/visual-editor).
  *
  * Monaco loads from the panel itself — public/monaco/<version>/vs, copied
  * from the monaco-editor package by scripts/build-editor-assets.ts — not from the CDN
@@ -16,10 +17,13 @@ import { useDocumentTheme } from '@/lib/ui/use-document-theme';
 
 loader.config({ paths: { vs: MONACO_VS_PATH } });
 
-const LANGUAGE: Readonly<Record<EditableMode, string>> = { jsx: 'typescript', html: 'html' };
+/** The Authoring modes written as code. */
+export type CodeMode = Exclude<EditableMode, 'visual'>;
+
+const LANGUAGE: Readonly<Record<CodeMode, string>> = { jsx: 'typescript', html: 'html' };
 
 /** Each mode's model has a path of its own, by which the browser tests find it. */
-const MODEL_PATH: Readonly<Record<EditableMode, string>> = {
+const MODEL_PATH: Readonly<Record<CodeMode, string>> = {
   jsx: 'file:///jsx/template.tsx',
   html: 'file:///html/template.html',
 };
@@ -77,7 +81,7 @@ export default function CodeEditor({
   onChange,
   label,
 }: {
-  mode: EditableMode;
+  mode: CodeMode;
   value: string;
   onChange: (value: string) => void;
   label: string;

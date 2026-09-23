@@ -123,6 +123,8 @@ export const templateHref = {
   index: "/templates",
   create: "/templates/create",
   edit: (id: string) => `/templates/edit/${encodeURIComponent(id)}`,
+  /** The editor, opened on a new, empty Visual source: where a template started in Visual lands. */
+  editStartingVisual: (id: string) => `/templates/edit/${encodeURIComponent(id)}?start=visual`,
   show: (id: string) => `/templates/show/${encodeURIComponent(id)}`,
   /** The version history (ticket 14), for anyone who may read the template. */
   history: (id: string) => `/templates/history/${encodeURIComponent(id)}`,
@@ -307,6 +309,8 @@ export type DraftBody = {
   main_mode: AuthoringMode;
   /** Left out: kept. */
   jsx_source?: string;
+  /** The Visual editor's document, as JSON (a JSON object, not its text). Left out: kept. */
+  visual_source?: Record<string, unknown>;
   /** Left out: kept. */
   html_source?: string;
   html_content: string;

@@ -109,11 +109,12 @@ describe("HTML mode", () => {
 });
 
 describe("a mode the module does not render", () => {
-  // Visual arrives with ticket 15. Until its case is written, a Visual source
-  // must not be compiled as JSX and reported as broken code.
+  // A mode added to AuthoringMode fails to compile until renderSource has its
+  // case; one that arrives anyway (a newer API) must not be compiled as JSX
+  // and reported as broken code.
   it("is refused as a caller's mistake, not taken for JSX", async () => {
-    const input = { mode: "visual", source: '{"type":"doc","content":[]}' } as unknown as SourceInput;
+    const input = { mode: "mjml", source: "<mjml></mjml>" } as unknown as SourceInput;
 
-    await assert.rejects(renderSource(input), /visual/);
+    await assert.rejects(renderSource(input), /mjml/);
   });
 });

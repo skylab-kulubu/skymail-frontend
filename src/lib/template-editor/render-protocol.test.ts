@@ -18,6 +18,11 @@ describe("a render request, as the sandbox reads it", () => {
     });
   });
 
+  it("carries a Visual source, the document's JSON text", () => {
+    const request = renderRequest("r2", { mode: "visual", source: '{"type":"skymail.visual","version":1,"blocks":[]}' });
+    assert.deepEqual(readRenderRequest(structuredClone(request))?.input, request.input);
+  });
+
   it("is nothing else", () => {
     const good = renderRequest("r1", { mode: "html", source: "<p>x</p>" });
     for (const other of [
@@ -27,7 +32,7 @@ describe("a render request, as the sandbox reads it", () => {
       { ...good, type: "ready" },
       { ...good, id: 7 },
       { ...good, id: "" },
-      { ...good, input: { mode: "visual", source: "{}" } },
+      { ...good, input: { mode: "mjml", source: "<mjml/>" } },
       { ...good, input: { mode: "html", source: 5 } },
       { ...good, input: null },
     ]) {
@@ -54,6 +59,7 @@ describe("a sandbox message, as the editor reads it", () => {
         html: "<p>{{.FirstName}}</p>",
         plainText: "{{.FirstName}}",
         variables: ["FirstName"],
+        warnings: ["Bağlantıdan sonra bir boşluk bırak."],
         // A sandbox cannot say which source it rendered: the editor knows.
         mode: "html",
         source: "something else",
@@ -64,23 +70,30 @@ describe("a sandbox message, as the editor reads it", () => {
       channel: RENDER_CHANNEL,
       type: "rendered",
       id: "r1",
-      result: { ok: true, html: "<p>{{.FirstName}}</p>", plainText: "{{.FirstName}}", variables: ["FirstName"] },
+      result: {
+        ok: true,
+        html: "<p>{{.FirstName}}</p>",
+        plainText: "{{.FirstName}}",
+        variables: ["FirstName"],
+        warnings: ["Bağlantıdan sonra bir boşluk bırak."],
+      },
     });
   });
 
-  it("carries a failure with its reason and message", () => {
-    const message = readSandboxMessage({
-      channel: RENDER_CHANNEL,
-      type: "rendered",
-      id: "r2",
-      result: { ok: false, reason: "compile", message: "Kod derlenemedi: …" },
+  for (const [reason, text] of [
+    ["compile", "Kod derlenemedi: …"],
+    ["invalid", 'Visual belge okunamadı: blocks[0]: bilinmeyen blok "quote"'],
+  ]) {
+    it(`carries a failure with its reason and message: ${reason}`, () => {
+      const message = readSandboxMessage({
+        channel: RENDER_CHANNEL,
+        type: "rendered",
+        id: "r2",
+        result: { ok: false, reason, message: text },
+      });
+      assert.deepEqual(message?.type === "rendered" && message.result, { ok: false, reason, message: text });
     });
-    assert.deepEqual(message?.type === "rendered" && message.result, {
-      ok: false,
-      reason: "compile",
-      message: "Kod derlenemedi: …",
-    });
-  });
+  }
 
   it("is nothing when it is not a message the protocol has", () => {
     const rendered = (result: unknown) => ({ channel: RENDER_CHANNEL, type: "rendered", id: "r1", result });
@@ -94,7 +107,10 @@ describe("a sandbox message, as the editor reads it", () => {
       rendered({ ok: true, plainText: "", variables: [] }),
       rendered({ ok: true, html: "<p/>", plainText: 1, variables: [] }),
       rendered({ ok: true, html: "<p/>", plainText: "", variables: "FirstName" }),
-      rendered({ ok: true, html: "<p/>", plainText: "", variables: [1] }),
+      rendered({ ok: true, html: "<p/>", plainText: "", variables: [1], warnings: [] }),
+      rendered({ ok: true, html: "<p/>", plainText: "", variables: [] }),
+      rendered({ ok: true, html: "<p/>", plainText: "", variables: [], warnings: "boşluk bırak" }),
+      rendered({ ok: true, html: "<p/>", plainText: "", variables: [], warnings: [{ text: "x" }] }),
       rendered({ ok: false, reason: "pwned", message: "x" }),
       rendered({ ok: false, reason: "render" }),
     ]) {

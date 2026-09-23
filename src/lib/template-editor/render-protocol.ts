@@ -37,14 +37,16 @@ export type SandboxRendered = Readonly<{
 
 export type SandboxMessage = SandboxReady | SandboxRendered;
 
-const MODES: readonly AuthoringMode[] = ["jsx", "html"];
-const FAILURE_REASONS: readonly RenderFailureReason[] = ["compile", "no-component", "render", "empty"];
+const MODES: readonly AuthoringMode[] = ["jsx", "visual", "html"];
+const FAILURE_REASONS: readonly RenderFailureReason[] = ["compile", "no-component", "render", "empty", "invalid"];
 
 type Fields = Record<string, unknown>;
 
 const isObject = (value: unknown): value is Fields => typeof value === "object" && value !== null;
 
 const isId = (value: unknown): value is string => typeof value === "string" && value !== "";
+
+const isStrings = (value: unknown): value is string[] => Array.isArray(value) && value.every((item) => typeof item === "string");
 
 function ofProtocol(data: unknown): data is Fields {
   return isObject(data) && data.channel === RENDER_CHANNEL;
@@ -65,10 +67,10 @@ export function readRenderRequest(data: unknown): RenderRequest | null {
 function readResult(value: unknown): RenderResult | null {
   if (!isObject(value)) return null;
   if (value.ok === true) {
-    const { html, plainText, variables } = value;
+    const { html, plainText, variables, warnings } = value;
     if (typeof html !== "string" || typeof plainText !== "string") return null;
-    if (!Array.isArray(variables) || !variables.every((name) => typeof name === "string")) return null;
-    return { ok: true, html, plainText, variables: [...variables] };
+    if (!isStrings(variables) || !isStrings(warnings)) return null;
+    return { ok: true, html, plainText, variables: [...variables], warnings: [...warnings] };
   }
   if (value.ok === false) {
     const { reason, message } = value;

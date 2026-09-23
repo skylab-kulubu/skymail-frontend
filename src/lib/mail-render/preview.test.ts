@@ -84,6 +84,19 @@ describe("a preview with sample values", () => {
       expect: "none",
     },
     {
+      // What a Visual section for "when the variable is not set" writes.
+      name: "an if not whose field is set",
+      body: "{{if not .Venue}}Yer yakında duyurulacak.{{else}}Yer: {{.Venue}}{{end}}",
+      sample: { Venue: "Davutpaşa" },
+      expect: "Yer: Davutpaşa",
+    },
+    {
+      name: "an if not whose field is empty",
+      body: "{{if not .Venue}}Yer yakında duyurulacak.{{end}}",
+      sample: { Venue: "" },
+      expect: "Yer yakında duyurulacak.",
+    },
+    {
       name: "a string holding the closing delimiter",
       body: '{{if eq .K "}}"}}kapanış{{end}}.',
       sample: { K: "}}" },
@@ -96,6 +109,11 @@ describe("a preview with sample values", () => {
       assert.equal(fillSampleValues(body, sample), expect);
     });
   }
+
+  // The Visual editor writes braces an operator typed as the action that prints them.
+  it("prints what an action holding only a string prints", () => {
+    assert.equal(fillSampleValues("<p>Şablonda {{`{{`}}.Ad}} yazılır, {{\"<b>\"}}</p>", {}), "<p>Şablonda {{.Ad}} yazılır, &lt;b&gt;</p>");
+  });
 
   it("drops a comment, as the mailer does", () => {
     assert.equal(fillSampleValues("<p>{{/* not */}}Merhaba{{- /* iki */ -}} !</p>", {}), "<p>Merhaba!</p>");

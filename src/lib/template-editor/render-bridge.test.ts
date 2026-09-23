@@ -18,7 +18,7 @@ type Frame = {
   answer: (request: RenderRequest, result: RenderResult) => void;
 };
 
-const OK = (html: string): RenderResult => ({ ok: true, html, plainText: html, variables: [] });
+const OK = (html: string): RenderResult => ({ ok: true, html, plainText: html, variables: [], warnings: [] });
 
 /**
  * Frames that stay silent until the test speaks for them, or — with
@@ -84,6 +84,22 @@ describe("where a source is rendered", () => {
     bridge.dispose();
   });
 
+  // A Visual document is data the render module reads, like HTML; it runs no code.
+  it("renders a Visual document in the same clean frame as HTML, and never in one JSX ran in", async () => {
+    const { createFrame } = sandbox({ answering: (input, frame) => OK(`${input.mode} in frame ${frame}`) });
+    const bridge = createRenderBridge({ createFrame });
+
+    const visual = await bridge.render({ mode: "visual", source: '{"type":"skymail.visual","version":1,"blocks":[]}' });
+    const html = await bridge.render({ mode: "html", source: "<p>1</p>" });
+    await bridge.render({ mode: "jsx", source: "A" });
+    const after = await bridge.render({ mode: "visual", source: '{"type":"skymail.visual","version":1,"blocks":[]}' });
+
+    assert.equal(visual?.ok && visual.html, "visual in frame 0");
+    assert.equal(html?.ok && html.html, "html in frame 0");
+    assert.equal(after?.ok && after.html, "visual in frame 1");
+    bridge.dispose();
+  });
+
   it("keeps a clean frame loading for the next render once asked to", async () => {
     const { frames, createFrame } = sandbox({ answering: () => OK("x") });
     const bridge = createRenderBridge({ createFrame });
@@ -112,6 +128,7 @@ describe("what a render says", () => {
       html: "<p>mail</p>",
       plainText: "<p>mail</p>",
       variables: [],
+      warnings: [],
       mode: "jsx",
       source: "export default Mail",
     });

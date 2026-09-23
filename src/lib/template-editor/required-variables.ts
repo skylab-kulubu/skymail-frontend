@@ -22,15 +22,13 @@
  *    publish named is pointed at.
  */
 import { asApiError } from "../api/errors";
-import { referencedVariables, variableAction } from "../mail-render/go-template";
+import { isVariableName, referencedVariables, variableAction } from "../mail-render/go-template";
 import type { ContractRequiredVariable, MailTemplate } from "../templates";
 import { currentRender, isEditableMode, mainBody, type EditorState } from "./editor-state";
 import { versionProblem, whyRequired, type MissingVariable, type VersionProblem } from "./refusals";
 
-/** A name the server takes for a Required variable (skymail-backend `IsVariableName`). */
-export function isVariableName(name: string): boolean {
-  return /^[A-Za-z_][A-Za-z0-9_]{0,63}$/.test(name);
-}
+/** A name the server takes for a Required variable: the render module's one rule. */
+export { isVariableName };
 
 /** A template's Required variables, and what its published body references. */
 export type RequiredSets = Readonly<{

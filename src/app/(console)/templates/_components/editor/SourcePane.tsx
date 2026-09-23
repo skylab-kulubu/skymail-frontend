@@ -10,6 +10,18 @@ const CodeEditor = dynamic(() => import('./CodeEditor'), {
   loading: () => <p className="p-4 text-xs text-neutral-500">Kod editörü yükleniyor…</p>,
 });
 
+/** The Visual editor speaks of the template it is in. */
+const TEMPLATE_WORDING = {
+  knownVariables: "Bu template'in bildiği değişkenler",
+  noKnownVariables: 'Bu template henüz değişken kullanmıyor; adını yazarak ekleyebilirsin.',
+  placeholder: 'Mailin metnini yaz; başlık, buton, görsel ve değişkenleri üstteki çubuktan ekle.',
+};
+
+const VisualEditor = dynamic(() => import('@/components/visual-editor/VisualEditor'), {
+  ssr: false,
+  loading: () => <p className="p-4 text-xs text-neutral-500">Visual editör yükleniyor…</p>,
+});
+
 /** One tab per Authoring mode the editor writes, marking the Main source. */
 export function SourceTabs({
   active,
@@ -78,7 +90,10 @@ export function SourceTabs({
   );
 }
 
-/** The panel under the tabs: the source in the code editor, or what to do when there is none. */
+/**
+ * The panel under the tabs: the source in its editor — the code editor for
+ * JSX and HTML, the Visual editor for Visual — or what to do when there is none.
+ */
 export function SourcePanel({
   mode,
   source,
@@ -87,6 +102,8 @@ export function SourcePanel({
   empty,
   toolbar,
   underTabs = true,
+  variables = [],
+  readOnly = false,
 }: {
   mode: EditableMode;
   source: string | undefined;
@@ -96,6 +113,10 @@ export function SourcePanel({
   toolbar?: ReactNode;
   /** Shown under SourceTabs with the same idPrefix; false where a page picks the mode some other way. */
   underTabs?: boolean;
+  /** The variables the Visual editor offers to insert. */
+  variables?: readonly string[];
+  /** Shown, not edited (the Visual editor; code is shown read-only elsewhere). */
+  readOnly?: boolean;
 }) {
   return (
     <div
@@ -109,10 +130,22 @@ export function SourcePanel({
       ) : (
         <>
           {toolbar}
-          <div className="h-[55vh] min-h-[360px] overflow-hidden rounded-lg border border-white/10">
-            {/* One editor per mode: switching tabs starts the next one from the text in hand. */}
-            <CodeEditor key={mode} mode={mode} value={source} onChange={onChange} label={`${AUTHORING_MODE_LABEL[mode]} kaynağı`} />
-          </div>
+          {/* One editor per mode: switching tabs starts the next one from the text in hand. */}
+          {mode === 'visual' ? (
+            <VisualEditor
+              key={mode}
+              value={source}
+              onChange={onChange}
+              variables={variables}
+              label="Visual kaynağı"
+              editable={!readOnly}
+              wording={TEMPLATE_WORDING}
+            />
+          ) : (
+            <div className="h-[55vh] min-h-[360px] overflow-hidden rounded-lg border border-white/10">
+              <CodeEditor key={mode} mode={mode} value={source} onChange={onChange} label={`${AUTHORING_MODE_LABEL[mode]} kaynağı`} />
+            </div>
+          )}
         </>
       )}
     </div>

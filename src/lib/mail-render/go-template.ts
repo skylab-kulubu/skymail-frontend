@@ -14,6 +14,11 @@ import { v } from "../../../emails/go";
  */
 export const variableAction: (name: string) => string = v;
 
+/** A name the mailer's data may have as a field: skymail-backend's rule (pkg/validator IsVariableName). */
+export function isVariableName(name: string): boolean {
+  return /^[A-Za-z_][A-Za-z0-9_]{0,63}$/.test(name);
+}
+
 export interface Action {
   /** Offset of the opening `{{`. */
   start: number;
@@ -94,18 +99,23 @@ function tokenMarks(text: string): [string, string] {
   throw new Error("Metin, Go aksiyonlarını saklamaya yetecek boş karakter bırakmıyor.");
 }
 
+/** A text with each Go action swapped for a token, and the way to put them back. */
+export interface MaskedActions {
+  masked: string;
+  /** A transformation's output with every token turned back into its action, byte for byte. */
+  unmask(output: string): string;
+}
+
 /**
- * Applies a transformation that must not touch a Go action — html-to-text
- * upper-cases headings, collapses whitespace and decodes entities, and any of
- * those turns an action into one the mailer cannot parse. Each action is
- * swapped for a token of private-use characters and digits, which survive all
- * of that, and put back afterwards byte for byte. The same action text gets the
- * same token, so a link whose text is its own address still reads once.
+ * Each action swapped for a token of private-use characters and digits, which
+ * no formatter or converter breaks, re-spaces, re-cases or decodes. The same
+ * action text gets the same token, so a link whose text is its own address
+ * still reads once.
  */
-export function preservingGoActions(text: string, transform: (masked: string) => string): string {
+export function maskGoActions(text: string): MaskedActions {
   const actions = findActions(text);
   if (actions.length === 0) {
-    return transform(text);
+    return { masked: text, unmask: (output) => output };
   }
 
   const [open, close] = tokenMarks(text);
@@ -124,7 +134,18 @@ export function preservingGoActions(text: string, transform: (masked: string) =>
   masked += text.slice(copied);
 
   const token = new RegExp(`${open}(\\d+)${close}`, "g");
-  return transform(masked).replace(token, (_token, index: string) => distinct[Number(index)]);
+  return { masked, unmask: (output) => output.replace(token, (_token, index: string) => distinct[Number(index)]) };
+}
+
+/**
+ * Applies a transformation that must not touch a Go action — html-to-text
+ * upper-cases headings, collapses whitespace and decodes entities, and any of
+ * those turns an action into one the mailer cannot parse. The actions are
+ * masked while it runs (maskGoActions) and put back afterwards byte for byte.
+ */
+export function preservingGoActions(text: string, transform: (masked: string) => string): string {
+  const { masked, unmask } = maskGoActions(text);
+  return unmask(transform(masked));
 }
 
 /** What is between the delimiters, trim markers dropped; null for a comment. */

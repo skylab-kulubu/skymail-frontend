@@ -18,7 +18,7 @@
  */
 import { Suspense, createElement, type ReactElement } from "react";
 import { pretty, toPlainText } from "@react-email/render";
-import { preservingGoActions } from "./go-template";
+import { maskGoActions, preservingGoActions } from "./go-template";
 
 const XHTML_DOCTYPE =
   '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">';
@@ -88,15 +88,33 @@ async function renderMarkup(element: ReactElement, deadlineMs: number): Promise<
 const isAbort = (error: unknown) =>
   error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError");
 
-export async function renderElement(element: ReactElement, deadlineMs: number): Promise<Bodies> {
+export interface ElementOptions {
+  /**
+   * Keep every Go action on one line, exactly as written, through the HTML's
+   * formatting. The formatter otherwise breaks a long line at any space,
+   * inside an action too (`{{if\n  .Link}}`): the mailer still parses that,
+   * but it is not the action that was written. A JSX template leaves this off,
+   * because its HTML must stay what the Template seed has always written.
+   */
+  keepActionsWhole?: boolean;
+}
+
+export async function renderElement(
+  element: ReactElement,
+  deadlineMs: number,
+  { keepActionsWhole = false }: ElementOptions = {},
+): Promise<Bodies> {
   const markup = await renderMarkup(element, deadlineMs);
   const document = `${XHTML_DOCTYPE}${markup.replace(/<!DOCTYPE.*?>/, "")}`;
 
-  return {
-    html: await pretty(document),
-    plainText: plainTextFromHtml(markup),
-    markup,
-  };
+  let html: string;
+  if (keepActionsWhole) {
+    const { masked, unmask } = maskGoActions(document);
+    html = unmask(await pretty(masked));
+  } else {
+    html = await pretty(document);
+  }
+  return { html, plainText: plainTextFromHtml(markup), markup };
 }
 
 /**

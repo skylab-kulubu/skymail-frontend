@@ -10,6 +10,8 @@
  * that will not start a worker from the opaque origin; it then only exposes
  * `render` (see frame.ts).
  */
+// First: before anything that can load Prism.
+import "./quiet-prism";
 import { renderSource, type RenderResult, type SourceInput } from "@/lib/mail-render";
 
 /** How long the render module lets a render wait on something asynchronous; the frame's own deadline is longer. */
@@ -24,7 +26,7 @@ async function render(input: SourceInput): Promise<RenderResult> {
   try {
     const rendered = await renderSource(input, { deadlineMs: RENDER_DEADLINE_MS });
     return rendered.ok
-      ? { ok: true, html: rendered.html, plainText: rendered.plainText, variables: rendered.variables }
+      ? { ok: true, html: rendered.html, plainText: rendered.plainText, variables: rendered.variables, warnings: rendered.warnings }
       : { ok: false, reason: rendered.reason, message: rendered.message };
   } catch (error) {
     return { ok: false, reason: "render", message: error instanceof Error ? error.message : String(error) };

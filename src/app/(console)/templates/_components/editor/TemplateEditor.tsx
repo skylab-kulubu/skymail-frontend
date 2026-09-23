@@ -44,6 +44,8 @@ import { versionProblem } from '@/lib/template-editor/refusals';
 import { authorLabel } from '@/lib/template-history/history';
 import { useRepoSample } from '@/lib/template-editor/use-repo-sample';
 import { useRenderBridge, useSourceRenders } from '@/lib/template-editor/use-renders';
+import { offeredVariables } from '@/lib/template-editor/visual-variables';
+import { renderWarnings } from '@/lib/mail-render/warnings';
 import {
   AUTHORING_MODE_LABEL,
   discardDraft,
@@ -67,15 +69,19 @@ import { HistoryLinks } from '../history/HistoryParts';
 
 type Loaded = { template: MailTemplate; version: TemplateVersion | null; loadedAt: number };
 
-export function TemplateEditor({ id }: { id: string }) {
+/**
+ * `startVisual` opens the Visual tab on a new, empty Visual source (unsaved),
+ * as a template created to be written in Visual lands (TemplateCreate).
+ */
+export function TemplateEditor({ id, startVisual = false }: { id: string; startVisual?: boolean }) {
   return (
     <RoleGate role={ROLE.templatesWrite}>
-      <EditorLoader id={id} />
+      <EditorLoader id={id} startVisual={startVisual} />
     </RoleGate>
   );
 }
 
-function EditorLoader({ id }: { id: string }) {
+function EditorLoader({ id, startVisual }: { id: string; startVisual: boolean }) {
   const { user } = useConsole();
   const viewerSub = user.sub ?? null;
   const [notice, setNotice] = useFlashNotice(templateHref.edit(id));
@@ -108,6 +114,7 @@ function EditorLoader({ id }: { id: string }) {
       notice={notice}
       setNotice={setNotice}
       reload={state.reload}
+      startVisual={startVisual}
     />
   );
 }
@@ -127,6 +134,7 @@ function Editor({
   notice,
   setNotice,
   reload,
+  startVisual,
 }: {
   template: MailTemplate;
   version: TemplateVersion;
@@ -134,11 +142,18 @@ function Editor({
   notice: NoticeData | null;
   setNotice: (notice: NoticeData | null) => void;
   reload: () => Promise<void>;
+  startVisual: boolean;
 }) {
   const api = useApi();
   const [stored, setStored] = useState(() => storedFromVersion(version, template.name));
-  const [editing, setEditing] = useState<Content>(() => contentOf(stored));
-  const [active, setActive] = useState<EditableMode>(() => (isEditableMode(stored.mainMode) ? stored.mainMode : 'jsx'));
+  const [editing, setEditing] = useState<Content>(() => {
+    const opened = contentOf(stored);
+    return (startVisual && addSource('visual', { editing: opened, renders: {}, stored })) || opened;
+  });
+  const [active, setActive] = useState<EditableMode>(() => {
+    if (startVisual) return 'visual';
+    return isEditableMode(stored.mainMode) ? stored.mainMode : 'jsx';
+  });
   const [busy, setBusy] = useState<Busy>(null);
   const [refusal, setRefusal] = useState<Refusal | null>(null);
   const [dialog, setDialog] = useState<Dialog | null>(null);
@@ -169,6 +184,13 @@ function Editor({
   const previewHtml = lastGood?.html ?? (untouchedMain || shown === null ? stored.html : null);
   const current = shown && shownSource !== undefined ? renderOf(renders[shown], { mode: shown, source: shownSource }) : null;
   const failure = current && !current.ok ? current.message : null;
+  const storedWarnings = useMemo(() => renderWarnings(stored.html, stored.plainText), [stored.html, stored.plainText]);
+  const previewWarnings = lastGood?.warnings ?? (previewHtml === stored.html ? storedWarnings : []);
+
+  const variables = useMemo(
+    () => offeredVariables(template, { storedHtml: stored.html, renders, subject: editing.subject }),
+    [template, stored.html, renders, editing.subject],
+  );
 
   const repo = useRepoSample(template.key);
   const samples = useSample(lastGood?.variables, previewHtml, editing.subject, repo, template.id);
@@ -384,6 +406,7 @@ function Editor({
             mode={active}
             source={editing.sources[active]}
             onChange={(value) => setSource(active, value)}
+            variables={variables}
             toolbar={
               active !== main || changed(active) ? (
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -417,7 +440,9 @@ function Editor({
                 <p className="mx-auto mt-1 max-w-md text-xs text-neutral-500">
                   {active === 'html'
                     ? 'Eklediğin HTML kaynağı, Main source’un render edilmiş HTML’inden başlar. Diğer kaynaklar olduğu gibi kalır; Main source değişmez.'
-                    : 'Eklediğin JSX kaynağı kulübün mail bileşenleriyle yazılmış bir başlangıçtan başlar. Diğer kaynaklar olduğu gibi kalır; Main source değişmez.'}
+                    : active === 'visual'
+                      ? 'Eklediğin Visual kaynağı boş başlar: JSX ya da HTML kaynağından dönüştürülmez. Başlık, paragraf, buton, görsel ve değişkenlerle yazarsın; mail kulübün mail bileşenleriyle çizilir. Diğer kaynaklar olduğu gibi kalır; Main source değişmez.'
+                      : 'Eklediğin JSX kaynağı kulübün mail bileşenleriyle yazılmış bir başlangıçtan başlar. Diğer kaynaklar olduğu gibi kalır; Main source değişmez.'}
                 </p>
                 <div className="mt-4 flex justify-center">
                   <Button variant="outlineBrand" onClick={() => added && setEditing(added)} disabled={!added || busy !== null}>
@@ -444,12 +469,15 @@ function Editor({
           }
           subject={editing.subject}
           samples={samples}
+          warnings={previewWarnings}
         />
       </div>
 
       {dialog?.kind === 'publish' ? (
         <PublishDialog
           name={editing.name}
+          // What is published is the stored draft: a publish waits for a save.
+          warnings={storedWarnings}
           busy={busy === 'publish'}
           onConfirm={() => void publish()}
           onCancel={() => setDialog(null)}
