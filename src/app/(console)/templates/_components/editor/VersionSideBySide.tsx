@@ -3,8 +3,8 @@
 import { useState, type ReactNode } from 'react';
 import type { SampleValues } from '@/lib/mail-render/preview';
 import type { MailScheme } from '@/lib/template-editor/preview';
+import { versionLine } from '@/lib/template-history/history';
 import { AUTHORING_MODE_LABEL, type TemplateVersion } from '@/lib/templates';
-import { versionLine } from './EditorParts';
 import { MailFrame, SchemeToggle, SubjectPreview } from './MailPreview';
 
 /** One column of a side-by-side comparison. */
@@ -13,12 +13,8 @@ export type VersionSide = Readonly<{
   label: string;
   /** Null when there is no such version, e.g. nothing is published. */
   version: TemplateVersion | null;
-  /** In place of the "#n · who · when · Main source" line under the label. */
-  line?: ReactNode;
   /** Beside the label: how the version stands, what can be done with it. */
   actions?: ReactNode;
-  /** What the column says when `version` is null. */
-  emptyText?: string;
 }>;
 
 function VersionColumn({
@@ -32,7 +28,7 @@ function VersionColumn({
   sample: SampleValues;
   scheme: MailScheme;
 }) {
-  const { label, version, line, actions, emptyText = 'Yayımlanmış bir sürüm yok.' } = side;
+  const { label, version, actions } = side;
   // Beside a wide screen's other column, the rows line up (subgrid): the two
   // mails start at the same height however long either heading runs.
   return (
@@ -44,7 +40,7 @@ function VersionColumn({
         </div>
         {version ? (
           <p className="text-xs text-neutral-500">
-            {line ?? `${versionLine(version, viewerSub)} · Main source ${AUTHORING_MODE_LABEL[version.main_mode]}`}
+            {versionLine(version, viewerSub)} · Main source {AUTHORING_MODE_LABEL[version.main_mode]}
           </p>
         ) : null}
       </div>
@@ -54,7 +50,7 @@ function VersionColumn({
           <MailFrame title={label} html={version.html_content} sample={sample} scheme={scheme} className="h-[50vh] min-h-[320px]" />
         </>
       ) : (
-        <p className="text-xs text-neutral-500">{emptyText}</p>
+        <p className="text-xs text-neutral-500">Yayımlanmış bir sürüm yok.</p>
       )}
     </section>
   );

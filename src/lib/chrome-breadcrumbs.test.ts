@@ -41,6 +41,12 @@ describe("the breadcrumb", () => {
     ]);
   });
 
+  // Only a Mail template has a version history.
+  it("has no history page under another section", () => {
+    assert.deepEqual(crumbs(`/mailing-lists/history/${ID}`)[2], ["Kayıt", `/mailing-lists/history/${ID}`, false]);
+    assert.deepEqual(crumbs(`/mail-tasks/history/${ID}`)[2], ["Kayıt", `/mail-tasks/history/${ID}`, false]);
+  });
+
   it("does not link a segment outside the address contract", () => {
     assert.deepEqual(crumbs("/nope/missing"), [
       ["Nope", "/nope", false],

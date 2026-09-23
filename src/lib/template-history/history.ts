@@ -2,7 +2,8 @@
  * A Mail template's version history as the panel shows it (ticket 14, stories
  * 37–39; ADR-0046): every version newest first, who wrote it and how it
  * stands, any two side by side as rendered mail, and any one restored as a
- * new draft.
+ * new draft. The editor's stale comparison and the read-only page name a
+ * version the same way (`versionLine`).
  *
  * Every change writes a version (tickets 04 and 07): an operator's save is a
  * draft until published, a Template seed's is published at once, and a
@@ -11,15 +12,19 @@
  * route pages like the others (`_start`/`_end`, `X-Total-Count`) and filters
  * by state (`published`, `draft` with discarded drafts flagged, `all`).
  */
-import { pageRange } from "../list-view";
+import type { ApiClient } from "../api/client";
+import { formatClubTime } from "../format";
+import { pageRange, readOption, readPage, viewHref } from "../list-view";
 import { referencedVariables } from "../mail-render/go-template";
-import { formatSendTime } from "../sends";
+import type { VersionProblem } from "../template-editor/refusals";
 import {
   AUTHORING_MODE_LABEL,
-  UNKNOWN_AUTHOR,
+  authorName,
+  fetchVersionPage,
   writtenBy,
   type TemplateVersion,
   type TemplateVersionSummary,
+  type VersionAuthor,
   type VersionPageQuery,
 } from "../templates";
 
@@ -37,27 +42,26 @@ export const HISTORY_FILTERS: ReadonlyArray<{ value: HistoryState; label: string
 /** Which versions and which page, kept in the page's address (`?state=draft&page=2`). */
 export type HistoryView = Readonly<{ state: HistoryState; page: number }>;
 
-const DEFAULT_VIEW: HistoryView = { state: "all", page: 1 };
+const DEFAULT_STATE: HistoryState = "all";
 
 /** The view an address asks for; anything it does not recognise falls back to the default. */
 export function readHistoryView(params: URLSearchParams): HistoryView {
-  const state = HISTORY_FILTERS.find((filter) => filter.value === params.get("state"))?.value ?? DEFAULT_VIEW.state;
-  const raw = params.get("page");
-  const page = raw !== null && /^\d+$/.test(raw) && Number(raw) >= 1 ? Number(raw) : DEFAULT_VIEW.page;
-  return { state, page };
+  return { state: readOption(params, "state", HISTORY_FILTERS, DEFAULT_STATE), page: readPage(params) };
 }
 
 /** The address of `view` on `pathname`, leaving the defaults out. */
 export function historyViewHref(pathname: string, view: HistoryView): string {
-  const params = new URLSearchParams();
-  if (view.state !== DEFAULT_VIEW.state) params.set("state", view.state);
-  if (view.page !== DEFAULT_VIEW.page) params.set("page", String(view.page));
-  const search = params.toString();
-  return search ? `${pathname}?${search}` : pathname;
+  return viewHref(pathname, { state: [view.state, DEFAULT_STATE], page: [view.page, 1] });
 }
 
 export function historyQuery(view: HistoryView): VersionPageQuery {
   return { state: view.state, ...pageRange(view.page, HISTORY_PAGE_SIZE) };
+}
+
+/** Who wrote a version, in the words every template screen uses: "sen" for the viewer. */
+export function authorLabel(author: VersionAuthor, viewerSub: string | null): string {
+  if (author.kind === "template_seed") return "Template seed";
+  return writtenBy(author, viewerSub) ? "sen" : authorName(author);
 }
 
 /** Who wrote a version, as the history names them. */
@@ -65,7 +69,6 @@ export type VersionAuthorShown = Readonly<{
   label: string;
   /** `unknown`: an operator whose name was not recorded. */
   kind: "seed" | "operator" | "unknown";
-  mine: boolean;
   /**
    * The migration's first version: its content predates the history, so its
    * author was never recorded and its time is the template's last change
@@ -74,47 +77,61 @@ export type VersionAuthorShown = Readonly<{
   beforeHistory: boolean;
 }>;
 
-type Authored = Pick<TemplateVersionSummary, "seq" | "author">;
-
-export function versionAuthor(version: Authored, viewerSub: string | null): VersionAuthorShown {
+export function versionAuthor(version: Pick<TemplateVersionSummary, "seq" | "author">, viewerSub: string | null): VersionAuthorShown {
   const { author } = version;
   const beforeHistory = version.seq === 1 && author.sub === null;
-  if (author.kind === "template_seed") return { label: "Template seed", kind: "seed", mine: false, beforeHistory };
-  const name = author.name?.trim();
-  const mine = writtenBy(author, viewerSub);
-  if (!name) return { label: UNKNOWN_AUTHOR, kind: "unknown", mine, beforeHistory };
-  return { label: mine ? `${name} (sen)` : name, kind: "operator", mine, beforeHistory };
+  const kind = author.kind === "template_seed" ? "seed" : author.name?.trim() || writtenBy(author, viewerSub) ? "operator" : "unknown";
+  return { label: authorLabel(author, viewerSub), kind, beforeHistory };
+}
+
+/**
+ * When a version was written, and published if it was, in the club's time
+ * (Europe/Istanbul) whatever the browser's zone.
+ */
+export function versionWhen(version: Pick<TemplateVersionSummary, "created_at" | "published_at">): string {
+  const written = formatClubTime(version.created_at);
+  if (version.published_at === null) return `yazıldı ${written}`;
+  const published = formatClubTime(version.published_at);
+  return published === written ? `yayımlandı ${published}` : `yazıldı ${written} · yayımlandı ${published}`;
+}
+
+/** "#4 · Mehmet Kaya · yayımlandı 23 Eyl 2026 10:12": one version, as every template screen names it. */
+export function versionLine(
+  version: Pick<TemplateVersionSummary, "seq" | "author" | "created_at" | "published_at">,
+  viewerSub: string | null,
+): string {
+  return `#${version.seq} · ${authorLabel(version.author, viewerSub)} · ${versionWhen(version)}`;
 }
 
 /**
  * How a version stands: the one being sent, published before, a draft, or a
  * draft its author gave up. A draft is someone's draft in progress only while
  * it is their newest version (the template's `drafts`); one they have since
- * saved over stays in the history, restorable.
+ * saved over stays in the history, restorable. A draft started from a version
+ * that is no longer published is stale (ticket 07).
  */
-export type VersionState = "sent" | "published" | "draft" | "discarded";
+export type VersionState = "sent" | "published" | "draft" | "stale" | "discarded";
 
 export type VersionBadge = Readonly<{ state: VersionState; label: string; inProgress: boolean }>;
 
-type Standing = Pick<TemplateVersionSummary, "id" | "current" | "published_at" | "discarded">;
+/** What a version's standing is read against: the template, as one source for every screen. */
+export type Standing = Readonly<{
+  /** The version sent: the template's `published_version_id`. */
+  publishedVersionId: string | null;
+  /** The template's drafts in progress. */
+  draftsInProgress: readonly string[];
+}>;
 
-export function versionBadge(version: Standing, draftsInProgress: Iterable<string>): VersionBadge {
-  if (version.current) return { state: "sent", label: "Gönderilen", inProgress: false };
+export function versionBadge(
+  version: Pick<TemplateVersionSummary, "id" | "published_at" | "discarded" | "base_version_id">,
+  { publishedVersionId, draftsInProgress }: Standing,
+): VersionBadge {
+  if (version.id === publishedVersionId) return { state: "sent", label: "Gönderilen", inProgress: false };
   if (version.published_at !== null) return { state: "published", label: "Yayımlanmış", inProgress: false };
   if (version.discarded) return { state: "discarded", label: "Atılmış taslak", inProgress: false };
-  const inProgress = [...draftsInProgress].includes(version.id);
+  const inProgress = draftsInProgress.includes(version.id);
+  if (version.base_version_id !== publishedVersionId) return { state: "stale", label: "Bayat taslak", inProgress };
   return { state: "draft", label: inProgress ? "Süren taslak" : "Taslak", inProgress };
-}
-
-/**
- * When a version was written, and published if it was, in the club's time
- * (Europe/Istanbul, as sends are shown) whatever the browser's zone.
- */
-export function versionWhen(version: Pick<TemplateVersionSummary, "created_at" | "published_at">): string {
-  const written = formatSendTime(version.created_at);
-  if (version.published_at === null) return `yazıldı ${written}`;
-  const published = formatSendTime(version.published_at);
-  return published === written ? `yayımlandı ${published}` : `yazıldı ${written} · yayımlandı ${published}`;
 }
 
 /** The name a version gives the template, where it is not what the template is called now. */
@@ -132,23 +149,80 @@ export function requestedSubject(version: Pick<TemplateVersionSummary, "subject"
   return asked !== null && asked !== version.subject ? asked : null;
 }
 
-/** Two versions to put side by side. */
-export type ComparisonRequest = Readonly<{ versionId: string; againstId: string }>;
+/** One row of the history: a version, and the earlier saves folded under it. */
+export type HistoryRow = Readonly<{ version: TemplateVersionSummary; earlier: readonly TemplateVersionSummary[] }>;
 
-type Listed = Pick<TemplateVersionSummary, "id" | "seq" | "base_version_id">;
+/** Two drafts one operator saved, one after the other, on the same published version. */
+function sameRun(a: TemplateVersionSummary, b: TemplateVersionSummary): boolean {
+  return (
+    a.published_at === null &&
+    b.published_at === null &&
+    a.author.kind === "operator" &&
+    a.author.sub !== null &&
+    a.author.sub === b.author.sub &&
+    a.base_version_id === b.base_version_id
+  );
+}
+
+/**
+ * The listed versions as rows: consecutive drafts one operator saved on the
+ * same base read as one row, the newest on top and the earlier saves under
+ * it (ticket 07: every save is a version). Within the page shown.
+ */
+export function historyRows(versions: readonly TemplateVersionSummary[]): HistoryRow[] {
+  const rows: { version: TemplateVersionSummary; earlier: TemplateVersionSummary[] }[] = [];
+  for (const version of versions) {
+    const last = rows.at(-1);
+    if (last && sameRun(last.earlier.at(-1) ?? last.version, version)) last.earlier.push(version);
+    else rows.push({ version, earlier: [] });
+  }
+  return rows;
+}
+
+/**
+ * Two versions to put side by side. The second is named, or is the version
+ * published before a given one, which only the API can say.
+ */
+export type ComparisonRequest =
+  | Readonly<{ versionId: string; againstId: string }>
+  | Readonly<{ versionId: string; publishedBefore: number }>;
 
 /**
  * What a version is compared with when the operator asks for no other: the
  * version being sent — what publishing or restoring it would replace. The
  * version being sent itself is compared with the one it started from, which
- * shows what it changed; failing that, with the next older version listed.
- * A template's only version has nothing to be compared with.
+ * shows what it changed; one that started from nothing (a Template seed's)
+ * with the version published before it. A template's first version has
+ * nothing before it.
  */
-export function defaultComparison(version: Listed, sentId: string | null, listed: readonly Listed[]): ComparisonRequest | null {
+export function defaultComparison(
+  version: Pick<TemplateVersionSummary, "id" | "seq" | "base_version_id">,
+  sentId: string | null,
+): ComparisonRequest | null {
   if (sentId !== null && version.id !== sentId) return { versionId: version.id, againstId: sentId };
   if (version.base_version_id !== null) return { versionId: version.id, againstId: version.base_version_id };
-  const older = listed.filter((other) => other.seq < version.seq).sort((a, b) => b.seq - a.seq)[0];
-  return older ? { versionId: version.id, againstId: older.id } : null;
+  return version.seq > 1 ? { versionId: version.id, publishedBefore: version.seq } : null;
+}
+
+const PUBLISHED_PAGE = 50;
+
+/**
+ * The published version written last before `seq`, asked of the API's
+ * published versions page by page (newest first), whatever the history shows.
+ */
+export async function fetchPublishedBefore(
+  api: ApiClient,
+  templateId: string,
+  seq: number,
+  signal?: AbortSignal,
+): Promise<TemplateVersionSummary | null> {
+  for (let start = 0; ; start += PUBLISHED_PAGE) {
+    const query: VersionPageQuery = { state: "published", _start: start, _end: start + PUBLISHED_PAGE };
+    const { versions, total } = await fetchVersionPage(api, templateId, query, signal);
+    const before = versions.find((version) => version.seq < seq);
+    if (before) return before;
+    if (versions.length < PUBLISHED_PAGE || (total !== null && query._end >= total)) return null;
+  }
 }
 
 /** The two in the order they were written: the older on the left. */
@@ -157,9 +231,9 @@ export function inSeqOrder<T extends { seq: number }>(a: T, b: T): [T, T] {
 }
 
 /** Picks a version to compare, or unpicks it; a third pick lets go of the first. */
-export function togglePick(picked: readonly string[], id: string): string[] {
-  if (picked.includes(id)) return picked.filter((other) => other !== id);
-  return [...picked, id].slice(-2);
+export function togglePick<T extends { id: string }>(picked: readonly T[], version: T): T[] {
+  if (picked.some((other) => other.id === version.id)) return picked.filter((other) => other.id !== version.id);
+  return [...picked, version].slice(-2);
 }
 
 /** One thing a comparison says in words beside the rendered mails. */
@@ -216,39 +290,38 @@ export function comparedVariables(...bodies: string[]): string[] {
 }
 
 /** What a restore did, as the page says it, and whether the editor should open the result. */
-export type RestoreOutcome = Readonly<{
-  kind: "drafted" | "already-draft" | "already-sent";
-  text: string;
-  openEditor: boolean;
-}>;
+export type RestoreOutcome = Readonly<{ text: string; openEditor: boolean }>;
 
 /**
- * Reads the restore's answer. A 201 is a new draft. A 200 is the version the
- * copy would have repeated: the viewer's draft in progress (`viewerDraftId`,
- * known before the restore) or the published version.
+ * Reads the restore's answer by its status (ticket 07): 201 wrote a new
+ * draft; 200 wrote nothing and answers the version the copy would have
+ * repeated — the viewer's draft in progress, or the published version.
  */
 export function restoreOutcome(
-  restored: Pick<TemplateVersion, "id" | "seq" | "published_at">,
+  answer: { status: number; version: Pick<TemplateVersion, "seq" | "published_at"> },
   from: { seq: number },
-  viewerDraftId: string | null,
 ): RestoreOutcome {
-  if (restored.published_at !== null) {
+  const { status, version } = answer;
+  if (status === 201) {
     return {
-      kind: "already-sent",
-      text: `Sürüm #${from.seq}, şu an gönderilen sürümle aynı; yeni taslak açılmadı.`,
-      openEditor: false,
+      openEditor: true,
+      text: `Sürüm #${from.seq} yeni bir taslak olarak geri getirildi (#${version.seq}). Canlı mail değişmedi; yayımlayana kadar gönderilen sürüm aynı kalır.`,
     };
   }
-  if (restored.id === viewerDraftId) {
-    return {
-      kind: "already-draft",
-      text: `Süren taslağın zaten sürüm #${from.seq} ile aynı; yeni taslak açılmadı. Canlı mail değişmedi.`,
-      openEditor: true,
-    };
+  if (version.published_at !== null) {
+    return { openEditor: false, text: `Sürüm #${from.seq}, şu an gönderilen sürümle aynı; yeni taslak açılmadı.` };
   }
   return {
-    kind: "drafted",
-    text: `Sürüm #${from.seq} yeni bir taslak olarak geri getirildi (#${restored.seq}). Canlı mail değişmedi; yayımlayana kadar gönderilen sürüm aynı kalır.`,
     openEditor: true,
+    text: `Süren taslağın (#${version.seq}) zaten sürüm #${from.seq} ile aynı; yeni taslak açılmadı. Canlı mail değişmedi.`,
   };
+}
+
+/**
+ * Whether a refused restore would be refused again as it is: the copy itself
+ * drops a Required variable or does not parse. Anything else — the network,
+ * the server — may pass on a retry.
+ */
+export function isFinalRestoreRefusal(problem: VersionProblem): boolean {
+  return problem.kind === "missing-variables" || problem.kind === "unparseable";
 }

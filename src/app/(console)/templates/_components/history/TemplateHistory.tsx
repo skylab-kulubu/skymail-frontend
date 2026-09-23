@@ -7,10 +7,13 @@
  * mail; and, for a writer, any one restored as a new draft, which the editor
  * then opens. Nothing here changes what is sent. A Template seed refused
  * because of an operator's change is said in full at the top.
+ *
+ * Which version is sent, and so which drafts are stale, is read from the
+ * template: one source for the badges, the comparisons and the restores.
  */
-import { useEffect, useState } from 'react';
+import { useId, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, ChevronDown } from 'lucide-react';
 import { FilterPills } from '@/components/chrome/FilterPills';
 import { Notice } from '@/components/chrome/Notice';
 import { Pagination } from '@/components/chrome/Pagination';
@@ -22,7 +25,7 @@ import { ROW_ACTION_CLASS } from '@/components/tables/RowActions';
 import { Button } from '@/components/ui/Button';
 import { ROLE, hasRole } from '@/lib/access';
 import { useApi, useApiLoad } from '@/lib/api/react';
-import { pageCount } from '@/lib/list-view';
+import { knownPageCount } from '@/lib/list-view';
 import { flashNotice, useFlashNotice } from '@/lib/notice';
 import { versionProblem } from '@/lib/template-editor/refusals';
 import {
@@ -30,6 +33,7 @@ import {
   HISTORY_PAGE_SIZE,
   defaultComparison,
   historyQuery,
+  historyRows,
   historyViewHref,
   readHistoryView,
   requestedSubject,
@@ -40,18 +44,13 @@ import {
   versionName,
   versionWhen,
   type ComparisonRequest,
+  type HistoryRow,
   type HistoryState,
   type HistoryView,
+  type Standing,
 } from '@/lib/template-history/history';
-import {
-  fetchTemplate,
-  fetchVersionPage,
-  restoreVersion,
-  templateHref,
-  writtenBy,
-  type MailTemplate,
-  type TemplateVersionSummary,
-} from '@/lib/templates';
+import { fetchTemplate, fetchVersionPage, restoreVersion, templateHref, type MailTemplate, type TemplateVersionSummary } from '@/lib/templates';
+import { useLastPage } from '@/lib/ui/use-last-page';
 import type { Refusal } from '../editor/EditorParts';
 import { TemplateLoadFailure } from '../editor/TemplateLoadFailure';
 import { MainSource } from '../TemplateRowParts';
@@ -73,6 +72,9 @@ const EMPTY_TEXT: Readonly<Record<HistoryState, string>> = {
 
 type Restoring = { version: TemplateVersionSummary; refusal: Refusal | null };
 
+/** A version picked to compare, with the number the page says it by. */
+type Picked = Readonly<{ id: string; seq: number }>;
+
 function History({ template }: { template: MailTemplate }) {
   const api = useApi();
   const router = useRouter();
@@ -87,34 +89,31 @@ function History({ template }: { template: MailTemplate }) {
     (client, signal) => fetchVersionPage(client, template.id, historyQuery(view), signal),
     `${template.id}:${view.state}:${view.page}`,
   );
-  const lastPage = page.status === 'success' ? pageCount(page.data.total, HISTORY_PAGE_SIZE) : null;
+  const lastPage =
+    page.status === 'success'
+      ? knownPageCount({ total: page.data.total, rows: page.data.versions.length }, view.page, HISTORY_PAGE_SIZE)
+      : null;
 
-  const [picked, setPicked] = useState<string[]>([]);
+  // Picks outlive the filter and the page, so any two versions can be compared; the bar above says which.
+  const [picked, setPicked] = useState<Picked[]>([]);
   const [comparing, setComparing] = useState<ComparisonRequest | null>(null);
   const [restoring, setRestoring] = useState<Restoring | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const drafts = template.drafts ?? [];
-  const draftsInProgress = drafts.map((draft) => draft.id);
-  const viewerDraft = drafts.find((draft) => writtenBy(draft.author, viewerSub)) ?? null;
+  const sentId = template.published_version_id;
+  const standing: Standing = { publishedVersionId: sentId, draftsInProgress: (template.drafts ?? []).map((draft) => draft.id) };
 
   function show(next: HistoryView) {
     router.push(historyViewHref(pathname, next), { scroll: false });
   }
 
   // A stale link past the end moves to the last page there is.
-  const { state: filter, page: pageNumber } = view;
-  useEffect(() => {
-    if (lastPage !== null && pageNumber > lastPage) {
-      router.replace(historyViewHref(pathname, { state: filter, page: lastPage }), { scroll: false });
-    }
-  }, [filter, lastPage, pageNumber, pathname, router]);
+  useLastPage(view.page, lastPage, (last) => router.replace(historyViewHref(pathname, { ...view, page: last }), { scroll: false }));
 
   async function restore(target: Restoring) {
     setBusy(true);
     try {
-      const restored = await restoreVersion(api, template.id, target.version.id);
-      const outcome = restoreOutcome(restored, target.version, viewerDraft?.id ?? null);
+      const outcome = restoreOutcome(await restoreVersion(api, template.id, target.version.id), target.version);
       if (outcome.openEditor) {
         // The editor opens the viewer's draft in progress: now the restored copy.
         flashNotice(templateHref.edit(template.id), { tone: 'success', text: outcome.text });
@@ -131,13 +130,23 @@ function History({ template }: { template: MailTemplate }) {
     }
   }
 
-  const rows = page.status === 'success' ? page.data.versions : [];
+  const item = (version: TemplateVersionSummary) => ({
+    version,
+    templateName: template.name,
+    viewerSub,
+    standing,
+    picked: picked.some((pick) => pick.id === version.id),
+    onPick: () => setPicked((current) => togglePick(current, { id: version.id, seq: version.seq })),
+    comparison: defaultComparison(version, sentId),
+    onCompare: setComparing,
+    onRestore: canWrite && version.id !== sentId ? () => setRestoring({ version, refusal: null }) : null,
+  });
 
   return (
     <div className="space-y-5">
       <PageHeader
         title="Sürüm geçmişi"
-        description={`“${template.name}” Mail template'inin her sürümü, en yenisi önce. Her kaydetme, yayım ve Template seed bir sürüm yazar; gönderilen, yayımlanmış olanlardan biridir.`}
+        description={`“${template.name}” Mail template'inin her sürümü, en yenisi önce. Her kaydetme, yayım ve Template seed bir sürüm yazar; gönderilen, yayımlanmış olanlardan biridir. Saatler İstanbul saati.`}
         meta={
           <>
             {template.system ? <Tag tone="system">System</Tag> : null}
@@ -152,7 +161,7 @@ function History({ template }: { template: MailTemplate }) {
       />
 
       {notice ? <Notice notice={notice} onDismiss={() => setNotice(null)} /> : null}
-      <SeedRefusalNotice refusal={template.seed_refusal} />
+      <SeedRefusalNotice template={template} />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
@@ -163,16 +172,14 @@ function History({ template }: { template: MailTemplate }) {
             onChange={(next) => show({ state: next, page: 1 })}
           />
           <p className="text-xs text-neutral-500 tabular-nums" aria-live="polite">
-            {page.status === 'success' ? `${page.data.total} sürüm` : ''}
+            {page.status === 'success' && page.data.total !== null ? `${page.data.total} sürüm` : ''}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <p className="text-xs text-neutral-500" aria-live="polite">
             {picked.length === 0
               ? 'Yan yana görmek için iki sürüm seç.'
-              : picked.length === 1
-                ? 'Bir sürüm seçildi; bir tane daha seç.'
-                : 'İki sürüm seçildi.'}
+              : `${picked.length} sürüm seçili: ${picked.map((pick) => `#${pick.seq}`).join(' ve ')}${picked.length === 1 ? '; bir tane daha seç.' : '.'}`}
           </p>
           {picked.length > 0 ? (
             <button type="button" onClick={() => setPicked([])} className={`${ROW_ACTION_CLASS} text-xs text-neutral-400 hover:text-neutral-200`}>
@@ -182,7 +189,7 @@ function History({ template }: { template: MailTemplate }) {
           <Button
             variant="outlineBrand"
             disabled={picked.length !== 2}
-            onClick={() => setComparing({ versionId: picked[0], againstId: picked[1] })}
+            onClick={() => setComparing({ versionId: picked[0].id, againstId: picked[1].id })}
           >
             Seçilenleri karşılaştır
           </Button>
@@ -200,23 +207,10 @@ function History({ template }: { template: MailTemplate }) {
       ) : (
         <div className="space-y-2">
           <ul aria-label="Sürümler" className="divide-y divide-white/5 rounded-lg border border-white/5">
-            {rows.length === 0 ? (
+            {page.data.versions.length === 0 ? (
               <li className="px-4 py-6 text-center text-sm text-neutral-500">{EMPTY_TEXT[view.state]}</li>
             ) : (
-              rows.map((row) => (
-                <VersionItem
-                  key={row.id}
-                  version={row}
-                  templateName={template.name}
-                  viewerSub={viewerSub}
-                  draftsInProgress={draftsInProgress}
-                  picked={picked.includes(row.id)}
-                  onPick={() => setPicked((current) => togglePick(current, row.id))}
-                  comparison={defaultComparison(row, template.published_version_id, rows)}
-                  onCompare={setComparing}
-                  onRestore={canWrite && !row.current ? () => setRestoring({ version: row, refusal: null }) : null}
-                />
-              ))
+              historyRows(page.data.versions).map((row) => <RowItem key={row.version.id} row={row} item={item} />)
             )}
           </ul>
           <Pagination
@@ -233,7 +227,7 @@ function History({ template }: { template: MailTemplate }) {
           template={template}
           pair={comparing}
           viewerSub={viewerSub}
-          draftsInProgress={draftsInProgress}
+          standing={standing}
           onRestore={canWrite ? (version) => setRestoring({ version, refusal: null }) : null}
           onClose={() => setComparing(null)}
         />
@@ -242,7 +236,6 @@ function History({ template }: { template: MailTemplate }) {
         <RestoreDialog
           version={restoring.version}
           viewerSub={viewerSub}
-          viewerDraftSeq={viewerDraft?.seq ?? null}
           busy={busy}
           refusal={restoring.refusal}
           onConfirm={() => void restore(restoring)}
@@ -253,12 +246,50 @@ function History({ template }: { template: MailTemplate }) {
   );
 }
 
+type ItemProps = Parameters<typeof VersionItem>[0];
+
+/**
+ * One row: a version, and the earlier saves one operator made on the same
+ * base folded under it, opened on demand; each can be picked or restored.
+ */
+function RowItem({ row, item }: { row: HistoryRow; item: (version: TemplateVersionSummary) => ItemProps }) {
+  const [open, setOpen] = useState(false);
+  const listId = useId();
+  const { version, earlier } = row;
+  return (
+    <li aria-label={`Sürüm #${version.seq}`} className="px-4 py-3">
+      <VersionItem {...item(version)} />
+      {earlier.length > 0 ? (
+        <div className="mt-2 pl-7">
+          <button
+            type="button"
+            aria-expanded={open}
+            aria-controls={listId}
+            onClick={() => setOpen((current) => !current)}
+            className={`${ROW_ACTION_CLASS} inline-flex items-center gap-1 text-xs text-neutral-400 hover:text-neutral-200`}
+          >
+            <ChevronDown className={`h-3 w-3 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden />
+            Aynı taslağın {earlier.length} önceki kaydı ({earlier.length === 1 ? `#${earlier[0].seq}` : `#${earlier.at(-1)?.seq}–#${earlier[0].seq}`})
+          </button>
+          <ul id={listId} hidden={!open} aria-label={`Sürüm #${version.seq} öncesi kayıtlar`} className="mt-2 space-y-3 border-l border-white/10 pl-3">
+            {earlier.map((save) => (
+              <li key={save.id} aria-label={`Sürüm #${save.seq}`}>
+                <VersionItem {...item(save)} />
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </li>
+  );
+}
+
 /** One version: its number, how it stands, its Main source mode, who wrote it and when, its subject. */
 function VersionItem({
   version,
   templateName,
   viewerSub,
-  draftsInProgress,
+  standing,
   picked,
   onPick,
   comparison,
@@ -268,7 +299,7 @@ function VersionItem({
   version: TemplateVersionSummary;
   templateName: string;
   viewerSub: string | null;
-  draftsInProgress: readonly string[];
+  standing: Standing;
   picked: boolean;
   onPick: () => void;
   /** What its Karşılaştır shows; null when there is nothing to compare it with. */
@@ -278,13 +309,13 @@ function VersionItem({
   onRestore: (() => void) | null;
 }) {
   const author = versionAuthor(version, viewerSub);
-  const badge = versionBadge(version, draftsInProgress);
+  const badge = versionBadge(version, standing);
   const name = versionName(version, templateName);
   const asked = requestedSubject(version);
   // The one sent is compared with what came before it; any other with the one sent.
-  const compareLabel = version.current ? 'Öncekiyle karşılaştır' : 'Gönderilenle karşılaştır';
+  const compareLabel = badge.state === 'sent' ? 'Öncekiyle karşılaştır' : 'Gönderilenle karşılaştır';
   return (
-    <li aria-label={`Sürüm #${version.seq}`} className="flex items-start gap-3 px-4 py-3">
+    <div className="flex items-start gap-3">
       <input
         type="checkbox"
         checked={picked}
@@ -346,6 +377,6 @@ function VersionItem({
           </div>
         ) : null}
       </div>
-    </li>
+    </div>
   );
 }

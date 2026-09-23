@@ -39,7 +39,7 @@ function isPage(parts: readonly string[]): boolean {
   if (!(`/${parts[0]}` in CHROME_CRUMB_LABELS)) return false;
   if (parts.length === 1) return true;
   if (parts.length === 2) return parts[1] === 'create';
-  if (parts.length === 3) return parts[1] === 'edit' || parts[1] === 'show' || parts[1] === 'history';
+  if (parts.length === 3) return parts[1] === 'edit' || parts[1] === 'show' || (parts[0] === 'templates' && parts[1] === 'history');
   return false;
 }
 

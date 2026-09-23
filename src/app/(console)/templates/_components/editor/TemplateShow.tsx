@@ -17,6 +17,7 @@ import { ROLE } from '@/lib/access';
 import { useApiLoad } from '@/lib/api/react';
 import { isEditableMode, storedFromVersion, type EditableMode } from '@/lib/template-editor/editor-state';
 import { useRepoSample } from '@/lib/template-editor/use-repo-sample';
+import { versionLine } from '@/lib/template-history/history';
 import {
   AUTHORING_MODE_LABEL,
   fetchTemplate,
@@ -25,7 +26,7 @@ import {
   type MailTemplate,
   type TemplateVersion,
 } from '@/lib/templates';
-import { TemplateKey, versionLine } from './EditorParts';
+import { TemplateKey } from './EditorParts';
 import { PreviewPane, useSample } from './PreviewPane';
 import { SourceTabs } from './SourcePane';
 import { TemplateLoadFailure } from './TemplateLoadFailure';

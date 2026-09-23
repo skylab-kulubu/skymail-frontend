@@ -322,15 +322,19 @@ export function fetchVersion(api: ApiClient, templateId: string, versionId: stri
 /** What `GET /templates/{id}/versions` takes: which versions, and the page's slice. */
 export type VersionPageQuery = { state: "all" | "published" | "draft"; _start: number; _end: number };
 
-/** One page of a template's history, newest first, with how many versions are in that state. */
+/**
+ * One page of a template's history, newest first, with how many versions are
+ * in that state — null when X-Total-Count did not reach the browser; the page
+ * then counts its pages with `knownPageCount`.
+ */
 export async function fetchVersionPage(
   api: ApiClient,
   templateId: string,
   query: VersionPageQuery,
   signal?: AbortSignal,
-): Promise<{ versions: TemplateVersionSummary[]; total: number }> {
+): Promise<{ versions: TemplateVersionSummary[]; total: number | null }> {
   const page = await api.getPage<TemplateVersionSummary>(`/templates/${templateId}/versions`, { query, signal });
-  return { versions: page.items, total: page.total ?? query._start + page.items.length };
+  return { versions: page.items, total: page.total };
 }
 
 /** Creates a template; the API publishes its first version at once. */
@@ -351,10 +355,16 @@ export function discardDraft(api: ApiClient, templateId: string, versionId: stri
  * Copies any version into a new draft by the caller, started from what is
  * published now; nothing that is sent changes. 201 with the draft, or 200
  * with the version the copy would have repeated: the caller's draft in
- * progress, or the published version.
+ * progress, or the published version. The status is kept: it alone says
+ * which of the two happened.
  */
-export function restoreVersion(api: ApiClient, templateId: string, versionId: string): Promise<TemplateVersion> {
-  return api.post<TemplateVersion>(`/templates/${templateId}/versions/${versionId}/restore`);
+export async function restoreVersion(
+  api: ApiClient,
+  templateId: string,
+  versionId: string,
+): Promise<{ status: number; version: TemplateVersion }> {
+  const { status, data } = await api.postForStatus<TemplateVersion>(`/templates/${templateId}/versions/${versionId}/restore`);
+  return { status, version: data };
 }
 
 /** A draft someone else's publish overtook (409 `template.stale_base`). */

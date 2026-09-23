@@ -9,21 +9,27 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { TEST_BASE_URL, json, scriptedClient, type RecordedCall } from "../api/testing";
+import type { VersionProblem } from "../template-editor/refusals";
 import { fetchVersionPage, restoreVersion, templateHref, type TemplateVersion, type TemplateVersionSummary } from "../templates";
 import {
   HISTORY_PAGE_SIZE,
+  authorLabel,
   comparedVariables,
   comparisonFacts,
   defaultComparison,
+  fetchPublishedBefore,
   historyQuery,
+  historyRows,
   historyViewHref,
   inSeqOrder,
+  isFinalRestoreRefusal,
   readHistoryView,
   requestedSubject,
   restoreOutcome,
   togglePick,
   versionAuthor,
   versionBadge,
+  versionLine,
   versionName,
   versionWhen,
 } from "./history";
@@ -55,6 +61,15 @@ function summary(seq: number, overrides: Partial<TemplateVersionSummary> = {}): 
     ...overrides,
   };
 }
+
+/** A draft by `sub`, started from `base`. */
+const draft = (seq: number, sub: string | null, base: number, overrides: Partial<TemplateVersionSummary> = {}) =>
+  summary(seq, {
+    published_at: null,
+    base_version_id: v(base),
+    author: { kind: "operator", sub, name: sub === VIEWER ? "Ada Yılmaz" : "Mehmet Kaya" },
+    ...overrides,
+  });
 
 function version(seq: number, overrides: Partial<TemplateVersion> = {}): TemplateVersion {
   return {
@@ -111,57 +126,71 @@ describe("a page of the history", () => {
     assert.deepEqual(page, { versions: rows, total: 23 });
   });
 
-  it("counts what came back when the answer has no total", async () => {
+  // Paged from knownPageCount then, as the send list is.
+  it("has no total when the answer carries none", async () => {
     const { api } = scriptedClient(json(200, [summary(1)]));
 
     const page = await fetchVersionPage(api, TEMPLATE, { state: "draft", _start: 20, _end: 40 });
 
-    assert.equal(page.total, 21);
+    assert.equal(page.total, null);
+  });
+});
+
+describe("the version published before another", () => {
+  it("is found among the published versions, page after page, whatever page the history shows", async () => {
+    // Seq 60 down to 11 on the first page: none of them before #11.
+    const first = Array.from({ length: 50 }, (_, index) => summary(60 - index));
+    const { api, calls } = scriptedClient(
+      json(200, first, { "X-Total-Count": "53" }),
+      json(200, [summary(9), summary(4), summary(1)], { "X-Total-Count": "53" }),
+    );
+
+    const found = await fetchPublishedBefore(api, TEMPLATE, 11);
+
+    assert.equal(found?.seq, 9);
+    assert.deepEqual(calls.map(pathOf), [
+      `/templates/${TEMPLATE}/versions?state=published&_start=0&_end=50`,
+      `/templates/${TEMPLATE}/versions?state=published&_start=50&_end=100`,
+    ]);
+  });
+
+  it("is none when nothing older was published", async () => {
+    const { api, calls } = scriptedClient(json(200, [summary(3)], { "X-Total-Count": "1" }));
+
+    assert.equal(await fetchPublishedBefore(api, TEMPLATE, 3), null);
+    assert.equal(calls.length, 1);
   });
 });
 
 describe("who wrote a version", () => {
   it("is an operator, by name", () => {
-    assert.deepEqual(versionAuthor(summary(4), VIEWER), {
-      label: "Mehmet Kaya",
-      kind: "operator",
-      mine: false,
-      beforeHistory: false,
-    });
+    assert.deepEqual(versionAuthor(summary(4), VIEWER), { label: "Mehmet Kaya", kind: "operator", beforeHistory: false });
   });
 
-  it("is marked as the viewer's own", () => {
+  // The editor, the comparisons and the history call the viewer the same.
+  it("is “sen” for the viewer, as everywhere", () => {
     const mine = summary(4, { author: { kind: "operator", sub: VIEWER, name: "Ada Yılmaz" } });
-    assert.deepEqual(versionAuthor(mine, VIEWER), { label: "Ada Yılmaz (sen)", kind: "operator", mine: true, beforeHistory: false });
+    assert.equal(authorLabel(mine.author, VIEWER), "sen");
+    assert.deepEqual(versionAuthor(mine, VIEWER), { label: "sen", kind: "operator", beforeHistory: false });
   });
 
   // The seed's token has a name of its own (a service account); what counts is that a seed wrote it.
   it("is the Template seed, whatever name its token carried", () => {
     const seeded = summary(2, { author: { kind: "template_seed", sub: "svc-1", name: "service-account-skymail-seed" } });
-    assert.deepEqual(versionAuthor(seeded, VIEWER), { label: "Template seed", kind: "seed", mine: false, beforeHistory: false });
+    assert.deepEqual(versionAuthor(seeded, VIEWER), { label: "Template seed", kind: "seed", beforeHistory: false });
   });
 
   it("is an operator nobody recorded the name of", () => {
     const nameless = summary(5, { author: { kind: "operator", sub: OTHER, name: "  " } });
-    assert.deepEqual(versionAuthor(nameless, VIEWER), {
-      label: "Adı bilinmeyen operatör",
-      kind: "unknown",
-      mine: false,
-      beforeHistory: false,
-    });
+    assert.deepEqual(versionAuthor(nameless, VIEWER), { label: "Adı bilinmeyen operatör", kind: "unknown", beforeHistory: false });
   });
 
   // Ticket 04's migration: one first version per template, with no sub and no name.
   it("is unknown, and older than the history, for a template's migrated first version", () => {
     const migrated = summary(1, { author: { kind: "operator", sub: null, name: null } });
-    assert.deepEqual(versionAuthor(migrated, VIEWER), {
-      label: "Adı bilinmeyen operatör",
-      kind: "unknown",
-      mine: false,
-      beforeHistory: true,
-    });
+    assert.deepEqual(versionAuthor(migrated, VIEWER), { label: "Adı bilinmeyen operatör", kind: "unknown", beforeHistory: true });
     const seeded = summary(1, { author: { kind: "template_seed", sub: null, name: null } });
-    assert.deepEqual(versionAuthor(seeded, VIEWER), { label: "Template seed", kind: "seed", mine: false, beforeHistory: true });
+    assert.deepEqual(versionAuthor(seeded, VIEWER), { label: "Template seed", kind: "seed", beforeHistory: true });
   });
 
   // Only the migration wrote a first version with no one on record; a later one without a subject is not older than the history.
@@ -172,33 +201,41 @@ describe("who wrote a version", () => {
 
   it("is never the viewer's when the viewer has no subject", () => {
     const nameless = summary(1, { author: { kind: "operator", sub: null, name: null } });
-    assert.equal(versionAuthor(nameless, null).mine, false);
+    assert.equal(authorLabel(nameless.author, null), "Adı bilinmeyen operatör");
   });
 });
 
 describe("how a version stands", () => {
+  const standing = (version: TemplateVersionSummary, draftsInProgress: string[] = []) =>
+    versionBadge(version, { publishedVersionId: v(3), draftsInProgress });
+
+  // Read from the template, as the comparison's sent version is: one source for both.
   it("is the one being sent", () => {
-    assert.deepEqual(versionBadge(summary(3, { current: true }), []), { state: "sent", label: "Gönderilen", inProgress: false });
+    assert.deepEqual(standing(summary(3)), { state: "sent", label: "Gönderilen", inProgress: false });
   });
 
   it("is published, and no longer sent", () => {
-    assert.deepEqual(versionBadge(summary(2), []), { state: "published", label: "Yayımlanmış", inProgress: false });
+    assert.deepEqual(standing(summary(2)), { state: "published", label: "Yayımlanmış", inProgress: false });
   });
 
-  it("is someone's draft in progress", () => {
-    const draft = summary(5, { published_at: null });
-    assert.deepEqual(versionBadge(draft, [v(5)]), { state: "draft", label: "Süren taslak", inProgress: true });
+  it("is someone's draft in progress on what is sent", () => {
+    assert.deepEqual(standing(draft(5, OTHER, 3), [v(5)]), { state: "draft", label: "Süren taslak", inProgress: true });
   });
 
   // An operator's newer save covers the older one: it stays in the history, restorable.
   it("is a draft its author has since saved over", () => {
-    const draft = summary(4, { published_at: null });
-    assert.deepEqual(versionBadge(draft, [v(5)]), { state: "draft", label: "Taslak", inProgress: false });
+    assert.deepEqual(standing(draft(4, OTHER, 3), [v(5)]), { state: "draft", label: "Taslak", inProgress: false });
   });
 
-  it("is a draft its author gave up", () => {
-    const discarded = summary(4, { published_at: null, discarded: true });
-    assert.deepEqual(versionBadge(discarded, [v(4)]), { state: "discarded", label: "Atılmış taslak", inProgress: false });
+  // Ticket 07: a draft whose base is no longer what is published.
+  it("is stale when someone published after it started, in progress or not", () => {
+    assert.deepEqual(standing(draft(5, OTHER, 2), [v(5)]), { state: "stale", label: "Bayat taslak", inProgress: true });
+    assert.deepEqual(standing(draft(4, OTHER, 1)), { state: "stale", label: "Bayat taslak", inProgress: false });
+  });
+
+  it("is a draft its author gave up, stale or not", () => {
+    assert.deepEqual(standing(draft(4, OTHER, 3, { discarded: true })), { state: "discarded", label: "Atılmış taslak", inProgress: false });
+    assert.deepEqual(standing(draft(4, OTHER, 1, { discarded: true })), { state: "discarded", label: "Atılmış taslak", inProgress: false });
   });
 });
 
@@ -215,6 +252,12 @@ describe("when a version was written", () => {
   it("says both when a draft was published later", () => {
     const published = summary(4, { created_at: "2026-09-22T21:10:00Z", published_at: "2026-09-23T06:00:00Z" });
     assert.equal(versionWhen(published), "yazıldı 23 Eyl 2026 00:10 · yayımlandı 23 Eyl 2026 09:00");
+  });
+
+  // The editor's stale comparison and the read-only page say it the same way.
+  it("reads the same in one line with its number and author", () => {
+    assert.equal(versionLine(summary(4), VIEWER), "#4 · Mehmet Kaya · yayımlandı 22 Eyl 2026 10:12");
+    assert.equal(versionLine(draft(5, VIEWER, 4, { created_at: "2026-09-23T07:12:00Z" }), VIEWER), "#5 · sen · yazıldı 23 Eyl 2026 10:12");
   });
 });
 
@@ -238,27 +281,66 @@ describe("what a version names the template and asks as its subject", () => {
   });
 });
 
-describe("which two versions a comparison shows", () => {
-  const listed = [summary(5, { published_at: null }), summary(4, { current: true }), summary(3), summary(2), summary(1)];
+describe("the rows of the history", () => {
+  // Ticket 07: every save is a version; one author's saves on one base read as one row.
+  it("fold consecutive drafts one author saved on one base into the newest, the earlier under it", () => {
+    const rows = historyRows([
+      draft(7, VIEWER, 3),
+      draft(6, VIEWER, 3),
+      draft(5, VIEWER, 3),
+      draft(4, OTHER, 3),
+      summary(3),
+    ]);
+    assert.deepEqual(
+      rows.map((row) => [row.version.seq, row.earlier.map((earlier) => earlier.seq)]),
+      [
+        [7, [6, 5]],
+        [4, []],
+        [3, []],
+      ],
+    );
+  });
 
+  it("keep apart drafts on another base, split by someone else's version, or with no author on record", () => {
+    const rows = historyRows([
+      draft(9, VIEWER, 5),
+      draft(8, VIEWER, 3),
+      draft(7, OTHER, 3),
+      draft(6, VIEWER, 3),
+      draft(5, null, 3),
+      draft(4, null, 3),
+    ]);
+    assert.deepEqual(
+      rows.map((row) => row.version.seq),
+      [9, 8, 7, 6, 5, 4],
+    );
+  });
+
+  it("never fold a published version", () => {
+    const rows = historyRows([summary(3, { author: { kind: "operator", sub: VIEWER, name: "Ada" } }), draft(2, VIEWER, 1)]);
+    assert.equal(rows.length, 2);
+  });
+});
+
+describe("which two versions a comparison shows", () => {
   it("puts a version beside the one being sent", () => {
-    assert.deepEqual(defaultComparison(listed[3], v(4), listed), { versionId: v(2), againstId: v(4) });
-    assert.deepEqual(defaultComparison(listed[0], v(4), listed), { versionId: v(5), againstId: v(4) });
+    assert.deepEqual(defaultComparison(summary(2), v(4)), { versionId: v(2), againstId: v(4) });
+    assert.deepEqual(defaultComparison(draft(5, OTHER, 4), v(4)), { versionId: v(5), againstId: v(4) });
   });
 
   // The sent one beside itself shows nothing: beside what it started from, it shows what it changed.
   it("puts the version being sent beside the one it started from", () => {
-    assert.deepEqual(defaultComparison(listed[1], v(4), listed), { versionId: v(4), againstId: v(3) });
+    assert.deepEqual(defaultComparison(summary(4), v(4)), { versionId: v(4), againstId: v(3) });
   });
 
-  it("falls back to the next older version listed when the sent one started from none", () => {
-    const first = summary(2, { current: true, base_version_id: null });
-    assert.deepEqual(defaultComparison(first, v(2), [first, summary(1)]), { versionId: v(2), againstId: v(1) });
+  // A seed publishes with no base: what came before it is the version published before it,
+  // which the API is asked for — not whatever row the page happens to show next.
+  it("puts a sent version that started from nothing beside the one published before it", () => {
+    assert.deepEqual(defaultComparison(summary(6, { base_version_id: null }), v(6)), { versionId: v(6), publishedBefore: 6 });
   });
 
-  it("offers none for a template's only version", () => {
-    const only = summary(1, { current: true });
-    assert.equal(defaultComparison(only, v(1), [only]), null);
+  it("offers none for a template's first version while it is sent", () => {
+    assert.equal(defaultComparison(summary(1), v(1)), null);
   });
 
   it("orders the two by when they were written, older first", () => {
@@ -269,13 +351,15 @@ describe("which two versions a comparison shows", () => {
 });
 
 describe("picking two versions to compare", () => {
+  const pick = (seq: number) => ({ id: v(seq), seq });
+
   it("adds a version, and takes it out again", () => {
-    assert.deepEqual(togglePick([], v(1)), [v(1)]);
-    assert.deepEqual(togglePick([v(1), v(3)], v(1)), [v(3)]);
+    assert.deepEqual(togglePick([], pick(1)), [pick(1)]);
+    assert.deepEqual(togglePick([pick(1), pick(3)], pick(1)), [pick(3)]);
   });
 
   it("keeps the two picked last", () => {
-    assert.deepEqual(togglePick([v(1), v(3)], v(5)), [v(3), v(5)]);
+    assert.deepEqual(togglePick([pick(1), pick(3)], pick(5)), [pick(3), pick(5)]);
   });
 });
 
@@ -333,37 +417,49 @@ describe("the sample values a comparison fills both mails with", () => {
 });
 
 describe("restoring a version", () => {
-  it("posts to the version's restore, with no body", async () => {
-    const { api, calls } = scriptedClient(json(201, version(6, { published_at: null })));
+  it("posts to the version's restore, with no body, and keeps the answer's status", async () => {
+    const restored = version(6, { published_at: null });
+    const { api, calls } = scriptedClient(json(201, restored));
 
-    await restoreVersion(api, TEMPLATE, v(2));
-
+    assert.deepEqual(await restoreVersion(api, TEMPLATE, v(2)), { status: 201, version: restored });
     assert.equal(pathOf(calls[0]), `/templates/${TEMPLATE}/versions/${v(2)}/restore`);
     assert.equal(calls[0].method, "POST");
     assert.equal(calls[0].body, null);
   });
 
-  it("opens a new draft, and says live mail did not change", () => {
-    const outcome = restoreOutcome(version(6, { published_at: null }), { seq: 2 }, v(5));
-    assert.equal(outcome.kind, "drafted");
-    assert.equal(outcome.openEditor, true);
-    assert.equal(
-      outcome.text,
-      "Sürüm #2 yeni bir taslak olarak geri getirildi (#6). Canlı mail değişmedi; yayımlayana kadar gönderilen sürüm aynı kalır.",
-    );
+  // Ticket 07: 201 is a new draft, 200 is nothing written.
+  it("opens a new draft on 201, and says live mail did not change", () => {
+    const outcome = restoreOutcome({ status: 201, version: version(6, { published_at: null }) }, { seq: 2 });
+    assert.deepEqual(outcome, {
+      openEditor: true,
+      text: "Sürüm #2 yeni bir taslak olarak geri getirildi (#6). Canlı mail değişmedi; yayımlayana kadar gönderilen sürüm aynı kalır.",
+    });
   });
 
-  it("opens the viewer's draft when it already is that version", () => {
-    const outcome = restoreOutcome(version(5, { published_at: null }), { seq: 2 }, v(5));
-    assert.equal(outcome.kind, "already-draft");
-    assert.equal(outcome.openEditor, true);
-    assert.match(outcome.text, /^Süren taslağın zaten sürüm #2 ile aynı; yeni taslak açılmadı\./);
+  // Whatever the page last knew of the viewer's drafts: one saved in another tab is still theirs.
+  it("opens the viewer's draft on 200 with a draft: it already was that version", () => {
+    const outcome = restoreOutcome({ status: 200, version: version(5, { published_at: null }) }, { seq: 2 });
+    assert.deepEqual(outcome, {
+      openEditor: true,
+      text: "Süren taslağın (#5) zaten sürüm #2 ile aynı; yeni taslak açılmadı. Canlı mail değişmedi.",
+    });
   });
 
-  it("opens nothing when that version is what is sent already", () => {
-    const outcome = restoreOutcome(version(4, { published_at: "2026-09-22T07:12:00Z", current: true }), { seq: 2 }, null);
-    assert.equal(outcome.kind, "already-sent");
-    assert.equal(outcome.openEditor, false);
-    assert.equal(outcome.text, "Sürüm #2, şu an gönderilen sürümle aynı; yeni taslak açılmadı.");
+  it("opens nothing on 200 with the published version: that is what is sent already", () => {
+    const outcome = restoreOutcome({ status: 200, version: version(4, { current: true }) }, { seq: 2 });
+    assert.deepEqual(outcome, { openEditor: false, text: "Sürüm #2, şu an gönderilen sürümle aynı; yeni taslak açılmadı." });
+  });
+
+  // The same copy would be refused again; anything else (a network error, a 5xx) may pass on a retry.
+  it("is refused for good when the copy itself drops a Required variable or does not parse", () => {
+    const problem = (kind: VersionProblem["kind"]): VersionProblem =>
+      kind === "missing-variables"
+        ? { kind, message: "", missing: [] }
+        : kind === "unparseable"
+          ? { kind, message: "", detail: "" }
+          : { kind, message: "Sunucuya ulaşılamadı." };
+    assert.equal(isFinalRestoreRefusal(problem("missing-variables")), true);
+    assert.equal(isFinalRestoreRefusal(problem("unparseable")), true);
+    assert.equal(isFinalRestoreRefusal(problem("message")), false);
   });
 });

@@ -181,13 +181,15 @@ export class MockSkymail {
   }
 
   /**
-   * Someone else publishes straight away — another operator's publish, or a
-   * Template seed — starting from what is published now.
+   * Someone else publishes straight away — another operator's publish,
+   * starting from what is published now, or a Template seed's, which starts
+   * from nothing (only a forced seed names what it replaced).
    */
   publishAs(templateId: string, author: Author, changes: Partial<Content>): Version {
     const row = this.row(templateId);
     const current = this.version(row.published_version_id!);
-    const version = this.write(templateId, author, current.id, { ...this.contentOf(current), ...changes });
+    const base = author.kind === "template_seed" ? null : current.id;
+    const version = this.write(templateId, author, base, { ...this.contentOf(current), ...changes });
     this.publish(version);
     return version;
   }

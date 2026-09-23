@@ -47,6 +47,8 @@ export type ApiClient = {
   /** GETs a list route and keeps its `X-Total-Count`. */
   getPage<T>(path: string, options?: RequestOptions): Promise<ApiPage<T>>;
   post<T = void>(path: string, body?: unknown, options?: RequestOptions): Promise<T>;
+  /** POSTs and keeps the answer's status beside its body: for a route whose 200 and 201 mean different things. */
+  postForStatus<T>(path: string, body?: unknown, options?: RequestOptions): Promise<{ status: number; data: T }>;
   put<T = void>(path: string, body?: unknown, options?: RequestOptions): Promise<T>;
   patch<T = void>(path: string, body?: unknown, options?: RequestOptions): Promise<T>;
   delete<T = void>(path: string, options?: RequestOptions): Promise<T>;
@@ -101,7 +103,7 @@ export function createApiClient({
     path: string,
     body: unknown,
     options: RequestOptions = {},
-  ): Promise<{ data: T; headers: Headers }> {
+  ): Promise<{ data: T; headers: Headers; status: number }> {
     const current = await sharedSession();
     // No session (signed out in another tab, or the session read failed), or
     // one the server could no longer refresh: every API route needs a bearer,
@@ -137,9 +139,10 @@ export function createApiClient({
       if (response.status === 401) announceSessionEnded();
       throw apiErrorFromResponse(response.status, text);
     }
-    if (text === "") return { data: undefined as T, headers: response.headers };
+    const { headers: answered, status } = response;
+    if (text === "") return { data: undefined as T, headers: answered, status };
     try {
-      return { data: JSON.parse(text) as T, headers: response.headers };
+      return { data: JSON.parse(text) as T, headers: answered, status };
     } catch {
       throw new ApiError(response.status, "response.not_json");
     }
@@ -162,6 +165,10 @@ export function createApiClient({
       return { items: data ?? [], total: totalCount(headers.get("X-Total-Count")) };
     },
     post: (path, body, options) => request("POST", path, body, options),
+    async postForStatus<T>(path: string, body?: unknown, options?: RequestOptions) {
+      const { data, status } = await send<T>("POST", path, body, options);
+      return { status, data };
+    },
     put: (path, body, options) => request("PUT", path, body, options),
     patch: (path, body, options) => request("PATCH", path, body, options),
     delete: (path, options) => request("DELETE", path, undefined, options),

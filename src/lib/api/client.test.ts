@@ -135,6 +135,29 @@ describe("a successful answer", () => {
   });
 });
 
+describe("an answer whose status says what happened", () => {
+  const signedIn = async () => session("token");
+
+  // A restore answers 201 when it wrote a draft and 200 when it wrote nothing,
+  // with a version either way: only the status tells them apart.
+  it("keeps the status beside the body", async () => {
+    const { fetch, calls } = scriptedFetch(json(201, { id: "new" }), json(200, { id: "same" }));
+    const api = createApiClient({ baseUrl: BASE_URL, fetch, getSession: signedIn });
+
+    assert.deepEqual(await api.postForStatus("/templates/1/versions/2/restore"), { status: 201, data: { id: "new" } });
+    assert.deepEqual(await api.postForStatus("/templates/1/versions/2/restore"), { status: 200, data: { id: "same" } });
+    assert.equal(calls[0].method, "POST");
+    assert.equal(calls[0].body, null);
+  });
+
+  it("fails like any other request", async () => {
+    const { fetch } = scriptedFetch(json(404, { code: "server.not_found", message: "nope" }));
+    const api = createApiClient({ baseUrl: BASE_URL, fetch, getSession: signedIn });
+
+    await assert.rejects(api.postForStatus("/templates/1/versions/2/restore"), (error) => error instanceof ApiError && error.status === 404);
+  });
+});
+
 describe("a page of a list", () => {
   const signedIn = async () => session("token");
 

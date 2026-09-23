@@ -5,17 +5,19 @@
  * Template seed refused because of an operator's change is said on the
  * template. A reader sees and compares, and restores nothing.
  */
-import { OTHER_OPERATOR, TEMPLATE_SEED } from "./fixtures/mock-api";
+import type { Page } from "@playwright/test";
+import { OTHER_OPERATOR, TEMPLATE_SEED, type Author } from "./fixtures/mock-api";
 import { VIEWER } from "./fixtures/session";
 import { expect, preview, test } from "./fixtures";
-import type { Page } from "@playwright/test";
 
 const mail = (text: string) => `<!DOCTYPE html><html><body><p>${text}</p><p>Merhaba {{.FirstName}}</p></body></html>`;
 
 /** A template's first version as the migration made it: no author on record. */
-const MIGRATED = { kind: "operator" as const, sub: null, name: null };
+const MIGRATED: Author = { kind: "operator", sub: null, name: null };
+const ME: Author = { kind: "operator", sub: VIEWER.sub, name: VIEWER.name };
 
 const item = (page: Page, seq: number) => page.getByRole("listitem", { name: `Sürüm #${seq}`, exact: true });
+const versions = (page: Page) => page.getByRole("list", { name: "Sürümler" }).getByRole("listitem");
 
 test("two versions compare side by side, and restoring one opens a new draft while live mail stays", async ({
   page,
@@ -25,6 +27,7 @@ test("two versions compare side by side, and restoring one opens a new draft whi
   await signIn("writer");
   const { id, versionId: first } = skymail.addTemplate({
     name: "Etkinlik duyurusu",
+    key: "club.event-announcement",
     subject: "Bu hafta SKY LAB'de",
     mainMode: "html",
     html: mail("İlk metin"),
@@ -44,7 +47,7 @@ test("two versions compare side by side, and restoring one opens a new draft whi
 
   // The editor's header says a seed is waiting, and leads to the history.
   await page.goto(`/templates/edit/${id}`);
-  await expect(page.getByRole("link", { name: "Template seed reddedildi · 23 Eyl 2026 00:10" })).toBeVisible();
+  await expect(page.getByText("Template seed reddedildi · 23 Eyl 2026 00:10")).toBeVisible();
   await page.getByRole("link", { name: "Sürüm geçmişi" }).click();
   await expect(page.getByRole("heading", { name: "Sürüm geçmişi", level: 1 })).toBeVisible();
 
@@ -52,10 +55,11 @@ test("two versions compare side by side, and restoring one opens a new draft whi
   await expect(refusal).toContainText("23 Eyl 2026 00:10 tarihinde bir Template seed, bir operatör değişikliği yüzünden reddedildi");
   await expect(refusal).toContainText("Gönderilen sürümü son Template seed değil, bir operatör yayımladı.");
   await expect(refusal).toContainText("Son Template seed'den sonra bir operatör yeni bir sürüm yazdı");
-  await expect(refusal).toContainText("Seed bu template için zorlanırsa repodaki hâli hemen yayımlanır");
+  await expect(refusal).toContainText("zorla bayrağıyla (--force=club.event-announcement) yeniden koşması demek");
+  await expect(refusal).toContainText("Panelde yapman gereken bir şey yok.");
 
   // Newest first: who wrote each, and how it stands.
-  await expect(page.getByRole("list", { name: "Sürümler" }).getByRole("listitem")).toHaveCount(4);
+  await expect(versions(page)).toHaveCount(4);
   await expect(item(page, 4)).toContainText("Süren taslak");
   await expect(item(page, 4)).toContainText("Mehmet Kaya");
   await expect(item(page, 3)).toContainText("Gönderilen");
@@ -71,13 +75,14 @@ test("two versions compare side by side, and restoring one opens a new draft whi
   await page.getByRole("group", { name: "Gösterilen sürümler" }).getByRole("button", { name: "Taslak" }).click();
   await drafts;
   await expect(page).toHaveURL(/\?state=draft$/);
-  await expect(page.getByRole("list", { name: "Sürümler" }).getByRole("listitem")).toHaveCount(1);
+  await expect(versions(page)).toHaveCount(1);
   await expect(item(page, 4)).toBeVisible();
   await page.getByRole("group", { name: "Gösterilen sürümler" }).getByRole("button", { name: "Hepsi" }).click();
 
   // Any two, side by side as rendered mail, the older first.
   await page.getByRole("checkbox", { name: "Karşılaştırmak için seç: sürüm #3" }).check();
   await page.getByRole("checkbox", { name: "Karşılaştırmak için seç: sürüm #1" }).check();
+  await expect(page.getByText("2 sürüm seçili: #3 ve #1.")).toBeVisible();
   await page.getByRole("button", { name: "Seçilenleri karşılaştır" }).click();
   const comparison = page.getByRole("dialog", { name: "Sürümleri karşılaştır" });
   await expect(preview(page, "Sürüm #1")).toContainText("İlk metin");
@@ -85,13 +90,13 @@ test("two versions compare side by side, and restoring one opens a new draft whi
   // Both filled with the same sample values.
   await expect(preview(page, "Sürüm #1")).toContainText("Merhaba Ayşe");
   await expect(preview(page, "Sürüm #3")).toContainText("Merhaba Ayşe");
-  const facts = comparison.getByRole("definition");
-  await expect(facts.nth(1)).toContainText("“Bu hafta SKY LAB'de”");
-  await expect(facts.nth(1)).toContainText("“Mehmet'in konusu”");
-  await expect(facts.nth(2)).toContainText("Aynı: HTML");
-  await expect(facts.nth(3)).toContainText("Farklı");
-  const frames = comparison.locator("iframe");
-  await expect(frames.first()).toHaveAttribute("title", "Sürüm #1");
+  const differences = comparison.getByRole("table", { name: "Farklar" });
+  await expect(differences.getByRole("row", { name: /^Ad / })).toContainText("Aynı: “Etkinlik duyurusu”");
+  await expect(differences.getByRole("row", { name: /^Konu / })).toContainText("#1 “Bu hafta SKY LAB'de”");
+  await expect(differences.getByRole("row", { name: /^Konu / })).toContainText("#3 “Mehmet'in konusu”");
+  await expect(differences.getByRole("row", { name: /^Main source / })).toContainText("Aynı: HTML");
+  await expect(differences.getByRole("row", { name: /^Gövde / })).toContainText("Farklı");
+  await expect(comparison.locator("iframe").first()).toHaveAttribute("title", "Sürüm #1");
 
   // Both mail themes.
   await comparison.getByRole("button", { name: "Koyu tema" }).click();
@@ -131,6 +136,42 @@ test("two versions compare side by side, and restoring one opens a new draft whi
   expect(skymail.version(theirs.id).published_at).toBeNull();
 });
 
+// 200 is "nothing written" (ticket 07), whatever the page last knew of the viewer's drafts.
+test("restoring what the viewer's draft already is, saved in another tab, opens that draft and writes nothing", async ({
+  page,
+  skymail,
+  signIn,
+}) => {
+  await signIn("writer");
+  const { id, versionId: first } = skymail.addTemplate({
+    name: "Bülten",
+    subject: "Eylül bülteni",
+    mainMode: "html",
+    html: mail("Eylül"),
+    htmlContent: mail("Eylül"),
+    plainText: "Eylül",
+    author: OTHER_OPERATOR,
+  });
+  skymail.publishAs(id, OTHER_OPERATOR, { subject: "Ekim bülteni", html_source: mail("Ekim"), html_content: mail("Ekim") });
+
+  await page.goto(`/templates/history/${id}`);
+  await expect(item(page, 2)).toContainText("Gönderilen");
+
+  // In another tab, the viewer saves a draft with the first wording back.
+  const { subject, html_source, html_content, plain_text_content } = skymail.version(first);
+  const mine = skymail.addDraft(id, ME, { subject, html_source, html_content, plain_text_content });
+
+  await item(page, 1).getByRole("button", { name: "Geri getir: sürüm #1" }).click();
+  await page.getByRole("dialog", { name: "Sürümü geri getir" }).getByRole("button", { name: "Taslak olarak geri getir" }).click();
+
+  await expect(page).toHaveURL(new RegExp(`/templates/edit/${id}$`));
+  await expect(
+    page.getByRole("status").filter({ hasText: `Süren taslağın (#${mine.seq}) zaten sürüm #1 ile aynı; yeni taslak açılmadı.` }),
+  ).toBeVisible();
+  await expect(page.getByText(`Taslağını düzenliyorsun: #${mine.seq}`)).toBeVisible();
+  expect(skymail.versionsOf(id)).toHaveLength(3);
+});
+
 test("restoring what is sent already opens no draft and stays in the history", async ({ page, skymail, signIn }) => {
   await signIn("writer");
   const { id, versionId: first } = skymail.addTemplate({
@@ -157,7 +198,42 @@ test("restoring what is sent already opens no draft and stays in the history", a
   expect(skymail.row(id).published_version_id).toBe(sent.id);
 });
 
-test("a reader pages through the history and compares, and is offered no restore", async ({ page, skymail, signIn }) => {
+test("one operator's saves on one base read as one row, stale once someone publishes, and each can be compared", async ({
+  page,
+  skymail,
+  signIn,
+}) => {
+  await signIn("writer");
+  const { id } = skymail.addTemplate({
+    name: "Duyuru",
+    subject: "Duyuru",
+    mainMode: "html",
+    html: mail("İlk"),
+    htmlContent: mail("İlk"),
+    plainText: "İlk",
+    author: OTHER_OPERATOR,
+  });
+  skymail.addDraft(id, OTHER_OPERATOR, { html_source: mail("Taslak 1"), html_content: mail("Taslak 1") });
+  skymail.addDraft(id, OTHER_OPERATOR, { html_source: mail("Taslak 2"), html_content: mail("Taslak 2") });
+  skymail.publishAs(id, ME, { html_source: mail("Yayımlanan"), html_content: mail("Yayımlanan") });
+
+  await page.goto(`/templates/history/${id}`);
+  await expect(versions(page)).toHaveCount(3);
+  await expect(item(page, 4)).toContainText("Gönderilen");
+  await expect(item(page, 4)).toContainText("sen");
+  await expect(item(page, 3)).toContainText("Bayat taslak");
+  await expect(item(page, 2)).toBeHidden();
+
+  await item(page, 3).getByRole("button", { name: "Aynı taslağın 1 önceki kaydı (#2)" }).click();
+  await expect(item(page, 2)).toContainText("Bayat taslak");
+  await page.getByRole("checkbox", { name: "Karşılaştırmak için seç: sürüm #2" }).check();
+  await page.getByRole("checkbox", { name: "Karşılaştırmak için seç: sürüm #4" }).check();
+  await page.getByRole("button", { name: "Seçilenleri karşılaştır" }).click();
+  await expect(preview(page, "Sürüm #2")).toContainText("Taslak 1");
+  await expect(preview(page, "Sürüm #4")).toContainText("Yayımlanan");
+});
+
+test("a reader pages through the history, compares across pages, and is offered no restore", async ({ page, skymail, signIn }) => {
   await signIn("reader");
   const { id } = skymail.addTemplate({
     name: "Hoş geldin",
@@ -168,9 +244,11 @@ test("a reader pages through the history and compares, and is offered no restore
     plainText: "Sürüm 1",
     author: TEMPLATE_SEED,
   });
-  for (let seq = 2; seq <= 22; seq += 1) {
+  for (let seq = 2; seq <= 21; seq += 1) {
     skymail.publishAs(id, OTHER_OPERATOR, { html_source: mail(`Sürüm ${seq}`), html_content: mail(`Sürüm ${seq}`) });
   }
+  // The version sent is a seed's, which starts from no version.
+  skymail.publishAs(id, TEMPLATE_SEED, { html_source: mail("Sürüm 22"), html_content: mail("Sürüm 22") });
 
   await page.goto(`/templates/show/${id}`);
   await expect(page.getByRole("heading", { name: "Hoş geldin" })).toBeVisible();
@@ -183,12 +261,24 @@ test("a reader pages through the history and compares, and is offered no restore
   await expect(item(page, 22)).toContainText("Gönderilen");
   await expect(page.getByRole("button", { name: /^Geri getir/ })).toHaveCount(0);
 
+  // What came before a seed's version is asked of the API's published versions.
+  const before = page.waitForRequest((request) => /\/versions\?state=published&_start=0&_end=50$/.test(request.url()));
+  await item(page, 22).getByRole("button", { name: "Öncekiyle karşılaştır: sürüm #22" }).click();
+  await before;
+  const comparison = page.getByRole("dialog", { name: "Sürümleri karşılaştır" });
+  await expect(preview(page, "Sürüm #21")).toContainText("Sürüm 21");
+  await expect(preview(page, "Sürüm #22")).toContainText("Sürüm 22");
+  await expect(comparison.getByRole("button", { name: /^Geri getir/ })).toHaveCount(0);
+  await comparison.getByRole("button", { name: "Kapat" }).first().click();
+
+  // A pick survives the page it was made on.
+  await page.getByRole("checkbox", { name: "Karşılaştırmak için seç: sürüm #22" }).check();
   await page.getByRole("navigation", { name: "Sürüm sayfaları" }).getByRole("button", { name: "Sayfa 2" }).click();
   await expect(page).toHaveURL(/\?page=2$/);
-  await expect(page.getByRole("list", { name: "Sürümler" }).getByRole("listitem")).toHaveCount(2);
-  await item(page, 1).getByRole("button", { name: "Gönderilenle karşılaştır: sürüm #1" }).click();
-
-  const comparison = page.getByRole("dialog", { name: "Sürümleri karşılaştır" });
+  await expect(versions(page)).toHaveCount(2);
+  await expect(page.getByText("1 sürüm seçili: #22; bir tane daha seç.")).toBeVisible();
+  await page.getByRole("checkbox", { name: "Karşılaştırmak için seç: sürüm #1" }).check();
+  await page.getByRole("button", { name: "Seçilenleri karşılaştır" }).click();
   await expect(preview(page, "Sürüm #1")).toContainText("Sürüm 1");
   await expect(preview(page, "Sürüm #22")).toContainText("Sürüm 22");
   await expect(comparison.getByRole("button", { name: /^Geri getir/ })).toHaveCount(0);

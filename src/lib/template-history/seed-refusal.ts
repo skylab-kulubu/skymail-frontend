@@ -2,16 +2,16 @@
  * A Template seed refused for a template because an operator changed it
  * (ADR-0047; ticket 09's `seed_refusal` on the template), in the words the
  * panel shows it in (story 41): when it was first refused with the content it
- * asked for last, which rules held, and what forcing it would do. The record
- * lasts until a seed goes through, so while it is there a repo change is
- * waiting on a decision.
+ * asked for last, which rules held, what forcing it would mean, and what the
+ * operator can do. The record lasts until a seed goes through, so while it is
+ * there a repo change is waiting on a decision.
  *
  * The rules are the ones the seed's own report names
  * (src/lib/template-seed/index.ts), said here for an operator rather than a
  * developer: forcing is the developer's step, and the payload hash is only
  * the API's way to tell the same content from new.
  */
-import { formatSendTime } from "../sends";
+import { formatClubTime } from "../format";
 import type { SeedConflictRule, SeedRefusal } from "../templates";
 
 // A Map: the rule comes from the answer, and "constructor" must not find what every object inherits.
@@ -36,28 +36,34 @@ export type SeedRefusalText = Readonly<{
   headline: string;
   /** Each rule that held. */
   reasons: readonly string[];
-  /** What forcing the seed would do. */
+  /** What forcing the seed would mean. */
   forcing: string;
-  /** What not forcing it leaves. */
-  unforced: string;
+  /** What the operator can do: nothing is required of them. */
+  whatToDo: readonly string[];
 }>;
 
 /** "23 Eyl 2026 00:10", or null for a time that is not one. */
 function refusedAt(refusal: SeedRefusal): string | null {
-  const when = formatSendTime(refusal.refused_at);
+  const when = formatClubTime(refusal.refused_at);
   return when === "—" ? null : when;
 }
 
-export function seedRefusalText(refusal: SeedRefusal | null | undefined): SeedRefusalText | null {
+/**
+ * The refusal in words; `key` is the template's Template key, which the
+ * seed's force flag names (a seeded template always has one).
+ */
+export function seedRefusalText(refusal: SeedRefusal | null | undefined, key: string | null): SeedRefusalText | null {
   if (!refusal) return null;
   const when = refusedAt(refusal);
   return {
     headline: `${when ? `${when} tarihinde bir` : "Bir"} Template seed, bir operatör değişikliği yüzünden reddedildi; bu template'e hiçbir şey yazılmadı. Repodaki bir değişiklik karar bekliyor.`,
     reasons: refusal.rules.map(seedRuleText),
-    forcing:
-      "Zorlamak bir geliştiricinin işi. Seed bu template için zorlanırsa repodaki hâli hemen yayımlanır ve gönderilen mail değişir. Operatörlerin sürümleri silinmez: bu geçmişte kalır, karşılaştırılıp geri getirilebilir. Süren taslaklar bayatlar; yayımlanırken yeni sürümle yan yana gösterilir.",
-    unforced:
-      "Zorlanmazsa repodaki değişiklik bu template'e gelmez ve gönderilen mail olduğu gibi kalır. Repo, gönderilen içeriği aynen tutarsa sonraki seed çakışmadan geçer.",
+    forcing: `Zorlamak, bir geliştiricinin Template seed'i repodan zorla bayrağıyla (--force=${key ?? "<key>"}) yeniden koşması demek: bu template'teki operatör içeriğinin yerine repodaki geçer ve gönderilen mail değişir. Operatörlerin sürümleri silinmez; bu geçmişte kalır, karşılaştırılıp geri getirilebilir. Süren taslaklar bayatlar.`,
+    whatToDo: [
+      "Panelde yapman gereken bir şey yok.",
+      "Repodaki hâli istiyorsan bir geliştiriciden seed'i bu template için zorlamasını iste.",
+      "Kendi içeriğini tutmak istiyorsan bir şey yapma: biri zorlayana kadar gönderilen mail değişmez. Repo, gönderilen içeriği aynen tutarsa sonraki seed çakışmadan geçer.",
+    ],
   };
 }
 

@@ -6,33 +6,24 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { ModalPrimaryActions } from '@/components/ui/modal-actions';
 import { useApiLoad } from '@/lib/api/react';
+import { useRepoSample } from '@/lib/template-editor/use-repo-sample';
 import {
   comparedVariables,
   comparisonFacts,
+  fetchPublishedBefore,
   inSeqOrder,
-  versionAuthor,
+  isFinalRestoreRefusal,
   versionBadge,
-  versionWhen,
+  versionLine,
   type ComparisonFact,
   type ComparisonRequest,
+  type Standing,
 } from '@/lib/template-history/history';
-import { useRepoSample } from '@/lib/template-editor/use-repo-sample';
-import {
-  AUTHORING_MODE_LABEL,
-  fetchVersion,
-  type MailTemplate,
-  type TemplateVersion,
-  type TemplateVersionSummary,
-} from '@/lib/templates';
+import { AUTHORING_MODE_LABEL, fetchVersion, type MailTemplate, type TemplateVersion, type TemplateVersionSummary } from '@/lib/templates';
 import { RefusalNotice, type Refusal } from '../editor/EditorParts';
 import { useSample } from '../editor/PreviewPane';
 import { VersionSideBySide } from '../editor/VersionSideBySide';
 import { VersionStateBadge } from './HistoryParts';
-
-/** "Mehmet Kaya · yayımlandı 22 Eyl 2026 10:12 · Main source JSX" */
-export function versionByline(version: TemplateVersionSummary, viewerSub: string | null): string {
-  return `${versionAuthor(version, viewerSub).label} · ${versionWhen(version)} · Main source ${AUTHORING_MODE_LABEL[version.main_mode] ?? version.main_mode}`;
-}
 
 /**
  * Restoring a version: it becomes the viewer's new draft, started from what is
@@ -42,7 +33,6 @@ export function versionByline(version: TemplateVersionSummary, viewerSub: string
 export function RestoreDialog({
   version,
   viewerSub,
-  viewerDraftSeq,
   busy,
   refusal,
   onConfirm,
@@ -50,8 +40,6 @@ export function RestoreDialog({
 }: {
   version: TemplateVersionSummary;
   viewerSub: string | null;
-  /** The viewer's draft in progress, which the restored copy takes the place of. */
-  viewerDraftSeq: number | null;
   busy: boolean;
   refusal: Refusal | null;
   onConfirm: () => void;
@@ -61,17 +49,12 @@ export function RestoreDialog({
     <Modal isOpen onClose={onCancel} title="Sürümü geri getir">
       <div className="space-y-3">
         <p>
-          <strong className="font-medium text-neutral-100">Sürüm #{version.seq}</strong> ({versionByline(version, viewerSub)})
-          senin yeni taslağın olarak açılır: adı, konusu, kaynakları ve Main source&apos;u olduğu gibi. Taslak, şu an
-          gönderilen sürümden başlamış sayılır.
+          <strong className="font-medium text-neutral-100">{versionLine(version, viewerSub)}</strong> senin yeni taslağın
+          olarak açılır: adı, konusu, kaynakları ve Main source&apos;u ({AUTHORING_MODE_LABEL[version.main_mode]}) olduğu
+          gibi. Taslak, şu an gönderilen sürümden başlamış sayılır.
         </p>
         <p>Gönderilen mail değişmez; taslağı yayımlayana kadar alıcılar bugünkü sürümü almaya devam eder.</p>
-        {viewerDraftSeq !== null ? (
-          <p>
-            Süren taslağın (#{viewerDraftSeq}) geçmişte kalır ve buradan yine geri getirilebilir; editör bundan sonra yeni
-            taslağı açar.
-          </p>
-        ) : null}
+        <p>Süren bir taslağın varsa geçmişte kalır ve buradan yine geri getirilebilir; editör bundan sonra yeni taslağı açar.</p>
         {refusal ? <RefusalNotice refusal={refusal} /> : null}
         <ModalPrimaryActions
           onCancel={onCancel}
@@ -79,20 +62,22 @@ export function RestoreDialog({
           confirmLabel="Taslak olarak geri getir"
           pendingLabel="Geri getiriliyor…"
           isPending={busy}
-          // The copy itself was refused; the same restore would be refused again.
-          confirmDisabled={refusal?.problem?.kind === 'missing-variables' || refusal?.problem?.kind === 'unparseable'}
+          confirmDisabled={refusal?.problem !== undefined && isFinalRestoreRefusal(refusal.problem)}
         />
       </div>
     </Modal>
   );
 }
 
-function Fact({ fact, older, newer }: { fact: ComparisonFact; older: number; newer: number }) {
+/** One row of what a comparison says in words: the same, or the older side's and the newer side's. */
+function FactRow({ fact, olderSeq, newerSeq }: { fact: ComparisonFact; olderSeq: number; newerSeq: number }) {
   const quote = (text: string | null) => (text === null ? '—' : fact.kind === 'text' ? `“${text}”` : text);
   return (
-    <div className="grid gap-x-3 gap-y-0.5 py-1.5 sm:grid-cols-[7rem_1fr]">
-      <dt className="text-xs text-neutral-500">{fact.label}</dt>
-      <dd className="min-w-0 text-sm break-words">
+    <tr className="border-t border-white/5 first:border-t-0">
+      <th scope="row" className="w-28 py-1.5 pr-3 text-left align-top text-xs font-normal text-neutral-500">
+        {fact.label}
+      </th>
+      <td className="min-w-0 py-1.5 text-sm break-words">
         {fact.same ? (
           <span className="text-neutral-400">
             Aynı{fact.newer !== null ? <span className="text-neutral-300">: {quote(fact.newer)}</span> : null}
@@ -102,16 +87,16 @@ function Fact({ fact, older, newer }: { fact: ComparisonFact; older: number; new
         ) : (
           <span className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
             <span className="text-neutral-400">
-              <span className="font-mono text-xs text-neutral-500">#{older}</span> {quote(fact.older)}
+              <span className="font-mono text-xs text-neutral-500">#{olderSeq}</span> {quote(fact.older)}
             </span>
             <ArrowRight className="h-3 w-3 shrink-0 self-center text-amber-300" role="img" aria-label="yerine" />
             <span className="text-amber-300">
-              <span className="font-mono text-xs">#{newer}</span> {quote(fact.newer)}
+              <span className="font-mono text-xs">#{newerSeq}</span> {quote(fact.newer)}
             </span>
           </span>
         )}
-      </dd>
-    </div>
+      </td>
+    </tr>
   );
 }
 
@@ -124,27 +109,31 @@ export function VersionComparison({
   template,
   pair,
   viewerSub,
-  draftsInProgress,
+  standing,
   onRestore,
   onClose,
 }: {
   template: MailTemplate;
   pair: ComparisonRequest;
   viewerSub: string | null;
-  draftsInProgress: readonly string[];
+  standing: Standing;
   /** Null for a reader, who may compare but not restore. */
   onRestore: ((version: TemplateVersion) => void) | null;
   onClose: () => void;
 }) {
+  const against = 'againstId' in pair ? pair.againstId : `before-${pair.publishedBefore}`;
   const state = useApiLoad(async (api, signal) => {
+    const againstId =
+      'againstId' in pair ? pair.againstId : ((await fetchPublishedBefore(api, template.id, pair.publishedBefore, signal))?.id ?? null);
+    if (againstId === null) return null;
     const [a, b] = await Promise.all([
       fetchVersion(api, template.id, pair.versionId, signal),
-      fetchVersion(api, template.id, pair.againstId, signal),
+      fetchVersion(api, template.id, againstId, signal),
     ]);
     return inSeqOrder(a, b);
-  }, `${pair.versionId}:${pair.againstId}`);
+  }, `${pair.versionId}:${against}`);
 
-  const [older, newer] = state.status === 'success' ? state.data : [null, null];
+  const [older, newer] = state.status === 'success' && state.data ? state.data : [null, null];
   const repo = useRepoSample(template.key);
   const samples = useSample(
     older && newer ? comparedVariables(older.html_content, newer.html_content) : [],
@@ -157,11 +146,10 @@ export function VersionComparison({
   const side = (version: TemplateVersion) => ({
     label: `Sürüm #${version.seq}`,
     version,
-    line: versionByline(version, viewerSub),
     actions: (
       <>
-        <VersionStateBadge badge={versionBadge(version, draftsInProgress)} />
-        {onRestore && !version.current ? (
+        <VersionStateBadge badge={versionBadge(version, standing)} />
+        {onRestore && version.id !== standing.publishedVersionId ? (
           <Button variant="outlineBrand" onClick={() => onRestore(version)} aria-label={`Geri getir: sürüm #${version.seq}`}>
             Geri getir
           </Button>
@@ -186,11 +174,13 @@ export function VersionComparison({
             Önce eski olan (#{older.seq}), sonra yeni olan (#{newer.seq}); ikisi de gönderilecekleri gibi, aynı örnek
             değerlerle render edilmiş.
           </p>
-          <dl aria-label="Farklar" className="divide-y divide-white/5 rounded-lg border border-white/10 px-4 py-1">
-            {comparisonFacts(older, newer).map((fact) => (
-              <Fact key={fact.label} fact={fact} older={older.seq} newer={newer.seq} />
-            ))}
-          </dl>
+          <table aria-label="Farklar" className="w-full table-fixed rounded-lg border border-white/10">
+            <tbody className="[&_td]:pr-4 [&_th]:pl-4">
+              {comparisonFacts(older, newer).map((fact) => (
+                <FactRow key={fact.label} fact={fact} olderSeq={older.seq} newerSeq={newer.seq} />
+              ))}
+            </tbody>
+          </table>
           <VersionSideBySide sides={[side(older), side(newer)]} viewerSub={viewerSub} sample={samples.sample} />
           <div className="flex justify-end">
             <Button variant="secondary" onClick={onClose}>
@@ -198,7 +188,9 @@ export function VersionComparison({
             </Button>
           </div>
         </div>
-      ) : null}
+      ) : (
+        <StateCard title="Karşılaştırılacak bir sürüm yok" description="Bu sürümden önce yayımlanmış bir sürüm bulunamadı." />
+      )}
     </Modal>
   );
 }
