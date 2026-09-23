@@ -265,6 +265,20 @@ export function isSystemArchiveRefusal(error: unknown): boolean {
   return asApiError(error).code === "template.system_protected";
 }
 
+/**
+ * Marks a variable required (`POST …/required-variables`, ticket 08). The
+ * published body must reference it already; one the contract holds is
+ * required already, and nothing changes. Writes no version.
+ */
+export function markRequiredVariable(api: ApiClient, templateId: string, name: string): Promise<MailTemplate> {
+  return api.post<MailTemplate>(`/templates/${templateId}/required-variables`, { name });
+}
+
+/** Releases a variable operators marked; a contract one is refused (409). Writes no version. */
+export function releaseRequiredVariable(api: ApiClient, templateId: string, name: string): Promise<MailTemplate> {
+  return api.delete<MailTemplate>(`/templates/${templateId}/required-variables/${encodeURIComponent(name)}`);
+}
+
 /** What `POST /templates/{id}/drafts` takes (`requests.SaveTemplateDraft`). */
 export type DraftBody = {
   /** Left out: kept from the version the save continues. */

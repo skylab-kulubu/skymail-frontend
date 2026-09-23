@@ -15,15 +15,28 @@
  *    row;
  *  - creating a template publishes its first version; react_email_content
  *    with no code outside comments leaves HTML the Main source;
- *  - a draft whose HTML no longer names a contract Required variable is
- *    refused with 422 template.required_variables_missing — a rough stand-in
- *    for the server's parse, enough to see the refusal (ticket 13 owns it).
+ *  - a draft save, or a publish, whose HTML body does not reference every
+ *    Required variable is refused with 422 template.required_variables_missing,
+ *    naming each missing one by name with its source and reason, as
+ *    requiredvars.CheckBody does. The body is read with the rule the server is
+ *    held to (referencedVariables, pinned to the same cases on both sides), so
+ *    a link left only in an HTML comment is missing here as it is there. The
+ *    mock does not parse: a body the mailer cannot parse is not refused;
+ *  - an operator marks a variable (`POST …/required-variables`) only when the
+ *    published body references it, and releases one (`DELETE
+ *    …/required-variables/{name}`) unless the contract holds it (409); both
+ *    answer with the template, need the write role, write no version, and
+ *    answer 404 for an archived template.
+ *
+ * A test can hold a request (`hold`) to put two in the order it needs.
  *
  * Every request is recorded, with whether it carried the minted session's
  * bearer token and which frame sent it. Anything else answers 501, so a test
  * never passes on a route nobody mocked.
  */
 import type { Page, Route } from "@playwright/test";
+import { referencedVariables } from "../../../src/lib/mail-render/go-template";
+import { isVariableName } from "../../../src/lib/template-editor/required-variables";
 import { E2E_API_URL } from "./env";
 import { VIEWER, accessToken } from "./session";
 
@@ -62,12 +75,26 @@ type Row = {
   react_email_content: string;
   created_at: string;
   updated_at: string;
-  archived_at: null;
-  archived_by: null;
+  /** Set by a test that archives the template behind the page's back. */
+  archived_at: string | null;
+  archived_by: string | null;
   published_version_id: string | null;
   contract_required_variables: { name: string; reason: string | null }[];
   operator_required_variables: string[];
 };
+
+/**
+ * A request a test holds, to put two requests in the order it wants: at
+ * `request` before the mock answers it (as if the server had not got to it
+ * yet), at `answer` after (the server acted; the answer is on its way).
+ */
+export type Hold = {
+  /** Settles when the request reaches the hold. */
+  readonly reached: Promise<void>;
+  release(): void;
+};
+
+type HeldRequest = { method: string; path: string; stage: "request" | "answer"; used: boolean; reach: () => void; gate: Promise<void> };
 
 export type Recorded = {
   method: string;
@@ -107,6 +134,7 @@ const sourceOf = (content: Content, mode: Mode) =>
 export class MockSkymail {
   readonly requests: Recorded[] = [];
   private readonly rows = new Map<string, Row>();
+  private readonly holds: HeldRequest[] = [];
   private readonly versions = new Map<string, Version>();
   private clock = Date.parse("2026-09-23T06:00:00Z");
   private ids = 0;
@@ -135,6 +163,8 @@ export class MockSkymail {
     author?: Author;
     /** The contract's Required variables, with why the mail needs them. */
     requiredVariables?: { name: string; reason: string | null }[];
+    /** The Required variables operators marked. */
+    operatorRequired?: string[];
   }): { id: string; versionId: string } {
     const id = this.nextId("7e3a1c00");
     const at = this.now();
@@ -153,7 +183,7 @@ export class MockSkymail {
       archived_by: null,
       published_version_id: null,
       contract_required_variables: input.requiredVariables ?? [],
-      operator_required_variables: [],
+      operator_required_variables: input.operatorRequired ?? [],
     });
     const version = this.write(id, input.author ?? TEMPLATE_SEED, null, {
       name: input.name,
@@ -206,6 +236,16 @@ export class MockSkymail {
   /** Requests to the API, without the ones the editor reads with. */
   writes(): Recorded[] {
     return this.requests.filter((request) => request.method !== "GET");
+  }
+
+  /** Holds the next `method` request to `path` (after the API base) at `stage`, until released. */
+  hold(method: string, path: string, stage: "request" | "answer"): Hold {
+    let reach = () => {};
+    let release = () => {};
+    const reached = new Promise<void>((resolve) => (reach = resolve));
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    this.holds.push({ method, path, stage, used: false, reach, gate });
+    return { reached, release };
   }
 
   async attach(page: Page) {
@@ -294,13 +334,16 @@ export class MockSkymail {
     } catch {
       // A request from no frame (a worker) has none.
     }
-    const answer = this.respond({
-      method: request.method(),
-      path: new URL(request.url()).pathname.slice(new URL(E2E_API_URL).pathname.length),
-      body,
-      authorization: request.headers().authorization,
-      frameUrl,
-    });
+    const method = request.method();
+    const path = new URL(request.url()).pathname.slice(new URL(E2E_API_URL).pathname.length);
+    const held = this.holds.find((hold) => !hold.used && hold.method === method && hold.path === path);
+    if (held) {
+      held.used = true;
+      held.reach();
+      if (held.stage === "request") await held.gate;
+    }
+    const answer = this.respond({ method, path, body, authorization: request.headers().authorization, frameUrl });
+    if (held?.stage === "answer") await held.gate;
     await route.fulfill({
       status: answer.status,
       contentType: "application/json",
@@ -321,6 +364,7 @@ export class MockSkymail {
     if (!authorized) return refuse(401, "server.unauthorized");
 
     const templateMatch = /^\/templates\/([^/]+)$/.exec(path);
+    const requiredMatch = /^\/templates\/([^/]+)\/required-variables(?:\/([^/]+))?$/.exec(path);
     const versionMatch = /^\/templates\/([^/]+)\/versions\/([^/]+)(?:\/(publish|discard))?$/.exec(path);
     const draftsMatch = /^\/templates\/([^/]+)\/drafts$/.exec(path);
 
@@ -342,6 +386,13 @@ export class MockSkymail {
       }
     }
     if (method === "POST" && draftsMatch) return this.saveDraft(draftsMatch[1], asFields(body));
+    if (requiredMatch && ((method === "POST" && !requiredMatch[2]) || (method === "DELETE" && requiredMatch[2]))) {
+      if (request.authorization !== `Bearer ${accessToken("writer")}`) return refuse(403, "server.forbidden");
+      const [, templateId, name] = requiredMatch;
+      return method === "POST"
+        ? this.markRequired(templateId, asFields(body).name)
+        : this.releaseRequired(templateId, decodeURIComponent(name));
+    }
 
     return refuse(501, "e2e.not_mocked", { method, path });
   }
@@ -382,14 +433,54 @@ export class MockSkymail {
   }
 
   /**
-   * The Required variables a body no longer references. A rough stand-in for
-   * the server's parse (an action naming `.Name`), enough to see the refusal.
+   * The Required variables `html` does not reference, as requiredvars.CheckBody
+   * lists them: each with its source and reason, sorted by name byte by byte.
+   * `operator` stands in for the operator set, for a check before it is written.
    */
-  private missingRequired(templateId: string, html: string) {
-    const referenced = (name: string) => new RegExp(`\\{\\{[^}]*\\$?\\.${name}\\b`).test(html);
-    return this.row(templateId)
-      .contract_required_variables.filter((variable) => !referenced(variable.name))
-      .map((variable) => ({ name: variable.name, source: "contract", reason: variable.reason }));
+  private missingRequired(templateId: string, html: string, operator = this.row(templateId).operator_required_variables) {
+    const referenced = new Set(referencedVariables(html));
+    return [
+      ...this.row(templateId).contract_required_variables.map(({ name, reason }) => ({ name, source: "contract", reason })),
+      ...operator.map((name) => ({ name, source: "operator", reason: null })),
+    ]
+      .filter((variable) => !referenced.has(variable.name))
+      .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+  }
+
+  /** A template the two routes act on: an archived one is as good as unknown. */
+  private inUse(templateId: string): Row | null {
+    const row = this.rows.get(templateId);
+    return row && row.archived_at === null ? row : null;
+  }
+
+  private markRequired(templateId: string, name: unknown): Answer {
+    const row = this.inUse(templateId);
+    if (!row) return refuse(404, "server.not_found");
+    if (typeof name !== "string" || !isVariableName(name)) {
+      return refuse(400, "validation.error", { errors: [{ field: "name", code: "invalid_variable_name" }] });
+    }
+    // One the contract holds is required already, and stays the contract's.
+    const inContract = row.contract_required_variables.some((variable) => variable.name === name);
+    const operator =
+      inContract || row.operator_required_variables.includes(name)
+        ? row.operator_required_variables
+        : [...row.operator_required_variables, name].sort();
+    // The published body must reference every Required variable, the new one too.
+    const missing = this.missingRequired(templateId, row.html_content, operator);
+    if (missing.length > 0) return refuse(422, "template.required_variables_missing", { missing });
+    row.operator_required_variables = operator;
+    return { status: 200, body: this.served(row) };
+  }
+
+  private releaseRequired(templateId: string, name: string): Answer {
+    const row = this.inUse(templateId);
+    if (!row) return refuse(404, "server.not_found");
+    if (!isVariableName(name)) return refuse(400, "template.invalid_variable_name");
+    if (row.contract_required_variables.some((variable) => variable.name === name)) {
+      return refuse(409, "template.required_variable_in_contract", { name });
+    }
+    row.operator_required_variables = row.operator_required_variables.filter((marked) => marked !== name);
+    return { status: 200, body: this.served(row) };
   }
 
   private publishDraft(version: Version, body: unknown): Answer {
@@ -406,6 +497,9 @@ export class MockSkymail {
         published_version_id: row.published_version_id,
       });
     }
+    // Against the Required variables as they are now, not as they were when the draft was saved.
+    const missing = this.missingRequired(row.id, version.html_content);
+    if (missing.length > 0) return refuse(422, "template.required_variables_missing", { missing });
     this.publish(version);
     return { status: 200, body: this.served(row) };
   }

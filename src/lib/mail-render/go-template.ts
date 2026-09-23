@@ -6,6 +6,13 @@
  * Not a parser. It finds where actions are; whether they make a valid template
  * is the server's to say.
  */
+import { v } from "../../../emails/go";
+
+/**
+ * A variable as the panel writes it for an operator: the action that prints
+ * it, `{{.Name}}` — the repo templates' own `v`.
+ */
+export const variableAction: (name: string) => string = v;
 
 export interface Action {
   /** Offset of the opening `{{`. */

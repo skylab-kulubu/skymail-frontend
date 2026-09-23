@@ -22,19 +22,24 @@ const PART_LABEL: ReadonlyMap<string, string> = new Map([
   ["html", "HTML gövdesi"],
 ]);
 
+/**
+ * Why the mail needs a Required variable: the reason the repo gives beside a
+ * contract variable, or else where the requirement comes from.
+ */
+export function whyRequired(source: MissingVariable["source"], reason: unknown): string {
+  if (typeof reason === "string" && reason.trim() !== "") return reason;
+  return source === "contract"
+    ? "Gönderen servisin sözleşmesi bu değişkeni istiyor."
+    : "Bir operatör bu değişkeni zorunlu işaretledi.";
+}
+
 function missingVariables(value: unknown): MissingVariable[] {
   if (!Array.isArray(value)) return [];
   return value.flatMap((entry): MissingVariable[] => {
     if (typeof entry !== "object" || entry === null) return [];
     const { name, source, reason } = entry as Record<string, unknown>;
     if (typeof name !== "string" || (source !== "contract" && source !== "operator")) return [];
-    const why =
-      typeof reason === "string" && reason.trim() !== ""
-        ? reason
-        : source === "contract"
-          ? "Gönderen servisin sözleşmesi bu değişkeni istiyor."
-          : "Bir operatör bu değişkeni zorunlu işaretledi.";
-    return [{ name, source, why }];
+    return [{ name, source, why: whyRequired(source, reason) }];
   });
 }
 
