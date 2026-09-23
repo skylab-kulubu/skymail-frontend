@@ -71,7 +71,7 @@ yarn typecheck        # next typegen && tsc --noEmit
 yarn build            # ortam değişkeni gerekmez
 yarn lint             # ESLint (TypeScript, hooks, Next.js kuralları)
 yarn api:check        # bütün Node testleri (src/**/*.test.ts): HTTP istemcisi, oturum token'ı, roller, tema ve render modülü
-yarn emails:check     # zengin metin dönüştürücüsü
+yarn emails:check     # serbest duyuru gövdesi: yazılan metin işaretlemeye dönmez, sunucunun izin listesi gövdeyi olduğu gibi bırakır
 yarn templates:check  # yalnız render modülünün testleri: repo template'leri JSX modunda, Visual belge ve modu (emails:render kontrolleriyle), HTML modu, değişkenler, önizleme, kaydetme kararı
 yarn emails:render    # repodaki Mail template'leri render edip denetler
 yarn test:e2e         # tarayıcı testleri (Playwright): editörün riskli akışları, taklit API ile

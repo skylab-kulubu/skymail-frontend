@@ -51,7 +51,7 @@
     "api:check": "tsx --test \"src/**/*.test.ts\"",
     "emails:render": "tsx scripts/render-templates.ts",
     "emails:seed": "tsx scripts/seed-templates.ts",
-    "emails:check": "tsx scripts/check-rich-text.ts",
+    "emails:check": "tsx --test src/lib/mail-render/free-body.test.ts src/lib/mail-render/server-allowlist.test.ts",
     "templates:check": "tsx --test \"src/lib/mail-render/*.test.ts\"",
     "editor:assets": "tsx scripts/build-editor-assets.ts",
     "test:e2e": "playwright test"

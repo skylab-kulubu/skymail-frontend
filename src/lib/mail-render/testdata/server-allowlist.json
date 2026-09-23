@@ -1,0 +1,1026 @@
+{
+  "about": "What skymail-backend makes of each input with the allow-list a free announcement body goes through: sanitizeEmailHTML (internal/mailer/sanitize.go, last changed in 0843303, bluemonday v1.0.27), run on origin/main 33266dd by server-allowlist-golden.go. `policy` is the policy as that file writes it. `cases` are written by hand; `generated` are a sample of 7000 random bodies and link addresses the reimplementation was held against (all 7000 gave the same bytes).",
+  "policy": [
+    "p.AllowElements(\"p\", \"br\", \"strong\", \"b\", \"em\", \"i\", \"u\", \"ul\", \"ol\", \"li\", \"h2\", \"h3\", \"blockquote\")",
+    "p.AllowAttrs(\"href\").OnElements(\"a\")",
+    "p.AllowURLSchemes(\"http\", \"https\", \"mailto\")",
+    "p.RequireParseableURLs(true)",
+    "p.AddTargetBlankToFullyQualifiedLinks(true)"
+  ],
+  "cases": [
+    {
+      "input": "<p>Merhaba</p>",
+      "output": "<p>Merhaba</p>"
+    },
+    {
+      "input": "<h2>Başlık</h2><h3>Alt başlık</h3><p><strong>k</strong> <b>b</b> <em>e</em> <i>i</i> <u>u</u><br><br/>son</p><ul><li>bir</li></ul><ol><li>iki</li></ol><blockquote>alıntı</blockquote>",
+      "output": "<h2>Başlık</h2><h3>Alt başlık</h3><p><strong>k</strong> <b>b</b> <em>e</em> <i>i</i> <u>u</u><br><br/>son</p><ul><li>bir</li></ul><ol><li>iki</li></ol><blockquote>alıntı</blockquote>"
+    },
+    {
+      "input": "<p>Davutpaşa'da \"GECEKODU\" &amp; 3 &lt; 5 &gt; 2</p>",
+      "output": "<p>Davutpaşa&#39;da &#34;GECEKODU&#34; &amp; 3 &lt; 5 &gt; 2</p>"
+    },
+    {
+      "input": "<p>Ali&#x27;nin &quot;kodu&quot; &amp; &#39;tek&#39; &#34;çift&#34;</p>",
+      "output": "<p>Ali&#39;nin &#34;kodu&#34; &amp; &#39;tek&#39; &#34;çift&#34;</p>"
+    },
+    {
+      "input": "<p>a&nbsp;b &copy; &hellip; &#8217;</p>",
+      "output": "<p>a b © … ’</p>"
+    },
+    {
+      "input": "<p>merhaba</p><script>alert(1)</script><p>son</p>",
+      "output": "<p>merhaba</p><p>son</p>"
+    },
+    {
+      "input": "<style>p{color:red}</style><p>x</p>",
+      "output": "<p>x</p>"
+    },
+    {
+      "input": "<p style=\"color:red\" class=\"x\" onclick=\"steal()\">metin</p>",
+      "output": "<p>metin</p>"
+    },
+    {
+      "input": "<div><img src=\"https://tracker.example/p.gif\"><span>içerik</span><hr></div>",
+      "output": "içerik"
+    },
+    {
+      "input": "<p><a href=\"https://yildizskylab.com\">site</a></p>",
+      "output": "<p><a href=\"https://yildizskylab.com\" target=\"_blank\" rel=\"noopener\">site</a></p>"
+    },
+    {
+      "input": "<p><a href=\"http://ornek.com/a b\">boşluk</a></p>",
+      "output": "<p>boşluk</p>"
+    },
+    {
+      "input": "<p><a href=\"javascript:steal()\">js</a></p>",
+      "output": "<p>js</p>"
+    },
+    {
+      "input": "<p><a href=\"mailto:ayse@ornek.com\">mail</a></p>",
+      "output": "<p><a href=\"mailto:ayse@ornek.com\">mail</a></p>"
+    },
+    {
+      "input": "<p><a href=\"mailto:ayse@ornek.com?subject=Merhaba%20D%C3%BCnya\">konulu</a></p>",
+      "output": "<p><a href=\"mailto:ayse@ornek.com?subject=Merhaba%20D%C3%BCnya\">konulu</a></p>"
+    },
+    {
+      "input": "<p><a href=\"HTTPS://Ornek.COM/Yol\">büyük</a></p>",
+      "output": "<p><a href=\"https://Ornek.COM/Yol\" target=\"_blank\" rel=\"noopener\">büyük</a></p>"
+    },
+    {
+      "input": "<p><a href=\"/goreli\">göreli</a></p>",
+      "output": "<p>göreli</p>"
+    },
+    {
+      "input": "<p><a href=\"https://ornek.com/ş?q=ç#bölüm\">türkçe</a></p>",
+      "output": "<p><a href=\"https://ornek.com/%C5%9F?q=ç#b%C3%B6l%C3%BCm\" target=\"_blank\" rel=\"noopener\">türkçe</a></p>"
+    },
+    {
+      "input": "<p><a href=\"https://ornek.com/%C5%9F?q=%C3%A7#b%C3%B6l%C3%BCm\">kodlu</a></p>",
+      "output": "<p><a href=\"https://ornek.com/%C5%9F?q=%C3%A7#b%C3%B6l%C3%BCm\" target=\"_blank\" rel=\"noopener\">kodlu</a></p>"
+    },
+    {
+      "input": "<p><a href=\"https://ornek.com/a|b^c#x{y}|z\">özel</a></p>",
+      "output": "<p><a href=\"https://ornek.com/a%7Cb%5Ec#x%7By%7D%7Cz\" target=\"_blank\" rel=\"noopener\">özel</a></p>"
+    },
+    {
+      "input": "<p><a href=\"https://ornek.com/a%7Cb%5Ec#x%7By%7D%7Cz\">özel kodlu</a></p>",
+      "output": "<p><a href=\"https://ornek.com/a%7Cb%5Ec#x%7By%7D%7Cz\" target=\"_blank\" rel=\"noopener\">özel kodlu</a></p>"
+    },
+    {
+      "input": "<p><a href=\"https://ornek.com/%zz\">bozuk</a></p>",
+      "output": "<p>bozuk</p>"
+    },
+    {
+      "input": "<p><a href=\"https://ornek.com/?a=1&amp;b=2\">sorgu</a></p>",
+      "output": "<p><a href=\"https://ornek.com/?a=1&amp;b=2\" target=\"_blank\" rel=\"noopener\">sorgu</a></p>"
+    },
+    {
+      "input": "<p><a href=\"https://ornek.com/it's\">tırnak</a></p>",
+      "output": "<p><a href=\"https://ornek.com/it&#39;s\" target=\"_blank\" rel=\"noopener\">tırnak</a></p>"
+    },
+    {
+      "input": "<p><a href=\"https://ornek.com/it&#39;s(1)!*[x]\">tırnak kodlu</a></p>",
+      "output": "<p><a href=\"https://ornek.com/it&#39;s(1)!*[x]\" target=\"_blank\" rel=\"noopener\">tırnak kodlu</a></p>"
+    },
+    {
+      "input": "<p><a href=\"https://ornek.com/#\">boş parça</a></p>",
+      "output": "<p><a href=\"https://ornek.com/\" target=\"_blank\" rel=\"noopener\">boş parça</a></p>"
+    },
+    {
+      "input": "<p><a href=\"https://ornek.com/?\">boş sorgu</a></p>",
+      "output": "<p><a href=\"https://ornek.com/?\" target=\"_blank\" rel=\"noopener\">boş sorgu</a></p>"
+    },
+    {
+      "input": "<p><a href=\"https://ornek.com\">eğiksiz</a></p>",
+      "output": "<p><a href=\"https://ornek.com\" target=\"_blank\" rel=\"noopener\">eğiksiz</a></p>"
+    },
+    {
+      "input": "<p><a href=\"https://ornek.com/#a#b\">iki diyez</a></p>",
+      "output": "<p><a href=\"https://ornek.com/#a%23b\" target=\"_blank\" rel=\"noopener\">iki diyez</a></p>"
+    },
+    {
+      "input": "<p><a href=\"https://ornek.com/#x?y=1'z\">parça sorgu</a></p>",
+      "output": "<p><a href=\"https://ornek.com/#x?y=1&#39;z\" target=\"_blank\" rel=\"noopener\">parça sorgu</a></p>"
+    },
+    {
+      "input": "<p><a href=\"https://user:pass@ornek.com/\">kullanıcı</a></p>",
+      "output": "<p><a href=\"https://user:pass@ornek.com/\" target=\"_blank\" rel=\"noopener\">kullanıcı</a></p>"
+    },
+    {
+      "input": "<p><a href=\"data:text/html,x\">data</a></p>",
+      "output": "<p>data</p>"
+    },
+    {
+      "input": "<p><a title=\"x\">başlıksız</a></p>",
+      "output": "<p>başlıksız</p>"
+    },
+    {
+      "input": "<p><a href=\"https://ornek.com\" target=\"_self\" rel=\"nofollow\">hedef</a></p>",
+      "output": "<p><a href=\"https://ornek.com\" target=\"_blank\" rel=\"noopener\">hedef</a></p>"
+    },
+    {
+      "input": "<p><a href=\" https://ornek.com/boşluklu \">kenar boşluğu</a></p>",
+      "output": "<p><a href=\"https://ornek.com/bo%C5%9Fluklu\" target=\"_blank\" rel=\"noopener\">kenar boşluğu</a></p>"
+    },
+    {
+      "input": "<p>a<!-- gizli -->b</p>",
+      "output": "<p>ab</p>"
+    },
+    {
+      "input": "<P><STRONG>X</STRONG></P>",
+      "output": "<p><strong>X</strong></p>"
+    },
+    {
+      "input": "<iframe>gizli</iframe><p>görünür</p>",
+      "output": "<p>görünür</p>"
+    },
+    {
+      "input": "<table><tr><td><strong>hücre</strong></td></tr></table>",
+      "output": "<strong>hücre</strong>"
+    },
+    {
+      "input": "<p><a href='https://ornek.com/x'>tek</a> <a href=https://ornek.com/y>tırnaksız</a></p>",
+      "output": "<p><a href=\"https://ornek.com/x\" target=\"_blank\" rel=\"noopener\">tek</a> <a href=\"https://ornek.com/y\" target=\"_blank\" rel=\"noopener\">tırnaksız</a></p>"
+    },
+    {
+      "input": "<p>{{.Secret}} {{safeHTML .X}} {{`{`}}</p>",
+      "output": "<p>{{.Secret}} {{safeHTML .X}} {{`{`}}</p>"
+    },
+    {
+      "input": "<p>satır\r\nsatır\rsatır</p>",
+      "output": "<p>satır\nsatır\nsatır</p>"
+    },
+    {
+      "input": "<p>🎉 İstanbul ığüşöç</p>",
+      "output": "<p>🎉 İstanbul ığüşöç</p>"
+    },
+    {
+      "input": "<h2>Duyuru</h2><p><strong><em><a href=\"https://skyl.app/gecekodu\">GECEKODU</a></em></strong> başladı</p><p><a href=\"https://skyl.app/gecekodu\"><strong>Başvur</strong></a></p>",
+      "output": "<h2>Duyuru</h2><p><strong><em><a href=\"https://skyl.app/gecekodu\" target=\"_blank\" rel=\"noopener\">GECEKODU</a></em></strong> başladı</p><p><a href=\"https://skyl.app/gecekodu\" target=\"_blank\" rel=\"noopener\"><strong>Başvur</strong></a></p>"
+    },
+    {
+      "input": "<p>tek &lt;script&gt; metin</p>",
+      "output": "<p>tek &lt;script&gt; metin</p>"
+    },
+    {
+      "input": "<p>< değil > ve & tek</p>",
+      "output": "<p>&lt; değil &gt; ve &amp; tek</p>"
+    },
+    {
+      "input": "<p><a href=\"https://ornek.com/a\">bir</a><a href=\"https://ornek.com/a\">iki</a></p>",
+      "output": "<p><a href=\"https://ornek.com/a\" target=\"_blank\" rel=\"noopener\">bir</a><a href=\"https://ornek.com/a\" target=\"_blank\" rel=\"noopener\">iki</a></p>"
+    },
+    {
+      "input": "<ul><li><p>iç içe</p></li></ul>",
+      "output": "<ul><li><p>iç içe</p></li></ul>"
+    },
+    {
+      "input": "<p><strong>kapanmamış</p>",
+      "output": "<p><strong>kapanmamış</p>"
+    },
+    {
+      "input": "</p>fazla kapanış<p>x</p>",
+      "output": "</p>fazla kapanış<p>x</p>"
+    },
+    {
+      "input": "<br>",
+      "output": "<br>"
+    },
+    {
+      "input": "<p><a href=\"https://ornek.com/x\"><img src=\"https://ornek.com/i.png\"></a></p>",
+      "output": "<p><a href=\"https://ornek.com/x\" target=\"_blank\" rel=\"noopener\"></a></p>"
+    },
+    {
+      "input": "<object><p>gizli</p></object><title>t</title><p>son</p>",
+      "output": "<p>son</p>"
+    },
+    {
+      "input": "<p><a href=\"HTTP://ornek.com/\">büyük şema</a> <a href=\"Mailto:a@b.com\">büyük mail</a></p>",
+      "output": "<p><a href=\"http://ornek.com/\" target=\"_blank\" rel=\"noopener\">büyük şema</a> <a href=\"mailto:a@b.com\">büyük mail</a></p>"
+    }
+  ],
+  "generated": [
+    {
+      "input": "<img title=\"t\"><a href=\"https://ornek.com/%zz\"><blockquote href=\"https://ornek.com/x\" href=\"https://ornek.com/%zz\">ığüşöç</blockquote></a><li></li></img><strong><h3></h3></strong><table></strong><textarea data-x=\"1\" target=_blank><b></textarea>",
+      "output": "<blockquote>ığüşöç</blockquote><li></li><strong><h3></h3></strong></strong>&lt;b&gt;"
+    },
+    {
+      "input": "<strong><P style=\"color:red\">5 > 3🎉</P></strong><i href='mailto:a@b.com' href=\"https://u:p@ornek.com/\"/><P href='mailto:a@b.com'></P>",
+      "output": "<strong><p>5 &gt; 3🎉</p></strong><i/><p></p>"
+    },
+    {
+      "input": "&#x27;merhaba<iframe>&#x27;</iframe></",
+      "output": "&#39;merhaba&lt;/"
+    },
+    {
+      "input": "<style></style></<h2></h2><iframe target=_blank>",
+      "output": "</h2>"
+    },
+    {
+      "input": "</><h3 href=\"https://ornek.com/#\"/>",
+      "output": "<h3/>"
+    },
+    {
+      "input": "<span title=\"t\">&amp<h3 class=x href=\"https://[::1]/\"/> <3<blockquote href=\"HTTP://Ornek.com/?q=ç&amp;x=1\">&quot;<P> <3<p href=\"https://ornek.com/it's\"><A data-x=\"1\"></A></b></P></blockquote></>",
+      "output": "&amp;<h3/> &lt;3<blockquote>&#34;<p> &lt;3<p></b></p></blockquote>"
+    },
+    {
+      "input": "<style></style>",
+      "output": ""
+    },
+    {
+      "input": "<P><script></script></P><iframe href=\"https://u:p@ornek.com/\"></img><noscript href=\"HTTP://Ornek.com/?q=ç&amp;x=1\"></title>",
+      "output": "<p></p>"
+    },
+    {
+      "input": "<table><style href=\"https://ornek.com/it's\"></style>  </table><object href=\"https://ornek.com/%zz\"></object>&amp<b class=x><noscript href=\"https://ornek.com/x\" href=\"javascript:y\"/><hr>5 > 3</hr></b>",
+      "output": "  &amp;<b>&lt;hr&gt;5 &gt; 3&lt;/hr&gt;&lt;/b&gt;"
+    },
+    {
+      "input": "&unknown;<strong></strong>",
+      "output": "&amp;unknown;<strong></strong>"
+    },
+    {
+      "input": "<A href=javascript:alert(1) href=\"https://ornek.com/it's\"><li>merhaba</br></></A></>",
+      "output": "<li>merhaba</br>"
+    },
+    {
+      "input": " <3",
+      "output": " &lt;3"
+    },
+    {
+      "input": "Davutpaşa'da  Davutpaşa'da",
+      "output": "Davutpaşa&#39;da  Davutpaşa&#39;da"
+    },
+    {
+      "input": "<!DOCTYPE html><A></A><iframe href=\"https://[::1]/\"><hr onclick=\"s()\" href=\"https://ornek.com/#\">&nbsp;<STRONG href=\"https://ornek.com/a|b{c}#d^e\" title=\"t\"/></hr><b href=\"HTTP://Ornek.com/?q=ç&amp;x=1\" style=\"color:red\">a & b<P></P></b></iframe>",
+      "output": ""
+    },
+    {
+      "input": "&copy;<a href=\"https://[::1]/\">&#39;&nbsp;</a><h2></h2><iframe target=_blank>",
+      "output": "©<a href=\"https://[::1]/\" target=\"_blank\" rel=\"noopener\">&#39; </a><h2></h2>"
+    },
+    {
+      "input": "</><h3 href=\"https://ornek.com/#\"/>",
+      "output": "<h3/>"
+    },
+    {
+      "input": "<span title=\"t\">&amp<h3 class=x href=\"https://[::1]/\"/> <3<blockquote href=\"HTTP://Ornek.com/?q=ç&amp;x=1\">&quot;<P> <3<p href=\"https://ornek.com/it's\"><A data-x=\"1\"></A></b></P></blockquote></>",
+      "output": "&amp;<h3/> &lt;3<blockquote>&#34;<p> &lt;3<p></b></p></blockquote>"
+    },
+    {
+      "input": "<style></style>",
+      "output": ""
+    },
+    {
+      "input": "<P><script></script></P><iframe href=\"https://u:p@ornek.com/\"></img><noscript href=\"HTTP://Ornek.com/?q=ç&amp;x=1\"></title>",
+      "output": "<p></p>"
+    },
+    {
+      "input": "<table><style href=\"https://ornek.com/it's\"></style>  </table><object href=\"https://ornek.com/%zz\"></object>&amp<b class=x><noscript href=\"https://ornek.com/x\" href=\"javascript:y\"/><hr>5 > 3</hr></b>",
+      "output": "  &amp;<b>&lt;hr&gt;5 &gt; 3&lt;/hr&gt;&lt;/b&gt;"
+    },
+    {
+      "input": "&unknown;<strong></strong>",
+      "output": "&amp;unknown;<strong></strong>"
+    },
+    {
+      "input": "<A href=javascript:alert(1) href=\"https://ornek.com/it's\"><li>merhaba</br></></A></>",
+      "output": "<li>merhaba</br>"
+    },
+    {
+      "input": " <3",
+      "output": " &lt;3"
+    },
+    {
+      "input": "Davutpaşa'da  Davutpaşa'da",
+      "output": "Davutpaşa&#39;da  Davutpaşa&#39;da"
+    },
+    {
+      "input": "<!DOCTYPE html><A></A><iframe href=\"https://[::1]/\"><hr onclick=\"s()\" href=\"https://ornek.com/#\">&nbsp;<STRONG href=\"https://ornek.com/a|b{c}#d^e\" title=\"t\"/></hr><b href=\"HTTP://Ornek.com/?q=ç&amp;x=1\" style=\"color:red\">a & b<P></P></b></iframe>",
+      "output": ""
+    },
+    {
+      "input": "&copy;<a href=\"https://[::1]/\">&#39;&nbsp;</a><h2></h2><iframe target=_blank>",
+      "output": "©<a href=\"https://[::1]/\" target=\"_blank\" rel=\"noopener\">&#39; </a><h2></h2>"
+    },
+    {
+      "input": "</><h3 href=\"https://ornek.com/#\"/>",
+      "output": "<h3/>"
+    },
+    {
+      "input": "<span title=\"t\">&amp<h3 class=x href=\"https://[::1]/\"/> <3<blockquote href=\"HTTP://Ornek.com/?q=ç&amp;x=1\">&quot;<P> <3<p href=\"https://ornek.com/it's\"><A data-x=\"1\"></A></b></P></blockquote></>",
+      "output": "&amp;<h3/> &lt;3<blockquote>&#34;<p> &lt;3<p></b></p></blockquote>"
+    },
+    {
+      "input": "<style></style>",
+      "output": ""
+    },
+    {
+      "input": "<P><script></script></P><iframe href=\"https://u:p@ornek.com/\"></img><noscript href=\"HTTP://Ornek.com/?q=ç&amp;x=1\"></title>",
+      "output": "<p></p>"
+    },
+    {
+      "input": "<table><style href=\"https://ornek.com/it's\"></style>  </table><object href=\"https://ornek.com/%zz\"></object>&amp<b class=x><noscript href=\"https://ornek.com/x\" href=\"javascript:y\"/><hr>5 > 3</hr></b>",
+      "output": "  &amp;<b>&lt;hr&gt;5 &gt; 3&lt;/hr&gt;&lt;/b&gt;"
+    },
+    {
+      "input": "&unknown;<strong></strong>",
+      "output": "&amp;unknown;<strong></strong>"
+    },
+    {
+      "input": "<A href=javascript:alert(1) href=\"https://ornek.com/it's\"><li>merhaba</br></></A></>",
+      "output": "<li>merhaba</br>"
+    },
+    {
+      "input": " <3",
+      "output": " &lt;3"
+    },
+    {
+      "input": "Davutpaşa'da  Davutpaşa'da",
+      "output": "Davutpaşa&#39;da  Davutpaşa&#39;da"
+    },
+    {
+      "input": "<!DOCTYPE html><A></A><iframe href=\"https://[::1]/\"><hr onclick=\"s()\" href=\"https://ornek.com/#\">&nbsp;<STRONG href=\"https://ornek.com/a|b{c}#d^e\" title=\"t\"/></hr><b href=\"HTTP://Ornek.com/?q=ç&amp;x=1\" style=\"color:red\">a & b<P></P></b></iframe>",
+      "output": ""
+    },
+    {
+      "input": "&copy;<a href=\"https://[::1]/\">&#39;&nbsp;</a><h2></h2><iframe target=_blank>",
+      "output": "©<a href=\"https://[::1]/\" target=\"_blank\" rel=\"noopener\">&#39; </a><h2></h2>"
+    },
+    {
+      "input": "</><h3 href=\"https://ornek.com/#\"/>",
+      "output": "<h3/>"
+    },
+    {
+      "input": "<span title=\"t\">&amp<h3 class=x href=\"https://[::1]/\"/> <3<blockquote href=\"HTTP://Ornek.com/?q=ç&amp;x=1\">&quot;<P> <3<p href=\"https://ornek.com/it's\"><A data-x=\"1\"></A></b></P></blockquote></>",
+      "output": "&amp;<h3/> &lt;3<blockquote>&#34;<p> &lt;3<p></b></p></blockquote>"
+    },
+    {
+      "input": "<style></style>",
+      "output": ""
+    },
+    {
+      "input": "<P><script></script></P><iframe href=\"https://u:p@ornek.com/\"></img><noscript href=\"HTTP://Ornek.com/?q=ç&amp;x=1\"></title>",
+      "output": "<p></p>"
+    },
+    {
+      "input": "<table><style href=\"https://ornek.com/it's\"></style>  </table><object href=\"https://ornek.com/%zz\"></object>&amp<b class=x><noscript href=\"https://ornek.com/x\" href=\"javascript:y\"/><hr>5 > 3</hr></b>",
+      "output": "  &amp;<b>&lt;hr&gt;5 &gt; 3&lt;/hr&gt;&lt;/b&gt;"
+    },
+    {
+      "input": "&unknown;<strong></strong>",
+      "output": "&amp;unknown;<strong></strong>"
+    },
+    {
+      "input": "<A href=javascript:alert(1) href=\"https://ornek.com/it's\"><li>merhaba</br></></A></>",
+      "output": "<li>merhaba</br>"
+    },
+    {
+      "input": " <3",
+      "output": " &lt;3"
+    },
+    {
+      "input": "Davutpaşa'da  Davutpaşa'da",
+      "output": "Davutpaşa&#39;da  Davutpaşa&#39;da"
+    },
+    {
+      "input": "<!DOCTYPE html><A></A><iframe href=\"https://[::1]/\"><hr onclick=\"s()\" href=\"https://ornek.com/#\">&nbsp;<STRONG href=\"https://ornek.com/a|b{c}#d^e\" title=\"t\"/></hr><b href=\"HTTP://Ornek.com/?q=ç&amp;x=1\" style=\"color:red\">a & b<P></P></b></iframe>",
+      "output": ""
+    },
+    {
+      "input": "&copy;<a href=\"https://[::1]/\">&#39;&nbsp;</a><h2></h2><iframe target=_blank>",
+      "output": "©<a href=\"https://[::1]/\" target=\"_blank\" rel=\"noopener\">&#39; </a><h2></h2>"
+    },
+    {
+      "input": "</><h3 href=\"https://ornek.com/#\"/>",
+      "output": "<h3/>"
+    },
+    {
+      "input": "<span title=\"t\">&amp<h3 class=x href=\"https://[::1]/\"/> <3<blockquote href=\"HTTP://Ornek.com/?q=ç&amp;x=1\">&quot;<P> <3<p href=\"https://ornek.com/it's\"><A data-x=\"1\"></A></b></P></blockquote></>",
+      "output": "&amp;<h3/> &lt;3<blockquote>&#34;<p> &lt;3<p></b></p></blockquote>"
+    },
+    {
+      "input": "<style></style>",
+      "output": ""
+    },
+    {
+      "input": "<P><script></script></P><iframe href=\"https://u:p@ornek.com/\"></img><noscript href=\"HTTP://Ornek.com/?q=ç&amp;x=1\"></title>",
+      "output": "<p></p>"
+    },
+    {
+      "input": "<table><style href=\"https://ornek.com/it's\"></style>  </table><object href=\"https://ornek.com/%zz\"></object>&amp<b class=x><noscript href=\"https://ornek.com/x\" href=\"javascript:y\"/><hr>5 > 3</hr></b>",
+      "output": "  &amp;<b>&lt;hr&gt;5 &gt; 3&lt;/hr&gt;&lt;/b&gt;"
+    },
+    {
+      "input": "&unknown;<strong></strong>",
+      "output": "&amp;unknown;<strong></strong>"
+    },
+    {
+      "input": "<A href=javascript:alert(1) href=\"https://ornek.com/it's\"><li>merhaba</br></></A></>",
+      "output": "<li>merhaba</br>"
+    },
+    {
+      "input": " <3",
+      "output": " &lt;3"
+    },
+    {
+      "input": "Davutpaşa'da  Davutpaşa'da",
+      "output": "Davutpaşa&#39;da  Davutpaşa&#39;da"
+    },
+    {
+      "input": "<!DOCTYPE html><A></A><iframe href=\"https://[::1]/\"><hr onclick=\"s()\" href=\"https://ornek.com/#\">&nbsp;<STRONG href=\"https://ornek.com/a|b{c}#d^e\" title=\"t\"/></hr><b href=\"HTTP://Ornek.com/?q=ç&amp;x=1\" style=\"color:red\">a & b<P></P></b></iframe>",
+      "output": ""
+    },
+    {
+      "input": "&copy;<a href=\"https://[::1]/\">&#39;&nbsp;</a><h2></h2><iframe target=_blank>",
+      "output": "©<a href=\"https://[::1]/\" target=\"_blank\" rel=\"noopener\">&#39; </a><h2></h2>"
+    },
+    {
+      "input": "</><h3 href=\"https://ornek.com/#\"/>",
+      "output": "<h3/>"
+    },
+    {
+      "input": "<span title=\"t\">&amp<h3 class=x href=\"https://[::1]/\"/> <3<blockquote href=\"HTTP://Ornek.com/?q=ç&amp;x=1\">&quot;<P> <3<p href=\"https://ornek.com/it's\"><A data-x=\"1\"></A></b></P></blockquote></>",
+      "output": "&amp;<h3/> &lt;3<blockquote>&#34;<p> &lt;3<p></b></p></blockquote>"
+    },
+    {
+      "input": "<style></style>",
+      "output": ""
+    },
+    {
+      "input": "<P><script></script></P><iframe href=\"https://u:p@ornek.com/\"></img><noscript href=\"HTTP://Ornek.com/?q=ç&amp;x=1\"></title>",
+      "output": "<p></p>"
+    },
+    {
+      "input": "<table><style href=\"https://ornek.com/it's\"></style>  </table><object href=\"https://ornek.com/%zz\"></object>&amp<b class=x><noscript href=\"https://ornek.com/x\" href=\"javascript:y\"/><hr>5 > 3</hr></b>",
+      "output": "  &amp;<b>&lt;hr&gt;5 &gt; 3&lt;/hr&gt;&lt;/b&gt;"
+    },
+    {
+      "input": "&unknown;<strong></strong>",
+      "output": "&amp;unknown;<strong></strong>"
+    },
+    {
+      "input": "<A href=javascript:alert(1) href=\"https://ornek.com/it's\"><li>merhaba</br></></A></>",
+      "output": "<li>merhaba</br>"
+    },
+    {
+      "input": " <3",
+      "output": " &lt;3"
+    },
+    {
+      "input": "Davutpaşa'da  Davutpaşa'da",
+      "output": "Davutpaşa&#39;da  Davutpaşa&#39;da"
+    },
+    {
+      "input": "<!DOCTYPE html><A></A><iframe href=\"https://[::1]/\"><hr onclick=\"s()\" href=\"https://ornek.com/#\">&nbsp;<STRONG href=\"https://ornek.com/a|b{c}#d^e\" title=\"t\"/></hr><b href=\"HTTP://Ornek.com/?q=ç&amp;x=1\" style=\"color:red\">a & b<P></P></b></iframe>",
+      "output": ""
+    },
+    {
+      "input": "&copy;<a href=\"https://[::1]/\">&#39;&nbsp;</a><h2></h2><iframe target=_blank>",
+      "output": "©<a href=\"https://[::1]/\" target=\"_blank\" rel=\"noopener\">&#39; </a><h2></h2>"
+    },
+    {
+      "input": "</><h3 href=\"https://ornek.com/#\"/>",
+      "output": "<h3/>"
+    },
+    {
+      "input": "<span title=\"t\">&amp<h3 class=x href=\"https://[::1]/\"/> <3<blockquote href=\"HTTP://Ornek.com/?q=ç&amp;x=1\">&quot;<P> <3<p href=\"https://ornek.com/it's\"><A data-x=\"1\"></A></b></P></blockquote></>",
+      "output": "&amp;<h3/> &lt;3<blockquote>&#34;<p> &lt;3<p></b></p></blockquote>"
+    },
+    {
+      "input": "<style></style>",
+      "output": ""
+    },
+    {
+      "input": "<P><script></script></P><iframe href=\"https://u:p@ornek.com/\"></img><noscript href=\"HTTP://Ornek.com/?q=ç&amp;x=1\"></title>",
+      "output": "<p></p>"
+    },
+    {
+      "input": "<table><style href=\"https://ornek.com/it's\"></style>  </table><object href=\"https://ornek.com/%zz\"></object>&amp<b class=x><noscript href=\"https://ornek.com/x\" href=\"javascript:y\"/><hr>5 > 3</hr></b>",
+      "output": "  &amp;<b>&lt;hr&gt;5 &gt; 3&lt;/hr&gt;&lt;/b&gt;"
+    },
+    {
+      "input": "&unknown;<strong></strong>",
+      "output": "&amp;unknown;<strong></strong>"
+    },
+    {
+      "input": "<A href=javascript:alert(1) href=\"https://ornek.com/it's\"><li>merhaba</br></></A></>",
+      "output": "<li>merhaba</br>"
+    },
+    {
+      "input": " <3",
+      "output": " &lt;3"
+    },
+    {
+      "input": "Davutpaşa'da  Davutpaşa'da",
+      "output": "Davutpaşa&#39;da  Davutpaşa&#39;da"
+    },
+    {
+      "input": "<!DOCTYPE html><A></A><iframe href=\"https://[::1]/\"><hr onclick=\"s()\" href=\"https://ornek.com/#\">&nbsp;<STRONG href=\"https://ornek.com/a|b{c}#d^e\" title=\"t\"/></hr><b href=\"HTTP://Ornek.com/?q=ç&amp;x=1\" style=\"color:red\">a & b<P></P></b></iframe>",
+      "output": ""
+    },
+    {
+      "input": "&copy;<a href=\"https://[::1]/\">&#39;&nbsp;</a><h2></h2><iframe target=_blank>",
+      "output": "©<a href=\"https://[::1]/\" target=\"_blank\" rel=\"noopener\">&#39; </a><h2></h2>"
+    },
+    {
+      "input": "</><h3 href=\"https://ornek.com/#\"/>",
+      "output": "<h3/>"
+    },
+    {
+      "input": "<span title=\"t\">&amp<h3 class=x href=\"https://[::1]/\"/> <3<blockquote href=\"HTTP://Ornek.com/?q=ç&amp;x=1\">&quot;<P> <3<p href=\"https://ornek.com/it's\"><A data-x=\"1\"></A></b></P></blockquote></>",
+      "output": "&amp;<h3/> &lt;3<blockquote>&#34;<p> &lt;3<p></b></p></blockquote>"
+    },
+    {
+      "input": "<style></style>",
+      "output": ""
+    },
+    {
+      "input": "<P><script></script></P><iframe href=\"https://u:p@ornek.com/\"></img><noscript href=\"HTTP://Ornek.com/?q=ç&amp;x=1\"></title>",
+      "output": "<p></p>"
+    },
+    {
+      "input": "<table><style href=\"https://ornek.com/it's\"></style>  </table><object href=\"https://ornek.com/%zz\"></object>&amp<b class=x><noscript href=\"https://ornek.com/x\" href=\"javascript:y\"/><hr>5 > 3</hr></b>",
+      "output": "  &amp;<b>&lt;hr&gt;5 &gt; 3&lt;/hr&gt;&lt;/b&gt;"
+    },
+    {
+      "input": "&unknown;<strong></strong>",
+      "output": "&amp;unknown;<strong></strong>"
+    },
+    {
+      "input": "<A href=javascript:alert(1) href=\"https://ornek.com/it's\"><li>merhaba</br></></A></>",
+      "output": "<li>merhaba</br>"
+    },
+    {
+      "input": " <3",
+      "output": " &lt;3"
+    },
+    {
+      "input": "Davutpaşa'da  Davutpaşa'da",
+      "output": "Davutpaşa&#39;da  Davutpaşa&#39;da"
+    },
+    {
+      "input": "<!DOCTYPE html><A></A><iframe href=\"https://[::1]/\"><hr onclick=\"s()\" href=\"https://ornek.com/#\">&nbsp;<STRONG href=\"https://ornek.com/a|b{c}#d^e\" title=\"t\"/></hr><b href=\"HTTP://Ornek.com/?q=ç&amp;x=1\" style=\"color:red\">a & b<P></P></b></iframe>",
+      "output": ""
+    },
+    {
+      "input": "&copy;<a href=\"https://[::1]/\">&#39;&nbsp;</a><h2></h2><iframe target=_blank>",
+      "output": "©<a href=\"https://[::1]/\" target=\"_blank\" rel=\"noopener\">&#39; </a><h2></h2>"
+    },
+    {
+      "input": "</><h3 href=\"https://ornek.com/#\"/>",
+      "output": "<h3/>"
+    },
+    {
+      "input": "<span title=\"t\">&amp<h3 class=x href=\"https://[::1]/\"/> <3<blockquote href=\"HTTP://Ornek.com/?q=ç&amp;x=1\">&quot;<P> <3<p href=\"https://ornek.com/it's\"><A data-x=\"1\"></A></b></P></blockquote></>",
+      "output": "&amp;<h3/> &lt;3<blockquote>&#34;<p> &lt;3<p></b></p></blockquote>"
+    },
+    {
+      "input": "<style></style>",
+      "output": ""
+    },
+    {
+      "input": "<P><script></script></P><iframe href=\"https://u:p@ornek.com/\"></img><noscript href=\"HTTP://Ornek.com/?q=ç&amp;x=1\"></title>",
+      "output": "<p></p>"
+    },
+    {
+      "input": "<table><style href=\"https://ornek.com/it's\"></style>  </table><object href=\"https://ornek.com/%zz\"></object>&amp<b class=x><noscript href=\"https://ornek.com/x\" href=\"javascript:y\"/><hr>5 > 3</hr></b>",
+      "output": "  &amp;<b>&lt;hr&gt;5 &gt; 3&lt;/hr&gt;&lt;/b&gt;"
+    },
+    {
+      "input": "&unknown;<strong></strong>",
+      "output": "&amp;unknown;<strong></strong>"
+    },
+    {
+      "input": "<A href=javascript:alert(1) href=\"https://ornek.com/it's\"><li>merhaba</br></></A></>",
+      "output": "<li>merhaba</br>"
+    },
+    {
+      "input": " <3",
+      "output": " &lt;3"
+    },
+    {
+      "input": "<a href=\"https:[fe80::1%25en0]/%2F\">x</a>",
+      "output": "<a href=\"https:[fe80::1%25en0]/%2F\">x</a>"
+    },
+    {
+      "input": "<a href=\"https://[::1]:80?~!;`%25\">x</a>",
+      "output": "<a href=\"https://[::1]:80?~!;`%25\" target=\"_blank\" rel=\"noopener\">x</a>"
+    },
+    {
+      "input": "<a href=\"http://[::1]/}`%[\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\" https:///;\">x</a>",
+      "output": "<a href=\"https:///;\">x</a>"
+    },
+    {
+      "input": "<a href=\"https:ornek.com:x/a\">x</a>",
+      "output": "<a href=\"https:ornek.com:x/a\">x</a>"
+    },
+    {
+      "input": "<a href=\"[::1]/a/<a\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"https:////'} \t%zz\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"https:ör%C3%B6.com/\">x</a>",
+      "output": "<a href=\"https:ör%C3%B6.com/\">x</a>"
+    },
+    {
+      "input": "<a href=\"mailto:ayse@ornek.com~ş#:`/,\">x</a>",
+      "output": "<a href=\"mailto:ayse@ornek.com~ş#:%60/,\">x</a>"
+    },
+    {
+      "input": "<a href=\"https://ornek.com/\">x</a>",
+      "output": "<a href=\"https://ornek.com/\" target=\"_blank\" rel=\"noopener\">x</a>"
+    },
+    {
+      "input": "<a href=\"javascript:u:p@ornek.com^,\\.ş\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"javascript:u:p@ornek.com/ 🎉?0\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"ftp://ornek.com:8080/\u0001-ş^^\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"https://[::1]:80\">x</a>",
+      "output": "<a href=\"https://[::1]:80\" target=\"_blank\" rel=\"noopener\">x</a>"
+    },
+    {
+      "input": "<a href=\"Mailto:ör%C3%B6.com/*%25\">x</a>",
+      "output": "<a href=\"mailto:ör%C3%B6.com/*%25\">x</a>"
+    },
+    {
+      "input": "<a href=\"http://şirket.com/,./\">x</a>",
+      "output": "<a href=\"http://%C5%9Firket.com/,./\" target=\"_blank\" rel=\"noopener\">x</a>"
+    },
+    {
+      "input": "<a href=\"https:///a b.com/'^[\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"ornek.com%41/0%2F+Z/0\t\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"HTTPS://Ornek.COM/}%25.(/&quot;+\">x</a>",
+      "output": "<a href=\"https://Ornek.COM/%7D%25.%28/%22+\" target=\"_blank\" rel=\"noopener\">x</a>"
+    },
+    {
+      "input": "<a href=\"ftp://şirket.com/a\n[`%{]\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"https:[fe80::1%25en0]/=\t0??\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"Mailto:Ornek.COM/*.-Z:\">x</a>",
+      "output": "<a href=\"mailto:Ornek.COM/*.-Z:\">x</a>"
+    },
+    {
+      "input": "<a href=\"ornek.com:x/\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"mailto:a@b.com?subject=Merhaba Dünya)\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"http://a b.com/? %[ç\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"mailto:\">x</a>",
+      "output": "<a href=\"mailto:\">x</a>"
+    },
+    {
+      "input": "<a href=\"https://[1.2.3.4]/\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"//u:p@ornek.com(?\\=~.&amp;\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"mailto:-+{\u0001[{\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"//ornek.com:8080\n\t]\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"https:////:*%2F_\">x</a>",
+      "output": "<a href=\"https:////:*%2F_\">x</a>"
+    },
+    {
+      "input": "<a href=\"https:ornek.com:x/%C5%9F#*}+\u0001:\">x</a>",
+      "output": "<a href=\"https:ornek.com:x/%C5%9F#*%7D+%01:\">x</a>"
+    },
+    {
+      "input": "<a href=\"//Ornek.COM/{+.\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\" https://ornek.com/)\">x</a>",
+      "output": "<a href=\"https://ornek.com/)\" target=\"_blank\" rel=\"noopener\">x</a>"
+    },
+    {
+      "input": "<a href=\"mailto:a@b.com?subject=Merhaba Dünya+'\t\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\" https:///ş\">x</a>",
+      "output": "<a href=\"https:///%C5%9F\">x</a>"
+    },
+    {
+      "input": "<a href=\" https://u:p@ornek.com/%41`(}\">x</a>",
+      "output": "<a href=\"https://u:p@ornek.com/A%60%28%7D\" target=\"_blank\" rel=\"noopener\">x</a>"
+    },
+    {
+      "input": "<a href=\"HTTPS://ornek.com:x/;|ç @\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"mailto:\">x</a>",
+      "output": "<a href=\"mailto:\">x</a>"
+    },
+    {
+      "input": "<a href=\"HTTPS://a@b@c.com/\">x</a>",
+      "output": "<a href=\"https://a%40b@c.com/\" target=\"_blank\" rel=\"noopener\">x</a>"
+    },
+    {
+      "input": "<a href=\"mailto:x(Z$ş\">x</a>",
+      "output": "<a href=\"mailto:x(Z$ş\">x</a>"
+    },
+    {
+      "input": "<a href=\"HTTPS://[::1]/$*'\">x</a>",
+      "output": "<a href=\"https://[::1]/$*&#39;\" target=\"_blank\" rel=\"noopener\">x</a>"
+    },
+    {
+      "input": "<a href=\"ornek.com%41/%#?\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\" https://a@b@c.com/%zz/;;🎉?!\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"Mailto:[::1]/+🎉$\\aş~\">x</a>",
+      "output": "<a href=\"mailto:[::1]/+🎉$\\aş~\">x</a>"
+    },
+    {
+      "input": "<a href=\"javascript:u:p@ornek.com/\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"ftp://[::1]:80/+?^$_\\\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"mailto:a@b.com?subject=Merhaba DünyaşZZ[%25\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"https://Ornek.COM/\">x</a>",
+      "output": "<a href=\"https://Ornek.COM/\" target=\"_blank\" rel=\"noopener\">x</a>"
+    },
+    {
+      "input": "<a href=\"u:p@ornek.com/%C5%9F\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"//ornek.com:x/`?++}🎉\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"ornek.com/\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"https:///ornek.com:x/%2F\">x</a>",
+      "output": "<a href=\"https:///ornek.com:x/%2F\">x</a>"
+    },
+    {
+      "input": "<a href=\"http://u:p@ornek.com/Z&amp;\u0001\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"mailto:a@b.com?subject=Merhaba DünyaZ\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"ftp://şirket.com/ş%C5%9F\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"//a@b@c.com/|\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"ornek.com:x/ -Z\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"https://[1.2.3.4]/#.=\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"ftp://[1.2.3.4]/🎉'\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"Mailto:[1.2.3.4]/]@0};\">x</a>",
+      "output": "<a href=\"mailto:[1.2.3.4]/]@0};\">x</a>"
+    },
+    {
+      "input": "<a href=\"https://///\">x</a>",
+      "output": "<a href=\"https://///\">x</a>"
+    },
+    {
+      "input": "<a href=\"Mailto:[1.2.3.4]/&amp;%zz\u0001\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"javascript:ör%C3%B6.com/?a'(#<\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"https:///[::1]/#%C5%9F00\">x</a>",
+      "output": "<a href=\"https:///[::1]/#%C5%9F00\">x</a>"
+    },
+    {
+      "input": "<a href=\"HTTPS://ornek.com:8080/a=🎉ç\">x</a>",
+      "output": "<a href=\"https://ornek.com:8080/a=%F0%9F%8E%89%C3%A7\" target=\"_blank\" rel=\"noopener\">x</a>"
+    },
+    {
+      "input": "<a href=\"a b.com/%25_~ \">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"http://a b.com/^~^(a_?\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"https:///şirket.com/?[ \">x</a>",
+      "output": "<a href=\"https:///%C5%9Firket.com/?[\">x</a>"
+    },
+    {
+      "input": "<a href=\"[fe80::1%25en0]/@=(a\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"mailto:ayse@ornek.com[\">x</a>",
+      "output": "<a href=\"mailto:ayse@ornek.com[\">x</a>"
+    },
+    {
+      "input": "<a href=\"https:///[::1]:80/'%{['.(\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"//ornek.com:8080/;(\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"ftp://ornek.com/ç(\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"https:///ornek.com:x{aç>?&quot;%2F\">x</a>",
+      "output": "<a href=\"https:///ornek.com:x%7Ba%C3%A7%3E?&#34;%2F\">x</a>"
+    },
+    {
+      "input": "<a href=\"ftp://[::1]/&quot; !\n\n[=\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"https:///a@b@c.com/%C5%9F%zz< _\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"javascript:u:p@ornek.com/-\t~\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\" https:///Z\\'\">x</a>",
+      "output": "<a href=\"https:///Z%5C%27\">x</a>"
+    },
+    {
+      "input": "<a href=\"ftp://[::1]/🎉\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"https:///ornek.com:8080/\\\">x</a>",
+      "output": "<a href=\"https:///ornek.com:8080/%5C\">x</a>"
+    },
+    {
+      "input": "<a href=\"ftp://ornek.com:x/🎉%2F./}\n%\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"https:[::1]/-(!%\">x</a>",
+      "output": "<a href=\"https:[::1]/-(!%\">x</a>"
+    },
+    {
+      "input": "<a href=\"HTTPS://u:p@ornek.com/-Z.`/%\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"mailto:x|\n+0\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"ftp://ornek.com%41/#].@@.\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"//ornek.com/\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"http:///a^*|#\">x</a>",
+      "output": "<a href=\"http:///a%5E%2A%7C\">x</a>"
+    },
+    {
+      "input": "<a href=\"https:şirket.com/)]@\">x</a>",
+      "output": "<a href=\"https:şirket.com/)]@\">x</a>"
+    },
+    {
+      "input": "<a href=\"https:Ornek.COM/\t\">x</a>",
+      "output": "<a href=\"https:Ornek.COM/\">x</a>"
+    },
+    {
+      "input": "<a href=\"https:[1.2.3.4]/`#%C5%9F&amp;&quot;\">x</a>",
+      "output": "<a href=\"https:[1.2.3.4]/`#%C5%9F&amp;%22\">x</a>"
+    },
+    {
+      "input": "<a href=\"https:şirket.com/&amp;\">x</a>",
+      "output": "<a href=\"https:şirket.com/&amp;\">x</a>"
+    },
+    {
+      "input": "<a href=\"javascript:ör%C3%B6.com/ 🎉Z*\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"https://ornek.com:x/:,ş%41\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"Mailto:ornek.com:x/]{%zz<_^0\">x</a>",
+      "output": "<a href=\"mailto:ornek.com:x/]{%zz&lt;_^0\">x</a>"
+    },
+    {
+      "input": "<a href=\"https://a b.com/%2F$);&amp;|]\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"/0:*\u0001ş\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"şirket.com/_/ş]\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"u:p@ornek.com/\t>\">x</a>",
+      "output": "x"
+    },
+    {
+      "input": "<a href=\"https://ornek.com%41/\">x</a>",
+      "output": "x"
+    }
+  ]
+}
