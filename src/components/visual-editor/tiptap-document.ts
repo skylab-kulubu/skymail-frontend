@@ -20,6 +20,7 @@ function marksTo(marks: readonly VisualMark[] | undefined): JSONContent["marks"]
 }
 
 function inlineTo(node: VisualInline): JSONContent {
+  if (node.type === "hardBreak") return { type: "hardBreak" };
   const marks = marksTo(node.marks);
   const content: JSONContent =
     node.type === "text" ? { type: "text", text: node.text } : { type: "variable", attrs: { name: node.name } };
@@ -29,8 +30,24 @@ function inlineTo(node: VisualInline): JSONContent {
 function blockTo(block: VisualBlock): JSONContent {
   switch (block.type) {
     case "heading":
-    case "paragraph":
-      return block.content.length > 0 ? { type: block.type, content: block.content.map(inlineTo) } : { type: block.type };
+    case "paragraph": {
+      const level = block.type === "heading" && block.level === 3 ? { attrs: { level: 3 } } : {};
+      return block.content.length > 0 ? { type: block.type, ...level, content: block.content.map(inlineTo) } : { type: block.type, ...level };
+    }
+    case "quote":
+      return {
+        type: "blockquote",
+        content: [block.content.length > 0 ? { type: "paragraph", content: block.content.map(inlineTo) } : { type: "paragraph" }],
+      };
+    case "list":
+      return {
+        type: block.ordered ? "orderedList" : "bulletList",
+        // The schema wants at least one item; an empty list gets a line to type in.
+        content: (block.items.length > 0 ? block.items : [[]]).map((item) => ({
+          type: "listItem",
+          content: [item.length > 0 ? { type: "paragraph", content: item.map(inlineTo) } : { type: "paragraph" }],
+        })),
+      };
     case "button":
       return {
         type: "button",
@@ -80,18 +97,37 @@ function inlineFrom(node: JSONContent): VisualInline {
       return buildVisual.text(text(node.text), marksFrom(node.marks));
     case "variable":
       return buildVisual.variable(text(node.attrs?.name), marksFrom(node.marks));
+    case "hardBreak":
+      return buildVisual.hardBreak();
     default:
       throw new Error(`Visual editörde bilinmeyen satır içi öğe "${node.type}"`);
   }
+}
+
+/** A list item's or a quote's content: the one paragraph the schema lets it hold. */
+function oneLine(node: JSONContent, what: string): VisualInline[] {
+  const [line, ...more] = node.content ?? [];
+  if (more.length > 0 || (line && line.type !== "paragraph")) throw new Error(`Visual editörde ${what} tek paragraf olmalı`);
+  return (line?.content ?? []).map(inlineFrom);
+}
+
+function itemFrom(node: JSONContent): VisualInline[] {
+  if (node.type !== "listItem") throw new Error(`Visual editörde listede bilinmeyen öğe "${node.type}"`);
+  return oneLine(node, "liste maddesi");
 }
 
 function blockFrom(node: JSONContent): VisualBlock {
   const attrs = node.attrs ?? {};
   switch (node.type) {
     case "heading":
-      return buildVisual.heading((node.content ?? []).map(inlineFrom));
+      return buildVisual.heading((node.content ?? []).map(inlineFrom), attrs.level === 3 ? 3 : undefined);
+    case "blockquote":
+      return buildVisual.quote(oneLine(node, "alıntı"));
     case "paragraph":
       return buildVisual.paragraph((node.content ?? []).map(inlineFrom));
+    case "bulletList":
+    case "orderedList":
+      return buildVisual.list(node.type === "orderedList", (node.content ?? []).map(itemFrom));
     case "button":
       return buildVisual.button(
         text(attrs.label),

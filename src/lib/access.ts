@@ -56,10 +56,30 @@ export function visibleNavigation(roles: readonly string[]): NavItem[] {
   return NAVIGATION.filter((item) => !item.requires || roles.includes(item.requires));
 }
 
-/** The role a page needs, by the section its address sits under. */
-export function requiredRoleFor(pathname: string): Role | undefined {
+/** Whether `roles` hold any one of `anyOf` (and `skymail:access`); none asked for is only access. */
+export function hasAnyRole(roles: readonly string[], anyOf: readonly Role[]): boolean {
+  return hasAccess(roles) && (anyOf.length === 0 || anyOf.some((role) => roles.includes(role)));
+}
+
+/**
+ * Pages whose roles are not their section's read role. The send form
+ * (`/mail-tasks/create`, ticket 16) takes `mails:send` or `mails:write` —
+ * what the API's send routes take — and a sender need not read the send list.
+ * It asks for `templates:read` itself, to offer a template.
+ */
+const PAGE_ROLES: ReadonlyArray<Readonly<{ path: string; anyOf: readonly Role[] }>> = [
+  { path: "/mail-tasks/create", anyOf: [ROLE.mailsSend, ROLE.mailsWrite] },
+];
+
+/**
+ * The roles a page needs, any one of them: its own, or the read role of the
+ * section its address sits under; none beyond access for the home screen.
+ */
+export function requiredRolesFor(pathname: string): readonly Role[] {
+  const page = PAGE_ROLES.find((entry) => entry.path === pathname);
+  if (page) return page.anyOf;
   const section = NAVIGATION.find(
     (item) => item.href !== "/" && (pathname === item.href || pathname.startsWith(`${item.href}/`)),
   );
-  return section?.requires;
+  return section?.requires ? [section.requires] : [];
 }

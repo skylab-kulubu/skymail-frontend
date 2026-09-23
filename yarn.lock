@@ -1565,7 +1565,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tiptap/extension-list@npm:3.31.3":
+"@tiptap/extension-list@npm:3.31.3, @tiptap/extension-list@npm:^3.12.1":
   version: 3.31.3
   resolution: "@tiptap/extension-list@npm:3.31.3"
   peerDependencies:
@@ -4261,6 +4261,7 @@ __metadata:
     "@react-email/render": "npm:^2.0.4"
     "@tailwindcss/postcss": "npm:^4.3.3"
     "@tiptap/core": "npm:^3.12.1"
+    "@tiptap/extension-list": "npm:^3.12.1"
     "@tiptap/extensions": "npm:^3.12.1"
     "@tiptap/pm": "npm:^3.12.1"
     "@tiptap/react": "npm:^3.12.1"

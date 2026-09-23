@@ -6,11 +6,11 @@ import { ModalDangerActions, ModalPrimaryActions } from '@/components/ui/modal-a
 import type { SampleValues } from '@/lib/mail-render/preview';
 import { renderOf } from '@/lib/mail-render/save';
 import type { SourceRender } from '@/lib/mail-render';
-import type { MailScheme } from '@/lib/template-editor/preview';
+import type { MailScheme } from '@/components/mail-preview/preview-document';
 import { AUTHORING_MODE_LABEL, type TemplateVersion } from '@/lib/templates';
 import type { EditableMode } from '@/lib/template-editor/editor-state';
 import { EditorNote, RefusalNotice, RenderWarnings, type Refusal } from './EditorParts';
-import { MailFrame, SchemeToggle, SubjectPreview } from './MailPreview';
+import { MailFrame, SchemeToggle, SubjectPreview } from '@/components/mail-preview/MailPreview';
 import { VersionSideBySide } from './VersionSideBySide';
 
 export function PublishDialog({

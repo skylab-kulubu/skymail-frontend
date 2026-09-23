@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { Loader2 } from 'lucide-react';
 import { FilterPills } from '@/components/chrome/FilterPills';
 import { fillSampleValues, type SampleValues } from '@/lib/mail-render/preview';
-import { previewDocument, type MailScheme } from '@/lib/template-editor/preview';
+import { previewDocument, type MailScheme } from './preview-document';
 
 const SCHEMES: ReadonlyArray<{ value: MailScheme; label: string }> = [
   { value: 'light', label: 'Açık tema' },

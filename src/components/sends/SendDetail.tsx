@@ -10,6 +10,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { AlertTriangle, Inbox, SearchX } from 'lucide-react';
 import { FilterPills } from '@/components/chrome/FilterPills';
+import { Notice } from '@/components/chrome/Notice';
 import { Pagination } from '@/components/chrome/Pagination';
 import { StateCard } from '@/components/chrome/StateCard';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -37,6 +38,7 @@ import {
   type Send,
 } from '@/lib/sends';
 import { knownPageCount } from '@/lib/list-view';
+import { useFlashNotice, type NoticeData } from '@/lib/notice';
 import { useLastPage } from '@/lib/ui/use-last-page';
 import { Audience } from './Audience';
 import { SectionTitle } from './SectionTitle';
@@ -44,6 +46,8 @@ import { RecipientStatusBadge, SendStatusBadge } from './StatusBadge';
 
 export function SendDetail({ id }: { id: string }) {
   const send = useApiLoad((api, signal) => fetchSend(api, id, signal), id);
+  // The send form leaves one here when it opens a send.
+  const [notice, setNotice] = useFlashNotice(sendHref(id));
 
   if (send.status === 'loading') return <StateCard isLoading title="Gönderim yükleniyor" />;
   if (send.status === 'error') {
@@ -61,10 +65,10 @@ export function SendDetail({ id }: { id: string }) {
       </StateCard>
     );
   }
-  return <SendView send={send.data} />;
+  return <SendView send={send.data} notice={notice} onDismiss={() => setNotice(null)} />;
 }
 
-function SendView({ send }: { send: Send }) {
+function SendView({ send, notice, onDismiss }: { send: Send; notice: NoticeData | null; onDismiss: () => void }) {
   const recipients = recipientSummary(send.recipient_counts);
 
   return (
@@ -81,6 +85,8 @@ function SendView({ send }: { send: Send }) {
           </>
         }
       />
+
+      {notice ? <Notice notice={notice} onDismiss={onDismiss} /> : null}
 
       <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         <Fact term="Kitle" className="col-span-2 sm:col-span-1">

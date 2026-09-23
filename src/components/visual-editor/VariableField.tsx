@@ -4,7 +4,7 @@ import { createContext, useContext, useState } from 'react';
 import { Braces } from 'lucide-react';
 import { FormField } from '@/components/chrome/FormField';
 import { Button } from '@/components/ui/Button';
-import { EVERY_VISUAL_FEATURE, isVariableName, type VisualAllowance } from '@/lib/mail-render/visual-document';
+import { TEMPLATE_BODY_ALLOWANCE, isVariableName, type VisualAllowance } from '@/lib/mail-render/visual-document';
 
 /** What the editor says in the words of where it is mounted; a template's editor names the template. */
 export type VisualEditorWording = Readonly<{
@@ -31,7 +31,7 @@ export type VisualEditorShared = Readonly<{
 
 export const VisualEditorContext = createContext<VisualEditorShared>({
   variables: [],
-  allow: EVERY_VISUAL_FEATURE,
+  allow: TEMPLATE_BODY_ALLOWANCE,
   wording: GENERIC_WORDING,
 });
 

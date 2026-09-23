@@ -5,7 +5,7 @@
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { hasAccess, requiredRoleFor, sectionLabel, visibleNavigation } from "./access";
+import { ROLE, hasAccess, hasAnyRole, requiredRolesFor, sectionLabel, visibleNavigation } from "./access";
 
 const hrefs = (roles: string[]) => visibleNavigation(roles).map((item) => item.href);
 
@@ -52,15 +52,30 @@ describe("the menu", () => {
 });
 
 describe("a page opened by its address", () => {
+  // Any one of the roles opens it.
   it("needs the read role of the section it belongs to", () => {
-    assert.equal(requiredRoleFor("/templates"), "skymail:templates:read");
-    assert.equal(requiredRoleFor("/templates/edit/123"), "skymail:templates:read");
-    assert.equal(requiredRoleFor("/mailing-lists/show/abc"), "skymail:lists:read");
-    assert.equal(requiredRoleFor("/mail-tasks/create"), "skymail:mails:read");
+    assert.deepEqual(requiredRolesFor("/templates"), ["skymail:templates:read"]);
+    assert.deepEqual(requiredRolesFor("/templates/edit/123"), ["skymail:templates:read"]);
+    assert.deepEqual(requiredRolesFor("/mailing-lists/show/abc"), ["skymail:lists:read"]);
+    assert.deepEqual(requiredRolesFor("/mail-tasks/show/abc"), ["skymail:mails:read"]);
+    assert.deepEqual(requiredRolesFor("/mail-tasks"), ["skymail:mails:read"]);
+  });
+
+  it("needs a send role on the send form, not the send list's read role", () => {
+    assert.deepEqual(requiredRolesFor("/mail-tasks/create"), ["skymail:mails:send", "skymail:mails:write"]);
   });
 
   it("needs nothing beyond access on the home screen or an unknown address", () => {
-    assert.equal(requiredRoleFor("/"), undefined);
-    assert.equal(requiredRoleFor("/templatesx"), undefined);
+    assert.deepEqual(requiredRolesFor("/"), []);
+    assert.deepEqual(requiredRolesFor("/templatesx"), []);
+  });
+});
+
+describe("any of some roles", () => {
+  it("is held when one is, with access", () => {
+    assert.equal(hasAnyRole([ROLE.access, ROLE.mailsSend], [ROLE.mailsSend, ROLE.mailsWrite]), true);
+    assert.equal(hasAnyRole([ROLE.access, ROLE.mailsRead], [ROLE.mailsSend, ROLE.mailsWrite]), false);
+    assert.equal(hasAnyRole([ROLE.mailsSend], [ROLE.mailsSend]), false);
+    assert.equal(hasAnyRole([ROLE.access], []), true);
   });
 });
