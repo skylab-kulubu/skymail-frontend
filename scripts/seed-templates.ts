@@ -6,6 +6,11 @@
  * longer in emails/ is left alone and reported, because archiving something a
  * live service still calls is how mail silently stops.
  *
+ * One field is not overwritten: a subject is seeded when the key is new and
+ * then belongs to the row, so an operator can reword it without a release
+ * (ADR-0045). A run that finds a reworded subject says so rather than leaving
+ * it to look like the repo's wording quietly failed to apply.
+ *
  * Credentials come from the environment and are never printed:
  *
  *   SKYMAIL_URL                 http://localhost:3000 (varsayılan)
@@ -68,6 +73,7 @@ async function main(): Promise<void> {
 
   const token = DRY_RUN ? "" : await resolveToken();
   let seeded = 0;
+  const kept: { key: string; subject: string }[] = [];
 
   for (const { meta, Component } of templates) {
     const html = await render(React.createElement(Component), { pretty: true });
@@ -104,13 +110,30 @@ async function main(): Promise<void> {
       throw new Error(`${meta.key} yazılamadı: HTTP ${response.status} ${detail.slice(0, 200)}`);
     }
 
-    const saved = (await response.json()) as { id: string };
+    const saved = (await response.json()) as { id: string; subject: string };
     seeded += 1;
-    console.log(`✓ ${meta.key.padEnd(34)} ${saved.id}`);
+
+    // A subject is seeded once and then belongs to the row, so an operator can
+    // reword it without a release. Saying so here is what keeps that from
+    // looking like the seed silently failed to apply the repo's wording.
+    const keptSubject = saved.subject !== meta.subject;
+    if (keptSubject) {
+      kept.push({ key: meta.key, subject: saved.subject });
+    }
+    console.log(`✓ ${meta.key.padEnd(34)} ${saved.id}${keptSubject ? "  · konu korundu" : ""}`);
   }
 
   if (!DRY_RUN) {
     console.log(`\n${seeded} şablon ${BASE_URL} üzerine yazıldı.`);
+    if (kept.length > 0) {
+      console.log(
+        `\n${kept.length} şablonun konusu arayüzden değiştirilmiş, dokunulmadı — gövdeleri yine de güncellendi:`,
+      );
+      for (const { key, subject } of kept) {
+        console.log(`  ${key.padEnd(34)} "${subject}"`);
+      }
+      console.log("Repodaki konuyu dayatmak istersen şablonu arayüzden düzenle; seed bunu yapmaz.");
+    }
     console.log("Repoda olmayan anahtarlar silinmedi — canlı bir servisin çağırdığı şablonu arşivlemek postayı sessizce durdurur.");
   }
 }
