@@ -67,15 +67,19 @@ import { TemplateLoadFailure } from './TemplateLoadFailure';
 
 type Loaded = { template: MailTemplate; version: TemplateVersion | null; loadedAt: number };
 
-export function TemplateEditor({ id }: { id: string }) {
+/**
+ * `startVisual` opens the Visual tab on a new, empty Visual source (unsaved),
+ * as a template created to be written in Visual lands (TemplateCreate).
+ */
+export function TemplateEditor({ id, startVisual = false }: { id: string; startVisual?: boolean }) {
   return (
     <RoleGate role={ROLE.templatesWrite}>
-      <EditorLoader id={id} />
+      <EditorLoader id={id} startVisual={startVisual} />
     </RoleGate>
   );
 }
 
-function EditorLoader({ id }: { id: string }) {
+function EditorLoader({ id, startVisual }: { id: string; startVisual: boolean }) {
   const { user } = useConsole();
   const viewerSub = user.sub ?? null;
   const [notice, setNotice] = useFlashNotice(templateHref.edit(id));
@@ -108,6 +112,7 @@ function EditorLoader({ id }: { id: string }) {
       notice={notice}
       setNotice={setNotice}
       reload={state.reload}
+      startVisual={startVisual}
     />
   );
 }
@@ -127,6 +132,7 @@ function Editor({
   notice,
   setNotice,
   reload,
+  startVisual,
 }: {
   template: MailTemplate;
   version: TemplateVersion;
@@ -134,11 +140,18 @@ function Editor({
   notice: NoticeData | null;
   setNotice: (notice: NoticeData | null) => void;
   reload: () => Promise<void>;
+  startVisual: boolean;
 }) {
   const api = useApi();
   const [stored, setStored] = useState(() => storedFromVersion(version, template.name));
-  const [editing, setEditing] = useState<Content>(() => contentOf(stored));
-  const [active, setActive] = useState<EditableMode>(() => (isEditableMode(stored.mainMode) ? stored.mainMode : 'jsx'));
+  const [editing, setEditing] = useState<Content>(() => {
+    const opened = contentOf(stored);
+    return (startVisual && addSource('visual', { editing: opened, renders: {}, stored })) || opened;
+  });
+  const [active, setActive] = useState<EditableMode>(() => {
+    if (startVisual) return 'visual';
+    return isEditableMode(stored.mainMode) ? stored.mainMode : 'jsx';
+  });
   const [busy, setBusy] = useState<Busy>(null);
   const [refusal, setRefusal] = useState<Refusal | null>(null);
   const [dialog, setDialog] = useState<Dialog | null>(null);

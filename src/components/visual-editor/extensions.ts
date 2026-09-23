@@ -5,6 +5,7 @@
 import type { Extensions } from '@tiptap/core';
 import { Placeholder } from '@tiptap/extensions';
 import { ReactNodeViewRenderer } from '@tiptap/react';
+import type { VisualAllowance } from '@/lib/mail-render/visual-document';
 import { ButtonView, ConditionalView, ImageView, VariableView } from './BlockViews';
 import { ButtonNode, ConditionalNode, ImageNode, VariableNode, visualSchemaExtensions } from './schema';
 
@@ -15,9 +16,9 @@ const WITH_VIEWS = new Map<unknown, Extensions[number]>([
   [ConditionalNode, ConditionalNode.extend({ addNodeView: () => ReactNodeViewRenderer(ConditionalView) })],
 ]);
 
-export const visualEditorExtensions: Extensions = [
-  ...visualSchemaExtensions.map((extension) => WITH_VIEWS.get(extension) ?? extension),
-  Placeholder.configure({
-    placeholder: 'Mailin metnini yaz; başlık, buton, görsel ve değişkenleri üstteki çubuktan ekle.',
-  }),
-];
+export function visualEditorExtensions(allowance: VisualAllowance, placeholder: string): Extensions {
+  return [
+    ...visualSchemaExtensions(allowance).map((extension) => WITH_VIEWS.get(extension) ?? extension),
+    Placeholder.configure({ placeholder }),
+  ];
+}

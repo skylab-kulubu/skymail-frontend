@@ -9,14 +9,16 @@
 import { referencedVariables } from "../mail-render/go-template";
 import type { MailTemplate } from "../templates";
 import type { Renders } from "./editor-state";
+import { requiredSetsOf } from "./required-variables";
 
 export function offeredVariables(
-  template: Pick<MailTemplate, "contract_required_variables" | "operator_required_variables">,
+  template: MailTemplate,
   referencedIn: Readonly<{ storedHtml: string; renders: Renders; subject: string }>,
 ): string[] {
+  const required = requiredSetsOf(template);
   const names = new Set<string>([
-    ...(template.contract_required_variables ?? []).map(({ name }) => name),
-    ...(template.operator_required_variables ?? []),
+    ...(required?.contract ?? []).map(({ name }) => name),
+    ...(required?.operator ?? []),
     ...referencedVariables(referencedIn.storedHtml),
     ...referencedVariables(referencedIn.subject),
   ]);

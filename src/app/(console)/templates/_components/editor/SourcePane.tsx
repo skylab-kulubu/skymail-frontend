@@ -10,6 +10,13 @@ const CodeEditor = dynamic(() => import('./CodeEditor'), {
   loading: () => <p className="p-4 text-xs text-neutral-500">Kod editörü yükleniyor…</p>,
 });
 
+/** The Visual editor speaks of the template it is in. */
+const TEMPLATE_WORDING = {
+  knownVariables: "Bu template'in bildiği değişkenler",
+  noKnownVariables: 'Bu template henüz değişken kullanmıyor; adını yazarak ekleyebilirsin.',
+  placeholder: 'Mailin metnini yaz; başlık, buton, görsel ve değişkenleri üstteki çubuktan ekle.',
+};
+
 const VisualEditor = dynamic(() => import('@/components/visual-editor/VisualEditor'), {
   ssr: false,
   loading: () => <p className="p-4 text-xs text-neutral-500">Visual editör yükleniyor…</p>,
@@ -132,6 +139,7 @@ export function SourcePanel({
               variables={variables}
               label="Visual kaynağı"
               editable={!readOnly}
+              wording={TEMPLATE_WORDING}
             />
           ) : (
             <div className="h-[55vh] min-h-[360px] overflow-hidden rounded-lg border border-white/10">

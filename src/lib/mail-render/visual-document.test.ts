@@ -11,10 +11,12 @@ import { join } from "node:path";
 import { describe, it } from "node:test";
 import {
   EMPTY_VISUAL_SOURCE,
+  EVERY_VISUAL_FEATURE,
   parseVisualSource,
   readVisualDocument,
   visualDocumentVariables,
   visualSource,
+  type VisualAllowance,
   type VisualDocument,
 } from "./visual-document";
 
@@ -261,5 +263,45 @@ describe("a Visual document that is refused", () => {
 
   it("will not serialise a document it would refuse to read", () => {
     assert.throws(() => visualSource(withBlocks([{ type: "quote" }]) as unknown as VisualDocument), /quote/);
+  });
+});
+
+// A body that goes through another gate — ticket 16's free announcement,
+// which the server's allow-list sanitizes — may use less of the model. The
+// reader refuses what a narrower allowance leaves out, as the editor offers
+// only what it allows.
+describe("a Visual document read with a narrower allowance", () => {
+  const plain: VisualAllowance = { blocks: ["heading", "paragraph", "button"], marks: ["bold", "italic"], variables: false };
+
+  it("reads what the allowance keeps", () => {
+    const read = readVisualDocument(
+      withBlocks([
+        { type: "heading", content: [{ type: "text", text: "Duyuru" }] },
+        { type: "paragraph", content: [{ type: "text", text: "kalın", marks: [{ type: "bold" }] }] },
+        { type: "button", label: "Git", link: { url: "https://skyl.app" } },
+      ]),
+      plain,
+    );
+    assert.ok(read.ok, read.ok ? "" : read.problems.join("\n"));
+  });
+
+  for (const [name, block, says] of [
+    ["an image", { type: "image", src: "https://cdn.yildizskylab.com/images/a", alt: "" }, /blocks\[0\]: "image" bloğu burada kullanılamaz/],
+    ["a divider", { type: "divider" }, /"divider" bloğu burada kullanılamaz/],
+    ["a conditional section", { type: "conditional", variable: "A", when: "set", blocks: [] }, /"conditional" bloğu burada kullanılamaz/],
+    ["a link", { type: "paragraph", content: [{ type: "text", text: "a", marks: [{ type: "link", href: "https://skyl.app" }] }] }, /marks\[0\]: "link" biçimi burada kullanılamaz/],
+    ["an inline variable", { type: "paragraph", content: [{ type: "variable", name: "FirstName" }] }, /content\[0\]: değişken burada kullanılamaz/],
+    ["a button to a variable", { type: "button", label: "Git", link: { variable: "Link" } }, /blocks\[0\]\.link: bağlantı burada bir değişken olamaz/],
+  ] as [string, unknown, RegExp][]) {
+    it(`refuses ${name}, saying it is not used here`, () => {
+      const read = readVisualDocument(withBlocks([block]), plain);
+      assert.equal(read.ok, false);
+      assert.ok(!read.ok && read.problems.some((problem) => says.test(problem)), JSON.stringify(!read.ok && read.problems));
+    });
+  }
+
+  it("is everything for a Mail template's own body", () => {
+    assert.ok(readVisualDocument(EVERY_BLOCK, EVERY_VISUAL_FEATURE).ok);
+    assert.equal(parseVisualSource(visualSource(EVERY_BLOCK), plain).ok, false);
   });
 });

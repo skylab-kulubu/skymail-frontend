@@ -21,6 +21,8 @@
  * checks documents with it in the page.
  */
 
+import { isVariableName } from "./go-template";
+
 export const VISUAL_DOCUMENT_TYPE = "skymail.visual";
 export const VISUAL_DOCUMENT_VERSION = 1;
 
@@ -53,14 +55,80 @@ export type VisualDocument = {
 
 export type VisualRead = { ok: true; document: VisualDocument } | { ok: false; problems: string[] };
 
-/** skymail-backend's variable name rule (pkg/validator IsVariableName). */
-const VARIABLE_NAME = /^[A-Za-z_][A-Za-z0-9_]{0,63}$/;
+export type VisualBlockType = VisualBlock["type"];
 
-export const isVariableName = (name: string) => VARIABLE_NAME.test(name);
+export type VisualMarkType = VisualMark["type"];
+
+/**
+ * What a document may use. A Mail template's body may use all of it; a body
+ * that goes through another gate — ticket 16's free announcement, which the
+ * server's allow-list sanitizes — only what survives it. The reader refuses
+ * what an allowance leaves out, and the editor offers only what it allows.
+ * `variables` covers inline variables and a button linking to one; a
+ * conditional section needs them too.
+ */
+export type VisualAllowance = Readonly<{
+  blocks: readonly VisualBlockType[];
+  marks: readonly VisualMarkType[];
+  variables: boolean;
+}>;
+
+export const EVERY_VISUAL_FEATURE: VisualAllowance = {
+  blocks: ["heading", "paragraph", "button", "image", "divider", "conditional"],
+  marks: ["bold", "italic", "link"],
+  variables: true,
+};
+
+export { isVariableName };
 
 export const IMAGE_WIDTH = { min: 16, max: 600 } as const;
 
-const MARK_ORDER: readonly VisualMark["type"][] = ["bold", "italic", "link"];
+/** Why a width cannot be an image's, or null when it can: none (the mail's width) or whole pixels within IMAGE_WIDTH. */
+export function imageWidthProblem(width: unknown): string | null {
+  const ok =
+    width === undefined ||
+    (typeof width === "number" && Number.isInteger(width) && width >= IMAGE_WIDTH.min && width <= IMAGE_WIDTH.max);
+  return ok ? null : `genişlik ${IMAGE_WIDTH.min} ile ${IMAGE_WIDTH.max} piksel arasında bir tam sayı olmalı`;
+}
+
+/** The one order marks are kept in, however they were applied. */
+export const MARK_ORDER: readonly VisualMarkType[] = ["bold", "italic", "link"];
+
+export const sortMarks = (marks: readonly VisualMark[]): VisualMark[] =>
+  [...marks].sort((a, b) => MARK_ORDER.indexOf(a.type) - MARK_ORDER.indexOf(b.type));
+
+const withMarks = (marks: readonly VisualMark[] | undefined) => (marks && marks.length > 0 ? { marks: sortMarks(marks) } : {});
+
+/**
+ * The model's nodes, each with its keys in the one order a document is
+ * written in: the reader builds with these, and so does the editor, so the
+ * same document is always the same text.
+ */
+export const buildVisual = {
+  document: (blocks: VisualBlock[]): VisualDocument => ({ type: VISUAL_DOCUMENT_TYPE, version: VISUAL_DOCUMENT_VERSION, blocks }),
+  text: (text: string, marks?: readonly VisualMark[]): VisualInline => ({ type: "text", text, ...withMarks(marks) }),
+  variable: (name: string, marks?: readonly VisualMark[]): VisualInline => ({ type: "variable", name, ...withMarks(marks) }),
+  heading: (content: VisualInline[]): VisualBlock => ({ type: "heading", content }),
+  paragraph: (content: VisualInline[]): VisualBlock => ({ type: "paragraph", content }),
+  button: (label: string, link: ButtonLink): VisualBlock => ({
+    type: "button",
+    label,
+    link: "variable" in link ? { variable: link.variable } : { url: link.url },
+  }),
+  image: (src: string, alt: string, width?: number): VisualBlock => ({
+    type: "image",
+    src,
+    alt,
+    ...(width === undefined ? {} : { width }),
+  }),
+  divider: (): VisualBlock => ({ type: "divider" }),
+  conditional: (variable: string, when: "set" | "unset", blocks: VisualBlock[]): VisualBlock => ({
+    type: "conditional",
+    variable,
+    when,
+    blocks,
+  }),
+};
 
 const LINK_PROTOCOLS = ["https:", "http:", "mailto:"];
 
@@ -125,6 +193,8 @@ const isFields = (value: unknown): value is Fields => typeof value === "object" 
 class Reader {
   readonly problems: string[] = [];
 
+  constructor(private readonly allowance: VisualAllowance) {}
+
   problem(path: string, message: string) {
     this.problems.push(`${path}: ${message}`);
   }
@@ -145,50 +215,48 @@ class Reader {
     return null;
   }
 
+  mark(item: unknown, at: string): VisualMark | null {
+    if (!isFields(item)) {
+      this.problem(at, "bir biçim değil");
+      return null;
+    }
+    if (item.type !== "bold" && item.type !== "italic" && item.type !== "link") {
+      this.problem(at, `bilinmeyen biçim ${JSON.stringify(item.type)}`);
+      return null;
+    }
+    if (!this.allowance.marks.includes(item.type)) {
+      this.problem(at, `"${item.type}" biçimi burada kullanılamaz`);
+      return null;
+    }
+    if (item.type !== "link") {
+      this.only(item, ["type"], at);
+      return { type: item.type };
+    }
+    this.only(item, ["type", "href"], at);
+    const problem = typeof item.href === "string" ? linkAddressProblem(item.href) : "bağlantının adresi yok";
+    if (problem) {
+      this.problem(`${at}.href`, problem);
+      return null;
+    }
+    return { type: "link", href: item.href as string };
+  }
+
   marks(value: unknown, path: string): VisualMark[] | null {
     if (value === undefined) return [];
     if (!Array.isArray(value)) {
       this.problem(path, "biçimler bir liste olmalı");
       return null;
     }
-    const marks: VisualMark[] = [];
-    let ok = true;
-    value.forEach((item, index) => {
-      const at = `${path}[${index}]`;
-      if (!isFields(item)) {
-        this.problem(at, "bir biçim değil");
-        ok = false;
-        return;
-      }
-      switch (item.type) {
-        case "bold":
-        case "italic":
-          this.only(item, ["type"], at);
-          marks.push({ type: item.type });
-          return;
-        case "link": {
-          this.only(item, ["type", "href"], at);
-          const problem = typeof item.href === "string" ? linkAddressProblem(item.href) : "bağlantının adresi yok";
-          if (problem) {
-            this.problem(`${at}.href`, problem);
-            ok = false;
-            return;
-          }
-          marks.push({ type: "link", href: item.href as string });
-          return;
-        }
-        default:
-          this.problem(at, `bilinmeyen biçim ${JSON.stringify(item.type)}`);
-          ok = false;
-      }
-    });
+    const read = value.map((item, index) => this.mark(item, `${path}[${index}]`));
+    const marks = read.filter((mark): mark is VisualMark => mark !== null);
+    let ok = marks.length === read.length;
     for (const type of MARK_ORDER) {
       if (marks.filter((mark) => mark.type === type).length > 1) {
         this.problem(path, `"${type}" iki kez`);
         ok = false;
       }
     }
-    return ok ? marks.sort((a, b) => MARK_ORDER.indexOf(a.type) - MARK_ORDER.indexOf(b.type)) : null;
+    return ok ? marks : null;
   }
 
   inlines(value: unknown, path: string, { marksAllowed }: { marksAllowed: boolean }): VisualInline[] {
@@ -208,21 +276,24 @@ class Reader {
         return;
       }
       this.only(item, item.type === "text" ? ["type", "text", "marks"] : ["type", "name", "marks"], at);
-      const marks = this.marks(item.marks, `${at}.marks`);
-      if (marks && marks.length > 0 && !marksAllowed) {
+      const marks = this.marks(item.marks, `${at}.marks`) ?? [];
+      if (marks.length > 0 && !marksAllowed) {
         this.problem(at, "başlıkta biçim (kalın, italik, bağlantı) kullanılmaz");
       }
-      const withMarks = marks && marks.length > 0 ? { marks } : {};
       if (item.type === "text") {
         if (typeof item.text !== "string" || item.text === "") {
           this.problem(`${at}.text`, "boş metin olmaz");
           return;
         }
-        inlines.push({ type: "text", text: item.text, ...withMarks });
-      } else {
-        const name = this.variableName(item.name, `${at}.name`);
-        if (name) inlines.push({ type: "variable", name, ...withMarks });
+        inlines.push(buildVisual.text(item.text, marks));
+        return;
       }
+      if (!this.allowance.variables) {
+        this.problem(at, "değişken burada kullanılamaz");
+        return;
+      }
+      const name = this.variableName(item.name, `${at}.name`);
+      if (name) inlines.push(buildVisual.variable(name, marks));
     });
     return inlines;
   }
@@ -233,6 +304,10 @@ class Reader {
       return null;
     }
     if ("variable" in value) {
+      if (!this.allowance.variables) {
+        this.problem(path, "bağlantı burada bir değişken olamaz");
+        return null;
+      }
       const name = this.variableName(value.variable, `${path}.variable`);
       return name ? { variable: name } : null;
     }
@@ -246,16 +321,13 @@ class Reader {
 
   image(item: Fields, path: string): VisualBlock | null {
     this.only(item, ["type", "src", "alt", "width"], path);
-    const problem = typeof item.src === "string" ? imageAddressProblem(item.src) : "görselin adresi yok";
-    if (problem) this.problem(`${path}.src`, problem);
+    const srcProblem = typeof item.src === "string" ? imageAddressProblem(item.src) : "görselin adresi yok";
+    if (srcProblem) this.problem(`${path}.src`, srcProblem);
     if (typeof item.alt !== "string") this.problem(`${path}.alt`, "görselin açıklaması (alt) bir metin olmalı");
-    const width = item.width;
-    const widthOk =
-      width === undefined ||
-      (typeof width === "number" && Number.isInteger(width) && width >= IMAGE_WIDTH.min && width <= IMAGE_WIDTH.max);
-    if (!widthOk) this.problem(`${path}.width`, `genişlik ${IMAGE_WIDTH.min} ile ${IMAGE_WIDTH.max} piksel arasında bir tam sayı olmalı`);
-    if (problem || typeof item.alt !== "string" || !widthOk) return null;
-    return { type: "image", src: item.src as string, alt: item.alt, ...(width === undefined ? {} : { width: width as number }) };
+    const widthProblem = imageWidthProblem(item.width);
+    if (widthProblem) this.problem(`${path}.width`, widthProblem);
+    if (srcProblem || typeof item.alt !== "string" || widthProblem) return null;
+    return buildVisual.image(item.src as string, item.alt, item.width as number | undefined);
   }
 
   block(item: unknown, path: string): VisualBlock | null {
@@ -263,36 +335,46 @@ class Reader {
       this.problem(path, "bir blok değil");
       return null;
     }
-    switch (item.type) {
+    const type = item.type as VisualBlockType;
+    if (!EVERY_VISUAL_FEATURE.blocks.includes(type)) {
+      this.problem(path, `bilinmeyen blok ${JSON.stringify(item.type)}`);
+      return null;
+    }
+    if (!this.allowance.blocks.includes(type) || (type === "conditional" && !this.allowance.variables)) {
+      this.problem(path, `"${type}" bloğu burada kullanılamaz`);
+      return null;
+    }
+    switch (type) {
       case "heading":
       case "paragraph": {
         this.only(item, ["type", "content"], path);
-        const content = this.inlines(item.content, `${path}.content`, { marksAllowed: item.type === "paragraph" });
-        return { type: item.type, content };
+        const content = this.inlines(item.content, `${path}.content`, { marksAllowed: type === "paragraph" });
+        return type === "heading" ? buildVisual.heading(content) : buildVisual.paragraph(content);
       }
       case "button": {
         this.only(item, ["type", "label", "link"], path);
         const labelOk = typeof item.label === "string" && item.label.trim() !== "";
         if (!labelOk) this.problem(`${path}.label`, "butonun etiketi boş olamaz");
         const link = this.link(item.link, `${path}.link`);
-        return labelOk && link ? { type: "button", label: item.label as string, link } : null;
+        return labelOk && link ? buildVisual.button(item.label as string, link) : null;
       }
       case "image":
         return this.image(item, path);
       case "divider":
         this.only(item, ["type"], path);
-        return { type: "divider" };
+        return buildVisual.divider();
       case "conditional": {
         this.only(item, ["type", "variable", "when", "blocks"], path);
         const variable = this.variableName(item.variable, `${path}.variable`);
         const whenOk = item.when === "set" || item.when === "unset";
         if (!whenOk) this.problem(`${path}.when`, '"set" (değişken doluysa) ya da "unset" (değişken boşsa) olmalı');
         const blocks = this.blocks(item.blocks, `${path}.blocks`);
-        return variable && whenOk ? { type: "conditional", variable, when: item.when as "set" | "unset", blocks } : null;
+        return variable && whenOk ? buildVisual.conditional(variable, item.when as "set" | "unset", blocks) : null;
       }
-      default:
-        this.problem(path, `bilinmeyen blok ${JSON.stringify(item.type)}`);
-        return null;
+      default: {
+        const unknown: never = type;
+        throw new Error(`Visual belge okuyucusu "${String(unknown)}" bloğunu tanımıyor.`);
+      }
     }
   }
 
@@ -308,10 +390,11 @@ class Reader {
 /**
  * A document as the API or the editor hands it over, read into the model:
  * every problem it has, or the document with its keys and marks in their one
- * order.
+ * order. `allowance` narrows what it may use; a Mail template's body may use
+ * everything.
  */
-export function readVisualDocument(value: unknown): VisualRead {
-  const reader = new Reader();
+export function readVisualDocument(value: unknown, allowance: VisualAllowance = EVERY_VISUAL_FEATURE): VisualRead {
+  const reader = new Reader(allowance);
   if (!isFields(value)) {
     reader.problem("belge", "bir Visual belge değil (bir JSON nesnesi bekleniyordu)");
     return { ok: false, problems: reader.problems };
@@ -327,18 +410,18 @@ export function readVisualDocument(value: unknown): VisualRead {
   reader.only(value, ["type", "version", "blocks"], "belge");
   const blocks = reader.blocks(value.blocks, "blocks");
   if (reader.problems.length > 0) return { ok: false, problems: reader.problems };
-  return { ok: true, document: { type: VISUAL_DOCUMENT_TYPE, version: VISUAL_DOCUMENT_VERSION, blocks } };
+  return { ok: true, document: buildVisual.document(blocks) };
 }
 
 /** A Visual source, which is the document's JSON text. */
-export function parseVisualSource(source: string): VisualRead {
+export function parseVisualSource(source: string, allowance: VisualAllowance = EVERY_VISUAL_FEATURE): VisualRead {
   let value: unknown;
   try {
     value = JSON.parse(source);
   } catch (error) {
     return { ok: false, problems: [`belge: JSON değil (${error instanceof Error ? error.message : String(error)})`] };
   }
-  return readVisualDocument(value);
+  return readVisualDocument(value, allowance);
 }
 
 /**
@@ -353,7 +436,7 @@ export function visualSource(document: VisualDocument): string {
 }
 
 /** Where a new Visual source starts: nothing. No other source is converted into it. */
-export const EMPTY_VISUAL_SOURCE = visualSource({ type: VISUAL_DOCUMENT_TYPE, version: VISUAL_DOCUMENT_VERSION, blocks: [] });
+export const EMPTY_VISUAL_SOURCE = visualSource(buildVisual.document([]));
 
 /** The variables a document uses — inline, as a button's link, as a condition — each once, sorted. */
 export function visualDocumentVariables(document: VisualDocument): string[] {

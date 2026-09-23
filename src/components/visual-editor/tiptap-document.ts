@@ -12,16 +12,7 @@
  * come from the schema, and is an error here rather than something left out.
  */
 import type { JSONContent } from "@tiptap/core";
-import {
-  VISUAL_DOCUMENT_TYPE,
-  VISUAL_DOCUMENT_VERSION,
-  type VisualBlock,
-  type VisualDocument,
-  type VisualInline,
-  type VisualMark,
-} from "@/lib/mail-render/visual-document";
-
-const MARK_ORDER: readonly VisualMark["type"][] = ["bold", "italic", "link"];
+import { buildVisual, type VisualBlock, type VisualDocument, type VisualInline, type VisualMark } from "@/lib/mail-render/visual-document";
 
 function marksTo(marks: readonly VisualMark[] | undefined): JSONContent["marks"] {
   if (!marks || marks.length === 0) return undefined;
@@ -69,9 +60,8 @@ export function toEditorContent(document: VisualDocument): JSONContent {
 
 const text = (value: unknown) => (typeof value === "string" ? value : "");
 
-function marksFrom(marks: JSONContent["marks"]): { marks?: VisualMark[] } {
-  if (!marks || marks.length === 0) return {};
-  const read = marks.map((mark): VisualMark => {
+function marksFrom(marks: JSONContent["marks"]): VisualMark[] {
+  return (marks ?? []).map((mark): VisualMark => {
     switch (mark.type) {
       case "bold":
       case "italic":
@@ -82,15 +72,14 @@ function marksFrom(marks: JSONContent["marks"]): { marks?: VisualMark[] } {
         throw new Error(`Visual editörde bilinmeyen biçim "${mark.type}"`);
     }
   });
-  return { marks: read.sort((a, b) => MARK_ORDER.indexOf(a.type) - MARK_ORDER.indexOf(b.type)) };
 }
 
 function inlineFrom(node: JSONContent): VisualInline {
   switch (node.type) {
     case "text":
-      return { type: "text", text: text(node.text), ...marksFrom(node.marks) };
+      return buildVisual.text(text(node.text), marksFrom(node.marks));
     case "variable":
-      return { type: "variable", name: text(node.attrs?.name), ...marksFrom(node.marks) };
+      return buildVisual.variable(text(node.attrs?.name), marksFrom(node.marks));
     default:
       throw new Error(`Visual editörde bilinmeyen satır içi öğe "${node.type}"`);
   }
@@ -100,30 +89,24 @@ function blockFrom(node: JSONContent): VisualBlock {
   const attrs = node.attrs ?? {};
   switch (node.type) {
     case "heading":
+      return buildVisual.heading((node.content ?? []).map(inlineFrom));
     case "paragraph":
-      return { type: node.type, content: (node.content ?? []).map(inlineFrom) };
+      return buildVisual.paragraph((node.content ?? []).map(inlineFrom));
     case "button":
-      return {
-        type: "button",
-        label: text(attrs.label),
-        link: attrs.linkKind === "variable" ? { variable: text(attrs.variable) } : { url: text(attrs.url) },
-      };
+      return buildVisual.button(
+        text(attrs.label),
+        attrs.linkKind === "variable" ? { variable: text(attrs.variable) } : { url: text(attrs.url) },
+      );
     case "image":
-      return {
-        type: "image",
-        src: text(attrs.src),
-        alt: text(attrs.alt),
-        ...(typeof attrs.width === "number" ? { width: attrs.width } : {}),
-      };
+      return buildVisual.image(text(attrs.src), text(attrs.alt), typeof attrs.width === "number" ? attrs.width : undefined);
     case "divider":
-      return { type: "divider" };
+      return buildVisual.divider();
     case "conditional":
-      return {
-        type: "conditional",
-        variable: text(attrs.variable),
-        when: attrs.when === "unset" ? "unset" : "set",
-        blocks: (node.content ?? []).map(blockFrom),
-      };
+      return buildVisual.conditional(
+        text(attrs.variable),
+        attrs.when === "unset" ? "unset" : "set",
+        (node.content ?? []).map(blockFrom),
+      );
     default:
       throw new Error(`Visual editörde bilinmeyen blok "${node.type}"`);
   }
@@ -131,9 +114,5 @@ function blockFrom(node: JSONContent): VisualBlock {
 
 /** The editor's content as a document, whether or not what was typed in it passes the model yet. */
 export function fromEditorContent(content: JSONContent): VisualDocument {
-  return {
-    type: VISUAL_DOCUMENT_TYPE,
-    version: VISUAL_DOCUMENT_VERSION,
-    blocks: (content.content ?? []).map(blockFrom),
-  };
+  return buildVisual.document((content.content ?? []).map(blockFrom));
 }

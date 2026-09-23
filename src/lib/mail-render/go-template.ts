@@ -14,6 +14,11 @@ import { v } from "../../../emails/go";
  */
 export const variableAction: (name: string) => string = v;
 
+/** A name the mailer's data may have as a field: skymail-backend's rule (pkg/validator IsVariableName). */
+export function isVariableName(name: string): boolean {
+  return /^[A-Za-z_][A-Za-z0-9_]{0,63}$/.test(name);
+}
+
 export interface Action {
   /** Offset of the opening `{{`. */
   start: number;

@@ -10,65 +10,18 @@
 import { useId, type ReactNode } from 'react';
 import { NodeViewContent, NodeViewWrapper, type ReactNodeViewProps } from '@tiptap/react';
 import { GitBranch, Image as ImageIcon, MousePointerClick, Trash2 } from 'lucide-react';
+import { FilterPills } from '@/components/chrome/FilterPills';
+import { FormField } from '@/components/chrome/FormField';
+import { Button } from '@/components/ui/Button';
 import {
-  IMAGE_WIDTH,
+  CLUB_IMAGE_HOST,
   imageAddressProblem,
+  imageWidthProblem,
   isVariableName,
   linkAddressProblem,
 } from '@/lib/mail-render/visual-document';
-import { VARIABLE_NAME_RULE, VariableField } from './VariableField';
-
-const inputClass =
-  'focus:border-skylab-400/50 h-8 w-full rounded-md border border-white/10 bg-white/3 px-3 text-xs text-neutral-100 placeholder:text-neutral-600 focus:bg-white/5 focus:outline-none aria-invalid:border-red-400/60 disabled:opacity-60';
-
-function TextField({
-  label,
-  value,
-  onChange,
-  disabled,
-  problem,
-  type = 'text',
-  placeholder,
-  inputMode,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  disabled: boolean;
-  problem?: string | null;
-  type?: 'text' | 'url' | 'number';
-  placeholder?: string;
-  inputMode?: 'numeric' | 'url';
-}) {
-  const id = useId();
-  const problemId = useId();
-  return (
-    <div className="min-w-0 space-y-1.5">
-      <label htmlFor={id} className="block text-xs font-medium text-neutral-300">
-        {label}
-      </label>
-      <input
-        id={id}
-        type={type}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        disabled={disabled}
-        placeholder={placeholder}
-        inputMode={inputMode}
-        autoComplete="off"
-        spellCheck={type === 'text'}
-        aria-invalid={problem ? true : undefined}
-        aria-describedby={problem ? problemId : undefined}
-        className={inputClass}
-      />
-      {problem ? (
-        <p id={problemId} className="text-xs text-red-300">
-          {problem}
-        </p>
-      ) : null}
-    </div>
-  );
-}
+import { colors, darkColors } from '../../../emails/theme';
+import { VariableField, useVisualEditor } from './VariableField';
 
 /** A block's frame in the editor: what it is, its settings, and a way to take it out. */
 function BlockFrame({
@@ -100,28 +53,32 @@ function BlockFrame({
           {icon}
           {label}
         </p>
-        {editable ? (
-          <button
-            type="button"
-            onClick={onRemove}
-            aria-label={`${label} bloğunu kaldır`}
-            title="Bloğu kaldır"
-            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-neutral-500 hover:bg-red-500/10 hover:text-red-300"
-          >
-            <Trash2 className="h-3.5 w-3.5" aria-hidden />
-          </button>
-        ) : null}
+        {editable ? <RemoveButton label={`${label} bloğunu kaldır`} onRemove={onRemove} /> : null}
       </div>
       {children}
     </NodeViewWrapper>
   );
 }
 
+function RemoveButton({ label, onRemove }: { label: string; onRemove: () => void }) {
+  return (
+    <Button variant="outlineDanger" onClick={onRemove} aria-label={label} title={label}>
+      <Trash2 className="h-3.5 w-3.5" aria-hidden />
+      Kaldır
+    </Button>
+  );
+}
+
+const LINK_KINDS = [
+  { value: 'url', label: 'Adres' },
+  { value: 'variable', label: 'Değişken' },
+] as const;
+
 export function ButtonView({ node, updateAttributes, deleteNode, editor, selected }: ReactNodeViewProps) {
-  const { label, linkKind, url, variable } = node.attrs as { label: string; linkKind: string; url: string; variable: string };
+  const { allow } = useVisualEditor();
+  const { label, linkKind, url, variable } = node.attrs as { label: string; linkKind: 'url' | 'variable'; url: string; variable: string };
   const editable = editor.isEditable;
-  const toVariable = linkKind === 'variable';
-  const kindId = useId();
+  const toVariable = allow.variables && linkKind === 'variable';
   return (
     <BlockFrame
       label="Buton"
@@ -136,40 +93,29 @@ export function ButtonView({ node, updateAttributes, deleteNode, editor, selecte
         </span>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
-        <TextField
+        <FormField
           label="Etiket"
           value={label}
-          onChange={(value) => updateAttributes({ label: value })}
+          onChange={(event) => updateAttributes({ label: event.target.value })}
           disabled={!editable}
-          problem={label.trim() === '' ? 'Butonun etiketi boş olamaz.' : null}
+          autoComplete="off"
+          error={label.trim() === '' ? 'Butonun etiketi boş olamaz.' : null}
         />
-        <div className="min-w-0 space-y-1.5">
-          <p id={kindId} className="text-xs font-medium text-neutral-300">
-            Bağlantı
-          </p>
-          <div role="radiogroup" aria-labelledby={kindId} className="flex flex-wrap gap-1">
-            {[
-              { kind: 'url', text: 'Adres' },
-              { kind: 'variable', text: 'Değişken' },
-            ].map(({ kind, text }) => (
-              <button
-                key={kind}
-                type="button"
-                role="radio"
-                aria-checked={linkKind === kind}
-                disabled={!editable}
-                onClick={() => updateAttributes({ linkKind: kind })}
-                className={`h-8 rounded-md border px-3 text-xs font-medium ${
-                  linkKind === kind
-                    ? 'border-skylab-400/60 bg-skylab-500/15 text-skylab-300'
-                    : 'border-white/10 text-neutral-300 hover:bg-white/5'
-                }`}
-              >
-                {text}
-              </button>
-            ))}
+        {allow.variables ? (
+          <div className="min-w-0 space-y-1.5">
+            <p className="text-xs font-medium text-neutral-300">Bağlantı</p>
+            {editable ? (
+              <FilterPills
+                value={linkKind}
+                onChange={(kind) => updateAttributes({ linkKind: kind })}
+                options={LINK_KINDS}
+                ariaLabel="Bağlantı"
+              />
+            ) : (
+              <p className="text-xs text-neutral-400">{toVariable ? 'Değişken' : 'Adres'}</p>
+            )}
           </div>
-        </div>
+        ) : null}
         <div className="sm:col-span-2">
           {toVariable ? (
             <VariableField
@@ -179,36 +125,40 @@ export function ButtonView({ node, updateAttributes, deleteNode, editor, selecte
               disabled={!editable}
             />
           ) : (
-            <TextField
+            <FormField
               label="Adres"
               type="url"
               inputMode="url"
               value={url}
-              onChange={(value) => updateAttributes({ url: value.trim() })}
+              onChange={(event) => updateAttributes({ url: event.target.value.trim() })}
               disabled={!editable}
               placeholder="https://"
-              problem={linkAddressProblem(url)}
+              autoComplete="off"
+              error={editable ? linkAddressProblem(url) : null}
             />
           )}
         </div>
       </div>
-      {toVariable ? (
+      {toVariable && isVariableName(variable) ? (
         <p className="text-xs text-neutral-500">
-          {isVariableName(variable)
-            ? `Gönderimde ${variable} boş gelirse buton hiç görünmez; boş bir bağlantı gitmez.`
-            : `Bir değişken seç ya da adını yaz. ${VARIABLE_NAME_RULE}`}
+          Gönderimde {variable} boş gelirse buton hiç görünmez; boş bir bağlantı gitmez.
         </p>
       ) : null}
     </BlockFrame>
   );
 }
 
+/** The image on the card of each mail theme, as the mail will show it. */
+const IMAGE_SURFACES = [
+  { name: 'Açık tema', background: colors.cardBg },
+  { name: 'Koyu tema', background: darkColors.cardBg },
+] as const;
+
 export function ImageView({ node, updateAttributes, deleteNode, editor, selected }: ReactNodeViewProps) {
   const { src, alt, width } = node.attrs as { src: string; alt: string; width: number | null };
   const editable = editor.isEditable;
-  const problem = src === '' ? null : imageAddressProblem(src);
-  const shown = src !== '' && problem === null;
-  const widthOk = width === null || (Number.isInteger(width) && width >= IMAGE_WIDTH.min && width <= IMAGE_WIDTH.max);
+  const problem = src === '' ? 'Görselin adresini yaz.' : imageAddressProblem(src);
+  const widthProblem = imageWidthProblem(width === null ? undefined : width);
   return (
     <BlockFrame
       label="Görsel"
@@ -219,48 +169,50 @@ export function ImageView({ node, updateAttributes, deleteNode, editor, selected
     >
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="sm:col-span-2">
-          <TextField
-            label="Görsel adresi (PNG ya da JPG)"
+          <FormField
+            label="Görsel adresi"
             type="url"
             inputMode="url"
             value={src}
-            onChange={(value) => updateAttributes({ src: value.trim() })}
+            onChange={(event) => updateAttributes({ src: event.target.value.trim() })}
             disabled={!editable}
-            placeholder="https://cdn.yildizskylab.com/…/afis.png"
-            problem={src === '' ? 'Görselin adresini yaz.' : problem}
+            placeholder={`https://${CLUB_IMAGE_HOST}/images/…`}
+            autoComplete="off"
+            error={editable ? problem : null}
           />
         </div>
-        <TextField
+        <FormField
           label="Açıklama (alt metin)"
           value={alt}
-          onChange={(value) => updateAttributes({ alt: value })}
+          onChange={(event) => updateAttributes({ alt: event.target.value })}
           disabled={!editable}
           placeholder="Görsel yüklenmezse görünen metin"
+          autoComplete="off"
         />
-        <TextField
+        <FormField
           label="Genişlik (piksel, boşsa mail genişliği)"
           type="number"
           inputMode="numeric"
           value={width === null ? '' : String(width)}
-          onChange={(value) => updateAttributes({ width: value === '' ? null : Number(value) })}
+          onChange={(event) => updateAttributes({ width: event.target.value === '' ? null : Number(event.target.value) })}
           disabled={!editable}
-          problem={widthOk ? null : `Genişlik ${IMAGE_WIDTH.min} ile ${IMAGE_WIDTH.max} arasında bir tam sayı olmalı.`}
+          error={editable && widthProblem ? `${widthProblem}.` : null}
         />
       </div>
       <p className="text-xs text-neutral-500">
-        Saydam zeminli bir PNG kullan: beyaz zeminli bir görsel koyu temada beyaz bir dikdörtgen olarak kalır. SVG kabul
-        edilmez; Gmail ve Outlook SVG göstermez.
+        Kulübün CDN&apos;inden ({CLUB_IMAGE_HOST}) bir görsel ya da .png, .jpg, .gif ile biten bir https adresi kullan.
+        Saydam zeminli bir PNG seç: beyaz zeminli bir görsel koyu temada beyaz bir dikdörtgen olarak kalır. SVG ve WebP
+        kabul edilmez; Gmail ve Outlook göstermez.
       </p>
-      {shown ? (
+      {problem === null ? (
         <div className="grid grid-cols-2 gap-2" aria-label="Görsel iki temada" role="group">
-          {[
-            { name: 'Açık tema', surface: 'bg-[#fbfafc] text-[#6f6579]' },
-            { name: 'Koyu tema', surface: 'bg-[#121115] text-[#a3a3a3]' },
-          ].map(({ name, surface }) => (
-            <figure key={name} className={`min-w-0 rounded-md border border-white/10 p-2 ${surface}`}>
-              {/* eslint-disable-next-line @next/next/no-img-element -- the operator's own image, shown as the mail will */}
-              <img src={src} alt={alt} referrerPolicy="no-referrer" className="mx-auto max-h-32 max-w-full object-contain" />
-              <figcaption className="mt-1 text-center text-[10px]">{name}</figcaption>
+          {IMAGE_SURFACES.map(({ name, background }) => (
+            <figure key={name} className="min-w-0 space-y-1">
+              <div className="rounded-md border border-white/10 p-2" style={{ backgroundColor: background }}>
+                {/* eslint-disable-next-line @next/next/no-img-element -- the operator's own image, shown as the mail will */}
+                <img src={src} alt={alt} referrerPolicy="no-referrer" className="mx-auto max-h-32 max-w-full object-contain" />
+              </div>
+              <figcaption className="text-center text-[10px] text-neutral-500">{name}</figcaption>
             </figure>
           ))}
         </div>
@@ -286,17 +238,7 @@ export function ConditionalView({ node, updateAttributes, deleteNode, editor, se
             <GitBranch className="h-3.5 w-3.5" aria-hidden />
             Koşullu bölüm: {when === 'unset' ? `${named} boşsa görünür` : `${named} doluysa görünür`}
           </p>
-          {editable ? (
-            <button
-              type="button"
-              onClick={deleteNode}
-              aria-label="Koşullu bölümü kaldır"
-              title="Bölümü içindekilerle kaldır"
-              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-neutral-500 hover:bg-red-500/10 hover:text-red-300"
-            >
-              <Trash2 className="h-3.5 w-3.5" aria-hidden />
-            </button>
-          ) : null}
+          {editable ? <RemoveButton label="Koşullu bölümü kaldır" onRemove={deleteNode} /> : null}
         </div>
         <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
           <VariableField

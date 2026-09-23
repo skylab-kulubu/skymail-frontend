@@ -10,15 +10,18 @@
  * It edits a Visual source: the document's JSON text
  * (src/lib/mail-render/visual-document.ts), which the render module turns into
  * mail. It knows nothing of Mail templates, drafts or where the document
- * goes; the template editor mounts it for a template's Visual source, and the
- * send form can mount it for a free announcement's body.
+ * goes. `allow` narrows what the document may use — the send form's free
+ * announcement (ticket 16) may use only what the server's allow-list keeps —
+ * and the editor then offers nothing else; `wording` says things in the words
+ * of where it is mounted.
  *
  * What it hands back may not pass the model yet — an image address half
  * typed — and the render says so. A document from outside that the model
  * does not read is not opened at all: opening it would drop what the editor
  * cannot show.
  */
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { NodeSelection } from '@tiptap/pm/state';
 import { EditorContent, useEditor, useEditorState, type Editor } from '@tiptap/react';
 import {
   Bold,
@@ -35,15 +38,28 @@ import {
   Undo2,
   type LucideIcon,
 } from 'lucide-react';
+import { FormField } from '@/components/chrome/FormField';
+import { NoticeBox } from '@/components/chrome/Notice';
+import { Button } from '@/components/ui/Button';
 import {
+  EVERY_VISUAL_FEATURE,
   isVariableName,
   linkAddressProblem,
   parseVisualSource,
   visualDocumentVariables,
+  type VisualAllowance,
 } from '@/lib/mail-render/visual-document';
 import { visualEditorExtensions } from './extensions';
 import { fromEditorContent, toEditorContent } from './tiptap-document';
-import { VariableInsertPanel, VisualEditorContext } from './VariableField';
+import {
+  GENERIC_WORDING,
+  VariableInsertPanel,
+  VisualEditorContext,
+  type VisualEditorShared,
+  type VisualEditorWording,
+} from './VariableField';
+
+export type { VisualEditorWording } from './VariableField';
 
 type Panel = 'link' | 'variable' | null;
 
@@ -57,33 +73,49 @@ function sourceOf(editor: Editor) {
   return { text: JSON.stringify(document), variables: visualDocumentVariables(document).filter(isVariableName) };
 }
 
-function ToolButton({
-  icon: Icon,
-  label,
-  onClick,
-  pressed,
-  disabled,
-  text,
-}: {
+type Tool = {
   icon: LucideIcon;
   label: string;
   onClick: () => void;
+  /** A toggle's state (aria-pressed), or a choice's (aria-checked) inside a single-choice group. */
   pressed?: boolean;
   disabled?: boolean;
   /** Shown beside the icon where there is room. */
   text?: string;
+};
+
+/**
+ * A toolbar button: one tab stop for the whole toolbar, arrow keys between
+ * its buttons (roving tabindex). A button that cannot act now stays
+ * focusable and says so (aria-disabled), so moving through the toolbar never
+ * skips one.
+ */
+function ToolButton({
+  tool: { icon: Icon, label, onClick, pressed, disabled, text },
+  role,
+  tabbable,
+  register,
+}: {
+  tool: Tool;
+  role?: 'radio';
+  tabbable: boolean;
+  register: (element: HTMLButtonElement | null) => void;
 }) {
   return (
     <button
+      ref={register}
       type="button"
+      role={role}
+      tabIndex={tabbable ? 0 : -1}
       // Keep the editor's selection: the button acts on it.
       onMouseDown={(event) => event.preventDefault()}
-      onClick={onClick}
+      onClick={disabled ? undefined : onClick}
       title={label}
       aria-label={label}
-      aria-pressed={pressed}
-      disabled={disabled}
-      className={`inline-flex h-8 min-w-8 shrink-0 items-center justify-center gap-1.5 rounded-md px-2 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-30 ${
+      aria-pressed={role ? undefined : pressed}
+      aria-checked={role ? Boolean(pressed) : undefined}
+      aria-disabled={disabled || undefined}
+      className={`focus-visible:ring-skylab-400/40 inline-flex h-8 min-w-8 shrink-0 items-center justify-center gap-1.5 rounded-md px-2 text-xs transition-colors focus-visible:ring-2 focus-visible:outline-none aria-disabled:cursor-not-allowed aria-disabled:opacity-30 ${
         pressed ? 'bg-white/15 text-neutral-100' : 'text-neutral-400 hover:bg-white/5 hover:text-neutral-200'
       }`}
     >
@@ -110,50 +142,51 @@ function LinkPanel({ editor, onClose }: { editor: Editor; onClose: () => void })
         onClose();
       }}
     >
-      <label className="block space-y-1.5">
-        <span className="block text-xs font-medium text-neutral-300">Bağlantı adresi</span>
-        <input
-          value={href}
-          onChange={(event) => setHref(event.target.value.trim())}
-          type="url"
-          inputMode="url"
-          autoComplete="off"
-          autoFocus
-          aria-invalid={problem ? true : undefined}
-          className="focus:border-skylab-400/50 h-8 w-full rounded-md border border-white/10 bg-white/3 px-3 text-xs text-neutral-100 focus:bg-white/5 focus:outline-none aria-invalid:border-red-400/60"
-        />
-      </label>
-      {problem ? <p className="text-xs text-red-300">{problem}.</p> : null}
+      <FormField
+        label="Bağlantı adresi"
+        value={href}
+        onChange={(event) => setHref(event.target.value.trim())}
+        type="url"
+        inputMode="url"
+        autoComplete="off"
+        autoFocus
+        error={problem ? `${problem}.` : null}
+      />
       {nothingSelected ? <p className="text-xs text-amber-300">Önce bağlantı yapılacak metni seç.</p> : null}
       <div className="flex flex-wrap gap-2">
-        <button
-          type="submit"
-          disabled={problem !== null || nothingSelected}
-          className="border-skylab-400/40 text-skylab-300 hover:bg-skylab-500/10 h-8 rounded-md border px-3 text-xs font-medium disabled:opacity-50"
-        >
+        <Button type="submit" variant="outlineBrand" disabled={problem !== null || nothingSelected}>
           Bağlantıyı uygula
-        </button>
+        </Button>
         {current ? (
-          <button
-            type="button"
+          <Button
+            variant="outlineDanger"
             onClick={() => {
               editor.chain().focus().extendMarkRange('link').unsetLink().run();
               onClose();
             }}
-            className="h-8 rounded-md border border-red-400/40 px-3 text-xs text-red-300 hover:bg-red-500/10"
           >
             Bağlantıyı kaldır
-          </button>
+          </Button>
         ) : null}
-        <button type="button" onClick={onClose} className="h-8 rounded-md border border-white/10 px-3 text-xs text-neutral-300 hover:bg-white/5">
+        <Button variant="secondary" onClick={onClose}>
           Vazgeç
-        </button>
+        </Button>
       </div>
     </form>
   );
 }
 
-function Toolbar({ editor, panel, setPanel }: { editor: Editor; panel: Panel; setPanel: (panel: Panel) => void }) {
+function Toolbar({
+  editor,
+  allow,
+  panel,
+  setPanel,
+}: {
+  editor: Editor;
+  allow: VisualAllowance;
+  panel: Panel;
+  setPanel: (panel: Panel) => void;
+}) {
   const state = useEditorState({
     editor,
     selector: ({ editor: current }) => ({
@@ -162,71 +195,155 @@ function Toolbar({ editor, panel, setPanel }: { editor: Editor; panel: Panel; se
       bold: current.isActive('bold'),
       italic: current.isActive('italic'),
       link: current.isActive('link'),
-      canBold: current.can().toggleBold(),
-      canItalic: current.can().toggleItalic(),
+      canBold: current.can().toggleBold?.() ?? false,
+      canItalic: current.can().toggleItalic?.() ?? false,
       canUndo: current.can().undo(),
       canRedo: current.can().redo(),
     }),
   });
   const chain = () => editor.chain().focus();
-  const insert = (content: Record<string, unknown>) => chain().insertContent(content).run();
+  // A new block goes after a selected block, never in its place.
+  const insert = (content: Record<string, unknown>) => {
+    const { selection } = editor.state;
+    return selection instanceof NodeSelection
+      ? chain().insertContentAt(selection.to, content).run()
+      : chain().insertContent(content).run();
+  };
+  const blocks = new Set(allow.blocks);
+  const marks = new Set(allow.marks);
+
+  const kinds: Tool[] = blocks.has('heading')
+    ? [
+        { icon: Pilcrow, label: 'Paragraf', pressed: state.paragraph, onClick: () => chain().setNode('paragraph').run() },
+        { icon: Heading2, label: 'Başlık', pressed: state.heading, onClick: () => chain().setNode('heading').run() },
+      ]
+    : [];
+  const styles: Tool[] = [
+    ...(marks.has('bold')
+      ? [{ icon: Bold, label: 'Kalın', pressed: state.bold, disabled: !state.canBold, onClick: () => chain().toggleBold().run() }]
+      : []),
+    ...(marks.has('italic')
+      ? [{ icon: Italic, label: 'İtalik', pressed: state.italic, disabled: !state.canItalic, onClick: () => chain().toggleItalic().run() }]
+      : []),
+    ...(marks.has('link')
+      ? [
+          {
+            icon: Link2,
+            label: 'Bağlantı',
+            pressed: state.link || panel === 'link',
+            disabled: state.heading,
+            onClick: () => setPanel(panel === 'link' ? null : 'link'),
+          },
+        ]
+      : []),
+  ];
+  const inserts: Tool[] = [
+    ...(allow.variables
+      ? [
+          {
+            icon: Braces,
+            label: 'Değişken ekle',
+            text: 'Değişken',
+            pressed: panel === 'variable',
+            onClick: () => setPanel(panel === 'variable' ? null : 'variable'),
+          },
+        ]
+      : []),
+    ...(blocks.has('button')
+      ? [
+          {
+            icon: MousePointerClick,
+            label: 'Buton ekle',
+            text: 'Buton',
+            onClick: () =>
+              insert({ type: 'button', attrs: { label: 'Devam et', linkKind: 'url', url: 'https://yildizskylab.com', variable: '' } }),
+          },
+        ]
+      : []),
+    ...(blocks.has('image')
+      ? [{ icon: ImageIcon, label: 'Görsel ekle', text: 'Görsel', onClick: () => insert({ type: 'image', attrs: { src: '', alt: '', width: null } }) }]
+      : []),
+    ...(blocks.has('divider')
+      ? [{ icon: Minus, label: 'Ayraç ekle', text: 'Ayraç', onClick: () => insert({ type: 'divider' }) }]
+      : []),
+    ...(blocks.has('conditional') && allow.variables
+      ? [
+          {
+            icon: GitBranch,
+            label: 'Koşullu bölüm ekle',
+            text: 'Koşullu bölüm',
+            onClick: () => {
+              // The blocks under the cursor go into the section; where they cannot, a new one starts.
+              if (!chain().wrapIn('conditional', { variable: '', when: 'set' }).run()) {
+                insert({ type: 'conditional', attrs: { variable: '', when: 'set' }, content: [{ type: 'paragraph' }] });
+              }
+            },
+          },
+        ]
+      : []),
+  ];
+  const history: Tool[] = [
+    { icon: Undo2, label: 'Geri al', disabled: !state.canUndo, onClick: () => chain().undo().run() },
+    { icon: Redo2, label: 'İleri al', disabled: !state.canRedo, onClick: () => chain().redo().run() },
+  ];
+
+  const buttons = useRef<(HTMLButtonElement | null)[]>([]);
+  const [tabStop, setTabStop] = useState(0);
+  const groups = [kinds, styles, inserts, history].filter((group) => group.length > 0);
+  const count = groups.reduce((total, group) => total + group.length, 0);
+  let index = 0;
+  const button = (tool: Tool, role?: 'radio') => {
+    const at = index++;
+    return (
+      <ToolButton
+        key={tool.label}
+        tool={tool}
+        role={role}
+        tabbable={at === Math.min(tabStop, count - 1)}
+        register={(element) => {
+          buttons.current[at] = element;
+        }}
+      />
+    );
+  };
+  const move = (event: KeyboardEvent<HTMLDivElement>) => {
+    const at = buttons.current.findIndex((element) => element === document.activeElement);
+    if (at === -1) return;
+    const to =
+      event.key === 'ArrowRight' ? (at + 1) % count
+      : event.key === 'ArrowLeft' ? (at - 1 + count) % count
+      : event.key === 'Home' ? 0
+      : event.key === 'End' ? count - 1
+      : null;
+    if (to === null) return;
+    event.preventDefault();
+    setTabStop(to);
+    buttons.current[to]?.focus();
+  };
 
   return (
     <div
       role="toolbar"
       aria-label="Visual editör araçları"
+      onKeyDown={move}
+      onFocus={(event) => {
+        const at = buttons.current.findIndex((element) => element !== null && element === (event.target as Node));
+        if (at !== -1) setTabStop(at);
+      }}
       className="flex flex-wrap items-center gap-0.5 rounded-t-lg border-b border-white/10 bg-white/[0.02] p-1"
     >
-      <ToolButton icon={Pilcrow} label="Paragraf" pressed={state.paragraph} onClick={() => chain().setNode('paragraph').run()} />
-      <ToolButton icon={Heading2} label="Başlık" pressed={state.heading} onClick={() => chain().setNode('heading').run()} />
-      <Separator />
-      <ToolButton icon={Bold} label="Kalın" pressed={state.bold} disabled={!state.canBold} onClick={() => chain().toggleBold().run()} />
-      <ToolButton
-        icon={Italic}
-        label="İtalik"
-        pressed={state.italic}
-        disabled={!state.canItalic}
-        onClick={() => chain().toggleItalic().run()}
-      />
-      <ToolButton
-        icon={Link2}
-        label="Bağlantı"
-        pressed={state.link || panel === 'link'}
-        disabled={state.heading}
-        onClick={() => setPanel(panel === 'link' ? null : 'link')}
-      />
-      <Separator />
-      <ToolButton
-        icon={Braces}
-        label="Değişken ekle"
-        text="Değişken"
-        pressed={panel === 'variable'}
-        onClick={() => setPanel(panel === 'variable' ? null : 'variable')}
-      />
-      <ToolButton
-        icon={MousePointerClick}
-        label="Buton ekle"
-        text="Buton"
-        onClick={() =>
-          insert({ type: 'button', attrs: { label: 'Devam et', linkKind: 'url', url: 'https://yildizskylab.com', variable: '' } })
-        }
-      />
-      <ToolButton icon={ImageIcon} label="Görsel ekle" text="Görsel" onClick={() => insert({ type: 'image', attrs: { src: '', alt: '', width: null } })} />
-      <ToolButton icon={Minus} label="Ayraç ekle" text="Ayraç" onClick={() => insert({ type: 'divider' })} />
-      <ToolButton
-        icon={GitBranch}
-        label="Koşullu bölüm ekle"
-        text="Koşullu bölüm"
-        onClick={() => {
-          // The blocks under the cursor go into the section; where they cannot, a new one starts.
-          if (!chain().wrapIn('conditional', { variable: '', when: 'set' }).run()) {
-            insert({ type: 'conditional', attrs: { variable: '', when: 'set' }, content: [{ type: 'paragraph' }] });
-          }
-        }}
-      />
-      <Separator />
-      <ToolButton icon={Undo2} label="Geri al" disabled={!state.canUndo} onClick={() => chain().undo().run()} />
-      <ToolButton icon={Redo2} label="İleri al" disabled={!state.canRedo} onClick={() => chain().redo().run()} />
+      {groups.map((group, position) => (
+        <div key={position} className="contents">
+          {position > 0 ? <Separator /> : null}
+          {group === kinds ? (
+            <div role="radiogroup" aria-label="Blok türü" className="flex items-center gap-0.5">
+              {group.map((tool) => button(tool, 'radio'))}
+            </div>
+          ) : (
+            group.map((tool) => button(tool))
+          )}
+        </div>
+      ))}
     </div>
   );
 }
@@ -245,9 +362,11 @@ const CONTENT_CLASS = [
 export function VisualEditor({
   value,
   onChange,
-  variables,
+  variables = [],
   label,
   editable = true,
+  allow = EVERY_VISUAL_FEATURE,
+  wording,
   footer,
 }: {
   /** A Visual source: the document's JSON text. A new one from outside replaces what is in the editor. */
@@ -255,10 +374,14 @@ export function VisualEditor({
   /** The document as the editor holds it, as JSON text. */
   onChange: (value: string) => void;
   /** Variables to offer, beside the ones the document already uses. */
-  variables: readonly string[];
+  variables?: readonly string[];
   /** The editor's accessible name. */
   label: string;
   editable?: boolean;
+  /** What the document may use; the editor offers nothing else. Fixed for the editor's life. */
+  allow?: VisualAllowance;
+  /** What it says, in the words of where it is mounted. */
+  wording?: Partial<VisualEditorWording>;
   /** Shown under the editing area. */
   footer?: ReactNode;
 }) {
@@ -269,14 +392,16 @@ export function VisualEditor({
     onChangeRef.current = onChange;
   }, [onChange]);
 
-  const [opened] = useState(() => parseVisualSource(value));
+  const words = useMemo(() => ({ ...GENERIC_WORDING, ...wording }), [wording]);
+  const [opened] = useState(() => parseVisualSource(value, allow));
+  const [extensions] = useState(() => visualEditorExtensions(allow, words.placeholder));
   const [problems, setProblems] = useState<string[] | null>(opened.ok ? null : opened.problems);
   const [used, setUsed] = useState<string[]>(opened.ok ? visualDocumentVariables(opened.document) : []);
   const [panel, setPanel] = useState<Panel>(null);
 
   const editor = useEditor({
     immediatelyRender: false,
-    extensions: visualEditorExtensions,
+    extensions,
     content: opened.ok ? toEditorContent(opened.document) : undefined,
     editable,
     editorProps: {
@@ -304,34 +429,37 @@ export function VisualEditor({
   useEffect(() => {
     if (!editor || value === emitted.current) return;
     emitted.current = value;
-    const read = parseVisualSource(value);
+    const read = parseVisualSource(value, allow);
     setProblems(read.ok ? null : read.problems);
     if (read.ok) {
       editor.commands.setContent(toEditorContent(read.document), { emitUpdate: false });
       setUsed(visualDocumentVariables(read.document));
     }
-  }, [editor, value]);
+  }, [editor, value, allow]);
 
-  const offered = useMemo(() => [...new Set([...variables, ...used])].sort(), [variables, used]);
-  const shared = useMemo(() => ({ variables: offered }), [offered]);
+  const offered = useMemo(
+    () => (allow.variables ? [...new Set([...variables, ...used])].sort() : []),
+    [allow.variables, variables, used],
+  );
+  const shared: VisualEditorShared = useMemo(() => ({ variables: offered, allow, wording: words }), [offered, allow, words]);
 
   if (problems) {
     return (
-      <div role="alert" className="rounded-lg border border-red-400/30 bg-red-500/5 p-4 text-sm text-red-300">
-        <p className="font-medium">Bu Visual belge açılmadı: bu panelin bilmediği bir şey içeriyor ve açmak onu düşürürdü.</p>
+      <NoticeBox tone="error">
+        <p className="font-medium">Bu Visual belge açılmadı: burada kullanılamayan bir şey içeriyor ve açmak onu düşürürdü.</p>
         <ul className="mt-2 list-disc space-y-1 pl-4 font-mono text-xs">
           {problems.map((problem) => (
             <li key={problem}>{problem}</li>
           ))}
         </ul>
-      </div>
+      </NoticeBox>
     );
   }
 
   return (
     <VisualEditorContext.Provider value={shared}>
       <div className="focus-within:border-skylab-400/40 rounded-lg border border-white/10">
-        {editor && editable ? <Toolbar editor={editor} panel={panel} setPanel={setPanel} /> : null}
+        {editor && editable ? <Toolbar editor={editor} allow={allow} panel={panel} setPanel={setPanel} /> : null}
         {editor && panel ? (
           <div className="border-b border-white/10 bg-white/[0.02] p-3">
             {panel === 'link' ? (

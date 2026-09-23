@@ -105,6 +105,8 @@ export const templateHref = {
   index: "/templates",
   create: "/templates/create",
   edit: (id: string) => `/templates/edit/${encodeURIComponent(id)}`,
+  /** The editor, opened on a new, empty Visual source: where a template started in Visual lands. */
+  editStartingVisual: (id: string) => `/templates/edit/${encodeURIComponent(id)}?start=visual`,
   show: (id: string) => `/templates/show/${encodeURIComponent(id)}`,
   archived: "/templates?lifecycle=inactive",
 } as const;

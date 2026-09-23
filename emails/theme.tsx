@@ -66,6 +66,9 @@ export const colors = {
   alertText: "#9e5560",
 } as const;
 
+/** The dark theme's card, which the stylesheet below paints; editors show images on it. */
+export const darkColors = { cardBg: "#121115" } as const;
+
 export const fontStack = "'Space Grotesk', Helvetica, Arial, sans-serif";
 
 /*
@@ -115,7 +118,7 @@ body { background-color: #f4f1f7; }
 
 @media (prefers-color-scheme: dark) {
   .email-bg   { background-color: #08070b !important; background-image: ${darkStarfield} !important; }
-  .card       { background-color: #121115 !important; border-color: #2a292c !important; }
+  .card       { background-color: ${darkColors.cardBg} !important; border-color: #2a292c !important; }
   .t-primary  { color: #ffffff !important; }
   .t-body     { color: #dcdcdc !important; }
   .t-muted    { color: #a3a3a3 !important; }
@@ -139,7 +142,7 @@ body { background-color: #f4f1f7; }
   attributes is the only way to tell it what we actually want. Other clients
   never set them, so these rules simply never match there.
 */
-[data-ogsb] .card, .card[data-ogsb] { background-color: #121115 !important; border-color: #2a292c !important; }
+[data-ogsb] .card, .card[data-ogsb] { background-color: ${darkColors.cardBg} !important; border-color: #2a292c !important; }
 [data-ogsb] .email-bg, .email-bg[data-ogsb] { background-color: #08070b !important; }
 [data-ogsc] .t-primary, .t-primary[data-ogsc] { color: #ffffff !important; }
 [data-ogsc] .t-body, .t-body[data-ogsc] { color: #dcdcdc !important; }

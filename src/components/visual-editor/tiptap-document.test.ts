@@ -9,7 +9,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, it } from "node:test";
 import { getSchema } from "@tiptap/core";
-import { visualSource, type VisualDocument } from "@/lib/mail-render/visual-document";
+import { EVERY_VISUAL_FEATURE, visualSource, type VisualDocument } from "@/lib/mail-render/visual-document";
 import { visualSchemaExtensions } from "./schema";
 import { fromEditorContent, toEditorContent } from "./tiptap-document";
 
@@ -17,7 +17,7 @@ const EVERY_BLOCK = JSON.parse(
   readFileSync(join(import.meta.dirname, "../../lib/mail-render/testdata/visual-every-block.json"), "utf8"),
 ) as VisualDocument;
 
-const schema = getSchema(visualSchemaExtensions);
+const schema = getSchema(visualSchemaExtensions(EVERY_VISUAL_FEATURE));
 
 /** Content as ProseMirror keeps it: checked against the editor's schema, and back to JSON. */
 function throughSchema(document: VisualDocument) {
@@ -97,5 +97,14 @@ describe("a Visual document in the editor", () => {
       { type: "button", label: "Git", link: { variable: "TicketUrl" } },
       { type: "button", label: "Git", link: { url: "https://skyl.app" } },
     ]);
+  });
+});
+
+describe("the editor for a narrower allowance", () => {
+  it("has only the blocks and marks allowed, so nothing else can be typed or pasted in", () => {
+    const narrow = getSchema(visualSchemaExtensions({ blocks: ["heading", "paragraph", "button"], marks: ["bold", "italic"], variables: false }));
+
+    assert.deepEqual(Object.keys(narrow.nodes).sort(), ["button", "doc", "heading", "paragraph", "text"]);
+    assert.deepEqual(Object.keys(narrow.marks).sort(), ["bold", "italic"]);
   });
 });

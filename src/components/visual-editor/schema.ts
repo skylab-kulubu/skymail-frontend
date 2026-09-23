@@ -15,7 +15,7 @@
  */
 import { Node, mergeAttributes, type Extensions } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
-import { linkAddressProblem } from "@/lib/mail-render/visual-document";
+import { linkAddressProblem, type VisualAllowance, type VisualBlockType } from "@/lib/mail-render/visual-document";
 
 /** A text attribute kept in a data-* attribute, so a block copied within the editor keeps it. */
 const dataAttribute = (name: string, fallback: string) => ({
@@ -120,35 +120,52 @@ export const ConditionalNode = Node.create({
   renderHTML: ({ HTMLAttributes }) => ["div", mergeAttributes(HTMLAttributes, { "data-conditional": "" }), 0],
 });
 
-/** Document, paragraph, text, bold, italic, link and the editing aids, from Skyforms' StarterKit; nothing else of it. */
-const basics = StarterKit.configure({
-  blockquote: false,
-  bulletList: false,
-  code: false,
-  codeBlock: false,
-  hardBreak: false,
-  heading: false,
-  horizontalRule: false,
-  listItem: false,
-  listKeymap: false,
-  orderedList: false,
-  strike: false,
-  underline: false,
-  link: {
-    openOnClick: false,
-    autolink: false,
-    linkOnPaste: false,
-    defaultProtocol: "https",
-    isAllowedUri: (url) => linkAddressProblem(url) === null,
-  },
-});
+/** Document, paragraph, text, the marks allowed and the editing aids, from Skyforms' StarterKit; nothing else of it. */
+function basics({ marks }: VisualAllowance) {
+  return StarterKit.configure({
+    blockquote: false,
+    bulletList: false,
+    code: false,
+    codeBlock: false,
+    hardBreak: false,
+    heading: false,
+    horizontalRule: false,
+    listItem: false,
+    listKeymap: false,
+    orderedList: false,
+    strike: false,
+    underline: false,
+    bold: marks.includes("bold") ? {} : false,
+    italic: marks.includes("italic") ? {} : false,
+    link: marks.includes("link")
+      ? {
+          openOnClick: false,
+          autolink: false,
+          linkOnPaste: false,
+          defaultProtocol: "https",
+          isAllowedUri: (url) => linkAddressProblem(url) === null,
+        }
+      : false,
+  });
+}
 
-export const visualSchemaExtensions: Extensions = [
-  basics,
-  HeadingNode,
-  VariableNode,
-  ButtonNode,
-  ImageNode,
-  DividerNode,
-  ConditionalNode,
-];
+/** The blocks of our own, by the model's name; the paragraph is the StarterKit's and always there. */
+export const BLOCK_NODES: Readonly<Record<Exclude<VisualBlockType, "paragraph">, Node>> = {
+  heading: HeadingNode,
+  button: ButtonNode,
+  image: ImageNode,
+  divider: DividerNode,
+  conditional: ConditionalNode,
+};
+
+/**
+ * The schema for what `allowance` lets a document use (EVERY_VISUAL_FEATURE
+ * for a Mail template's body): a block, mark or variable it leaves out is not
+ * in the schema at all, so it can be neither typed nor pasted in.
+ */
+export function visualSchemaExtensions(allowance: VisualAllowance): Extensions {
+  const blocks = (Object.keys(BLOCK_NODES) as (keyof typeof BLOCK_NODES)[])
+    .filter((type) => allowance.blocks.includes(type) && (type !== "conditional" || allowance.variables))
+    .map((type) => BLOCK_NODES[type]);
+  return [basics(allowance), ...(allowance.variables ? [VariableNode] : []), ...blocks];
+}

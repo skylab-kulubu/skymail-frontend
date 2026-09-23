@@ -299,9 +299,21 @@ export function planMainChange(candidate: EditableMode, state: EditorState): Sav
 export function addSource(mode: EditableMode, state: EditorState): Content | null {
   const { editing } = state;
   if (editing.sources[mode] !== undefined) return null;
-  const start = mode === "jsx" ? JSX_STARTER : mode === "visual" ? EMPTY_VISUAL_SOURCE : mainBody(state)?.html;
+  const start = startOf(mode, state);
   if (start === undefined) return null;
   return { ...editing, sources: { ...editing.sources, [mode]: start } };
+}
+
+/** Where a new source in `mode` starts; undefined when it has nothing to start from. */
+function startOf(mode: EditableMode, state: EditorState): string | undefined {
+  switch (mode) {
+    case "jsx":
+      return JSX_STARTER;
+    case "visual":
+      return EMPTY_VISUAL_SOURCE;
+    case "html":
+      return mainBody(state)?.html;
+  }
 }
 
 /**

@@ -132,6 +132,11 @@ function blocks(list: readonly VisualBlock[], above: boolean): ReactNode[] {
         );
         break;
       }
+      default: {
+        // A new block fails to compile here until it has its component.
+        const unhandled: never = block;
+        throw new Error(`Visual render "${(unhandled as VisualBlock).type}" bloğunu tanımıyor.`);
+      }
     }
     above = true;
   });
