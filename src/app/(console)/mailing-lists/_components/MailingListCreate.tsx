@@ -6,7 +6,7 @@ import { useApi } from '@/lib/api/react';
 import { createList, listHref } from '@/lib/mailing-lists';
 import { RoleGate } from '@/components/layout/RoleGate';
 import { ROLE } from '@/lib/access';
-import { flashNotice } from './flash';
+import { flashNotice } from '@/lib/notice';
 import { ListNameForm } from './ListNameForm';
 
 export function MailingListCreate() {

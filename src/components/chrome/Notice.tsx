@@ -1,13 +1,7 @@
 'use client';
 
 import { AlertTriangle, CheckCircle2, X } from 'lucide-react';
-
-export type NoticeData = Readonly<{
-  tone: 'success' | 'error';
-  text: string;
-  /** An archived list the notice can bring back ("Geri al"). */
-  restore?: Readonly<{ id: string; name: string }>;
-}>;
+import type { NoticeData } from '@/lib/notice';
 
 const TONE = {
   success: {
@@ -33,7 +27,7 @@ export function Notice({
 }: {
   notice: NoticeData;
   onDismiss?: () => void;
-  onRestore?: (list: { id: string; name: string }) => void;
+  onRestore?: (record: { id: string; name: string }) => void;
   restoring?: boolean;
 }) {
   const { Icon, className } = TONE[notice.tone];

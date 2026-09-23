@@ -1,7 +1,17 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { NoticeData } from './Notice';
+
+/**
+ * The outcome of an action, as a page says it (`components/chrome/Notice`):
+ * a success as a success, an error as the API's Turkish sentence.
+ */
+export type NoticeData = Readonly<{
+  tone: 'success' | 'error';
+  text: string;
+  /** An archived record — a mailing list, a Mail template — the notice can bring back ("Geri al"). */
+  restore?: Readonly<{ id: string; name: string }>;
+}>;
 
 /**
  * A notice for the page an action navigates to — "created", "archived" — kept

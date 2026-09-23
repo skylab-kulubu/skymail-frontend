@@ -11,6 +11,8 @@ interface ModalDangerActionsProps {
   confirmLabel?: string;
   pendingLabel?: string;
   isPending?: boolean;
+  /** The action can no longer succeed (e.g. the API refused it for good); Cancel stays. */
+  confirmDisabled?: boolean;
   className?: string;
 }
 
@@ -22,6 +24,7 @@ export function ModalDangerActions({
   confirmLabel = 'Sil',
   pendingLabel = 'Siliniyor...',
   isPending = false,
+  confirmDisabled = false,
   className,
 }: ModalDangerActionsProps) {
   return (
@@ -29,7 +32,7 @@ export function ModalDangerActions({
       <Button variant="secondary" onClick={onCancel} disabled={isPending}>
         {cancelLabel}
       </Button>
-      <Button variant="danger" onClick={onConfirm} disabled={isPending}>
+      <Button variant="danger" onClick={onConfirm} disabled={isPending || confirmDisabled}>
         {isPending ? pendingLabel : confirmLabel}
       </Button>
     </div>

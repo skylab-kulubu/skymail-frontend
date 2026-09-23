@@ -13,7 +13,7 @@ import { FilterPills } from '@/components/chrome/FilterPills';
 import { Pagination } from '@/components/chrome/Pagination';
 import { StateCard } from '@/components/chrome/StateCard';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { DataTable } from '@/components/tables/DataTable';
+import { ResponsiveTable } from '@/components/tables/ResponsiveTable';
 import { Button } from '@/components/ui/Button';
 import { sectionLabel } from '@/lib/access';
 import { useApiLoad } from '@/lib/api/react';
@@ -96,58 +96,45 @@ export function SendList() {
         </StateCard>
       ) : (
         <div className="space-y-2">
-          {/* A phone gets rows it can read without scrolling sideways. */}
-          {state.data.items.length > 0 ? (
-            <ul className="divide-y divide-white/5 rounded-lg border border-white/5 md:hidden">
-              {state.data.items.map((send) => (
-                <SendItem key={send.id} send={send} />
-              ))}
-            </ul>
-          ) : (
-            <p className="rounded-lg border border-white/5 px-4 py-6 text-center text-sm text-neutral-500 md:hidden">
-              {EMPTY_TEXT[view.status]}
-            </p>
-          )}
-          <div className="hidden md:block">
-            <DataTable<Send>
-              data={state.data.items}
-              emptyText={EMPTY_TEXT[view.status]}
-              columns={[
-                {
-                  key: 'template_name',
-                  header: 'Mail template',
-                  render: (_, send) => (
-                    <Link
-                      href={sendHref(send.id)}
-                      className="hover:text-skylab-300 block max-w-[16rem] truncate font-medium text-neutral-100 transition-colors"
-                    >
-                      {templateLabel(send)}
-                    </Link>
-                  ),
-                },
-                {
-                  key: 'audience',
-                  header: 'Kitle',
-                  render: (_, send) => <Audience audience={audienceLabel(send.audience)} className="max-w-[16rem]" />,
-                },
-                {
-                  key: 'status',
-                  header: 'Durum',
-                  render: (value: SendStatus) => <SendStatusBadge status={value} />,
-                },
-                {
-                  key: 'recipient_counts',
-                  header: 'Alıcılar',
-                  render: (_, send) => <RecipientCounts send={send} />,
-                },
-                {
-                  key: 'created_at',
-                  header: 'Tarih',
-                  render: (value: string) => <span className="text-neutral-400 tabular-nums">{formatSendTime(value)}</span>,
-                },
-              ]}
-            />
-          </div>
+          <ResponsiveTable<Send>
+            rows={state.data.items}
+            emptyText={EMPTY_TEXT[view.status]}
+            renderItem={(send) => <SendItem send={send} />}
+            columns={[
+              {
+                key: 'template_name',
+                header: 'Mail template',
+                render: (_, send) => (
+                  <Link
+                    href={sendHref(send.id)}
+                    className="hover:text-skylab-300 block max-w-[16rem] truncate font-medium text-neutral-100 transition-colors"
+                  >
+                    {templateLabel(send)}
+                  </Link>
+                ),
+              },
+              {
+                key: 'audience',
+                header: 'Kitle',
+                render: (_, send) => <Audience audience={audienceLabel(send.audience)} className="max-w-[16rem]" />,
+              },
+              {
+                key: 'status',
+                header: 'Durum',
+                render: (value: SendStatus) => <SendStatusBadge status={value} />,
+              },
+              {
+                key: 'recipient_counts',
+                header: 'Alıcılar',
+                render: (_, send) => <RecipientCounts send={send} />,
+              },
+              {
+                key: 'created_at',
+                header: 'Tarih',
+                render: (value: string) => <span className="text-neutral-400 tabular-nums">{formatSendTime(value)}</span>,
+              },
+            ]}
+          />
           <Pagination
             ariaLabel="Gönderim sayfaları"
             current={view.page}

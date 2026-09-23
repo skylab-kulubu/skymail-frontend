@@ -20,6 +20,11 @@ export type SessionToken = {
   expiresAt: number;
   /** The `skymail` client roles, e.g. `skymail:access`, `skymail:templates:read`. */
   roles: string[];
+  /**
+   * The Keycloak subject the access token was issued to; null when it carries
+   * none. Absent from a cookie written before it was kept, until its next refresh.
+   */
+  subject?: string | null;
   user: SessionUser;
   error?: typeof REFRESH_ERROR;
 };
@@ -72,6 +77,16 @@ export function clientRoles(accessToken: string, clientId: string): string[] {
   return Array.isArray(roles) ? roles.filter((role): role is string => typeof role === "string") : [];
 }
 
+/**
+ * The Keycloak subject the access token was issued to, read like the roles.
+ * skymail-backend records it as the author of a Mail template version, so the
+ * panel tells the viewer's own draft apart by it.
+ */
+function tokenSubject(accessToken: string): string | null {
+  const sub = claims(accessToken).sub;
+  return typeof sub === "string" && sub !== "" ? sub : null;
+}
+
 function pickUser(profile: { name?: unknown; email?: unknown }): SessionUser {
   const user: SessionUser = {};
   if (typeof profile.name === "string" && profile.name !== "") user.name = profile.name;
@@ -95,6 +110,7 @@ export function tokenFromSignIn(
     idToken: account.id_token,
     expiresAt,
     roles: clientRoles(accessToken, clientId),
+    subject: tokenSubject(accessToken),
     user: pickUser(profile),
   };
 }
@@ -221,6 +237,7 @@ export async function refreshIfExpiring(
     idToken: tokens.id_token ?? token.idToken,
     expiresAt: receivedAt + (tokens.expires_in ?? DEFAULT_LIFETIME_S) * 1000,
     roles: clientRoles(tokens.access_token, clientId),
+    subject: tokenSubject(tokens.access_token),
     error: undefined,
   };
 }
@@ -230,6 +247,8 @@ export async function refreshIfExpiring(
 export type ExposedSession = {
   expires: string;
   user: { name?: string | null; email?: string | null };
+  /** The Keycloak subject, which the API records as the author of what this person writes. */
+  subject: string | null;
   /** Sent as the bearer token to the SkyMail API. */
   accessToken: string;
   /** The `skymail` client roles. */
@@ -247,6 +266,7 @@ export function sessionFromToken(session: { expires: string }, token: SessionTok
   const exposed: ExposedSession = {
     expires: session.expires,
     user: { name: token.user?.name ?? null, email: token.user?.email ?? null },
+    subject: token.subject ?? null,
     accessToken: token.accessToken,
     roles: token.roles ?? [],
   };
