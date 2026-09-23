@@ -1,44 +1,38 @@
 'use client';
 
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { ArchiveDialog } from '@/components/chrome/ArchiveDialog';
 import { FilterPills } from '@/components/chrome/FilterPills';
-import { useFlashNotice } from '@/components/chrome/flash';
-import { Notice, type NoticeData } from '@/components/chrome/Notice';
+import { Notice } from '@/components/chrome/Notice';
 import { Pagination } from '@/components/chrome/Pagination';
 import { StateCard } from '@/components/chrome/StateCard';
 import { useConsole } from '@/components/layout/ConsoleContext';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { DataTable } from '@/components/tables/DataTable';
+import { ResponsiveTable } from '@/components/tables/ResponsiveTable';
+import { RowActions } from '@/components/tables/RowActions';
 import { Button } from '@/components/ui/Button';
 import { CreatePageButton } from '@/components/ui/CreatePageButton';
 import { ROLE, hasRole, sectionLabel } from '@/lib/access';
-import { apiErrorMessage } from '@/lib/api/errors';
-import { useApi, useApiLoad } from '@/lib/api/react';
-import {
-  LIFECYCLE_FILTERS,
-  listViewHref,
-  pageCount,
-  readListView,
-  type Lifecycle,
-  type ListView,
-} from '@/lib/list-view';
+import { useApi } from '@/lib/api/react';
+import { LIFECYCLE_FILTERS, type Lifecycle } from '@/lib/list-view';
+import type { NoticeData } from '@/lib/notice';
 import {
   TEMPLATE_PAGE_SIZE,
   archiveTemplate,
   fetchTemplatePage,
-  isSystemProtected,
+  isSystemArchiveRefusal,
   restoreTemplate,
   templateActions,
   templateHref,
   toTemplateRow,
+  type AuthoringMode,
   type TemplateActions,
   type TemplateRow,
 } from '@/lib/templates';
+import { useArchivableList, type ArchivableRecord } from '@/lib/ui/use-archivable-list';
 import { DraftIndicator } from './DraftIndicator';
-import { MainSource, RowActions, TemplateName } from './TemplateRowParts';
+import { MainSource, TemplateName } from './TemplateRowParts';
 
 const EMPTY_TEXT: Readonly<Record<Lifecycle, string>> = {
   current: 'Henüz Mail template yok.',
@@ -46,10 +40,8 @@ const EMPTY_TEXT: Readonly<Record<Lifecycle, string>> = {
   all: 'Hiç Mail template yok.',
 };
 
-type TemplateRef = Readonly<{ id: string; name: string }>;
-
 /** What the page says after an archive: the template is kept, and can come back. */
-function archivedNotice(template: TemplateRef): NoticeData {
+function archivedNotice(template: ArchivableRecord): NoticeData {
   return {
     tone: 'success',
     text: `“${template.name}” arşivlendi. Sürümleri ve geçmiş gönderimleri korunuyor.`,
@@ -59,78 +51,41 @@ function archivedNotice(template: TemplateRef): NoticeData {
 
 export function TemplatesPage() {
   const api = useApi();
-  const router = useRouter();
-  const pathname = usePathname() || templateHref.index;
-  const view = readListView(useSearchParams());
   const { roles, user } = useConsole();
   const canWrite = hasRole(roles, ROLE.templatesWrite);
   const viewerSub = user.sub ?? null;
-
-  const [notice, setNotice] = useFlashNotice(templateHref.index);
-  const [toArchive, setToArchive] = useState<TemplateRef | null>(null);
-  // Per row: two restores in flight must not clear each other's busy state.
-  const [restoring, setRestoring] = useState<ReadonlySet<string>>(() => new Set());
-
-  const state = useApiLoad(
-    (client, signal) => fetchTemplatePage(client, view, signal),
-    `${view.lifecycle}:${view.page}`,
-  );
+  const list = useArchivableList({
+    index: templateHref.index,
+    pageSize: TEMPLATE_PAGE_SIZE,
+    load: fetchTemplatePage,
+    restore: restoreTemplate,
+    archivedNotice,
+    canRestore: canWrite,
+  });
+  const { view, state } = list;
   const rows = state.status === 'success' ? state.data.templates.map((item) => toTemplateRow(item, viewerSub)) : [];
-  const lastPage = state.status === 'success' ? pageCount(state.data.total, TEMPLATE_PAGE_SIZE) : null;
 
-  function show(next: ListView) {
-    router.push(listViewHref(pathname, next), { scroll: false });
-  }
-
-  // A page that emptied — its last row archived, or a stale link — moves to the last page there is.
-  const { lifecycle, page } = view;
-  useEffect(() => {
-    if (lastPage !== null && page > lastPage) {
-      router.replace(listViewHref(pathname, { lifecycle, page: lastPage }), { scroll: false });
-    }
-  }, [lastPage, lifecycle, page, pathname, router]);
-
-  function markRestoring(id: string, busy: boolean) {
-    setRestoring((current) => {
-      const next = new Set(current);
-      if (busy) next.add(id);
-      else next.delete(id);
-      return next;
-    });
-  }
-
-  async function restore(template: TemplateRef) {
-    markRestoring(template.id, true);
-    try {
-      await restoreTemplate(api, template.id);
-      await state.reload();
-      setNotice({ tone: 'success', text: `“${template.name}” geri alındı; yeniden aktif.` });
-    } catch (error) {
-      setNotice({ tone: 'error', text: `“${template.name}” geri alınamadı. ${apiErrorMessage(error)}` });
-    } finally {
-      markRestoring(template.id, false);
-    }
-  }
-
-  async function archive(template: TemplateRef) {
+  async function archive(template: ArchivableRecord) {
     try {
       await archiveTemplate(api, template.id);
     } catch (error) {
       // It became a System template after the list loaded: show it as one.
-      if (isSystemProtected(error)) void state.reload();
+      if (isSystemArchiveRefusal(error)) void state.reload();
       throw error;
     }
   }
 
-  const rowActions = (row: TemplateRow) => (
-    <RowActions
-      row={row}
-      actions={templateActions(row, roles)}
-      restoring={restoring.has(row.id)}
-      onArchive={() => setToArchive(row)}
-      onRestore={() => void restore(row)}
-    />
-  );
+  const rowActions = (row: TemplateRow) => {
+    const actions = templateActions(row, roles);
+    return (
+      <RowActions
+        target={`“${row.name}” Mail template'ini`}
+        onArchive={actions.archive ? () => list.askArchive(row) : undefined}
+        onRestore={actions.restore ? () => list.restore(row) : undefined}
+        restoring={list.isRestoring(row.id)}
+      />
+    );
+  };
 
   const columns = [
     {
@@ -154,7 +109,7 @@ export function TemplatesPage() {
     {
       key: 'mainSource',
       header: 'Main source',
-      render: (value: string | null) => <MainSource label={value} />,
+      render: (value: AuthoringMode | null) => <MainSource mode={value} />,
     },
     {
       key: 'drafts',
@@ -173,21 +128,14 @@ export function TemplatesPage() {
         actions={canWrite ? <CreatePageButton href={templateHref.create}>Yeni template</CreatePageButton> : null}
       />
 
-      {notice ? (
-        <Notice
-          notice={notice}
-          onDismiss={() => setNotice(null)}
-          onRestore={canWrite ? (template) => void restore(template) : undefined}
-          restoring={notice.restore ? restoring.has(notice.restore.id) : false}
-        />
-      ) : null}
+      {list.notice ? <Notice {...list.notice} /> : null}
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <FilterPills
           ariaLabel="Gösterilen Mail template'ler"
           value={view.lifecycle}
           options={LIFECYCLE_FILTERS}
-          onChange={(next) => show({ lifecycle: next, page: 1 })}
+          onChange={(next) => list.show({ lifecycle: next, page: 1 })}
         />
         {/* Present from the start, so a screen reader hears the count change with the filter. */}
         <p className="text-xs text-neutral-500 tabular-nums" aria-live="polite">
@@ -210,42 +158,30 @@ export function TemplatesPage() {
         </StateCard>
       ) : (
         <div className="space-y-2">
-          {/* A phone gets rows it can read without scrolling sideways. */}
-          {rows.length > 0 ? (
-            <ul className="divide-y divide-white/5 rounded-lg border border-white/5 bg-neutral-900 md:hidden">
-              {rows.map((row) => (
-                <TemplateItem key={row.id} row={row} actions={templateActions(row, roles)}>
-                  {rowActions(row)}
-                </TemplateItem>
-              ))}
-            </ul>
-          ) : (
-            <p className="rounded-lg border border-white/5 px-4 py-6 text-center text-sm text-neutral-500 md:hidden">
-              {EMPTY_TEXT[view.lifecycle]}
-            </p>
-          )}
-          <div className="hidden md:block">
-            <DataTable data={rows} columns={columns} emptyText={EMPTY_TEXT[view.lifecycle]} />
-          </div>
+          <ResponsiveTable
+            rows={rows}
+            columns={columns}
+            emptyText={EMPTY_TEXT[view.lifecycle]}
+            renderItem={(row) => (
+              <TemplateItem row={row} actions={templateActions(row, roles)}>
+                {rowActions(row)}
+              </TemplateItem>
+            )}
+          />
           <Pagination
             ariaLabel="Mail template sayfaları"
             current={view.page}
-            totalPages={lastPage ?? 1}
-            onPageChange={(next) => show({ ...view, page: next })}
+            totalPages={list.lastPage ?? 1}
+            onPageChange={(next) => list.show({ ...view, page: next })}
           />
         </div>
       )}
 
       <ArchiveDialog
-        record={toArchive}
+        {...list.archiveDialog}
         title="Mail template'i arşivle"
         archive={archive}
-        onClose={() => setToArchive(null)}
-        onArchived={async (template) => {
-          await state.reload();
-          setToArchive(null);
-          setNotice(archivedNotice(template));
-        }}
+        isFinalRefusal={isSystemArchiveRefusal}
       >
         {(template) => (
           <p className="leading-relaxed">
@@ -276,10 +212,10 @@ function TemplateItem({
         <span className="text-neutral-500">Konu: </span>
         {row.subject}
       </p>
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
+      <div className="flex flex-wrap items-start gap-x-3 gap-y-1.5 text-xs">
         <span className="inline-flex items-center gap-1.5">
           <span className="text-neutral-500">Main source</span>
-          <MainSource label={row.mainSource} />
+          <MainSource mode={row.mainSource} />
         </span>
         {row.drafts ? <DraftIndicator drafts={row.drafts} /> : null}
       </div>

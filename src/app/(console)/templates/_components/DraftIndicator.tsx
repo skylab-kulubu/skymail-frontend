@@ -3,7 +3,7 @@
 import { useId, useState } from 'react';
 import { ChevronDown, PenLine } from 'lucide-react';
 import { formatDateTime } from '@/lib/format';
-import type { DraftAuthor, DraftIndicator as DraftIndicatorData } from '@/lib/templates';
+import type { DraftAuthor, DraftsInProgress } from '@/lib/templates';
 
 /** Marks the viewer's own draft. */
 function MineMark() {
@@ -20,29 +20,29 @@ function describe(author: DraftAuthor): string {
 
 /**
  * Who has an unpublished draft of the template. One author is named on the
- * row. Several are counted ("2 taslak"), and their names open on a tap, or a
- * click or Enter, in the row itself, so a phone reads them too; a pointer
- * also gets them, with the times, on hover.
+ * row, with when they wrote it. Several are counted ("2 taslak"), and their
+ * names and times open on a tap, or a click or Enter, in the row itself, so a
+ * phone reads them too; a pointer also gets them on hover.
  */
-export function DraftIndicator({ drafts }: { drafts: DraftIndicatorData }) {
+export function DraftIndicator({ drafts }: { drafts: DraftsInProgress }) {
   const [open, setOpen] = useState(false);
   const listId = useId();
 
   if (drafts.authors.length === 1) {
     const [author] = drafts.authors;
     return (
-      <span
-        className="inline-flex max-w-full items-center gap-1.5 text-xs text-amber-300"
-        title={`Yayımlanmamış taslak: ${describe(author)}`}
-      >
-        <PenLine className="h-3 w-3 shrink-0" aria-hidden />
-        <span className="truncate">
-          {/* The table's column already says Taslak; a phone's stacked row does not. */}
-          <span className="md:hidden">Taslak: </span>
-          {author.name}
+      <div className="min-w-0 text-xs">
+        <span className="inline-flex max-w-full items-center gap-1.5 text-amber-300">
+          <PenLine className="h-3 w-3 shrink-0" aria-hidden />
+          <span className="truncate">
+            {/* The table's column already says Taslak; a phone's stacked row does not. */}
+            <span className="md:hidden">Taslak: </span>
+            {author.name}
+          </span>
+          {author.mine ? <MineMark /> : null}
         </span>
-        {author.mine ? <MineMark /> : null}
-      </span>
+        <span className="text-2xs block pl-[1.125rem] text-neutral-500">{formatDateTime(author.writtenAt)}</span>
+      </div>
     );
   }
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { ArchiveDialog } from '@/components/chrome/ArchiveDialog';
-import type { NoticeData } from '@/components/chrome/Notice';
+import type { NoticeData } from '@/lib/notice';
 import { useApi } from '@/lib/api/react';
 import { archiveList } from '@/lib/mailing-lists';
 

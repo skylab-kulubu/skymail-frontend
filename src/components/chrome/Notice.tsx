@@ -1,13 +1,7 @@
 'use client';
 
 import { AlertTriangle, CheckCircle2, X } from 'lucide-react';
-
-export type NoticeData = Readonly<{
-  tone: 'success' | 'error';
-  text: string;
-  /** An archived record — a mailing list, a Mail template — the notice can bring back ("Geri al"). */
-  restore?: Readonly<{ id: string; name: string }>;
-}>;
+import type { NoticeData } from '@/lib/notice';
 
 const TONE = {
   success: {

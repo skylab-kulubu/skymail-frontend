@@ -1,8 +1,9 @@
 /**
  * The Mail template list as the operator sees it, driven through the one HTTP
- * client with a scripted fetch that answers the way skymail-backend does
- * (`internal/handlers/template.go` on `feat/template-drafts`): which request
- * the list sends, and which rows, markers and actions come out of the answer.
+ * client with a scripted fetch that answers the way skymail-backend's template
+ * routes do (`GET /templates` with `main_mode` and `drafts` since ticket 07,
+ * `DELETE /templates/{id}`, `POST /templates/{id}/restore`): which request the
+ * list sends, and which rows, markers and actions come out of the answer.
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
@@ -11,11 +12,13 @@ import {
   TEMPLATE_PAGE_SIZE,
   archiveTemplate,
   fetchTemplatePage,
-  isSystemProtected,
+  isSystemArchiveRefusal,
+  mainSourceLabel,
   restoreTemplate,
   templateActions,
   templateHref,
   toTemplateRow,
+  type AuthoringMode,
   type MailTemplate,
   type TemplateVersionSummary,
 } from "./templates";
@@ -107,15 +110,42 @@ describe("a row of the Mail template list", () => {
     assert.equal(row.system, false);
   });
 
-  it("names the Authoring mode of the Main source as the glossary does", () => {
-    assert.equal(toTemplateRow(template({ main_mode: "jsx" }), VIEWER).mainSource, "JSX");
-    assert.equal(toTemplateRow(template({ main_mode: "visual" }), VIEWER).mainSource, "Visual");
-    assert.equal(toTemplateRow(template({ main_mode: "html" }), VIEWER).mainSource, "HTML");
+  it("carries the Authoring mode of the Main source", () => {
+    assert.equal(toTemplateRow(template({ main_mode: "jsx" }), VIEWER).mainSource, "jsx");
+    assert.equal(toTemplateRow(template({ main_mode: "visual" }), VIEWER).mainSource, "visual");
+    assert.equal(toTemplateRow(template({ main_mode: "html" }), VIEWER).mainSource, "html");
+  });
+
+  it("names the Authoring modes as the glossary does, and nothing it cannot name", () => {
+    assert.equal(mainSourceLabel("jsx"), "JSX");
+    assert.equal(mainSourceLabel("visual"), "Visual");
+    assert.equal(mainSourceLabel("html"), "HTML");
+    assert.equal(mainSourceLabel(null), "—");
   });
 
   // Null for a template with no published version: nothing is sent yet.
   it("has no Main source when nothing is published", () => {
     assert.equal(toTemplateRow(template({ main_mode: null, published_version_id: null }), VIEWER).mainSource, null);
+  });
+
+  // A mode a newer backend adds must not show as a blank or a wrong mode.
+  it("has no Main source it can name for a mode it does not know", () => {
+    const row = toTemplateRow(template({ main_mode: "mjml" as unknown as AuthoringMode }), VIEWER);
+
+    assert.equal(row.mainSource, null);
+  });
+
+  // A backend before ticket 07 serves neither main_mode nor drafts.
+  it("shows a template from a backend that sends no Main source or drafts", () => {
+    const older = template();
+    delete older.main_mode;
+    delete older.drafts;
+
+    const row = toTemplateRow(older, VIEWER);
+
+    assert.equal(row.mainSource, null);
+    assert.equal(row.drafts, null);
+    assert.equal(row.name, "Aylık bülten");
   });
 
   it("carries the time an archived template was archived", () => {
@@ -221,9 +251,9 @@ describe("what a row allows", () => {
   // The API refuses it (409 template.system_protected); the row does not
   // offer what would be refused, and says why.
   it("never offers to archive a System template, and says why to every viewer", () => {
-    assert.deepEqual(allowed(templateActions(system, WRITER)), ["systemProtected"]);
+    assert.deepEqual(allowed(templateActions(system, WRITER)), ["systemNote"]);
     assert.equal(templateActions(system, WRITER).href, `/templates/edit/${ID.welcome}`);
-    assert.deepEqual(allowed(templateActions(system, READER)), ["systemProtected"]);
+    assert.deepEqual(allowed(templateActions(system, READER)), ["systemNote"]);
   });
 
   // Every read of an archived template answers 404, so it does not open.
@@ -323,7 +353,7 @@ describe("archiving and restoring", () => {
 
     const error = await archiveTemplate(api, ID.welcome).catch((reason: unknown) => reason);
 
-    assert.equal(isSystemProtected(error), true);
+    assert.equal(isSystemArchiveRefusal(error), true);
     assert.equal(
       (error as Error).message,
       "System template arşivlenemez: başka bir servis bu maili Template key ile gönderiyor.",
@@ -335,8 +365,8 @@ describe("archiving and restoring", () => {
 
     const error = await archiveTemplate(api, ID.newsletter).catch((reason: unknown) => reason);
 
-    assert.equal(isSystemProtected(error), false);
-    assert.equal(isSystemProtected(new Error("boom")), false);
+    assert.equal(isSystemArchiveRefusal(error), false);
+    assert.equal(isSystemArchiveRefusal(new Error("boom")), false);
   });
 
   it("restores an archived template", async () => {

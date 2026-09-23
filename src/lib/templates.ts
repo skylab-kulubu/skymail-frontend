@@ -3,9 +3,10 @@
  * routes under `/templates` in `main.go`) and as the template list shows them.
  *
  * A template's row is a copy of its published version, which is what is sent.
- * Beside it the API serves the Authoring mode of that version's Main source
- * and each operator's draft in progress. Templates are archived, never
- * deleted (ADR-0042); a System template is not archived at all (ADR-0045).
+ * Beside it the API serves, since ticket 07, the Authoring mode of that
+ * version's Main source and each operator's draft in progress. Templates are
+ * archived, never deleted (ADR-0042); a System template is not archived at
+ * all (ADR-0045).
  */
 import { ROLE, hasRole } from "./access";
 import type { ApiClient } from "./api/client";
@@ -57,10 +58,13 @@ export type MailTemplate = {
   archived_at: string | null;
   archived_by: string | null;
   published_version_id: string | null;
-  /** The Authoring mode of the Main source the template sends; null with no published version. */
-  main_mode: AuthoringMode | null;
-  /** Each operator's draft in progress, newest first. */
-  drafts: TemplateVersionSummary[];
+  /**
+   * The Authoring mode of the Main source the template sends; null with no
+   * published version. Absent from a backend before ticket 07.
+   */
+  main_mode?: AuthoringMode | null;
+  /** Each operator's draft in progress, newest first. Absent from a backend before ticket 07. */
+  drafts?: TemplateVersionSummary[];
 };
 
 export const TEMPLATE_PAGE_SIZE = 25;
@@ -81,6 +85,15 @@ export const AUTHORING_MODE_LABEL: Readonly<Record<AuthoringMode, string>> = {
   html: "HTML",
 };
 
+function isAuthoringMode(value: unknown): value is AuthoringMode {
+  return typeof value === "string" && Object.hasOwn(AUTHORING_MODE_LABEL, value);
+}
+
+/** What the list says a Main source is written in; a dash when there is none it can name. */
+export function mainSourceLabel(mode: AuthoringMode | null): string {
+  return mode ? AUTHORING_MODE_LABEL[mode] : "—";
+}
+
 /** Why a System template has no Arşivle, short enough to stand on its row. */
 export const SYSTEM_TEMPLATE_NOTE = "Bir servis bunu Template key ile gönderir; arşivlenemez.";
 
@@ -96,7 +109,7 @@ export type DraftAuthor = Readonly<{
 }>;
 
 /** Who has an unpublished draft of a template. */
-export type DraftIndicator = Readonly<{
+export type DraftsInProgress = Readonly<{
   /** The one author's name, or "N taslak". */
   summary: string;
   /** One of the drafts is the viewer's. */
@@ -112,9 +125,12 @@ export type TemplateRow = Readonly<{
   key: string | null;
   subject: string;
   system: boolean;
-  /** The Main source's Authoring mode (JSX, Visual, HTML); null when nothing is published. */
-  mainSource: string | null;
-  drafts: DraftIndicator | null;
+  /**
+   * The Main source's Authoring mode; null when nothing is published, or the
+   * API names none the panel knows.
+   */
+  mainSource: AuthoringMode | null;
+  drafts: DraftsInProgress | null;
   archivedAt: string | null;
 }>;
 
@@ -123,7 +139,10 @@ export type TemplateRow = Readonly<{
  * what the API records as a version's author, where a name may be shared or
  * change.
  */
-function draftIndicator(drafts: readonly TemplateVersionSummary[], viewerSub: string | null): DraftIndicator | null {
+function draftsInProgress(
+  drafts: readonly TemplateVersionSummary[],
+  viewerSub: string | null,
+): DraftsInProgress | null {
   if (drafts.length === 0) return null;
   const authors = drafts.map((draft) => ({
     versionId: draft.id,
@@ -145,8 +164,8 @@ export function toTemplateRow(template: MailTemplate, viewerSub: string | null):
     key: template.key,
     subject: template.subject,
     system: template.system,
-    mainSource: template.main_mode ? AUTHORING_MODE_LABEL[template.main_mode] : null,
-    drafts: draftIndicator(template.drafts, viewerSub),
+    mainSource: isAuthoringMode(template.main_mode) ? template.main_mode : null,
+    drafts: draftsInProgress(template.drafts ?? [], viewerSub),
     archivedAt: template.archived_at,
   };
 }
@@ -160,8 +179,8 @@ export type TemplateActions = Readonly<{
   href: string | null;
   archive: boolean;
   restore: boolean;
-  /** A current System template: no one archives it, and every viewer is told why. */
-  systemProtected: boolean;
+  /** A current System template: no one archives it, and its row tells every viewer why. */
+  systemNote: boolean;
 }>;
 
 export function templateActions(row: TemplateRow, roles: readonly string[]): TemplateActions {
@@ -172,7 +191,7 @@ export function templateActions(row: TemplateRow, roles: readonly string[]): Tem
     href,
     archive: !archived && !row.system && canWrite,
     restore: archived && canWrite,
-    systemProtected: !archived && row.system,
+    systemNote: !archived && row.system,
   };
 }
 
@@ -200,6 +219,6 @@ export function restoreTemplate(api: ApiClient, id: string): Promise<MailTemplat
  * one that became System after the list was loaded, since its row offers no
  * Arşivle.
  */
-export function isSystemProtected(error: unknown): boolean {
+export function isSystemArchiveRefusal(error: unknown): boolean {
   return asApiError(error).code === "template.system_protected";
 }
