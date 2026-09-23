@@ -52,6 +52,21 @@ const BY_CODE: ReadonlyMap<string, string> = new Map([
     "Template key geçersiz: 3–64 karakter olmalı; küçük harf, rakam, nokta ve tire içerebilir, harf ya da rakamla başlayıp bitmeli.",
   ],
   ["mail.template_target_missing", "Gönderim için bir Mail template seçmelisin."],
+  // Drafts and publishing (ticket 07) and Required variables (ticket 08); the
+  // editor spells out the details of the last two from their params.
+  [
+    "template.stale_base",
+    "Bu taslağı başlattıktan sonra başka bir sürüm yayımlandı. İki sürümü karşılaştırıp seç.",
+  ],
+  ["template.not_a_draft", "Bu sürüm taslak değil, yayımlanmış. Yeniden yayımlamak için geri getirip taslak olarak yayımla."],
+  ["template.draft_discarded", "Bu taslak atılmış; yayımlanamaz. Geçmişten geri getirip yeni bir taslak olarak kullanabilirsin."],
+  ["template.invalid_base", "Taslağın başladığı sürüm geçerli değil. Sayfayı yenileyip tekrar dene."],
+  ["template.main_source_missing", "Main source seçilen Authoring mode'da kaynak yok."],
+  ["template.unparseable", "Konu ya da gövde, mailer'ın okuyabileceği bir Go template değil."],
+  [
+    "template.required_variables_missing",
+    "Gövde, bu template'in Required variable'larından bazılarına artık başvurmuyor.",
+  ],
 ]);
 
 function byStatus(status: number): string {

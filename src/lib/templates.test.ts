@@ -11,6 +11,13 @@ import { TEST_BASE_URL, json, scriptedClient, type RecordedCall } from "./api/te
 import {
   TEMPLATE_PAGE_SIZE,
   archiveTemplate,
+  createTemplate,
+  discardDraft,
+  fetchTemplate,
+  fetchVersion,
+  publishDraft,
+  saveDraft,
+  writtenBy,
   fetchTemplatePage,
   isSystemArchiveRefusal,
   mainSourceLabel,
@@ -29,6 +36,7 @@ function answer(status: number, body: unknown, total?: number): Response {
 
 /** The path a request went to, after the API base. */
 const pathOf = (call: RecordedCall) => call.url.slice(TEST_BASE_URL.length);
+const bodyOf = (call: RecordedCall) => (call.body === null ? null : JSON.parse(call.body));
 
 const ID = {
   welcome: "11111111-1111-4111-8111-111111111111",
@@ -376,5 +384,109 @@ describe("archiving and restoring", () => {
 
     assert.deepEqual([calls[0].method, pathOf(calls[0])], ["POST", `/templates/${ID.newsletter}/restore`]);
     assert.equal(restored.id, ID.newsletter);
+  });
+});
+
+// The editor's routes: drafts, publishing and a stale draft, discarding,
+// creating (tickets 04, 07, 08).
+const TEMPLATE_ID = "7e3a1c00-0000-4000-8000-000000000001";
+const DRAFT = "9a1b2c00-0000-4000-8000-000000000007";
+const BASE = "9a1b2c00-0000-4000-8000-000000000003";
+const NEWER = "9a1b2c00-0000-4000-8000-000000000005";
+
+const stale = (published: string) =>
+  json(409, {
+    code: "template.stale_base",
+    message: "A newer version was published after this draft was started.",
+    params: { version_id: DRAFT, base_version_id: BASE, published_version_id: published },
+  });
+
+describe("reading a template and a version", () => {
+  it("asks the template and version routes", async () => {
+    const { api, calls } = scriptedClient(json(200, { id: TEMPLATE_ID }), json(200, { id: DRAFT }));
+    await fetchTemplate(api, TEMPLATE_ID);
+    await fetchVersion(api, TEMPLATE_ID, DRAFT);
+    assert.deepEqual(calls.map(pathOf), [`/templates/${TEMPLATE_ID}`, `/templates/${TEMPLATE_ID}/versions/${DRAFT}`]);
+  });
+});
+
+describe("creating a template", () => {
+  it("posts it to the template routes, which publish its first version", async () => {
+    const { api, calls } = scriptedClient(json(201, { id: TEMPLATE_ID }));
+    const body = { name: "Duyuru", subject: "Merhaba", html_content: "<p/>", plain_text_content: "x", react_email_content: "// x\n" };
+    assert.equal((await createTemplate(api, body)).id, TEMPLATE_ID);
+    assert.equal(pathOf(calls[0]), "/templates");
+    assert.deepEqual(bodyOf(calls[0]), body);
+  });
+});
+
+describe("saving a draft", () => {
+  it("posts the draft to the template's drafts", async () => {
+    const { api, calls } = scriptedClient(json(201, { id: DRAFT, published_at: null }));
+    const body = {
+      subject: "Merhaba",
+      main_mode: "html" as const,
+      html_source: "<p>x</p>",
+      html_content: "<p>x</p>",
+      plain_text_content: "x",
+      base_version_id: BASE,
+    };
+    const saved = await saveDraft(api, TEMPLATE_ID, body);
+    assert.equal(saved.id, DRAFT);
+    assert.equal(calls[0].method, "POST");
+    assert.equal(pathOf(calls[0]), `/templates/${TEMPLATE_ID}/drafts`);
+    assert.deepEqual(bodyOf(calls[0]), body);
+  });
+});
+
+describe("publishing a draft", () => {
+  it("publishes it as it is, with no body", async () => {
+    const { api, calls } = scriptedClient(json(200, { id: TEMPLATE_ID, published_version_id: DRAFT }));
+    const outcome = await publishDraft(api, TEMPLATE_ID, DRAFT);
+    assert.deepEqual(outcome, { kind: "published", template: { id: TEMPLATE_ID, published_version_id: DRAFT } });
+    assert.equal(pathOf(calls[0]), `/templates/${TEMPLATE_ID}/versions/${DRAFT}/publish`);
+    assert.equal(calls[0].body, null);
+  });
+
+  it("comes back stale, naming the draft and what is published now, when someone published since it started", async () => {
+    const { api } = scriptedClient(stale(NEWER));
+    assert.deepEqual(await publishDraft(api, TEMPLATE_ID, DRAFT), {
+      kind: "stale",
+      conflict: { draftId: DRAFT, baseVersionId: BASE, publishedVersionId: NEWER },
+    });
+  });
+
+  it("over a stale base names the version the operator saw and chose to replace", async () => {
+    const { api, calls } = scriptedClient(json(200, { id: TEMPLATE_ID }));
+    await publishDraft(api, TEMPLATE_ID, DRAFT, NEWER);
+    assert.deepEqual(bodyOf(calls[0]), { force: { over_version_id: NEWER } });
+  });
+
+  it("comes back stale again when yet another version was published before the confirmation", async () => {
+    const latest = "9a1b2c00-0000-4000-8000-000000000009";
+    const { api } = scriptedClient(stale(latest));
+    const outcome = await publishDraft(api, TEMPLATE_ID, DRAFT, NEWER);
+    assert.equal(outcome.kind === "stale" && outcome.conflict.publishedVersionId, latest);
+  });
+
+  it("throws any other refusal", async () => {
+    const { api } = scriptedClient(json(409, { code: "template.draft_discarded", message: "discarded" }));
+    await assert.rejects(publishDraft(api, TEMPLATE_ID, DRAFT), { code: "template.draft_discarded" });
+  });
+});
+
+describe("discarding a draft", () => {
+  it("posts to the draft's discard", async () => {
+    const { api, calls } = scriptedClient(json(200, { id: DRAFT, discarded: true }));
+    await discardDraft(api, TEMPLATE_ID, DRAFT);
+    assert.equal(pathOf(calls[0]), `/templates/${TEMPLATE_ID}/versions/${DRAFT}/discard`);
+  });
+});
+
+describe("whose version it is", () => {
+  it("is the viewer's when its author has the viewer's Keycloak subject", () => {
+    assert.equal(writtenBy({ kind: "operator", sub: VIEWER, name: "Başka ad" }, VIEWER), true);
+    assert.equal(writtenBy({ kind: "operator", sub: OTHER, name: "DENEME OPERATÖR" }, VIEWER), false);
+    assert.equal(writtenBy({ kind: "operator", sub: null, name: null }, null), false, "no subject is nobody's");
   });
 });

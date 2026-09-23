@@ -16,12 +16,19 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: ReactNode;
+  /** `wide` holds content side by side — two mails, say — and scrolls within the screen. */
+  size?: 'md' | 'wide';
 }
+
+const SIZE = {
+  md: 'max-w-md',
+  wide: 'max-w-6xl max-h-[calc(100dvh-2rem)] overflow-y-auto',
+} as const;
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-export function Modal({ isOpen, onClose, title, children }: ModalProps) {
+export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
@@ -87,7 +94,7 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className="relative z-10 w-full max-w-md rounded-xl border border-white/10 bg-neutral-900 shadow-2xl focus:outline-none"
+        className={`relative z-10 w-full ${SIZE[size]} rounded-xl border border-white/10 bg-neutral-900 shadow-2xl focus:outline-none`}
       >
         <div className="flex items-center gap-3 border-b border-white/5 px-5 py-4">
           <h2 id={titleId} className="min-w-0 flex-1 text-base font-semibold text-neutral-100">

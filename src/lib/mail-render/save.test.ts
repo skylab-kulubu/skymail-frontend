@@ -9,7 +9,7 @@
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { decideSave, renderSource, type SaveDecision, type SourceInput, type SourceRender } from ".";
+import { decideSave, renderOf, renderSource, type SaveDecision, type SourceInput, type SourceRender } from ".";
 
 // What seed-templates.ts writes into react_email_content until ticket 09.
 const SEEDED_STUB =
@@ -146,4 +146,14 @@ describe("whether the editor may save", () => {
       assert.equal(decideSave(editing, lastRender, stored), expect);
     });
   }
+});
+
+describe("the render of a source", () => {
+  it("is the render of that very text in that mode, successful or not", async () => {
+    const broken = await renderSource(jsx("export default () => <p>"));
+    assert.equal(renderOf(broken, jsx("export default () => <p>")), broken);
+    assert.equal(renderOf(broken, jsx(GOOD_CODE)), null, "another text");
+    assert.equal(renderOf(broken, { mode: "html", source: "export default () => <p>" }), null, "another mode");
+    assert.equal(renderOf(null, jsx(GOOD_CODE)), null);
+  });
 });
