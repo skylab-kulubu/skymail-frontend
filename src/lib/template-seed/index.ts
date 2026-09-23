@@ -30,8 +30,8 @@ const DECLARED_KEY = /\bkey:\s*"([^"]+)"/;
 /** How the seed is run, for the commands the report prints. */
 export const SEED_COMMAND = "corepack yarn emails:seed";
 
-/** A template as the seed sends it: its meta and the text of its .tsx file. */
-export interface SeedTemplate {
+/** A template as the repo holds it: its meta and the text of its .tsx file. */
+export interface RepoTemplate {
   meta: TemplateMeta;
   source: string;
 }
@@ -46,7 +46,7 @@ export interface SeedTemplate {
 export async function templateSources(
   templates: { meta: TemplateMeta }[],
   dir = EMAILS_DIR,
-): Promise<SeedTemplate[]> {
+): Promise<RepoTemplate[]> {
   const files = new Map<string, { file: string; text: string }>();
   for (const file of (await readdir(dir)).filter((name) => name.endsWith(".tsx")).sort()) {
     const text = await readFile(join(dir, file), "utf8");
@@ -79,7 +79,7 @@ export interface SeedRun {
   /** The SkyMail API root, without /v1. */
   baseUrl: string;
   token: string;
-  templates: SeedTemplate[];
+  templates: RepoTemplate[];
   dryRun: boolean;
   force: ForceOption;
   fetch: typeof globalThis.fetch;
@@ -132,11 +132,21 @@ export function parseSeedArgs(argv: string[], keys: string[]): SeedArgs {
   return { ok: true, dryRun, force: { all, keys: all ? [] : forced } };
 }
 
-/** A version a refusal names (skymail-backend handlers.SeedConflictVersion). */
+/** A version a refusal or a force names: its summary, as skymail-backend's version routes serve it. */
 interface ConflictVersion {
+  id: string;
   seq: number;
+  subject: string;
   author: { kind: string; name: string | null };
+  created_at: string;
   published_at: string | null;
+}
+
+/** What a forced seed wrote over (skymail-backend handlers.SeedOverride). */
+interface Override {
+  rules: string[];
+  published_version: ConflictVersion | null;
+  operator_versions: ConflictVersion[];
 }
 
 /** The params of 409 template.seed_conflict, as far as the report reads them. */
@@ -221,7 +231,7 @@ export async function runSeed(run: SeedRun): Promise<number> {
     const outcome = await upsert(run, meta.key, payload, forced);
     if (outcome.kind === "written") {
       written += 1;
-      run.print(`✓ ${meta.key.padEnd(34)} ${outcome.id}${forced ? "  (zorlandı)" : ""}`);
+      run.print(`✓ ${meta.key.padEnd(34)} ${outcome.id}${forced ? `  (${forceNote(outcome.overrode)})` : ""}`);
     } else if (outcome.kind === "refused") {
       refusals.push({ key: meta.key, conflict: outcome.conflict });
       run.print(`✗ ${meta.key.padEnd(34)} reddedildi: son seed'den sonra bir operatör değiştirmiş`);
@@ -249,7 +259,7 @@ export async function runSeed(run: SeedRun): Promise<number> {
 const isForced = (force: ForceOption, key: string) => force.all || force.keys.includes(key);
 
 type Outcome =
-  | { kind: "written"; id: string }
+  | { kind: "written"; id: string; overrode: Override | null }
   | { kind: "refused"; conflict: SeedConflict }
   | { kind: "failed"; reason: string };
 
@@ -267,8 +277,16 @@ async function upsert(run: SeedRun, key: string, payload: SeedPayload, forced: b
     return { kind: "failed", reason: `sunucuya ulaşılamadı (${cause})` };
   }
   if (response.ok) {
-    const saved = (await response.json()) as { id: string };
-    return { kind: "written", id: saved.id };
+    let saved: { id?: unknown; overrode?: Override };
+    try {
+      saved = (await response.json()) as typeof saved;
+    } catch {
+      saved = {};
+    }
+    if (typeof saved.id !== "string") {
+      return { kind: "failed", reason: `sunucudan okunamayan bir yanıt geldi (HTTP ${response.status})` };
+    }
+    return { kind: "written", id: saved.id, overrode: saved.overrode ?? null };
   }
   const error = apiErrorFromResponse(response.status, await response.text());
   if (response.status === 409 && error.code === "template.seed_conflict") {
@@ -301,6 +319,41 @@ function reportRefusals(print: (line: string) => void, refusals: Refusal[]): voi
 }
 
 const who = (version: ConflictVersion) => version.author.name ?? "adı bilinmiyor";
+
+const DAY = new Intl.DateTimeFormat("tr-TR", { day: "numeric", month: "short", timeZone: "Europe/Istanbul" });
+
+/**
+ * What a forced seed says it wrote over: each operator version by number,
+ * state, author and day, and an operator's subject — or that it overrode
+ * nothing, when the template was the last seed's all along.
+ */
+function forceNote(overrode: Override | null): string {
+  if (!overrode) {
+    return "zorlandı, ezilen yok";
+  }
+  const versions = new Map<string, ConflictVersion>();
+  const published = overrode.published_version;
+  if (published && published.author.kind === "operator") {
+    versions.set(published.id, published);
+  }
+  for (const version of overrode.operator_versions) {
+    versions.set(version.id, version);
+  }
+  const replaced = [...versions.values()]
+    .sort((a, b) => a.seq - b.seq)
+    .map((version) => {
+      const state = version.published_at === null ? "taslak" : "yayımlanmış sürüm";
+      const day = DAY.format(new Date(version.published_at ?? version.created_at));
+      return `#${version.seq} ${state}, ${who(version)}, ${day}`;
+    });
+  if (overrode.rules.includes("operator_subject") && published) {
+    replaced.push(`operatörün konusu "${published.subject}"`);
+  }
+  if (replaced.length === 0) {
+    replaced.push(overrode.rules.join(", "));
+  }
+  return `zorlandı: ${replaced.join("; ")} — geçmişte duruyor, geri getirilebilir`;
+}
 
 const numbered = (version: ConflictVersion) =>
   `#${version.seq} ${version.published_at === null ? "taslak" : "yayımlı"} (${who(version)})`;

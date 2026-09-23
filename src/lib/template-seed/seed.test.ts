@@ -6,18 +6,18 @@
  * changed.
  */
 import assert from "node:assert/strict";
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
 import { templates as repoTemplates } from "../../../emails";
 import type { TemplateMeta } from "../../../emails/types";
 import { json, scriptedFetch, type RecordedCall } from "../api/testing";
-import { parseSeedArgs, runSeed, templateSources, type SeedRun, type SeedTemplate } from ".";
+import { parseSeedArgs, runSeed, templateSources, type SeedRun, type RepoTemplate } from ".";
 
 const BASE_URL = "https://skymail.example.test";
 
-function template(key: string, text: string, overrides: Partial<TemplateMeta> = {}): SeedTemplate {
+function template(key: string, text: string, overrides: Partial<TemplateMeta> = {}): RepoTemplate {
   return {
     meta: {
       key,
@@ -39,6 +39,31 @@ const seeded = (key: string) => json(200, { id: `id-${key}`, key, subject: `Konu
 
 const operator = (name: string) => ({ kind: "operator", sub: `sub-${name}`, name });
 const templateSeed = { kind: "template_seed", sub: "sub-seed", name: "service-account-skymail-seed" };
+
+/** A version as skymail-backend's version routes summarise it. */
+function summary(
+  seq: number,
+  author: { kind: string; sub: string; name: string },
+  publishedAt: string | null,
+  subject = "Konu",
+  createdAt = publishedAt ?? "2026-09-20T09:00:00Z",
+) {
+  return {
+    id: `v${seq}`,
+    template_id: "id-template",
+    seq,
+    name: "Ad",
+    subject,
+    requested_subject: null,
+    main_mode: "html",
+    author,
+    created_at: createdAt,
+    published_at: publishedAt,
+    base_version_id: null,
+    current: false,
+    discarded: false,
+  };
+}
 
 /** skymail-backend's refusal of a template an operator changed since the last seed. */
 function refused(key: string, params: Record<string, unknown>): Response {
@@ -152,19 +177,63 @@ describe("the Template seed", () => {
     assert.match(output, /geçmiş/, "says the operator's versions stay in the history");
   });
 
-  it("forces only the templates it is told to, and says which it forced", async () => {
-    const templates = [template("free.basic", "Serbest"), template("core.welcome", "Hoş geldin")];
-    const named = scriptedFetch(seeded("free.basic"), seeded("core.welcome"));
+  it("forces only the templates it is told to, and says what each force wrote over", async () => {
+    const templates = [
+      template("free.basic", "Serbest"),
+      template("core.welcome", "Hoş geldin"),
+      template("core.certificate", "Sertifika"),
+      template("keycloak.reset-password", "Parola"),
+    ];
+    const named = scriptedFetch(
+      seeded("free.basic"),
+      json(200, {
+        id: "id-core.welcome",
+        overrode: {
+          rules: ["published_by_operator", "newer_operator_version"],
+          published_version: summary(3, operator("Can Demir"), "2026-09-22T09:00:00Z", "Aramıza hoş geldin"),
+          operator_versions: [
+            summary(3, operator("Can Demir"), "2026-09-22T09:00:00Z", "Aramıza hoş geldin"),
+            summary(4, operator("Ada Yılmaz"), null, "Taslak", "2026-09-23T08:00:00Z"),
+          ],
+        },
+      }),
+      json(200, {
+        id: "id-core.certificate",
+        overrode: {
+          rules: ["operator_subject"],
+          published_version: summary(2, templateSeed, "2026-09-10T09:00:00Z", "Sertifikan hazır 🎓"),
+          operator_versions: [],
+        },
+      }),
+      seeded("keycloak.reset-password"),
+    );
 
-    const { exitCode, output } = await run({ templates, fetch: named.fetch, force: { all: false, keys: ["core.welcome"] } });
+    const { exitCode, output } = await run({
+      templates,
+      fetch: named.fetch,
+      force: { all: false, keys: ["core.welcome", "core.certificate", "keycloak.reset-password"] },
+    });
 
     assert.equal(exitCode, 0, output);
     assert.deepEqual(
       named.calls.map(({ url }) => url),
-      [`${BASE_URL}/v1/templates/by-key/free.basic`, `${BASE_URL}/v1/templates/by-key/core.welcome?force=true`],
+      [
+        `${BASE_URL}/v1/templates/by-key/free.basic`,
+        `${BASE_URL}/v1/templates/by-key/core.welcome?force=true`,
+        `${BASE_URL}/v1/templates/by-key/core.certificate?force=true`,
+        `${BASE_URL}/v1/templates/by-key/keycloak.reset-password?force=true`,
+      ],
     );
     assert.match(output, /✓ free\.basic\s+id-free\.basic$/m);
-    assert.match(output, /✓ core\.welcome\s+id-core\.welcome {2}\(zorlandı\)$/m);
+    assert.match(
+      output,
+      /✓ core\.welcome\s+id-core\.welcome {2}\(zorlandı: #3 yayımlanmış sürüm, Can Demir, 22 Eyl; #4 taslak, Ada Yılmaz, 23 Eyl — geçmişte duruyor, geri getirilebilir\)$/m,
+    );
+    assert.match(
+      output,
+      /✓ core\.certificate\s+id-core\.certificate {2}\(zorlandı: operatörün konusu "Sertifikan hazır 🎓" — geçmişte duruyor, geri getirilebilir\)$/m,
+    );
+    assert.match(output, /✓ keycloak\.reset-password\s+id-keycloak\.reset-password {2}\(zorlandı, ezilen yok\)$/m);
 
     const all = scriptedFetch(seeded("free.basic"), seeded("core.welcome"));
     await run({ templates, fetch: all.fetch, force: { all: true, keys: [] } });
@@ -185,6 +254,23 @@ describe("the Template seed", () => {
     assert.match(output, /✗ core\.welcome\s+yazılamadı: HTTP 401 server\.unauthorized/);
     assert.match(output, /Oturumun sona erdi/, "says why in Turkish");
     assert.match(output, /core\.certificate/, "names what was not tried");
+    assert.match(output, /1 şablon reddedildi/);
+    assert.match(output, /--force=free\.basic/);
+  });
+
+  it("reports what it refused before an answer it cannot read, and fails", async () => {
+    const templates = [template("free.basic", "Serbest"), template("core.welcome", "Hoş geldin"), template("core.certificate", "Sertifika")];
+    const { fetch, calls } = scriptedFetch(
+      refused("free.basic", { rules: ["newer_operator_version"], operator_versions: [summary(2, operator("Ada Yılmaz"), null)] }),
+      new Response("<html>Bad Gateway</html>", { status: 200, headers: { "Content-Type": "text/html" } }),
+    );
+
+    const { exitCode, output } = await run({ templates, fetch });
+
+    assert.equal(exitCode, 1, output);
+    assert.equal(calls.length, 2);
+    assert.match(output, /✗ core\.welcome\s+yazılamadı: sunucudan okunamayan bir yanıt geldi \(HTTP 200\)/);
+    assert.match(output, /denenmeyenler: core\.certificate/);
     assert.match(output, /1 şablon reddedildi/);
     assert.match(output, /--force=free\.basic/);
   });
@@ -266,8 +352,9 @@ describe("the sources the seed sends", () => {
     }
   });
 
-  it("refuse two files that declare one key, and a template with no file", async () => {
+  it("refuse two files that declare one key, and a template with no file", async (t) => {
     const dir = await mkdtemp(join(tmpdir(), "seed-sources-"));
+    t.after(() => rm(dir, { recursive: true, force: true }));
     const declaring = (key: string) => `export const meta = { key: "${key}" };\nexport default () => null;\n`;
     await writeFile(join(dir, "one.tsx"), declaring("core.welcome"));
     await writeFile(join(dir, "theme.tsx"), "export const colors = {};\n");
