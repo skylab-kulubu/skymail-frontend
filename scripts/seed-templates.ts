@@ -11,6 +11,14 @@
  * (ADR-0045). A run that finds a reworded subject says so rather than leaving
  * it to look like the repo's wording quietly failed to apply.
  *
+ * A skymail-backend with the seed conflict rule (ADR-0047, rewrite ticket 09)
+ * writes the subject again and instead refuses a template an operator changed
+ * since the last seed, with 409 template.seed_conflict, writing nothing to it.
+ * The run goes on with the other templates, lists the refused ones with why
+ * and the command that forces each, and exits non-zero. --force=<key>[,<key>]
+ * and --force-all write over the operator's change (?force=true); their
+ * versions stay in the template's history. An older backend ignores both.
+ *
  * Credentials come from the environment and are never printed:
  *
  *   SKYMAIL_URL                 http://localhost:3000 (varsayılan)
@@ -28,6 +36,75 @@ import { templates } from "../emails";
 
 const BASE_URL = (process.env.SKYMAIL_URL ?? "http://localhost:3000").replace(/\/+$/, "");
 const DRY_RUN = process.argv.includes("--dry-run");
+const SEED_COMMAND = "corepack yarn emails:seed";
+
+/** The keys --force=<key>[,<key>] names, or "all" for --force-all. A key the seed does not have is a mistake. */
+function forcedKeys(): Set<string> | "all" {
+  if (process.argv.includes("--force-all")) {
+    return "all";
+  }
+  const known = new Set(templates.map(({ meta }) => meta.key));
+  const keys = new Set<string>();
+  for (const arg of process.argv.slice(2)) {
+    if (arg !== "--force" && !arg.startsWith("--force=")) {
+      continue;
+    }
+    const named = arg.slice("--force=".length).split(",").filter((key) => key !== "");
+    if (named.length === 0) {
+      throw new Error("--force hangi şablonların zorlanacağını söylemeli: --force=<anahtar>[,<anahtar>] ya da --force-all.");
+    }
+    for (const key of named) {
+      if (!known.has(key)) {
+        throw new Error(`--force bilinmeyen anahtar: ${key}. Seed'in anahtarları emails/CATALOG.md'de.`);
+      }
+      keys.add(key);
+    }
+  }
+  return keys;
+}
+
+/** A version a refusal names, as far as the report reads it. */
+interface ConflictVersion {
+  seq: number;
+  author: { name: string | null };
+  published_at: string | null;
+}
+
+/** The params of 409 template.seed_conflict, as far as the report reads them. */
+interface SeedConflict {
+  rules: string[];
+  published_version: ConflictVersion | null;
+  last_seed_version: ConflictVersion | null;
+  operator_versions: ConflictVersion[];
+  subject: string;
+  requested_subject: string;
+}
+
+const who = (version: ConflictVersion) => version.author.name ?? "adı bilinmiyor";
+
+/** Each rule that held, in words, with the versions involved. */
+function reasons(conflict: SeedConflict): string[] {
+  const lastSeed = conflict.last_seed_version;
+  return (conflict.rules ?? []).map((rule) => {
+    switch (rule) {
+      case "published_by_operator": {
+        const since = lastSeed ? `son seed #${lastSeed.seq}` : "bu şablonu hiçbir seed yazmamış";
+        const published = conflict.published_version;
+        return published
+          ? `Gönderilen sürüm #${published.seq} bir operatörün (${who(published)}); ${since}.`
+          : `Gönderilen sürüm son seed'in değil; ${since}.`;
+      }
+      case "newer_operator_version":
+        return `Son seed'den sonra operatör sürümleri var: ${(conflict.operator_versions ?? [])
+          .map((v) => `#${v.seq} ${v.published_at === null ? "taslak" : "yayımlı"} (${who(v)})`)
+          .join(", ")}.`;
+      case "operator_subject":
+        return `Konu operatörün: şu an "${conflict.subject}", repo "${conflict.requested_subject}" istiyor.`;
+      default:
+        return `Kural: ${rule}.`;
+    }
+  });
+}
 
 async function resolveToken(): Promise<string> {
   const direct = process.env.SKYMAIL_TOKEN;
@@ -71,9 +148,12 @@ async function main(): Promise<void> {
     console.log(`[kuru çalışma] ${BASE_URL} üzerine hiçbir şey yazılmayacak.\n`);
   }
 
+  const force = forcedKeys();
   const token = DRY_RUN ? "" : await resolveToken();
   let seeded = 0;
   const kept: { key: string; subject: string }[] = [];
+  const refused: { key: string; conflict: SeedConflict }[] = [];
+  let failure: string | null = null;
 
   for (const { meta, Component } of templates) {
     const html = await render(React.createElement(Component), { pretty: true });
@@ -96,7 +176,8 @@ async function main(): Promise<void> {
       continue;
     }
 
-    const response = await fetch(`${BASE_URL}/v1/templates/by-key/${encodeURIComponent(meta.key)}`, {
+    const forced = force === "all" || force.has(meta.key);
+    const response = await fetch(`${BASE_URL}/v1/templates/by-key/${encodeURIComponent(meta.key)}${forced ? "?force=true" : ""}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -107,7 +188,21 @@ async function main(): Promise<void> {
 
     if (!response.ok) {
       const detail = await response.text();
-      throw new Error(`${meta.key} yazılamadı: HTTP ${response.status} ${detail.slice(0, 200)}`);
+      let error: { code?: string; params?: SeedConflict } = {};
+      try {
+        error = JSON.parse(detail);
+      } catch {
+        // Not the API's error shape; reported as it came.
+      }
+      if (response.status === 409 && error.code === "template.seed_conflict" && error.params) {
+        refused.push({ key: meta.key, conflict: error.params });
+        console.log(`✗ ${meta.key.padEnd(34)} reddedildi: son seed'den sonra bir operatör değiştirmiş`);
+        continue;
+      }
+      // Anything else — an expired token, a failing server — would fail the
+      // rest the same way.
+      failure = `${meta.key} yazılamadı: HTTP ${response.status} ${detail.slice(0, 200)}`;
+      break;
     }
 
     const saved = (await response.json()) as { id: string; subject: string };
@@ -120,7 +215,7 @@ async function main(): Promise<void> {
     if (keptSubject) {
       kept.push({ key: meta.key, subject: saved.subject });
     }
-    console.log(`✓ ${meta.key.padEnd(34)} ${saved.id}${keptSubject ? "  · konu korundu" : ""}`);
+    console.log(`✓ ${meta.key.padEnd(34)} ${saved.id}${keptSubject ? "  · konu korundu" : ""}${forced ? "  (zorlandı)" : ""}`);
   }
 
   if (!DRY_RUN) {
@@ -134,7 +229,31 @@ async function main(): Promise<void> {
       }
       console.log("Repodaki konuyu dayatmak istersen şablonu arayüzden düzenle; seed bunu yapmaz.");
     }
+    if (refused.length > 0) {
+      console.log(
+        `\n${refused.length} şablon reddedildi: son seed'den sonra bir operatör değiştirmiş, üzerlerine hiçbir şey yazılmadı.`,
+      );
+      for (const { key, conflict } of refused) {
+        console.log(`\n  ${key}`);
+        for (const reason of reasons(conflict)) {
+          console.log(`    ${reason}`);
+        }
+        console.log(`    Zorlamak için: ${SEED_COMMAND} --force=${key}`);
+      }
+      console.log(`\nReddedilenlerin hepsini zorlamak için: ${SEED_COMMAND} --force=${refused.map(({ key }) => key).join(",")}`);
+      console.log(`Her şablonu zorlamak için: ${SEED_COMMAND} --force-all`);
+      console.log(
+        "Zorlamak operatörün çalışmasını silmez: sürümleri SkyMail'de şablonun geçmişinde kalır ve oradan geri getirilebilir.",
+      );
+    }
     console.log("Repoda olmayan anahtarlar silinmedi — canlı bir servisin çağırdığı şablonu arşivlemek postayı sessizce durdurur.");
+  }
+
+  if (failure) {
+    throw new Error(failure);
+  }
+  if (refused.length > 0) {
+    process.exitCode = 1;
   }
 }
 
