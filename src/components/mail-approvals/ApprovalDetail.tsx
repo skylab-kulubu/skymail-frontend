@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/Button';
 import { ROLE, isApprover } from '@/lib/access';
 import { useApi, useApiLoad } from '@/lib/api/react';
 import { viewerActions, type ViewerActions } from '@/lib/mail-approvals/actions';
+import { formatClubTime } from '@/lib/format';
 import {
   APPROVAL_LIST_PATH,
   approvalHref,
@@ -30,7 +31,6 @@ import {
   deadlineHint,
   eventActorName,
   fetchApproval,
-  formatApprovalTime,
   notificationNote,
   resubmitHref,
   submitterName,
@@ -201,7 +201,7 @@ function ApprovalView({
     <div className="space-y-6">
       <PageHeader
         title={approval.template.name}
-        description={`Mail onayı · ${submitterName(approval.submitter)} ${formatApprovalTime(approval.submitted_at)} tarihinde sundu`}
+        description={`Mail onayı · ${submitterName(approval.submitter)} ${formatClubTime(approval.submitted_at)} tarihinde sundu`}
         meta={
           <>
             <ApprovalStateBadge state={actions.state} />
@@ -253,7 +253,7 @@ function ApprovalView({
           <Submitter submitter={approval.submitter} />
         </Fact>
         <Fact term="Sunuldu">
-          <span className="tabular-nums">{formatApprovalTime(approval.submitted_at)}</span>
+          <span className="tabular-nums">{formatClubTime(approval.submitted_at)}</span>
         </Fact>
         <Fact term="Son tarih">
           <Deadline item={approval} now={now} />
@@ -317,7 +317,7 @@ function DeadlineLine({ approval }: { approval: MailApproval }) {
   const hint = deadlineHint(approval.deadline_at);
   return (
     <p>
-      Son tarih {formatApprovalTime(approval.deadline_at)}
+      Son tarih {formatClubTime(approval.deadline_at)}
       {hint && !hint.passed ? ` (${hint.text})` : ''}: o zamana kadar karar verilmezse süresi dolar ve gönderilmez.
     </p>
   );
@@ -554,7 +554,6 @@ function EditPanel({
           onRich={(name, source) => onInput({ ...current, rich: { ...current.rich, [name]: source } })}
           problems={problems}
           warnings={warnings}
-          onSend={() => {}}
         />
       )}
       {unchanged ? <NoticeBox tone="error">Henüz bir değişkeni değiştirmedin: olduğu gibi göndermek için “Onayla ve gönder”i kullan.</NoticeBox> : null}
@@ -616,11 +615,11 @@ function PreviewSection({ approval }: { approval: MailApproval }) {
 /** The request's values, each by its field's name; a body as its words (the preview shows it as mail). */
 function Variables({ approval, fields }: { approval: MailApproval; fields: readonly VariableField[] }) {
   const variables = approval.body_variables ?? {};
-  const named = fields.length > 0 ? fields : Object.keys(variables).map((name) => ({ name, label: name, kind: 'text' as const }));
-  if (named.length === 0) return <p className="text-xs text-neutral-500">Bu istekte değişken yok.</p>;
+  // approvalFields gives a field for every value the request carries.
+  if (fields.length === 0) return <p className="text-xs text-neutral-500">Bu istekte değişken yok.</p>;
   return (
     <dl className="divide-y divide-white/5 rounded-lg border border-white/5">
-      {named.map((field) => {
+      {fields.map((field) => {
         const text = valueText(variables[field.name], field.kind);
         return (
           <div key={field.name} className="grid gap-1 px-3.5 py-2.5 sm:grid-cols-[12rem_minmax(0,1fr)] sm:gap-4">

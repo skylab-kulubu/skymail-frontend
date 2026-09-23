@@ -20,6 +20,7 @@ import { CreatePageButton } from '@/components/ui/CreatePageButton';
 import { isApprover, sectionLabel } from '@/lib/access';
 import { useApiLoad } from '@/lib/api/react';
 import { knownPageCount } from '@/lib/list-view';
+import { formatClubTime } from '@/lib/format';
 import {
   APPROVAL_FILTERS,
   APPROVAL_PAGE_SIZE,
@@ -28,7 +29,6 @@ import {
   approvalListHref,
   effectiveState,
   fetchApprovalPage,
-  formatApprovalTime,
   readApprovalListView,
   submitterName,
   type ApprovalFilter,
@@ -199,7 +199,7 @@ function ApprovalRow({ item, now }: { item: ApprovalItem; now: Date }) {
           </div>
           <Audience audience={audienceLabel(item.audience)} className="text-xs" />
           <p className="text-2xs text-neutral-500">
-            {submitterName(item.submitter)} · {formatApprovalTime(item.submitted_at)}
+            {submitterName(item.submitter)} · {formatClubTime(item.submitted_at)}
           </p>
           <p className="text-2xs text-neutral-500">
             Son tarih: <Deadline item={item} now={now} inline />

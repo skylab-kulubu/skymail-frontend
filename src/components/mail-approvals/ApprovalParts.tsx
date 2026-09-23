@@ -1,11 +1,11 @@
 'use client';
 
 import { ToneBadge, type Tone } from '@/components/chrome/ToneBadge';
+import { formatClubTime } from '@/lib/format';
 import {
   APPROVAL_STATE_LABEL,
   deadlineHint,
   effectiveState,
-  formatApprovalTime,
   isWaiting,
   submitterName,
   type ApprovalItem,
@@ -38,7 +38,7 @@ export function Deadline({ item, now = new Date(), inline = false }: { item: Pic
   const hint = deadlineHint(item.deadline_at, now);
   return (
     <span className={inline ? 'inline-flex flex-wrap items-baseline gap-x-1.5' : 'flex flex-col'}>
-      <span className="text-neutral-300 tabular-nums">{formatApprovalTime(item.deadline_at)}</span>
+      <span className="text-neutral-300 tabular-nums">{formatClubTime(item.deadline_at)}</span>
       {hint ? <span className={`text-2xs ${hint.urgent ? 'text-amber-300' : 'text-neutral-500'}`}>{hint.text}</span> : null}
     </span>
   );
@@ -48,7 +48,7 @@ export function Deadline({ item, now = new Date(), inline = false }: { item: Pic
 export function Submitter({ submitter, at }: { submitter: ApprovalSubmitter; at?: string }) {
   const name = submitterName(submitter);
   const email = submitter.email?.trim() || null;
-  const under = at ? formatApprovalTime(at) : email && email !== name ? email : null;
+  const under = at ? formatClubTime(at) : email && email !== name ? email : null;
   return (
     <span className="flex max-w-[14rem] min-w-0 flex-col" title={email ?? undefined}>
       <span className="truncate text-neutral-200">{name}</span>

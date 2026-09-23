@@ -3,10 +3,10 @@
 import Link from 'next/link';
 import { useCan } from '@/components/layout/ConsoleContext';
 import { ROLE } from '@/lib/access';
+import { formatClubTime } from '@/lib/format';
 import {
   eventActorName,
   eventLabel,
-  formatApprovalTime,
   type ApprovalChange,
   type ApprovalEvent,
   type MailApproval,
@@ -62,7 +62,7 @@ export function ApprovalHistory({ approval, fields }: { approval: MailApproval; 
               )}
               {own ? <span className="text-2xs ml-2 rounded border border-white/10 px-1.5 py-0.5 text-neutral-400">kendi isteği</span> : null}
             </p>
-            <p className="text-2xs text-neutral-500 tabular-nums">{formatApprovalTime(event.at)}</p>
+            <p className="text-2xs text-neutral-500 tabular-nums">{formatClubTime(event.at)}</p>
             {event.note ? (
               <p className="text-xs break-words whitespace-pre-line text-neutral-300">
                 {event.kind === 'rejected' ? 'Gerekçe: ' : 'Not: '}“{event.note}”

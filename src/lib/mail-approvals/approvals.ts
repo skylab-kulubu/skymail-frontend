@@ -19,7 +19,6 @@
  */
 import { ROLE } from "../access";
 import type { ApiClient, ApiPage } from "../api/client";
-import { formatClubTime } from "../format";
 import { pageRange, readPage, viewHref } from "../list-view";
 import { SEND_LIST_PATH, type SendAudience } from "../sends";
 
@@ -243,9 +242,6 @@ export const isWaiting = (state: ApprovalState) => state === "pending" || state 
 export function effectiveState(request: Pick<ApprovalItem, "state" | "deadline_at">, now: Date = new Date()): ApprovalState {
   return isWaiting(request.state) && deadlineHint(request.deadline_at, now)?.passed ? "expired" : request.state;
 }
-
-/** A request's times, as every screen shows them: the club's zone. */
-export const formatApprovalTime = formatClubTime;
 
 // ---------------------------------------------------------------------------
 // Words

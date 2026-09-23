@@ -1,7 +1,8 @@
 'use client';
 
 import { NoticeBox } from '@/components/chrome/Notice';
-import { eventActorName, formatApprovalTime, type MailApproval } from '@/lib/mail-approvals/approvals';
+import { formatClubTime } from '@/lib/format';
+import { eventActorName, type MailApproval } from '@/lib/mail-approvals/approvals';
 
 /**
  * What the send form was filled from, said above it: a rejected request and
@@ -14,13 +15,13 @@ export function PrefillIntro({ approval, mode, notes }: { approval: MailApproval
     <div className="space-y-3">
       {mode === 'copy' ? (
         <NoticeBox tone="info">
-          “{approval.template.name}” isteğinin değerleriyle dolduruldu ({formatApprovalTime(approval.submitted_at)} sunulmuştu). Göndermeden
+          “{approval.template.name}” isteğinin değerleriyle dolduruldu ({formatClubTime(approval.submitted_at)} sunulmuştu). Göndermeden
           önce bak: onaya sunarsan yeni bir istek olur ve 7 günlük süresi baştan başlar.
         </NoticeBox>
       ) : decision?.kind === 'rejected' ? (
         <NoticeBox tone="warning">
           <p className="font-medium">
-            {eventActorName(decision)} {formatApprovalTime(decision.at)} tarihinde reddetti.
+            {eventActorName(decision)} {formatClubTime(decision.at)} tarihinde reddetti.
           </p>
           {decision.note ? <p className="mt-1 whitespace-pre-line">Gerekçe: {decision.note}</p> : null}
         </NoticeBox>
