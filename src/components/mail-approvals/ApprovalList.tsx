@@ -1,8 +1,9 @@
 'use client';
 
 // Mail onayı's list (ticket 20): an approver sees everyone's requests,
-// pending first, and filters by state; anyone else sees their own. The
-// filter and the page live in the address (`?state=returned&page=2`).
+// pending first, or only the ones they submitted, and filters by state;
+// anyone else sees their own. The filters and the page live in the address
+// (`?state=returned&mine=true&page=2`).
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -22,6 +23,7 @@ import { knownPageCount } from '@/lib/list-view';
 import {
   APPROVAL_FILTERS,
   APPROVAL_PAGE_SIZE,
+  APPROVAL_SCOPES,
   approvalHref,
   approvalListHref,
   effectiveState,
@@ -54,7 +56,10 @@ export function ApprovalList() {
   const approver = isApprover(roles);
   const canCompose = sendAccess(roles).people;
   const view = readApprovalListView(useSearchParams(), { approver });
-  const state = useApiLoad((api, signal) => fetchApprovalPage(api, view, { approver }, signal), `${approver}:${view.state}:${view.page}`);
+  const state = useApiLoad(
+    (api, signal) => fetchApprovalPage(api, view, { approver }, signal),
+    `${approver}:${view.state}:${view.mine}:${view.page}`,
+  );
   const lastPage =
     state.status === 'success'
       ? knownPageCount({ total: state.data.total, rows: state.data.items.length }, view.page, APPROVAL_PAGE_SIZE)
@@ -66,7 +71,7 @@ export function ApprovalList() {
   }
 
   // A stale link past the end moves to the last page there is.
-  useLastPage(view.page, lastPage, (page) => router.replace(approvalListHref({ state: view.state, page }, { approver }), { scroll: false }));
+  useLastPage(view.page, lastPage, (page) => router.replace(approvalListHref({ ...view, page }, { approver }), { scroll: false }));
 
   return (
     <div className="space-y-4">
@@ -81,15 +86,25 @@ export function ApprovalList() {
       />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        {/* On a phone the filter scrolls within itself, a label to a line. */}
-        <div className="max-w-full overflow-x-auto">
-          <div className="w-max">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          {approver ? (
             <FilterPills
-              ariaLabel="Gösterilen istekler"
-              value={view.state}
-              options={APPROVAL_FILTERS}
-              onChange={(next) => show({ state: next, page: 1 })}
+              ariaLabel="Kimin istekleri"
+              value={view.mine ? 'mine' : 'all'}
+              options={APPROVAL_SCOPES}
+              onChange={(next) => show({ ...view, mine: next === 'mine', page: 1 })}
             />
+          ) : null}
+          {/* On a phone the filter scrolls within itself, a label to a line. */}
+          <div className="max-w-full overflow-x-auto">
+            <div className="w-max">
+              <FilterPills
+                ariaLabel="Gösterilen istekler"
+                value={view.state}
+                options={APPROVAL_FILTERS}
+                onChange={(next) => show({ ...view, state: next, page: 1 })}
+              />
+            </div>
           </div>
         </div>
         {/* Present from the start, so a screen reader hears the count change with the filter. */}

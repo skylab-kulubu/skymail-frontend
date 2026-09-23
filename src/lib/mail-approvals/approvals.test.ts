@@ -46,25 +46,26 @@ describe("where a request lives", () => {
 
 describe("the list's view", () => {
   // An approver's work is what waits for them; anyone else follows their own.
-  it("starts on the pending ones for an approver, and on all of them for anyone else", () => {
-    assert.deepEqual(readApprovalListView(new URLSearchParams(""), { approver: true }), { state: "pending", page: 1 });
-    assert.deepEqual(readApprovalListView(new URLSearchParams(""), { approver: false }), { state: "all", page: 1 });
+  it("starts on everyone's pending ones for an approver, and on all of their own for anyone else", () => {
+    assert.deepEqual(readApprovalListView(new URLSearchParams(""), { approver: true }), { state: "pending", mine: false, page: 1 });
+    assert.deepEqual(readApprovalListView(new URLSearchParams(""), { approver: false }), { state: "all", mine: true, page: 1 });
   });
 
-  it("reads a state and a page from the address, and falls back on anything else", () => {
-    assert.deepEqual(readApprovalListView(new URLSearchParams("state=expired&page=3"), { approver: true }), { state: "expired", page: 3 });
-    assert.deepEqual(readApprovalListView(new URLSearchParams("state=all"), { approver: true }), { state: "all", page: 1 });
-    assert.deepEqual(readApprovalListView(new URLSearchParams("state=nope&page=-1"), { approver: false }), { state: "all", page: 1 });
+  it("reads a state, whose requests and a page from the address, and falls back on anything else", () => {
+    assert.deepEqual(readApprovalListView(new URLSearchParams("state=expired&page=3"), { approver: true }), { state: "expired", mine: false, page: 3 });
+    assert.deepEqual(readApprovalListView(new URLSearchParams("state=declined&mine=true"), { approver: true }), { state: "declined", mine: true, page: 1 });
+    assert.deepEqual(readApprovalListView(new URLSearchParams("state=nope&page=-1&mine=no"), { approver: false }), { state: "all", mine: true, page: 1 });
   });
 
   it("leaves the viewer's default out of the address", () => {
-    assert.equal(approvalListHref({ state: "pending", page: 1 }, { approver: true }), "/mail-approvals");
-    assert.equal(approvalListHref({ state: "all", page: 1 }, { approver: true }), "/mail-approvals?state=all");
-    assert.equal(approvalListHref({ state: "all", page: 2 }, { approver: false }), "/mail-approvals?page=2");
-    assert.equal(approvalListHref({ state: "returned", page: 1 }, { approver: false }), "/mail-approvals?state=returned");
+    assert.equal(approvalListHref({ state: "pending", mine: false, page: 1 }, { approver: true }), "/mail-approvals");
+    assert.equal(approvalListHref({ state: "all", mine: false, page: 1 }, { approver: true }), "/mail-approvals?state=all");
+    assert.equal(approvalListHref({ state: "pending", mine: true, page: 1 }, { approver: true }), "/mail-approvals?mine=true");
+    assert.equal(approvalListHref({ state: "all", mine: true, page: 2 }, { approver: false }), "/mail-approvals?page=2");
+    assert.equal(approvalListHref({ state: "returned", mine: true, page: 1 }, { approver: false }), "/mail-approvals?state=returned");
   });
 
-  it("offers Bekleyen · Geri dönen · Onaylanan · Reddedilen · Süresi dolan · Hepsi, in that order", () => {
+  it("offers Bekleyen · Geri dönen · Onaylanan · Reddedilen · Kabul edilmedi · Süresi dolan · Hepsi, in that order", () => {
     assert.deepEqual(
       APPROVAL_FILTERS.map((filter) => [filter.value, filter.label]),
       [
@@ -72,20 +73,24 @@ describe("the list's view", () => {
         ["returned", "Geri dönen"],
         ["approved", "Onaylanan"],
         ["rejected", "Reddedilen"],
+        ["declined", "Kabul edilmedi"],
         ["expired", "Süresi dolan"],
         ["all", "Hepsi"],
       ],
     );
   });
 
-  it("asks for everyone's requests for an approver and the viewer's own for anyone else, a page at a time", async () => {
-    const { api, calls } = scriptedClient(json(200, [], { "X-Total-Count": "30" }), json(200, null));
-    const page = await fetchApprovalPage(api, { state: "pending", page: 2 }, { approver: true });
+  it("asks for everyone's requests or an approver's own, and the viewer's own for anyone else, a page at a time", async () => {
+    const { api, calls } = scriptedClient(json(200, [], { "X-Total-Count": "30" }), json(200, null), json(200, null));
+    const page = await fetchApprovalPage(api, { state: "pending", mine: false, page: 2 }, { approver: true });
     assert.equal(calls[0].url, `${TEST_BASE_URL}/mail_approvals?state=pending&_start=${APPROVAL_PAGE_SIZE}&_end=${2 * APPROVAL_PAGE_SIZE}`);
     assert.deepEqual(page, { items: [], total: 30 });
 
-    await fetchApprovalPage(api, { state: "all", page: 1 }, { approver: false });
-    assert.equal(calls[1].url, `${TEST_BASE_URL}/mail_approvals?mine=true&_start=0&_end=${APPROVAL_PAGE_SIZE}`);
+    await fetchApprovalPage(api, { state: "declined", mine: true, page: 1 }, { approver: true });
+    assert.equal(calls[1].url, `${TEST_BASE_URL}/mail_approvals?state=declined&mine=true&_start=0&_end=${APPROVAL_PAGE_SIZE}`);
+
+    await fetchApprovalPage(api, { state: "all", mine: true, page: 1 }, { approver: false });
+    assert.equal(calls[2].url, `${TEST_BASE_URL}/mail_approvals?mine=true&_start=0&_end=${APPROVAL_PAGE_SIZE}`);
   });
 
   it("counts what waits for an approver from the list's total", async () => {

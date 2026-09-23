@@ -143,10 +143,11 @@ export const resubmitHref = (id: string) => `${APPROVAL_LIST_PATH}/edit/${encode
 export const copyApprovalHref = (id: string) => `${SEND_LIST_PATH}/create?${new URLSearchParams({ from_approval: id })}`;
 
 // ---------------------------------------------------------------------------
-// The list: /mail-approvals?state=returned&page=2
+// The list: /mail-approvals?state=returned&mine=true&page=2
 
 export type ApprovalFilter = ApprovalState | "all";
-export type ApprovalListView = Readonly<{ state: ApprovalFilter; page: number }>;
+/** `mine`: only the viewer's own requests — an approver's choice; anyone else sees only theirs anyway. */
+export type ApprovalListView = Readonly<{ state: ApprovalFilter; mine: boolean; page: number }>;
 type Viewer = Readonly<{ approver: boolean }>;
 
 export const APPROVAL_FILTERS: ReadonlyArray<Readonly<{ value: ApprovalFilter; label: string }>> = [
@@ -154,8 +155,15 @@ export const APPROVAL_FILTERS: ReadonlyArray<Readonly<{ value: ApprovalFilter; l
   { value: "returned", label: "Geri dönen" },
   { value: "approved", label: "Onaylanan" },
   { value: "rejected", label: "Reddedilen" },
+  { value: "declined", label: "Kabul edilmedi" },
   { value: "expired", label: "Süresi dolan" },
   { value: "all", label: "Hepsi" },
+];
+
+/** Whose requests an approver sees: everyone's, or only the ones they submitted (`?mine=true`). */
+export const APPROVAL_SCOPES: ReadonlyArray<Readonly<{ value: "all" | "mine"; label: string }>> = [
+  { value: "all", label: "Herkesin" },
+  { value: "mine", label: "Benim sunduklarım" },
 ];
 
 const STATES: readonly ApprovalState[] = ["pending", "returned", "approved", "rejected", "declined", "expired"];
@@ -166,14 +174,18 @@ const defaultFilter = ({ approver }: Viewer): ApprovalFilter => (approver ? "pen
 export function readApprovalListView(params: URLSearchParams, viewer: Viewer): ApprovalListView {
   const raw = params.get("state");
   const state = raw === "all" || STATES.includes(raw as ApprovalState) ? (raw as ApprovalFilter) : defaultFilter(viewer);
-  return { state, page: readPage(params) };
+  return { state, mine: !viewer.approver || params.get("mine") === "true", page: readPage(params) };
 }
 
 export function approvalListHref(view: ApprovalListView, viewer: Viewer): string {
-  return viewHref(APPROVAL_LIST_PATH, { state: [view.state, defaultFilter(viewer)], page: [view.page, 1] });
+  return viewHref(APPROVAL_LIST_PATH, {
+    state: [view.state, defaultFilter(viewer)],
+    mine: [String(viewer.approver && view.mine), "false"],
+    page: [view.page, 1],
+  });
 }
 
-/** One page of the list: everyone's for an approver, the viewer's own for anyone else. */
+/** One page of the list: everyone's or an approver's own, the viewer's own for anyone else. */
 export function fetchApprovalPage(
   api: ApiClient,
   view: ApprovalListView,
@@ -183,7 +195,7 @@ export function fetchApprovalPage(
   return api.getPage<ApprovalItem>("/mail_approvals", {
     query: {
       state: view.state === "all" ? undefined : view.state,
-      mine: approver ? undefined : true,
+      mine: !approver || view.mine ? true : undefined,
       ...pageRange(view.page, APPROVAL_PAGE_SIZE),
     },
     signal,
@@ -192,7 +204,7 @@ export function fetchApprovalPage(
 
 /** How many requests wait for an approver: the pending list's total, null when the answer does not say. */
 export async function pendingCount(api: ApiClient, signal?: AbortSignal): Promise<number | null> {
-  const page = await api.getPage<ApprovalItem>("/mail_approvals", { query: { state: "pending", _start: 0, _end: 1 }, signal });
+  const page = await api.getPage<ApprovalItem>("/mail_approvals", { query: { state: "pending", ...pageRange(1, 1) }, signal });
   return page.total;
 }
 
