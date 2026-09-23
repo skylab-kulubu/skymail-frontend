@@ -50,6 +50,7 @@
   "scripts": {
     "dev": "refine dev",
     "build": "tsc && refine build",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.node.json",
     "start": "refine start",
     "refine": "refine",
     "emails:render": "tsx scripts/render-templates.ts",
