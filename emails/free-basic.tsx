@@ -18,7 +18,7 @@ export const meta: TemplateMeta = {
     Subject: "GECEKODU başvuruları açıldı",
     Heading: "GECEKODU Başvuruları Açıldı",
     BodyHtml:
-      "<p>Bu yıl <strong>GECEKODU</strong> 12–13 Nisan'da Davutpaşa'da. Takımını kur, 24 saat boyunca bir fikri çalışır hâle getir.</p><p>Kontenjan sınırlı; başvurular <strong>5 Nisan</strong>'da kapanıyor.</p>",
+      "<p>Bu yıl <strong>GECEKODU</strong> 12–13 Nisan'da Davutpaşa'da. Takımını kur, 24 saat boyunca bir fikri çalışır hâle getir.</p><p>Kontenjan sınırlı; başvurular <strong>5 Nisan</strong>'da kapanıyor. Geçen yılın projelerine <a href=\"https://github.com/skylab-kulubu\">GitHub'dan</a> göz atabilirsin.</p>",
     CtaLabel: "Başvuruya Git",
     CtaUrl: "https://skyl.app/gecekodu",
   },
@@ -41,7 +41,7 @@ export default function FreeBasic() {
       {end}
 
       <div
-        className="t-body"
+        className="t-body free-body"
         style={{
           marginTop: "14px",
           fontSize: "15px",
