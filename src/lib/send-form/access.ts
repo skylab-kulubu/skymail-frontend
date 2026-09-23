@@ -55,3 +55,16 @@ export function approvalNote(access: SendAccess, audience: "list" | "people"): s
     ? `Bu hesap bir mail listesine doğrudan gönderemez (${ROLE.mailsWrite} rolü gerekiyor): gönderim onaya sunulur, bir onaycı onaylayınca gider.`
     : `Bu hesap mail gönderemez (${ROLE.mailsSend} ya da ${ROLE.mailsWrite} rolü gerekiyor): gönderim onaya sunulur, bir onaycı onaylayınca gider. Onaya tek bir kişi sunulur.`;
 }
+
+/**
+ * The audience the form starts on: a list a link names (`presetList`) when
+ * the viewer can pick one; else one they send to at once — a list with
+ * `mails:write`, people with `mails:send` — so the form's main action is a
+ * send; else, for someone who sends nothing, a list if they can pick one.
+ */
+export function defaultAudience(access: SendAccess, { presetList }: { presetList: boolean }): "list" | "people" {
+  if (presetList && access.list) return "list";
+  if (access.send.list) return "list";
+  if (access.send.people) return "people";
+  return access.list ? "list" : "people";
+}

@@ -37,6 +37,8 @@ export const ROLES = {
   sender: ["skymail:access", "skymail:templates:read", "skymail:lists:read", "skymail:mails:read", "skymail:mails:write"],
   /** Sends to people only (`mails:send`), and reads nothing of sends. */
   individual: ["skymail:access", "skymail:templates:read", "skymail:mails:send"],
+  /** Sends to people only (`mails:send`) and reads lists: a list goes for approval (ticket 20). */
+  personSender: ["skymail:access", "skymail:templates:read", "skymail:lists:read", "skymail:mails:send"],
   /** Reads sends, sends nothing. */
   watcher: ["skymail:access", "skymail:templates:read", "skymail:mails:read"],
   /** Reads templates and lists and sends nothing: submits for approval (ticket 20). */

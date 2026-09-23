@@ -24,7 +24,7 @@ import { approvalHref, type MailApproval } from '@/lib/mail-approvals/approvals'
 import { approvalRequest, type ComposePrefill } from '@/lib/mail-approvals/edit';
 import type { ListRow } from '@/lib/mailing-lists';
 import { SEND_LIST_PATH } from '@/lib/sends';
-import { approvalNote, directSend, type SendAccess } from '@/lib/send-form/access';
+import { approvalNote, defaultAudience, directSend, type SendAccess } from '@/lib/send-form/access';
 import { fieldValues, variableFields } from '@/lib/send-form/fields';
 import {
   audienceSize,
@@ -99,7 +99,7 @@ export function Compose({
   const [templateId, setTemplateId] = useState<string | null>(prefill?.templateId ?? null);
   const [values, setValues] = useState<Record<string, string>>(prefill?.values ?? {});
   const [rich, setRich] = useState<Record<string, string>>(prefill?.rich ?? {});
-  const [audience, setAudience] = useState<Audience>(prefill?.audience ?? (access.list ? 'list' : 'people'));
+  const [audience, setAudience] = useState<Audience>(prefill?.audience ?? defaultAudience(access, { presetList: presetListId !== null }));
   const [listId, setListId] = useState<string | null>(prefill ? prefill.listId : (preset?.id ?? null));
   const [people, setPeople] = useState<PersonEntry[]>(() =>
     prefill && prefill.people.length > 0 ? prefill.people.map((person) => personEntry(person)) : [personEntry()],

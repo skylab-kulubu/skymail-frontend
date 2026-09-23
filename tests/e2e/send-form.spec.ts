@@ -344,3 +344,26 @@ test("who may send what: people only with mails:send, who is told to ask about a
   await expect(page.getByRole("heading", { name: "Gönderimler" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Yeni gönderim" })).toBeVisible();
 });
+
+test("someone who sends to people and reads lists starts on people, sent at once; a list goes for approval", async ({ page, skymail, signIn }) => {
+  await signIn("personSender");
+  reminder(skymail);
+  skymail.addList({ name: "GECEKODU katılımcıları", recipients: PARTICIPANTS });
+
+  await page.goto("/mail-tasks/create");
+  await expect(page.getByRole("button", { name: "Kişiler" })).toHaveAttribute("aria-pressed", "true");
+  await expect(send(page)).toBeVisible();
+  await pickReminder(page);
+  await page.getByLabel("1. kişinin adı soyadı").fill("Ayşe Yılmaz");
+  await page.getByLabel("1. kişinin e-posta adresi").fill("ayse@ornek.com");
+  await page.getByLabel("EventName").fill("GECEKODU");
+  // Enter sends, as the main action does.
+  await page.getByLabel("EventName").press("Enter");
+  await expect(dialog(page)).toBeVisible();
+  await dialog(page).getByRole("button", { name: "İptal" }).click();
+
+  await page.getByRole("button", { name: "Mail listesi" }).click();
+  await expect(send(page)).toHaveCount(0);
+  await expect(page.getByText("Bu hesap bir mail listesine doğrudan gönderemez (skymail:mails:write rolü gerekiyor)")).toBeVisible();
+  expect(skymail.sendRequests()).toEqual([]);
+});

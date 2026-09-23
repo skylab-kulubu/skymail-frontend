@@ -10,7 +10,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { ROLE } from "../access";
-import { approvalNote, directSend, sendAccess } from "./access";
+import { approvalNote, defaultAudience, directSend, sendAccess } from "./access";
 
 const roles = (...granted: string[]) => [ROLE.access, ...granted];
 
@@ -85,5 +85,26 @@ describe("what the form says when a send goes for approval", () => {
     const sender = sendAccess(roles(ROLE.templatesRead, ROLE.listsRead, ROLE.mailsWrite));
     assert.equal(approvalNote(sender, "list"), null);
     assert.equal(approvalNote(sender, "people"), null);
+  });
+});
+
+describe("the audience the form starts on", () => {
+  // Starting on a list the viewer cannot send to would turn the form's main
+  // action, and Enter, into a submission for approval.
+  it("is one the viewer sends to at once: a list with mails:write, else people with mails:send", () => {
+    assert.equal(defaultAudience(sendAccess(roles(ROLE.templatesRead, ROLE.listsRead, ROLE.mailsWrite)), { presetList: false }), "list");
+    assert.equal(defaultAudience(sendAccess(roles(ROLE.templatesRead, ROLE.listsRead, ROLE.mailsSend)), { presetList: false }), "people");
+    assert.equal(defaultAudience(sendAccess(roles(ROLE.templatesRead, ROLE.mailsWrite)), { presetList: false }), "people");
+  });
+
+  it("is a list for someone who sends nothing and can pick one, and people for someone who cannot", () => {
+    assert.equal(defaultAudience(sendAccess(roles(ROLE.templatesRead, ROLE.listsRead)), { presetList: false }), "list");
+    assert.equal(defaultAudience(sendAccess(roles(ROLE.templatesRead)), { presetList: false }), "people");
+  });
+
+  // superadmin links an Event's list: the list it names is what the sender came for.
+  it("is the list a link names, wherever the viewer can pick it", () => {
+    assert.equal(defaultAudience(sendAccess(roles(ROLE.templatesRead, ROLE.listsRead, ROLE.mailsSend)), { presetList: true }), "list");
+    assert.equal(defaultAudience(sendAccess(roles(ROLE.templatesRead, ROLE.mailsSend)), { presetList: true }), "people");
   });
 });
