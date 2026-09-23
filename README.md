@@ -19,6 +19,10 @@
 * **Mail template'ler:** kulübün gönderdiği maillerin konusu ve gövdesi.
 * **Mail listeleri:** internal listeler ve Keycloak grupları.
 * **Gönderimler:** bir listeye ya da tek tek kişilere mail gönderme.
+* **Mail onayı:** gönderim yetkisi olmayan üye gönderimi onaya sunar; onaycı
+  (`skymail:mails:approve`) olduğu gibi onaylar, değişkenleri düzenleyip gönderir
+  ya da sunana geri gönderir, ya da gerekçesiyle reddeder. 7 gün içinde karar
+  verilmeyen istek gönderilmez.
 
 Panel Next.js (App Router) + Tailwind 4 + TypeScript. Kabuk ve temel bileşenler
 superadmin'den kopyalandı (ADR-0017); giriş Auth.js v5 ile Keycloak'ın `skymail`

@@ -105,7 +105,7 @@ function RichField({
  * sends, a markup one (free.basic's BodyHtml) in the Visual editor with only
  * what the server's allow-list keeps. Only a Required variable is marked and
  * holds the send back when empty; anything else that may be a slip is said
- * under its field. Enter in a single-line field sends.
+ * under its field. Enter in a single-line field sends, where `onSend` is given.
  */
 export function VariableFields({
   fields,
@@ -123,7 +123,8 @@ export function VariableFields({
   /** Shown once the sender has tried to send. */
   problems: Readonly<Record<string, string>> | null;
   warnings: Readonly<Record<string, string>>;
-  onSend: () => void;
+  /** What Enter in a single-line field does; nothing when it is not given. */
+  onSend?: () => void;
 }) {
   return (
     <div className="grid gap-4 md:grid-cols-2">
@@ -145,7 +146,7 @@ export function VariableFields({
             inputMode={field.kind === 'url' ? 'url' : undefined}
             value={input.values[field.name] ?? ''}
             onChange={(event) => onValue(field.name, event.target.value)}
-            onKeyDown={enterSends(onSend)}
+            onKeyDown={onSend ? enterSends(onSend) : undefined}
             placeholder={field.kind === 'url' ? 'https://' : undefined}
             autoComplete="off"
             hint={field.why || warnings[field.name] ? <Hint why={field.why} warning={warnings[field.name] ?? null} /> : null}

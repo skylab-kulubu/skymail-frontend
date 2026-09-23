@@ -308,7 +308,7 @@ test("a template archived since the page opened is refused, said to be, and not 
   await expect(page).toHaveURL(`/mail-tasks/create?mail_list_id=${gecekodu}`);
 });
 
-test("who may send what: people only with mails:send, who is told to ask about a send that may be open", async ({ page, skymail, signIn, context }) => {
+test("who may send what: people only with mails:send, who is told to ask about a send that may be open; the rest goes for approval", async ({ page, skymail, signIn, context }) => {
   freeBasic(skymail);
   reminder(skymail);
   const gecekodu = skymail.addList({ name: "GECEKODU katılımcıları", recipients: PARTICIPANTS });
@@ -316,8 +316,8 @@ test("who may send what: people only with mails:send, who is told to ask about a
 
   await signIn("individual");
   await page.goto(`/mail-tasks/create?mail_list_id=${gecekodu}`);
-  await expect(page.getByText("Bu bağlantı bir mail listesine gönderim için, ama bu hesap listeye gönderemez")).toBeVisible();
-  await expect(page.getByText("Bir mail listesine göndermek skymail:mails:write rolü ister; bu hesapla tek tek kişilere gönderebilirsin.")).toBeVisible();
+  await expect(page.getByText("Bu bağlantı bir mail listesine gönderim için, ama bu hesap mail listelerini göremiyor (skymail:lists:read)")).toBeVisible();
+  await expect(page.getByText("Mail listelerini görmek için skymail:lists:read rolü gerekiyor; bu hesapla kişilere gönderebilirsin.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Mail listesi" })).toHaveCount(0);
   expect(skymail.requests.some((request) => request.path.startsWith("/mailing_lists"))).toBe(false);
 
@@ -332,13 +332,38 @@ test("who may send what: people only with mails:send, who is told to ask about a
   );
   await expect(page.getByRole("button", { name: "Gönderimlere git" })).toHaveCount(0);
 
+  // Sending nothing, the watcher submits for approval (ticket 20).
   await context.clearCookies();
   await signIn("watcher");
   await page.goto("/mail-tasks/create");
-  await expect(page.getByText("Bu sayfayı görme yetkin yok")).toBeVisible();
-  await expect(page.getByText("Bu sayfa için skymail:mails:send ya da skymail:mails:write rolü gerekiyor.")).toBeVisible();
-  await expect(page.getByLabel("Konu")).toHaveCount(0);
+  await expect(page.getByLabel("Konu")).toBeVisible();
+  await expect(page.getByText("Bu hesap mail gönderemez (skymail:mails:send ya da skymail:mails:write rolü gerekiyor)")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Onaya sun…" })).toBeVisible();
+  await expect(send(page)).toHaveCount(0);
   await page.goto("/mail-tasks");
   await expect(page.getByRole("heading", { name: "Gönderimler" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Yeni gönderim" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Yeni gönderim" })).toBeVisible();
+});
+
+test("someone who sends to people and reads lists starts on people, sent at once; a list goes for approval", async ({ page, skymail, signIn }) => {
+  await signIn("personSender");
+  reminder(skymail);
+  skymail.addList({ name: "GECEKODU katılımcıları", recipients: PARTICIPANTS });
+
+  await page.goto("/mail-tasks/create");
+  await expect(page.getByRole("button", { name: "Kişiler" })).toHaveAttribute("aria-pressed", "true");
+  await expect(send(page)).toBeVisible();
+  await pickReminder(page);
+  await page.getByLabel("1. kişinin adı soyadı").fill("Ayşe Yılmaz");
+  await page.getByLabel("1. kişinin e-posta adresi").fill("ayse@ornek.com");
+  await page.getByLabel("EventName").fill("GECEKODU");
+  // Enter sends, as the main action does.
+  await page.getByLabel("EventName").press("Enter");
+  await expect(dialog(page)).toBeVisible();
+  await dialog(page).getByRole("button", { name: "İptal" }).click();
+
+  await page.getByRole("button", { name: "Mail listesi" }).click();
+  await expect(send(page)).toHaveCount(0);
+  await expect(page.getByText("Bu hesap bir mail listesine doğrudan gönderemez (skymail:mails:write rolü gerekiyor)")).toBeVisible();
+  expect(skymail.sendRequests()).toEqual([]);
 });

@@ -15,6 +15,8 @@ export const ROLE = {
   mailsRead: "skymail:mails:read",
   mailsWrite: "skymail:mails:write",
   mailsSend: "skymail:mails:send",
+  /** Mail onayı (ticket 18): decides sends submitted for approval; apart from sending. */
+  mailsApprove: "skymail:mails:approve",
 } as const;
 
 export type Role = (typeof ROLE)[keyof typeof ROLE];
@@ -26,15 +28,22 @@ export type NavItem = Readonly<{
   requires?: Role;
 }>;
 
-/** Today's addresses: superadmin links to `/mailing-lists/show/:id` and `/mail-tasks/create`. */
+/**
+ * Today's addresses: superadmin links to `/mailing-lists/show/:id` and
+ * `/mail-tasks/create`; the approval mails to `/mail-approvals/show/:id`.
+ * The mail approvals need nothing beyond access: anyone may submit, and the
+ * API lists each viewer what they may see — an approver everyone's, anyone
+ * else their own.
+ */
 export const NAVIGATION: readonly NavItem[] = [
   { href: "/", label: "Ana sayfa" },
   { href: "/templates", label: "Mail template'ler", requires: ROLE.templatesRead },
   { href: "/mailing-lists", label: "Mail listeleri", requires: ROLE.listsRead },
   { href: "/mail-tasks", label: "Gönderimler", requires: ROLE.mailsRead },
+  { href: "/mail-approvals", label: "Mail onayları" },
 ];
 
-export type SectionHref = "/" | "/templates" | "/mailing-lists" | "/mail-tasks";
+export type SectionHref = "/" | "/templates" | "/mailing-lists" | "/mail-tasks" | "/mail-approvals";
 
 /** A section's label, for the menu, the breadcrumbs, the tab title and the page header. */
 export function sectionLabel(href: SectionHref): string {
@@ -56,6 +65,11 @@ export function visibleNavigation(roles: readonly string[]): NavItem[] {
   return NAVIGATION.filter((item) => !item.requires || roles.includes(item.requires));
 }
 
+/** Whether the viewer decides sends submitted for approval (Mail onayı). */
+export function isApprover(roles: readonly string[]): boolean {
+  return hasRole(roles, ROLE.mailsApprove);
+}
+
 /** Whether `roles` hold any one of `anyOf` (and `skymail:access`); none asked for is only access. */
 export function hasAnyRole(roles: readonly string[], anyOf: readonly Role[]): boolean {
   return hasAccess(roles) && (anyOf.length === 0 || anyOf.some((role) => roles.includes(role)));
@@ -63,13 +77,12 @@ export function hasAnyRole(roles: readonly string[], anyOf: readonly Role[]): bo
 
 /**
  * Pages whose roles are not their section's read role. The send form
- * (`/mail-tasks/create`, ticket 16) takes `mails:send` or `mails:write` —
- * what the API's send routes take — and a sender need not read the send list.
- * It asks for `templates:read` itself, to offer a template.
+ * (`/mail-tasks/create`, ticket 16) sends what the viewer may send and
+ * submits the rest for approval (ticket 20), so it needs only access; a
+ * sender need not read the send list. It asks for `templates:read` itself,
+ * to offer a template.
  */
-const PAGE_ROLES: ReadonlyArray<Readonly<{ path: string; anyOf: readonly Role[] }>> = [
-  { path: "/mail-tasks/create", anyOf: [ROLE.mailsSend, ROLE.mailsWrite] },
-];
+const PAGE_ROLES: ReadonlyArray<Readonly<{ path: string; anyOf: readonly Role[] }>> = [{ path: "/mail-tasks/create", anyOf: [] }];
 
 /**
  * The roles a page needs, any one of them: its own, or the read role of the

@@ -32,7 +32,8 @@ export function MailFrame({
   title: string;
   /** Null while there is nothing to show yet. */
   html: string | null;
-  sample: SampleValues;
+  /** The values filled in; none for a mail the server already rendered, shown as it is. */
+  sample?: SampleValues;
   scheme: MailScheme;
   className?: string;
   /** What to say instead of "preparing" when nothing is coming. */

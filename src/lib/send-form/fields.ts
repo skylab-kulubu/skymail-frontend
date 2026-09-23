@@ -104,9 +104,21 @@ export function variableFields(template: FieldSource): VariableField[] {
       : operator.has(name)
         ? "Required variable: bu template'te zorunlu işaretlenmiş."
         : null;
-    const kind: FieldKind = markup.has(name) ? "rich" : /(url|link|href)$/i.test(name) ? "url" : "text";
+    const kind: FieldKind = markup.has(name) ? "rich" : kindByName(name);
     return { name, label: LABELS.get(name) ?? name, kind, required: why !== null, why, inSubject: inSubject.includes(name) };
   });
+}
+
+/** A text field, or an address when its name says it is one (…Url, …Link, …Href). */
+const kindByName = (name: string): FieldKind => (/(url|link|href)$/i.test(name) ? "url" : "text");
+
+/**
+ * A field for a variable known only by its name — a request's value with no
+ * template version to read it from (ticket 20): labelled as the form labels
+ * it, never marked required (the API still checks Required variables).
+ */
+export function namedField(name: string, kind: FieldKind = kindByName(name)): VariableField {
+  return { name, label: LABELS.get(name) ?? name, kind, required: false, why: null, inSubject: false };
 }
 
 /** Whether the mail uses the recipient's name, so a person sent to needs one. */

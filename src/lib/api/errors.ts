@@ -69,6 +69,23 @@ const BY_CODE: ReadonlyMap<string, string> = new Map([
   ],
   // Marking and releasing a Required variable (ticket 13).
   ["template.required_variable_in_contract", "Bu değişken gönderen servisin sözleşmesinde; panelden çıkarılamaz."],
+  // Mail onayı (ticket 19); the approval screens say more from the params
+  // and the action (src/lib/mail-approvals/refusals.ts).
+  ["mail_approval.template_unavailable", "Mail template arşivlenmiş ya da yayımlanmış bir sürümü yok; gönderilemez."],
+  ["mail_approval.audience_unavailable", "Mail listesi arşivlenmiş ya da Keycloak grubu artık yok; gönderilemez."],
+  ["mail_approval.audience_empty", "Mail listesinde gönderilecek kimse yok; gönderilemez."],
+  ["mail_approval.required_variables_missing", "Mail template'in Required variable'larından biri boş."],
+  ["mail_approval.unrenderable", "Mail template bu değerlerle işlenemiyor."],
+  ["mail_approval.busy", "Şu anda başka biri bu istek üzerinde işlem yapıyor. Yeniden yükleyip tekrar dene."],
+  ["mail_approval.changed", "İstek bu işlem hazırlanırken değişti. Yeniden yükleyip tekrar dene."],
+  ["mail_approval.expired", "İstek 7 gün içinde karara bağlanmadığı için süresi doldu; artık gönderilmez."],
+  ["mail_approval.state_conflict", "Bu istek artık bu işlemin yapılabileceği durumda değil."],
+  [
+    "mail_approval.template_republished",
+    "Bu istek sunulduktan sonra Mail template'in yeni bir sürümü yayımlandı; sunulan mail gönderilemez.",
+  ],
+  ["mail_approval.not_submitter", "Bu işlemi yalnız isteği sunan yapabilir."],
+  ["mail_approval.no_edit", "Düzenleme sunulan değerlerle aynı."],
   [
     "template.invalid_variable_name",
     "Değişken adı geçersiz: harf ya da alt çizgiyle başlamalı; yalnız İngilizce harf, rakam ve alt çizgi içerebilir, en çok 64 karakter.",

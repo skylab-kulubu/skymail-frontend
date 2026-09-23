@@ -5,30 +5,32 @@
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { ROLE, hasAccess, hasAnyRole, requiredRolesFor, sectionLabel, visibleNavigation } from "./access";
+import { ROLE, hasAccess, hasAnyRole, isApprover, requiredRolesFor, sectionLabel, visibleNavigation } from "./access";
 
 const hrefs = (roles: string[]) => visibleNavigation(roles).map((item) => item.href);
 
 describe("the menu", () => {
-  it("shows only the home screen to someone with access and no read roles", () => {
-    assert.deepEqual(hrefs(["skymail:access"]), ["/"]);
+  // Anyone who can use SkyMail may submit a send for approval, and sees their
+  // own requests (ticket 20).
+  it("shows the home screen and the mail approvals to someone with access and no read roles", () => {
+    assert.deepEqual(hrefs(["skymail:access"]), ["/", "/mail-approvals"]);
   });
 
   it("adds each section for its read role", () => {
-    assert.deepEqual(hrefs(["skymail:access", "skymail:templates:read"]), ["/", "/templates"]);
-    assert.deepEqual(hrefs(["skymail:access", "skymail:lists:read"]), ["/", "/mailing-lists"]);
-    assert.deepEqual(hrefs(["skymail:access", "skymail:mails:read"]), ["/", "/mail-tasks"]);
+    assert.deepEqual(hrefs(["skymail:access", "skymail:templates:read"]), ["/", "/templates", "/mail-approvals"]);
+    assert.deepEqual(hrefs(["skymail:access", "skymail:lists:read"]), ["/", "/mailing-lists", "/mail-approvals"]);
+    assert.deepEqual(hrefs(["skymail:access", "skymail:mails:read"]), ["/", "/mail-tasks", "/mail-approvals"]);
   });
 
   it("shows every section to someone with every read role, in a fixed order", () => {
     assert.deepEqual(
       hrefs(["skymail:mails:read", "skymail:lists:read", "skymail:templates:read", "skymail:access"]),
-      ["/", "/templates", "/mailing-lists", "/mail-tasks"],
+      ["/", "/templates", "/mailing-lists", "/mail-tasks", "/mail-approvals"],
     );
   });
 
   it("does not count a write role as permission to read the list", () => {
-    assert.deepEqual(hrefs(["skymail:access", "skymail:templates:write", "skymail:mails:send"]), ["/"]);
+    assert.deepEqual(hrefs(["skymail:access", "skymail:templates:write", "skymail:mails:send"]), ["/", "/mail-approvals"]);
   });
 
   it("is empty without skymail:access, whatever else the token carries", () => {
@@ -45,9 +47,10 @@ describe("the menu", () => {
         "skymail:lists:read",
         "skymail:mails:read",
       ]).map((item) => item.label),
-      ["Ana sayfa", "Mail template'ler", "Mail listeleri", "Gönderimler"],
+      ["Ana sayfa", "Mail template'ler", "Mail listeleri", "Gönderimler", "Mail onayları"],
     );
     assert.equal(sectionLabel("/mailing-lists"), "Mail listeleri");
+    assert.equal(sectionLabel("/mail-approvals"), "Mail onayları");
   });
 });
 
@@ -61,13 +64,30 @@ describe("a page opened by its address", () => {
     assert.deepEqual(requiredRolesFor("/mail-tasks"), ["skymail:mails:read"]);
   });
 
-  it("needs a send role on the send form, not the send list's read role", () => {
-    assert.deepEqual(requiredRolesFor("/mail-tasks/create"), ["skymail:mails:send", "skymail:mails:write"]);
+  // The send form submits for approval what the viewer may not send
+  // (ticket 20): it asks for templates:read itself, to offer a template.
+  it("needs only access on the send form, not the send list's read role or a send role", () => {
+    assert.deepEqual(requiredRolesFor("/mail-tasks/create"), []);
+  });
+
+  it("needs only access on the mail approvals: the API shows each viewer what they may see", () => {
+    assert.deepEqual(requiredRolesFor("/mail-approvals"), []);
+    assert.deepEqual(requiredRolesFor("/mail-approvals/show/abc"), []);
+    assert.deepEqual(requiredRolesFor("/mail-approvals/edit/abc"), []);
   });
 
   it("needs nothing beyond access on the home screen or an unknown address", () => {
     assert.deepEqual(requiredRolesFor("/"), []);
     assert.deepEqual(requiredRolesFor("/templatesx"), []);
+  });
+});
+
+describe("an approver", () => {
+  it("holds skymail:mails:approve, apart from sending, with access", () => {
+    assert.equal(ROLE.mailsApprove, "skymail:mails:approve");
+    assert.equal(isApprover([ROLE.access, ROLE.mailsApprove]), true);
+    assert.equal(isApprover([ROLE.access, ROLE.mailsWrite, ROLE.mailsSend]), false);
+    assert.equal(isApprover([ROLE.mailsApprove]), false);
   });
 });
 

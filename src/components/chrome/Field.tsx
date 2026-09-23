@@ -1,7 +1,7 @@
 // Copied from superadmin (ADR-0017). The date/time surface is superadmin's
 // light chip; everything else paints with the chrome's tokens, so the field
 // reads in both themes.
-import type { InputHTMLAttributes } from 'react';
+import type { InputHTMLAttributes, TextareaHTMLAttributes } from 'react';
 
 type FieldProps = InputHTMLAttributes<HTMLInputElement>;
 
@@ -19,6 +19,16 @@ export function Field({ className = '', type, ...props }: FieldProps) {
       type={type}
       {...props}
       className={`focus:border-skylab-400/50 h-8 w-full rounded-md border border-white/10 px-3 text-xs focus:outline-none aria-invalid:border-red-400/60 ${surface} ${className}`}
+    />
+  );
+}
+
+/** Several lines of text, painted as a Field is. */
+export function TextArea({ className = '', ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return (
+    <textarea
+      {...props}
+      className={`focus:border-skylab-400/50 w-full rounded-md border border-white/10 bg-white/3 px-3 py-2 text-xs text-neutral-100 placeholder:text-neutral-600 focus:bg-white/5 focus:outline-none aria-invalid:border-red-400/60 ${className}`}
     />
   );
 }

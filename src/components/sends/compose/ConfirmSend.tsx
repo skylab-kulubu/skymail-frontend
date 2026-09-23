@@ -3,6 +3,7 @@
 import { NoticeBox } from '@/components/chrome/Notice';
 import { Modal } from '@/components/ui/Modal';
 import { ModalPrimaryActions } from '@/components/ui/modal-actions';
+import type { ApprovalRequest } from '@/lib/mail-approvals/edit';
 import type { ListRow } from '@/lib/mailing-lists';
 import { formatCount } from '@/lib/sends';
 import type { PersonRow } from '@/lib/send-form/audience';
@@ -11,13 +12,15 @@ import type { Progress } from './use-sending';
 
 /**
  * What the dialog is asked to confirm: a send; a send to a list again when
- * the last one may already be open; or sending again to people, some of
- * whom may already have the mail.
+ * the last one may already be open; sending again to people, some of whom
+ * may already have the mail; or a send submitted — or resubmitted — for
+ * approval (ticket 20).
  */
 export type Confirming =
   | { kind: 'send'; plan: SendPlan }
   | { kind: 'resendList'; plan: Extract<SendPlan, { kind: 'list' }> }
-  | { kind: 'retryPeople'; retry: Retry };
+  | { kind: 'retryPeople'; retry: Retry }
+  | { kind: 'submit'; plan: SendPlan; request: ApprovalRequest; resubmit: boolean };
 
 const person = ({ name, email }: PersonRow) => (name ? `${name} <${email}>` : email);
 
@@ -36,6 +39,7 @@ export function ConfirmSend({
   draftNote,
   warnings,
   progress,
+  submitting = false,
   onCancel,
   onConfirm,
 }: {
@@ -47,17 +51,29 @@ export function ConfirmSend({
   /** What may be a slip, in words (sendPlan's warnings). */
   warnings: readonly string[];
   progress: Progress | null;
+  /** A submission for approval is on its way. */
+  submitting?: boolean;
   onCancel: () => void;
   onConfirm: (confirming: Confirming) => void;
 }) {
   const title =
-    confirming?.kind === 'resendList' ? 'Listeye yeniden gönder' : confirming?.kind === 'retryPeople' ? 'Kişilere yeniden gönder' : 'Gönderimi onayla';
+    confirming?.kind === 'resendList'
+      ? 'Listeye yeniden gönder'
+      : confirming?.kind === 'retryPeople'
+        ? 'Kişilere yeniden gönder'
+        : confirming?.kind === 'submit'
+          ? confirming.resubmit
+            ? 'Yeniden onaya sun'
+            : 'Onaya sun'
+          : 'Gönderimi onayla';
   const people =
-    confirming?.kind === 'send' && confirming.plan.kind === 'people'
+    (confirming?.kind === 'send' || confirming?.kind === 'submit') && confirming.plan.kind === 'people'
       ? confirming.plan.requests.map((request) => ({ name: request.recipient_full_name, email: request.recipient_email }))
       : [];
+  const busy = progress !== null || submitting;
+  const submission = confirming?.kind === 'submit';
   return (
-    <Modal isOpen={confirming !== null} onClose={progress ? () => {} : onCancel} title={title}>
+    <Modal isOpen={confirming !== null} onClose={busy ? () => {} : onCancel} title={title}>
       {confirming?.kind === 'retryPeople' ? (
         <div className="space-y-3">
           {confirming.retry.uncertain.length > 0 ? (
@@ -76,15 +92,19 @@ export function ConfirmSend({
         <>
           <dl className="space-y-2">
             <div>
-              <dt className="text-xs text-neutral-500">Gönderilecek</dt>
+              <dt className="text-xs text-neutral-500">{submission ? 'Onaya sunulacak' : 'Gönderilecek'}</dt>
               <dd className="break-words text-neutral-100">{what}</dd>
             </div>
             <div>
               <dt className="text-xs text-neutral-500">Kime</dt>
               <dd className="break-words text-neutral-100">
-                {people.length > 0 ? `${formatCount(people.length)} kişi, her biri ayrı bir gönderim` : audienceText(list, size)}
+                {submission && people.length === 1
+                  ? person(people[0])
+                  : people.length > 0
+                    ? `${formatCount(people.length)} kişi, her biri ayrı bir gönderim`
+                    : audienceText(list, size)}
               </dd>
-              {people.length > 0 ? (
+              {people.length > 0 && !submission ? (
                 <dd className="mt-1 max-h-32 overflow-y-auto text-xs text-neutral-400">{people.map(({ name, email }) => name || email).join(', ')}</dd>
               ) : null}
             </div>
@@ -108,9 +128,16 @@ export function ConfirmSend({
               </NoticeBox>
             </div>
           ) : null}
-          <p className="mt-3 text-xs text-neutral-500">
-            {draftNote ?? 'Yalnız yayımlanmış sürüm gönderilir.'} Gönderim açıldıktan sonra geri alınamaz.
-          </p>
+          {submission ? (
+            <p className="mt-3 text-xs text-neutral-500">
+              {draftNote ?? 'Yalnız yayımlanmış sürüm gönderilir.'} Bir onaycı onaylayınca gönderilir; onaycı değişkenleri düzenleyebilir
+              ya da gerekçesiyle reddedebilir. 7 gün içinde karar verilmezse süresi dolar ve gönderilmez.
+            </p>
+          ) : (
+            <p className="mt-3 text-xs text-neutral-500">
+              {draftNote ?? 'Yalnız yayımlanmış sürüm gönderilir.'} Gönderim açıldıktan sonra geri alınamaz.
+            </p>
+          )}
         </>
       )}
       {progress && progress.total > 1 ? (
@@ -124,12 +151,14 @@ export function ConfirmSend({
         confirmLabel={
           confirming?.kind === 'send'
             ? 'Gönder'
-            : confirming?.kind === 'retryPeople' && confirming.retry.uncertain.length === 0
-              ? 'Yeniden gönder'
-              : 'Yine de yeniden gönder'
+            : confirming?.kind === 'submit'
+              ? title
+              : confirming?.kind === 'retryPeople' && confirming.retry.uncertain.length === 0
+                ? 'Yeniden gönder'
+                : 'Yine de yeniden gönder'
         }
-        pendingLabel="Gönderiliyor…"
-        isPending={progress !== null}
+        pendingLabel={submission ? 'Sunuluyor…' : 'Gönderiliyor…'}
+        isPending={busy}
       />
     </Modal>
   );
