@@ -74,7 +74,19 @@ yarn api:check        # bütün Node testleri (src/**/*.test.ts): HTTP istemcisi
 yarn emails:check     # zengin metin dönüştürücüsü
 yarn templates:check  # yalnız render modülünün testleri: repo template'leri JSX modunda, HTML modu, değişkenler, önizleme, kaydetme kararı
 yarn emails:render    # repodaki Mail template'leri render edip denetler
+yarn test:e2e         # tarayıcı testleri (Playwright): editörün riskli akışları, taklit API ile
 ```
+
+`yarn test:e2e` paneli production build olarak 3013 portunda başlatır; SkyMail
+API'si tarayıcıda ağ katmanında taklit edilir (`tests/e2e/fixtures/mock-api.ts`),
+oturum atılabilir bir `AUTH_SECRET` ile üretilir, Keycloak'a gidilmez. Chromium
+ilk seferde `yarn playwright install chromium` ile indirilir.
+
+`dev` ve `build`, Next.js'ten önce `scripts/build-editor-assets.ts`'i koşar
+(`yarn editor:assets`): Mail template editörünün render sandbox'ı
+(`public/render-sandbox/`, opak kökenli iframe'de açılan tek betik) ve Monaco
+(`public/monaco/vs`, CDN yerine panelin kendisinden). İkisi de üretilir,
+git'e girmez.
 
 İmaj: `docker build -t skymail-frontend .` — build argümanı yok; konteyner
 `node server.js` ile başlar ve ayarlarını ortamdan okur.
