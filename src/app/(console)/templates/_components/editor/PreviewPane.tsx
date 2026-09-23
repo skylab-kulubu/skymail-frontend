@@ -1,12 +1,12 @@
 'use client';
 
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Loader2 } from 'lucide-react';
 import { NoticeBox } from '@/components/chrome/Notice';
 import { referencedVariables } from '@/lib/mail-render/go-template';
 import type { SampleValues } from '@/lib/mail-render/preview';
 import type { MailScheme } from '@/lib/template-editor/preview';
-import { sampleNames, sampleValues } from '@/lib/template-editor/samples';
+import { readTypedSamples, sampleNames, sampleValues, writeTypedSamples } from '@/lib/template-editor/samples';
 import { EditorNote, SamplePanel } from './EditorParts';
 import { MailFrame, SchemeToggle, SubjectPreview } from './MailPreview';
 
@@ -20,20 +20,46 @@ function storedVariables(html: string | null): string[] {
   }
 }
 
+/** The browser's storage, or null where reaching it throws (blocked site data). */
+function localStorageOrNull(): Storage | null {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
 /**
- * The sample values a page previews with: the repo's for the template, and
- * what the operator types, for the variables the body and subject reference.
+ * The sample values a page previews with, for the variables the body and
+ * subject reference: what the operator typed, else the repo file's, else a
+ * guess for a common name. What the operator types for a template is kept in
+ * their browser under `storageKey` (its id), so a reload keeps it.
  */
-export function useSample(variables: readonly string[] | undefined, fallbackHtml: string | null, subject: string, repo: SampleValues) {
+export function useSample(
+  variables: readonly string[] | undefined,
+  fallbackHtml: string | null,
+  subject: string,
+  repo: SampleValues,
+  storageKey?: string,
+) {
   const [typed, setTyped] = useState<Record<string, string>>({});
+  useEffect(() => {
+    const storage = localStorageOrNull();
+    if (storageKey && storage) setTyped(readTypedSamples(storage, storageKey));
+  }, [storageKey]);
   const variablesKey = (variables ?? storedVariables(fallbackHtml)).join('\n');
   const names = useMemo(() => sampleNames(variablesKey === '' ? [] : variablesKey.split('\n'), subject), [variablesKey, subject]);
   const sample = useMemo(() => sampleValues(names, repo, typed), [names, repo, typed]);
   return {
     names,
     sample,
-    typed,
-    type: (name: string, value: string) => setTyped((previous) => ({ ...previous, [name]: value })),
+    type: (name: string, value: string) =>
+      setTyped((previous) => {
+        const next = { ...previous, [name]: value };
+        const storage = localStorageOrNull();
+        if (storageKey && storage) writeTypedSamples(storage, storageKey, next);
+        return next;
+      }),
   };
 }
 
@@ -50,7 +76,6 @@ export function PreviewPane({
   note,
   subject,
   samples,
-  repo,
 }: {
   html: string | null;
   pending: boolean;
@@ -63,7 +88,6 @@ export function PreviewPane({
   note?: ReactNode;
   subject: string;
   samples: ReturnType<typeof useSample>;
-  repo: SampleValues;
 }) {
   const [scheme, setScheme] = useState<MailScheme>('light');
   return (
@@ -100,7 +124,7 @@ export function PreviewPane({
         scheme={scheme}
         emptyText={failure && html === null ? 'Gösterilecek bir render yok.' : undefined}
       />
-      <SamplePanel names={samples.names} repo={repo} typed={samples.typed} onType={samples.type} />
+      <SamplePanel names={samples.names} sample={samples.sample} onType={samples.type} />
     </section>
   );
 }

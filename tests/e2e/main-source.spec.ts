@@ -51,6 +51,7 @@ test("making the HTML source main keeps the JSX source as it was", async ({ page
   const dialog = page.getByRole("dialog", { name: "HTML kaynağını Main source yap" });
   await expect(preview(page, "Main source adayı")).toContainText("HTML ile düzeltilmiş metin");
   await expect(dialog).toContainText("JSX kaynağı olduğu gibi korunur");
+  await expect(dialog).toContainText("kaydedilmemiş olarak kalır");
   expect(skymail.writes()).toHaveLength(0);
   await dialog.getByRole("button", { name: "Main source yap" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Main source artık HTML" })).toBeVisible();
@@ -74,4 +75,40 @@ test("making the HTML source main keeps the JSX source as it was", async ({ page
   await expect(preview(page, "Mail önizlemesi")).toContainText("HTML ile düzeltilmiş metin");
   await page.getByRole("tab", { name: /JSX/ }).click();
   expect(await sourceIn(page, "jsx")).toBe(JSX);
+});
+
+// Story 35: stopping halfway through an edit. A source that does not compile
+// is never saved, so a half-written experiment is set aside — that source
+// alone — and the rest of the work is saved.
+test("a half-written source is set aside so the rest can be saved", async ({ page, skymail, signIn }) => {
+  await signIn("writer");
+  const html = "<!DOCTYPE html><html><body><p>Merhaba {{.FirstName}}</p></body></html>";
+  const { id } = skymail.addTemplate({
+    name: "Haftalık duyuru",
+    subject: "Eski konu",
+    mainMode: "html",
+    html,
+    jsx: JSX,
+    htmlContent: html,
+    plainText: "Merhaba",
+  });
+
+  await page.goto(`/templates/edit/${id}`);
+  await expect(preview(page, "Mail önizlemesi")).toContainText("Merhaba");
+  await page.getByLabel("Konu").fill("Yeni konu");
+  await page.getByRole("tab", { name: /JSX/ }).click();
+  await writeSource(page, "jsx", "export default () => <Text>");
+  await expect(page.getByRole("alert").filter({ hasText: "Render edilemedi" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Bu kaynaktaki değişiklikleri geri al" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Taslağı kaydet" }).click();
+  const refusal = page.getByRole("alert").filter({ hasText: "Kaydedilmedi" });
+  await expect(refusal).toContainText("JSX kaynağı render edilemedi");
+  expect(skymail.writes()).toHaveLength(0);
+
+  await refusal.getByRole("button", { name: "JSX kaynağındaki değişiklikleri geri al" }).click();
+  expect(await sourceIn(page, "jsx")).toBe(JSX);
+  await page.getByRole("button", { name: "Taslağı kaydet" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Taslak kaydedildi" })).toBeVisible();
+  expect(skymail.versionsOf(id)[0]).toMatchObject({ subject: "Yeni konu", jsx_source: JSX, html_source: html, published_at: null });
 });

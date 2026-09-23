@@ -101,6 +101,10 @@ export function MainSourceDialog({
             ? `${kept.map((mode) => AUTHORING_MODE_LABEL[mode]).join(' ve ')} kaynağı olduğu gibi korunur.`
             : null}
         </p>
+        <p>
+          Bu değişikliğe yalnız {label} kaynağı ve Main source seçimi girer. Ad, konu ve diğer kaynaklardaki
+          kaydedilmemiş değişikliklerin buna dahil değil; kaydedilmemiş olarak kalır.
+        </p>
         {refusal ? <RefusalNotice refusal={refusal} /> : null}
         {current && !current.ok ? (
           <EditorNote tone="warning">

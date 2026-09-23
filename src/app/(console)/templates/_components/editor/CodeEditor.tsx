@@ -9,7 +9,7 @@
  * at the version yarn.lock pins, and a later CSP needs no outside host for it.
  * Imported only through next/dynamic, so it never renders on the server.
  */
-import Editor, { loader, type BeforeMount } from '@monaco-editor/react';
+import Editor, { loader, type BeforeMount, type OnMount } from '@monaco-editor/react';
 import type { EditableMode } from '@/lib/template-editor/editor-state';
 import { MONACO_VS_PATH } from '@/lib/template-editor/monaco-path';
 import { useDocumentTheme } from '@/lib/ui/use-document-theme';
@@ -56,6 +56,21 @@ const configure: BeforeMount = (monaco) => {
   typescript.typescriptDefaults.setDiagnosticsOptions({ noSemanticValidation: true, noSyntaxValidation: false });
 };
 
+/**
+ * Sources keep "\n" line endings, as they were written and stored. Monaco
+ * takes the platform's default whenever a model's text has no line break to
+ * go by, and would hand back "\r\n" text from then on.
+ */
+const keepLf: OnMount = (editor, monaco) => {
+  const lf = () => {
+    const model = editor.getModel();
+    if (model && model.getEOL() !== '\n') model.setEOL(monaco.editor.EndOfLineSequence.LF);
+  };
+  lf();
+  editor.onDidChangeModel(lf);
+  editor.onDidChangeModelContent(lf);
+};
+
 export default function CodeEditor({
   mode,
   value,
@@ -76,6 +91,7 @@ export default function CodeEditor({
       onChange={(next) => onChange(next ?? '')}
       theme={theme === 'light' ? 'vs' : 'vs-dark'}
       beforeMount={configure}
+      onMount={keepLf}
       loading={<p className="p-4 text-xs text-neutral-500">Kod editörü yükleniyor…</p>}
       height="100%"
       options={{

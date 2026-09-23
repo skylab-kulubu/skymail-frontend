@@ -19,6 +19,7 @@ import {
   planCreate,
   planMainChange,
   planSave,
+  revertSource,
   storedFromVersion,
   versionToOpen,
   type Content,
@@ -333,5 +334,25 @@ describe("creating a template", () => {
   it("needs a name and a subject", async () => {
     const plan = planCreate({ name: "", subject: " ", mode: "html", source: HTML }, await render("html", HTML));
     assert.deepEqual(!plan.ok && plan.blockers.map((blocker) => blocker.message), ["Template adı boş olamaz.", "Konu boş olamaz."]);
+  });
+});
+
+describe("dropping one source's unsaved changes", () => {
+  it("puts that source back as stored and keeps every other change", async () => {
+    const stored = storedFromVersion(version({ html_source: HTML }), "Hoş geldin");
+    const editing: Content = { ...contentOf(stored), subject: "Yeni konu", sources: { jsx: BROKEN_JSX, html: `${HTML}<p>ek</p>` } };
+    const reverted = revertSource("jsx", editing, stored);
+    assert.deepEqual(reverted, { ...editing, sources: { jsx: JSX, html: `${HTML}<p>ek</p>` } });
+    // Then the rest can be saved.
+    const plan = planSave({ editing: reverted, renders: { jsx: await render("jsx", BROKEN_JSX), html: await render("html", `${HTML}<p>ek</p>`) }, stored });
+    assert.ok(plan.ok);
+    assert.equal(plan.body.subject, "Yeni konu");
+    assert.equal(plan.body.jsx_source, JSX);
+  });
+
+  it("takes away a source added since the last save", () => {
+    const stored = storedFromVersion(version(), "Hoş geldin");
+    const editing: Content = { ...contentOf(stored), sources: { jsx: JSX, html: HTML } };
+    assert.deepEqual(revertSource("html", editing, stored).sources, { jsx: JSX });
   });
 });

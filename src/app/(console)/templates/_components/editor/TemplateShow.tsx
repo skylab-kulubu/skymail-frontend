@@ -60,7 +60,7 @@ function Show({ template, version }: { template: MailTemplate; version: Template
   const stored = storedFromVersion(version, template.name);
   const [active, setActive] = useState<EditableMode>(() => (isEditableMode(stored.mainMode) ? stored.mainMode : 'jsx'));
   const repo = useRepoSample(template.key);
-  const samples = useSample(undefined, stored.html, stored.subject, repo);
+  const samples = useSample(undefined, stored.html, stored.subject, repo, template.id);
   const source = stored.sources[active];
 
   return (
@@ -107,7 +107,7 @@ function Show({ template, version }: { template: MailTemplate; version: Template
             ) : null}
           </div>
         </section>
-        <PreviewPane html={stored.html} pending={false} failure={null} subject={stored.subject} samples={samples} repo={repo} />
+        <PreviewPane html={stored.html} pending={false} failure={null} subject={stored.subject} samples={samples} />
       </div>
     </div>
   );

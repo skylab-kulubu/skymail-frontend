@@ -6,9 +6,17 @@ import { Field } from '@/components/chrome/Field';
 import { NoticeBox } from '@/components/chrome/Notice';
 import { formatDateTime } from '@/lib/format';
 import type { SampleValues } from '@/lib/mail-render/preview';
-import type { Blocker } from '@/lib/template-editor/editor-state';
+import { Button } from '@/components/ui/Button';
+import type { Blocker, EditableMode } from '@/lib/template-editor/editor-state';
 import type { VersionProblem } from '@/lib/template-editor/refusals';
-import { SYSTEM_TEMPLATE_NOTE, authorName, writtenBy, type MailTemplate, type VersionAuthor } from '@/lib/templates';
+import {
+  AUTHORING_MODE_LABEL,
+  SYSTEM_TEMPLATE_NOTE,
+  authorName,
+  writtenBy,
+  type MailTemplate,
+  type VersionAuthor,
+} from '@/lib/templates';
 
 /** Who wrote a version, in the words the history uses. */
 export function authorLabel(author: VersionAuthor, viewerSub: string | null): string {
@@ -50,9 +58,21 @@ export type Refusal = Readonly<{ title: string; problem?: VersionProblem; blocke
  * Why a save, a Main source change or a publish did not happen: the editor's
  * own reasons (a source with no render), or the API's — by missing Required
  * variable with why the mail needs it, or by the part the mailer cannot parse.
+ * A source that blocks a save because of unsaved changes can be set back from
+ * here (`onRevert`), so the rest of the work still saves.
  */
-export function RefusalNotice({ refusal }: { refusal: Refusal }) {
+export function RefusalNotice({
+  refusal,
+  onRevert,
+}: {
+  refusal: Refusal;
+  /** Sets one source back as stored; offered for each source that blocks and has unsaved changes. */
+  onRevert?: { can: (mode: EditableMode) => boolean; revert: (mode: EditableMode) => void };
+}) {
   const { title, problem, blockers } = refusal;
+  const revertable = (blockers ?? []).flatMap((blocker) =>
+    blocker.mode && onRevert?.can(blocker.mode) ? [blocker.mode] : [],
+  );
   return (
     <NoticeBox tone="error">
       <p className="font-medium">{title}</p>
@@ -78,30 +98,38 @@ export function RefusalNotice({ refusal }: { refusal: Refusal }) {
             ))}
           </ul>
         ) : null}
+        {revertable.length > 0 ? (
+          <div className="flex flex-wrap gap-2 pt-1">
+            {[...new Set(revertable)].map((mode) => (
+              <Button key={mode} variant="secondary" onClick={() => onRevert?.revert(mode)}>
+                {AUTHORING_MODE_LABEL[mode]} kaynağındaki değişiklikleri geri al
+              </Button>
+            ))}
+          </div>
+        ) : null}
       </div>
     </NoticeBox>
   );
 }
 
 /**
- * The values the preview fills the template with. They come from the repo's
- * file for the template where there is one; the operator can type others.
- * Nothing here is saved or sent.
+ * The values the preview fills the template with: the repo's file's for the
+ * template where there is one, a guess for a common name, and whatever the
+ * operator types, which their browser keeps for the template. Nothing here
+ * is saved or sent.
  */
 export function SamplePanel({
   names,
-  repo,
-  typed,
+  sample,
   onType,
 }: {
   names: readonly string[];
-  repo: SampleValues;
-  typed: Readonly<Record<string, string>>;
+  /** The values in use, by name. */
+  sample: SampleValues;
   onType: (name: string, value: string) => void;
 }) {
   const shown = (name: string) => {
-    if (Object.hasOwn(typed, name)) return typed[name];
-    const value = repo[name];
+    const value = sample[name];
     if (value === undefined || value === null) return '';
     return typeof value === 'object' ? JSON.stringify(value) : String(value);
   };
@@ -112,7 +140,8 @@ export function SamplePanel({
       </summary>
       <div className="space-y-3 border-t border-white/5 px-4 py-3">
         <p className="text-xs text-neutral-500">
-          Önizleme bu değerlerle dolar; kaydedilmez, gönderilmez. Değeri olmayan değişken önizlemede «Ad» olarak görünür.
+          Önizleme bu değerlerle dolar; kaydedilmez, gönderilmez. Yazdıkların bu tarayıcıda bu template için saklanır.
+          Değeri olmayan değişken önizlemede «Ad» olarak görünür.
         </p>
         {names.length === 0 ? (
           <p className="text-xs text-neutral-500">Bu template değişken kullanmıyor.</p>

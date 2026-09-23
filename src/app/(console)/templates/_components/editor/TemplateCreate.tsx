@@ -114,7 +114,6 @@ function CreateForm() {
           failure={current && !current.ok ? current.message : null}
           subject={subject}
           samples={samples}
-          repo={NO_REPO_SAMPLE}
         />
       </div>
       <FormActions

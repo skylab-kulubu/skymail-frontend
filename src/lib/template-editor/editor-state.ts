@@ -281,6 +281,20 @@ export function addSource(mode: EditableMode, state: EditorState): Content | nul
 }
 
 /**
+ * The source in `mode` back as stored — or gone, if it was added since the
+ * last save — with every other change kept. A save refuses a source that does
+ * not render (story 29); this is how a half-written one is set aside so the
+ * rest can still be saved.
+ */
+export function revertSource(mode: EditableMode, editing: Content, stored: Stored): Content {
+  const sources = { ...editing.sources };
+  const kept = stored.sources[mode];
+  if (kept === undefined) delete sources[mode];
+  else sources[mode] = kept;
+  return { ...editing, sources };
+}
+
+/**
  * A new template: its name, subject and first source. With nothing stored to
  * keep, the save rule comes down to a successful render of the source as it
  * stands.

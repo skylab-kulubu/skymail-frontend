@@ -33,6 +33,7 @@ import {
   isEditableMode,
   planMainChange,
   planSave,
+  revertSource,
   storedFromVersion,
   versionToOpen,
   type Content,
@@ -167,7 +168,7 @@ function Editor({
   const failure = current && !current.ok ? current.message : null;
 
   const repo = useRepoSample(template.key);
-  const samples = useSample(lastGood?.variables, previewHtml, editing.subject, repo);
+  const samples = useSample(lastGood?.variables, previewHtml, editing.subject, repo, template.id);
 
   useEffect(() => {
     if (!dirty) return;
@@ -182,6 +183,10 @@ function Editor({
 
   const setSource = (mode: EditableMode, value: string) =>
     setEditing((previous) => ({ ...previous, sources: { ...previous.sources, [mode]: value } }));
+  const revert = (mode: EditableMode) => {
+    setEditing((previous) => revertSource(mode, previous, stored));
+    setRefusal(null);
+  };
 
   async function save() {
     const plan = planSave(state);
@@ -339,7 +344,7 @@ function Editor({
           Senin kaydettiğin onlarınkini değiştirmez.
         </EditorNote>
       ) : null}
-      {refusal ? <RefusalNotice refusal={refusal} /> : null}
+      {refusal ? <RefusalNotice refusal={refusal} onRevert={{ can: changed, revert }} /> : null}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <FormField
@@ -373,19 +378,29 @@ function Editor({
             source={editing.sources[active]}
             onChange={(value) => setSource(active, value)}
             toolbar={
-              active !== main ? (
+              active !== main || changed(active) ? (
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-xs text-neutral-500">
-                    Bu kaynak gönderilmiyor; gönderilen mail {AUTHORING_MODE_LABEL[main]}{' '}
-                    kaynağından üretilir.
+                  <p className="min-w-0 flex-1 text-xs text-neutral-500">
+                    {active !== main
+                      ? `Bu kaynak gönderilmiyor; gönderilen mail ${AUTHORING_MODE_LABEL[main]} kaynağından üretilir.`
+                      : null}
                   </p>
-                  <Button
-                    variant="outlineBrand"
-                    onClick={() => setDialog({ kind: 'main', mode: active, refusal: null })}
-                    disabled={busy !== null}
-                  >
-                    Bu kaynağı Main source yap
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    {changed(active) ? (
+                      <Button variant="secondary" onClick={() => revert(active)} disabled={busy !== null}>
+                        Bu kaynaktaki değişiklikleri geri al
+                      </Button>
+                    ) : null}
+                    {active !== main ? (
+                      <Button
+                        variant="outlineBrand"
+                        onClick={() => setDialog({ kind: 'main', mode: active, refusal: null })}
+                        disabled={busy !== null}
+                      >
+                        Bu kaynağı Main source yap
+                      </Button>
+                    ) : null}
+                  </div>
                 </div>
               ) : null
             }
@@ -422,7 +437,6 @@ function Editor({
           }
           subject={editing.subject}
           samples={samples}
-          repo={repo}
         />
       </div>
 
