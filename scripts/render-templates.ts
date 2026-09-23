@@ -16,15 +16,102 @@ import { templates } from "../emails";
 
 const OUT_DIR = join(process.cwd(), "build", "emails");
 
-/** Replaces the Go actions with sample values so a preview reads like a real mail. */
+/**
+ * Replaces the Go actions with sample values so a preview reads like a real mail.
+ *
+ * The conditionals are evaluated rather than stripped. Stripping them showed
+ * every branch of an `{{if}}/{{else if}}/{{else}}` chain at once, which made the
+ * preview of a template with several outcomes unreadable — and a preview nobody
+ * can read is a design review nobody does.
+ */
 function fillSample(html: string, sample: Record<string, unknown>): string {
-  let filled = html;
+  const truthy = (name: string) => {
+    const value = sample[name];
+    return value !== undefined && value !== null && value !== "" && value !== false;
+  };
 
-  // Drop the conditionals, keeping the "value is present" branch.
-  filled = filled.replace(/\{\{if [^}]+\}\}/g, "").replace(/\{\{end\}\}/g, "");
-  filled = filled.replace(/\{\{safeHTML \.(\w+)\}\}/g, (_match, name: string) => String(sample[name] ?? ""));
-  filled = filled.replace(/\{\{\.(\w+)\}\}/g, (_match, name: string) => String(sample[name] ?? `«${name}»`));
+  // The pretty printer wraps a long line and splits an action across it, even
+  // between `else` and `if`. Every match below is against the flattened form,
+  // never the raw one; matching the raw one silently picked the wrong branch.
+  const flatten = (action: string) => action.replace(/\s+/g, " ");
 
+  const holds = (action: string): boolean => {
+    const flat = flatten(action);
+    const equals = /^\{\{(?:else )?if eq \.(\w+) `([^`]*)`\}\}$/.exec(flat);
+    if (equals) {
+      return String(sample[equals[1]] ?? "") === equals[2];
+    }
+    const present = /^\{\{(?:else )?if \.(\w+)\}\}$/.exec(flat);
+    return present ? truthy(present[1]) : false;
+  };
+
+  // Walk the actions, keeping only the text of the branch that holds. Nesting
+  // works because a branch that is not taken is dropped whole, actions and all.
+  const resolve = (text: string): string => {
+    const tokens = [...text.matchAll(/\{\{(?:if|else if|else|end)\b[^}]*\}\}/g)];
+    if (tokens.length === 0) {
+      return text;
+    }
+
+    let out = "";
+    let index = 0;
+    let depth = 0;
+    let taken = false;
+    let keeping = false;
+    let chainStart = -1;
+
+    for (const token of tokens) {
+      const action = token[0];
+      const flat = flatten(action);
+      const at = token.index ?? 0;
+
+      if (depth === 0) {
+        if (flat.startsWith("{{if")) {
+          out += text.slice(index, at);
+          depth = 1;
+          taken = holds(action);
+          keeping = taken;
+          chainStart = at + action.length;
+          continue;
+        }
+        // An {{end}} or {{else}} with no {{if}} open: leave it as it came.
+        continue;
+      }
+
+      if (flat.startsWith("{{if")) {
+        depth += 1;
+        continue;
+      }
+
+      if (depth === 1 && (flat.startsWith("{{else") || flat === "{{end}}")) {
+        if (keeping) {
+          out += resolve(text.slice(chainStart, at));
+          keeping = false;
+        }
+        if (flat === "{{end}}") {
+          depth = 0;
+          index = at + action.length;
+          continue;
+        }
+        const nowHolds = flat === "{{else}}" ? !taken : !taken && holds(action);
+        keeping = nowHolds;
+        taken = taken || nowHolds;
+        chainStart = at + action.length;
+        continue;
+      }
+
+      if (flat === "{{end}}") {
+        depth -= 1;
+      }
+    }
+
+    out += text.slice(index);
+    return out;
+  };
+
+  let filled = resolve(html);
+  filled = filled.replace(/\{\{safeHTML \.(\w+)\}\}/g, (_m, name: string) => String(sample[name] ?? ""));
+  filled = filled.replace(/\{\{\.(\w+)\}\}/g, (_m, name: string) => String(sample[name] ?? `«${name}»`));
   return filled;
 }
 
