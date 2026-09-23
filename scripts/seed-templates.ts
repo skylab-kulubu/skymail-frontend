@@ -94,6 +94,14 @@ const who = (version: ConflictVersion) => version.author.name ?? "adı bilinmiyo
 
 const DAY = new Intl.DateTimeFormat("tr-TR", { day: "numeric", month: "short", timeZone: "Europe/Istanbul" });
 
+// A report must not be more fragile than what it reports on: a missing or
+// malformed timestamp says so instead of throwing (and losing the list of
+// refused templates) or printing 1 January 1970 for a null.
+function day(value: string | null | undefined): string {
+  const at = value ? new Date(value) : null;
+  return at && !Number.isNaN(at.getTime()) ? DAY.format(at) : "tarih yok";
+}
+
 /**
  * What a forced template's line says. Only a backend with the conflict rule
  * forces, and it says what it overrode; today's ignores ?force=true, so an
@@ -113,7 +121,7 @@ function forceNote(overrode: Override | undefined): string {
   }
   const replaced = [...versions.values()]
     .sort((a, b) => a.seq - b.seq)
-    .map((v) => `#${v.seq} ${v.published_at === null ? "taslak" : "yayımlanmış sürüm"}, ${who(v)}, ${DAY.format(new Date(v.published_at ?? v.created_at))}`);
+    .map((v) => `#${v.seq} ${v.published_at === null ? "taslak" : "yayımlanmış sürüm"}, ${who(v)}, ${day(v.published_at ?? v.created_at)}`);
   if ((overrode.rules ?? []).includes("operator_subject") && published) {
     replaced.push(`operatörün konusu "${published.subject}"`);
   }
