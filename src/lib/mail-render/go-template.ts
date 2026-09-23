@@ -175,6 +175,9 @@ interface Frame extends Scope {
  *    calls the template decides its data. A `block` body is read the same
  *    way, unless the block is given `.` itself, when it reads like the text
  *    around it;
+ *  - an action inside an HTML comment counts for nothing: the mailer's
+ *    html/template leaves the comment, and what its actions print, out of the
+ *    mail. It still opens and closes its block (see htmlCommentFlags);
  *  - an action React escaped (a `"` written as `&quot;`) is read as written,
  *    which is also how the mailer would fail to parse it.
  */
@@ -183,8 +186,12 @@ export function referencedVariables(text: string): string[] {
   const frames: Frame[] = [];
   const top: Scope = { dot: true, dollar: true };
   const current = (): Scope => frames.at(-1) ?? top;
+  let commented = false;
 
   const collect = (code: string, scope: Scope) => {
+    if (commented) {
+      return;
+    }
     for (const [, dollar, name] of code.matchAll(FIELD)) {
       if (dollar ? scope.dollar : scope.dot) {
         found.add(name);
@@ -192,7 +199,10 @@ export function referencedVariables(text: string): string[] {
     }
   };
 
-  for (const { start, end } of findActions(text)) {
+  const actions = findActions(text);
+  const inComment = htmlCommentFlags(text, actions);
+  for (const [index, { start, end }] of actions.entries()) {
+    commented = inComment[index];
     const inside = actionInside(text.slice(start, end));
     if (inside === null) {
       continue;
@@ -239,6 +249,39 @@ export function referencedVariables(text: string): string[] {
   }
 
   return [...found].sort();
+}
+
+const COMMENT_START = "<!--";
+const COMMENT_END = "-->";
+
+/**
+ * Whether each action stands inside an HTML comment, the way html/template
+ * reads one in text: `<!--` opens it and the next `-->` after that closes it,
+ * across actions if need be. Only the text between actions is read, so a
+ * `<!--` in an action's string opens nothing. html/template does not read
+ * `<!--` as a comment inside a tag, a <script> or a <style>; taking one there
+ * for a comment only makes a reference not count, never a missing one count.
+ * skymail-backend reads comments the same way (internal/mailer/variables.go).
+ */
+function htmlCommentFlags(text: string, actions: Action[]): boolean[] {
+  const flags: boolean[] = [];
+  let open = false;
+  let from = 0;
+  for (const { start, end } of actions) {
+    const between = text.slice(from, start);
+    let at = 0;
+    for (;;) {
+      const next = between.indexOf(open ? COMMENT_END : COMMENT_START, at);
+      if (next === -1) {
+        break;
+      }
+      at = next + (open ? COMMENT_END.length : COMMENT_START.length);
+      open = !open;
+    }
+    flags.push(open);
+    from = end;
+  }
+  return flags;
 }
 
 const OPENS_BLOCK = new Set(["if", "range", "with", "define", "block"]);

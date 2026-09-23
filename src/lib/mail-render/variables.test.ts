@@ -5,6 +5,7 @@
  * in the text, not a comment, not a string.
  */
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, it } from "node:test";
@@ -30,6 +31,23 @@ interface SharedCase {
 }
 
 const SHARED_CASES = join(import.meta.dirname, "testdata", "referenced-variables.json");
+
+/**
+ * The shared cases are one file kept in two repos: this copy, and
+ * skymail-backend's internal/mailer/testdata/referenced-variables.json, whose
+ * test pins the same hash. Changing either copy fails its own repo's test
+ * until both copies, and both hashes, change together.
+ */
+const SHARED_CASES_SHA256 = "b54be25614fedd3054e85589e27ea596b97d2023dc37817058a32d4c08d2bbab";
+
+it("holds the same shared cases as the server", async () => {
+  const sum = createHash("sha256").update(await readFile(SHARED_CASES)).digest("hex");
+  assert.equal(
+    sum,
+    SHARED_CASES_SHA256,
+    "testdata/referenced-variables.json değişmiş: skymail-backend'deki kopyayı (internal/mailer/testdata/referenced-variables.json) da aynı yap, sonra iki sabiti de güncelle",
+  );
+});
 
 describe("the variables a body references", async () => {
   const { cases } = JSON.parse(await readFile(SHARED_CASES, "utf8")) as { cases: SharedCase[] };
