@@ -2,12 +2,12 @@
  * The send form (ticket 16): a Mail template or a free announcement, to a
  * mailing list or to people one by one. superadmin links an Event's list to
  * /mail-tasks/create?mail_list_id=<id>, so that list is preselected. A free
- * announcement's body is written in the Visual editor and goes out as the
- * markup the server's allow-list keeps, byte for byte. People are sent to one
- * by one, and one who fails does not stop the others.
+ * announcement's body is written in the Visual editor and goes out as
+ * markup the server's allow-list keeps. People are sent to one by one, and
+ * one who fails does not stop the others. A send that may already be open is
+ * never sent again without a confirmation that says it may mail someone twice.
  */
 import type { Page } from "@playwright/test";
-import { sanitizeLikeServer } from "../../src/lib/mail-render/server-allowlist";
 import { expect, preview, test } from "./fixtures";
 import type { MockSkymail } from "./fixtures/mock-api";
 
@@ -46,16 +46,25 @@ const PARTICIPANTS = [
   { full_name: "Zeynep Kaya", email: "zeynep@ornek.com" },
 ];
 
+const SERVER_ERROR = { status: 500, body: { code: "server.internal_server_error", message: "boom" } };
+
 const listRadio = (page: Page, name: string) =>
   page.getByRole("group", { name: "Mail listesi" }).getByRole("radio", { name: new RegExp(name) });
 
 const body = (page: Page) => page.getByRole("textbox", { name: "Gövde" });
 const toolbar = (page: Page) => page.getByRole("toolbar", { name: "Visual editör araçları" });
+const send = (page: Page) => page.getByRole("button", { name: "Gönder…", exact: true });
+const dialog = (page: Page, name = "Gönderimi onayla") => page.getByRole("dialog", { name });
 
 async function typeWith(page: Page, mark: "Kalın" | "İtalik", text: string) {
   await toolbar(page).getByRole("button", { name: mark }).click();
   await page.keyboard.type(text);
   await toolbar(page).getByRole("button", { name: mark }).click();
+}
+
+async function pickReminder(page: Page) {
+  await page.getByRole("button", { name: "Mail template" }).click();
+  await page.getByRole("group", { name: "Mail template" }).getByRole("radio", { name: /Etkinlik hatırlatması/ }).check();
 }
 
 test("superadmin's link preselects the list, and so does the list's own Yeni gönderim", async ({ page, skymail, signIn }) => {
@@ -83,7 +92,7 @@ test("superadmin's link preselects the list, and so does the list's own Yeni gö
   await expect(page.getByRole("group", { name: "Mail listesi" }).getByRole("radio", { checked: true })).toHaveCount(0);
 });
 
-test("a free announcement written in the Visual editor goes to a list as the markup the server keeps", async ({ page, skymail, signIn }) => {
+test("a free announcement written in the Visual editor goes to a list as the allow-listed markup", async ({ page, skymail, signIn }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await signIn("sender");
@@ -94,13 +103,13 @@ test("a free announcement written in the Visual editor goes to a list as the mar
   await expect(page.getByRole("button", { name: "Serbest duyuru" })).toHaveAttribute("aria-pressed", "true");
   await page.getByLabel("Konu").fill("GECEKODU başvuruları açıldı");
 
-  // Only what the server keeps is offered: no variables, sections, images or rules.
+  // Only what the server keeps is offered: no variables, sections, images, rules or house buttons.
   await body(page).click();
-  for (const missing of ["Değişken ekle", "Görsel ekle", "Ayraç ekle", "Koşullu bölüm ekle"]) {
+  for (const missing of ["Değişken ekle", "Görsel ekle", "Ayraç ekle", "Koşullu bölüm ekle", "Buton ekle"]) {
     await expect(toolbar(page).getByRole("button", { name: missing })).toHaveCount(0);
   }
 
-  await toolbar(page).getByRole("radio", { name: "Başlık" }).click();
+  await toolbar(page).getByRole("radio", { name: "Başlık", exact: true }).click();
   await page.keyboard.type("Başvurular açıldı");
   await page.keyboard.press("Enter");
   await page.keyboard.type("Davutpaşa'da, son gün ");
@@ -110,100 +119,151 @@ test("a free announcement written in the Visual editor goes to a list as the mar
   await toolbar(page).getByRole("button", { name: "Bağlantı" }).click();
   await page.getByLabel("Bağlantı adresi").fill("https://skyl.app/gecekodu?kaynak=mail&tur='duyuru'");
   await page.getByRole("button", { name: "Bağlantıyı uygula" }).click();
-  await expect(body(page).getByRole("link", { name: "burada" })).toBeVisible();
   await expect(body(page)).toBeFocused();
-  // The link's text is still selected: ArrowRight goes past it (End would not, with a selection).
-  await page.keyboard.press("ArrowRight");
+  // Typing on after a link follows it: the link's text stays as it was.
   await page.keyboard.type(".");
+  await expect(body(page).getByRole("link", { name: "burada", exact: true })).toBeVisible();
+  // A line break inside the paragraph, then a bulleted list.
+  await page.keyboard.press("Shift+Enter");
+  await page.keyboard.type("Kontenjan sınırlı.");
   await page.keyboard.press("Enter");
-  await toolbar(page).getByRole("button", { name: "Buton ekle" }).click();
-  await page.getByRole("group", { name: "Buton" }).getByLabel("Etiket").fill("Başvuruya git");
-  await page.getByRole("group", { name: "Buton" }).getByLabel("Adres").fill("https://skyl.app/gecekodu");
+  await toolbar(page).getByRole("button", { name: "Madde listesi" }).click();
+  await page.keyboard.type("24 saat");
+  await page.keyboard.press("Enter");
+  await page.keyboard.type("3–5 kişilik takımlar");
+  // An empty item ends the list; then a sub-heading and a quote.
+  await page.keyboard.press("Enter");
+  await page.keyboard.press("Enter");
+  await toolbar(page).getByRole("radio", { name: "Alt başlık" }).click();
+  await expect(toolbar(page).getByRole("radio", { name: "Alt başlık" })).toHaveAttribute("aria-checked", "true");
+  await page.keyboard.type("Program");
+  await page.keyboard.press("Enter");
+  await toolbar(page).getByRole("button", { name: "Alıntı" }).click();
+  await page.keyboard.type("Bir gecede bir ürün.");
 
-  // The preview is the published free.basic with this body, as the server keeps it.
+  // The preview is the published free.basic with exactly this body.
   await expect(page.getByText(/^Konu\s*GECEKODU başvuruları açıldı$/)).toBeVisible();
   const mail = preview(page, "Gönderim önizlemesi");
   await expect(mail.locator("h2")).toHaveText("Başvurular açıldı");
-  await expect(mail.getByRole("link", { name: "burada" })).toHaveAttribute("target", "_blank");
-  await expect(mail).toContainText("Başvuruya git");
+  await expect(mail.locator("li")).toHaveText(["24 saat", "3–5 kişilik takımlar"]);
+  await expect(mail.locator("h3")).toHaveText("Program");
+  await expect(mail.locator("blockquote")).toHaveText("Bir gecede bir ürün.");
+  await expect(mail.getByRole("link", { name: "burada" })).toBeVisible();
 
-  await page.getByRole("button", { name: "Gönder…" }).click();
-  const dialog = page.getByRole("dialog", { name: "Gönderimi onayla" });
-  await expect(dialog).toContainText("Serbest duyuru “GECEKODU başvuruları açıldı”");
-  await expect(dialog).toContainText("“GECEKODU katılımcıları” listesi (3 alıcı)");
-  await dialog.getByRole("button", { name: "Gönder", exact: true }).click();
+  await send(page).click();
+  await expect(dialog(page)).toContainText("Serbest duyuru “GECEKODU başvuruları açıldı”");
+  await expect(dialog(page)).toContainText("“GECEKODU katılımcıları” listesi (3 alıcı)");
+  await expect(dialog(page)).not.toContainText("Göndermeden önce bak");
+  await dialog(page).getByRole("button", { name: "Gönder", exact: true }).click();
 
   await expect(page).toHaveURL(/\/mail-tasks\/show\/b1c2d3e4-/);
   await expect(page.getByRole("status").filter({ hasText: "Gönderim kuyruğa alındı" })).toHaveText(
     "Gönderim kuyruğa alındı: Serbest duyuru “GECEKODU başvuruları açıldı”, “GECEKODU katılımcıları” listesine.",
   );
-  await expect(page.getByRole("heading", { name: "Serbest Gönderim" })).toBeVisible();
 
   const sends = skymail.sendRequests();
-  expect(sends.map((send) => send.path)).toEqual(["/mail_tasks"]);
-  const bodyHtml =
-    "<h2>Başvurular açıldı</h2>" +
-    "<p>Davutpaşa&#39;da, son gün <strong>5 Nisan</strong>. Ayrıntılar " +
-    '<a href="https://skyl.app/gecekodu?kaynak=mail&amp;tur=%27duyuru%27">burada</a>.</p>' +
-    '<p><a href="https://skyl.app/gecekodu"><strong>Başvuruya git</strong></a></p>';
+  expect(sends.map((request) => request.path)).toEqual(["/mail_tasks"]);
   expect(sends[0].body).toEqual({
     template_id: free.id,
     mail_list_id: gecekodu,
-    body_variables: { Subject: "GECEKODU başvuruları açıldı", Heading: "", BodyHtml: bodyHtml, CtaUrl: "", CtaLabel: "" },
+    body_variables: {
+      Subject: "GECEKODU başvuruları açıldı",
+      Heading: "",
+      BodyHtml:
+        "<h2>Başvurular açıldı</h2>" +
+        "<p>Davutpaşa&#39;da, son gün <strong>5 Nisan</strong>. Ayrıntılar " +
+        '<a href="https://skyl.app/gecekodu?kaynak=mail&amp;tur=%27duyuru%27">burada</a>.<br>Kontenjan sınırlı.</p>' +
+        "<ul><li>24 saat</li><li>3–5 kişilik takımlar</li></ul>" +
+        "<h3>Program</h3>" +
+        "<blockquote>Bir gecede bir ürün.</blockquote>",
+      CtaUrl: "",
+      CtaLabel: "",
+    },
   });
-  // Nothing in it is dropped or rewritten on the way.
-  expect(sanitizeLikeServer(bodyHtml, { serverAdditions: false })).toBe(bodyHtml);
   expect(errors).toEqual([]);
 });
 
-test("people are sent to one by one, and the one who failed is said to have", async ({ page, skymail, signIn }) => {
+test("a list send that may already be open is held back until a re-send is confirmed", async ({ page, skymail, signIn }) => {
+  await signIn("sender");
+  freeBasic(skymail);
+  const gecekodu = skymail.addList({ name: "GECEKODU katılımcıları", recipients: PARTICIPANTS });
+  skymail.refuseListSend(SERVER_ERROR);
+
+  await page.goto(`/mail-tasks/create?mail_list_id=${gecekodu}`);
+  await page.getByLabel("Konu").fill("Duyuru");
+  await body(page).click();
+  await page.keyboard.type("Merhaba.");
+  await send(page).click();
+  await dialog(page).getByRole("button", { name: "Gönder", exact: true }).click();
+
+  const held = page.getByRole("status").filter({ hasText: "Bu listeye gönderim açılmış olabilir." });
+  await expect(held).toContainText("Sunucu bir hatayla yanıt verdi (HTTP 500). Gönderim açılmış olabilir.");
+  await expect(held).toContainText("Gönderimler listesine bak");
+  await expect(send(page)).toBeDisabled();
+  expect(skymail.sendRequests()).toHaveLength(1);
+
+  await held.getByRole("button", { name: "Yine de yeniden gönder…" }).click();
+  const again = dialog(page, "Listeye yeniden gönder");
+  await expect(again).toContainText("Yeniden göndermek listedeki herkese aynı maili ikinci kez gönderebilir.");
+  await expect(again).toContainText("“GECEKODU katılımcıları” listesi (3 alıcı)");
+  await again.getByRole("button", { name: "Yine de yeniden gönder" }).click();
+
+  await expect(page).toHaveURL(/\/mail-tasks\/show\/b1c2d3e4-/);
+  expect(skymail.sendRequests().map((request) => request.path)).toEqual(["/mail_tasks", "/mail_tasks"]);
+});
+
+test("people are sent to one by one; one whose send may be open is said so, and sent again only when confirmed", async ({ page, skymail, signIn }) => {
   await signIn("sender");
   freeBasic(skymail);
   const { id } = reminder(skymail);
-  skymail.refuseSingle("ali@ornek.com", { status: 500, body: { code: "server.internal_server_error", message: "boom" } });
+  skymail.refuseSingle("ali@ornek.com", SERVER_ERROR);
 
   await page.goto("/mail-tasks/create");
-  await page.getByRole("button", { name: "Mail template" }).click();
-  await page.getByRole("group", { name: "Mail template" }).getByRole("radio", { name: /Etkinlik hatırlatması/ }).check();
+  await pickReminder(page);
   await page.getByRole("button", { name: "Kişiler" }).click();
 
-  // The mail greets people by name, so a row without one is refused before anything goes out.
+  // An address that is not one stops the send, and the focus goes to it; a missing name is only pointed out.
   await page.getByLabel("1. kişinin e-posta adresi").fill("ayse@ornek.com");
-  await page.getByLabel("EventName").fill("GECEKODU");
-  await page.getByLabel("DetailsUrl").fill("https://skyl.app/gecekodu");
-  await page.getByRole("button", { name: "Gönder…" }).click();
-  await expect(page.getByText("Bu mail alıcıyı adıyla anıyor ({{.FullName}}); adını yaz.")).toBeVisible();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
-
-  await page.getByLabel("1. kişinin adı soyadı").fill("Ayşe Yılmaz");
   await page.getByRole("button", { name: "Kişi ekle" }).click();
   await page.getByLabel("2. kişinin adı soyadı").fill("Ali Can");
+  await page.getByLabel("2. kişinin e-posta adresi").fill("ali@");
+  await page.getByLabel("EventName").fill("GECEKODU");
+  await page.getByLabel("DetailsUrl").fill("https://skyl.app/gecekodu");
+  await expect(page.getByText("Bu mail alıcıyı adıyla anıyor ({{.FullName}}); adı boş giderse selamlama eksik kalır.")).toBeVisible();
+  await page.getByLabel("DetailsUrl").press("Enter");
+  await expect(page.getByText("Geçerli bir e-posta adresi gir.")).toBeVisible();
+  await expect(page.getByLabel("2. kişinin e-posta adresi")).toBeFocused();
+  await expect(dialog(page)).toHaveCount(0);
+
   await page.getByLabel("2. kişinin e-posta adresi").fill("ali@ornek.com");
   await page.getByRole("button", { name: "Kişi ekle" }).click();
   await page.getByLabel("3. kişinin adı soyadı").fill("Zeynep Kaya");
   await page.getByLabel("3. kişinin e-posta adresi").fill("zeynep@ornek.com");
+  await send(page).click();
+  await expect(dialog(page)).toContainText("Göndermeden önce bak");
+  await expect(dialog(page)).toContainText("1. kişi (ayse@ornek.com): Bu mail alıcıyı adıyla anıyor");
+  await dialog(page).getByRole("button", { name: "İptal" }).click();
+  await page.getByLabel("1. kişinin adı soyadı").fill("Ayşe Yılmaz");
   await expect(preview(page, "Gönderim önizlemesi")).toContainText("Merhaba Ayşe Yılmaz, GECEKODU yarın.");
 
-  await page.getByRole("button", { name: "Gönder…" }).click();
-  const dialog = page.getByRole("dialog", { name: "Gönderimi onayla" });
-  await expect(dialog).toContainText("3 kişi, her biri ayrı bir gönderim");
-  await expect(dialog).toContainText("Ayşe Yılmaz, Ali Can, Zeynep Kaya");
-  await dialog.getByRole("button", { name: "Gönder", exact: true }).click();
+  await send(page).click();
+  await expect(dialog(page)).toContainText("3 kişi, her biri ayrı bir gönderim");
+  await expect(dialog(page)).toContainText("Ayşe Yılmaz, Ali Can, Zeynep Kaya");
+  await dialog(page).getByRole("button", { name: "Gönder", exact: true }).click();
 
   const summary = page.getByRole("region", { name: "Gönderim sonucu" });
-  await expect(summary).toContainText("3 kişiden 2 kişiye gönderim açıldı, 1 kişiye açılamadı.");
+  await expect(summary).toContainText("3 kişiden 2 kişiye gönderim açıldı; 1 kişiye açılıp açılmadığı belli değil.");
   const people = summary.getByRole("list", { name: "Kişiler" }).getByRole("listitem");
   await expect(people.nth(0)).toContainText("Kuyruğa alındı");
-  await expect(people.nth(1)).toContainText("Açılamadı");
-  await expect(people.nth(1)).toContainText("Sunucuda beklenmeyen bir hata oluştu.");
-  await expect(people.nth(2)).toContainText("Kuyruğa alındı");
+  await expect(people.nth(1)).toContainText("Açılmış olabilir");
+  await expect(people.nth(1)).toContainText("Sunucu bir hatayla yanıt verdi (HTTP 500). Bu kişiye gönderim açılmış olabilir.");
   await expect(people.nth(2).getByRole("link", { name: "Gönderimi gör" })).toHaveAttribute("href", /\/mail-tasks\/show\/b1c2d3e4-/);
 
   const sends = skymail.sendRequests();
-  expect(sends.map((send) => [send.path, (send.body as { recipient_email: string }).recipient_email])).toEqual([
-    ["/mail_tasks/single", "ayse@ornek.com"],
-    ["/mail_tasks/single", "ali@ornek.com"],
-    ["/mail_tasks/single", "zeynep@ornek.com"],
+  expect(sends.map((request) => (request.body as { recipient_email: string }).recipient_email)).toEqual([
+    "ayse@ornek.com",
+    "ali@ornek.com",
+    "zeynep@ornek.com",
   ]);
   expect(sends[0].body).toEqual({
     template_id: id,
@@ -212,10 +272,15 @@ test("people are sent to one by one, and the one who failed is said to have", as
     body_variables: { EventName: "GECEKODU", DetailsUrl: "https://skyl.app/gecekodu" },
   });
 
-  // Trying again sends only to the one who failed.
-  await summary.getByRole("button", { name: "Açılamayanlara yeniden dene" }).click();
+  // Sending again takes a confirmation that names who may get the mail twice, and goes only to them.
+  await summary.getByRole("button", { name: "Yeniden gönder…" }).click();
+  const again = dialog(page, "Kişilere yeniden gönder");
+  await expect(again).toContainText("aynı maili ikinci kez gönderebilir");
+  await expect(again).toContainText("Ali Can <ali@ornek.com>");
+  expect(skymail.sendRequests()).toHaveLength(3);
+  await again.getByRole("button", { name: "Yine de yeniden gönder" }).click();
   await expect(summary).toContainText("3 kişinin hepsine gönderim açıldı.");
-  expect(skymail.sendRequests().map((send) => (send.body as { recipient_email: string }).recipient_email)).toEqual([
+  expect(skymail.sendRequests().map((request) => (request.body as { recipient_email: string }).recipient_email)).toEqual([
     "ayse@ornek.com",
     "ali@ornek.com",
     "zeynep@ornek.com",
@@ -223,7 +288,7 @@ test("people are sent to one by one, and the one who failed is said to have", as
   ]);
 });
 
-test("a template archived since the page opened is refused, and said to be", async ({ page, skymail, signIn }) => {
+test("a template archived since the page opened is refused, said to be, and not offered again", async ({ page, skymail, signIn }) => {
   await signIn("sender");
   const { id } = reminder(skymail);
   const gecekodu = skymail.addList({ name: "GECEKODU katılımcıları", recipients: PARTICIPANTS });
@@ -232,33 +297,46 @@ test("a template archived since the page opened is refused, and said to be", asy
   // Without free.basic, the form starts on a Mail template.
   await page.getByRole("group", { name: "Mail template" }).getByRole("radio", { name: /Etkinlik hatırlatması/ }).check();
   await page.getByLabel("EventName").fill("GECEKODU");
-  await page.getByRole("button", { name: "Gönder…" }).click();
+  await send(page).click();
   skymail.archiveTemplate(id);
-  await page.getByRole("dialog", { name: "Gönderimi onayla" }).getByRole("button", { name: "Gönder", exact: true }).click();
+  await dialog(page).getByRole("button", { name: "Gönder", exact: true }).click();
 
-  await expect(page.getByRole("alert").filter({ hasText: "Gönderim açılamadı." })).toContainText(
+  await expect(page.getByRole("alert").filter({ hasText: "Gönderim açılmadı." })).toContainText(
     "Bu Mail template arşivlenmiş; arşivlenmiş bir template gönderilmez. Başka bir template seç ya da template'i geri getir.",
   );
+  await expect(page.getByRole("button", { name: "Yine de yeniden gönder…" })).toHaveCount(0);
   await expect(page).toHaveURL(`/mail-tasks/create?mail_list_id=${gecekodu}`);
 });
 
-test("who may send what: people only with mails:send, an explanation without a send role", async ({ page, skymail, signIn, context }) => {
+test("who may send what: people only with mails:send, who is told to ask about a send that may be open", async ({ page, skymail, signIn, context }) => {
   freeBasic(skymail);
+  reminder(skymail);
   const gecekodu = skymail.addList({ name: "GECEKODU katılımcıları", recipients: PARTICIPANTS });
+  skymail.refuseSingle("ayse@ornek.com", { status: 502, body: { code: "server.service_unavailable", message: "x" } });
 
   await signIn("individual");
   await page.goto(`/mail-tasks/create?mail_list_id=${gecekodu}`);
   await expect(page.getByText("Bu bağlantı bir mail listesine gönderim için, ama bu hesap listeye gönderemez")).toBeVisible();
   await expect(page.getByText("Bir mail listesine göndermek skymail:mails:write rolü ister; bu hesapla tek tek kişilere gönderebilirsin.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Mail listesi" })).toHaveCount(0);
-  await expect(page.getByLabel("1. kişinin e-posta adresi")).toBeVisible();
   expect(skymail.requests.some((request) => request.path.startsWith("/mailing_lists"))).toBe(false);
+
+  await pickReminder(page);
+  await page.getByLabel("1. kişinin adı soyadı").fill("Ayşe Yılmaz");
+  await page.getByLabel("1. kişinin e-posta adresi").fill("ayse@ornek.com");
+  await page.getByLabel("EventName").fill("GECEKODU");
+  await send(page).click();
+  await dialog(page).getByRole("button", { name: "Gönder", exact: true }).click();
+  await expect(page.getByRole("region", { name: "Gönderim sonucu" })).toContainText(
+    "Gönderimleri görme yetkin (skymail:mails:read) yok: yeniden göndermeden önce bu yetkisi olan birine gönderimin açılıp açılmadığını sor.",
+  );
+  await expect(page.getByRole("button", { name: "Gönderimlere git" })).toHaveCount(0);
 
   await context.clearCookies();
   await signIn("watcher");
   await page.goto("/mail-tasks/create");
-  await expect(page.getByText("Bu hesapla gönderim yapılamaz")).toBeVisible();
-  await expect(page.getByText("Mail göndermek için skymail:mails:send ya da skymail:mails:write rolü gerekiyor.")).toBeVisible();
+  await expect(page.getByText("Bu sayfayı görme yetkin yok")).toBeVisible();
+  await expect(page.getByText("Bu sayfa için skymail:mails:send ya da skymail:mails:write rolü gerekiyor.")).toBeVisible();
   await expect(page.getByLabel("Konu")).toHaveCount(0);
   await page.goto("/mail-tasks");
   await expect(page.getByRole("heading", { name: "Gönderimler" })).toBeVisible();

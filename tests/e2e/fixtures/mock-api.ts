@@ -48,7 +48,8 @@
  *    template, an archived or unknown list, or a group without members;
  *    `POST /mail_tasks/single` needs mails:send or mails:write, answers 404
  *    for an archived template and 400 for an address that is not one — or
- *    what a test set for that address (`refuseSingle`). Both answer 201
+ *    what a test set for that address (`refuseSingle`) or for the next list
+ *    send (`refuseListSend`). Both answer 201
  *    `{id}`, and the send can be read back — alone, with its recipients'
  *    queue, or in `GET /mail_tasks`, newest first.
  *
@@ -203,6 +204,7 @@ export class MockSkymail {
   private readonly lists = new Map<string, ListFixture>();
   private readonly sends = new Map<string, SendRecord>();
   private readonly singleRefusals = new Map<string, Answer>();
+  private listRefusal: Answer | null = null;
   private clock = Date.parse("2026-09-23T06:00:00Z");
   private ids = 0;
 
@@ -317,6 +319,11 @@ export class MockSkymail {
   /** The next single send to `email` gets this answer instead of opening. */
   refuseSingle(email: string, answer: Answer) {
     this.singleRefusals.set(email, answer);
+  }
+
+  /** The next send to a list gets this answer instead of opening. */
+  refuseListSend(answer: Answer) {
+    this.listRefusal = answer;
   }
 
   /** Archives a template behind the page's back. */
@@ -591,6 +598,11 @@ export class MockSkymail {
   }
 
   private openListSend(body: Record<string, unknown>): Answer {
+    if (this.listRefusal) {
+      const refused = this.listRefusal;
+      this.listRefusal = null;
+      return refused;
+    }
     const template = this.sendableTemplate(body.template_id);
     const list = typeof body.mail_list_id === "string" ? this.lists.get(body.mail_list_id) : undefined;
     if (!template || !list || list.archived_at !== null) return refuse(404, "server.not_found");
