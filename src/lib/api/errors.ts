@@ -67,6 +67,12 @@ const BY_CODE: ReadonlyMap<string, string> = new Map([
     "template.required_variables_missing",
     "Gövde, bu template'in Required variable'larından bazılarına artık başvurmuyor.",
   ],
+  // Marking and releasing a Required variable (ticket 13).
+  ["template.required_variable_in_contract", "Bu değişken gönderen servisin sözleşmesinde; panelden çıkarılamaz."],
+  [
+    "template.invalid_variable_name",
+    "Değişken adı geçersiz: harf ya da alt çizgiyle başlamalı; yalnız İngilizce harf, rakam ve alt çizgi içerebilir, en çok 64 karakter.",
+  ],
 ]);
 
 function byStatus(status: number): string {

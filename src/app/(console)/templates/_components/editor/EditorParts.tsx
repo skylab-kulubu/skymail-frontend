@@ -5,10 +5,11 @@ import type { ReactNode } from 'react';
 import { Field } from '@/components/chrome/Field';
 import { NoticeBox } from '@/components/chrome/Notice';
 import { formatDateTime } from '@/lib/format';
+import { variableAction } from '@/lib/mail-render/go-template';
 import type { SampleValues } from '@/lib/mail-render/preview';
 import { Button } from '@/components/ui/Button';
 import type { Blocker, EditableMode } from '@/lib/template-editor/editor-state';
-import type { VersionProblem } from '@/lib/template-editor/refusals';
+import type { MissingVariable, VersionProblem } from '@/lib/template-editor/refusals';
 import {
   AUTHORING_MODE_LABEL,
   SYSTEM_TEMPLATE_NOTE,
@@ -54,6 +55,20 @@ export function EditorNote({ tone = 'info', children }: { tone?: 'info' | 'warni
 
 export type Refusal = Readonly<{ title: string; problem?: VersionProblem; blockers?: readonly Blocker[] }>;
 
+/** Required variables a body does not reference, each with why the mail needs it and where that comes from. */
+export function MissingVariables({ missing }: { missing: readonly MissingVariable[] }) {
+  return (
+    <ul className="space-y-1.5">
+      {missing.map((variable) => (
+        <li key={`${variable.source}:${variable.name}`}>
+          <code className="rounded bg-red-500/10 px-1 font-mono text-xs">{variableAction(variable.name)}</code>{' '}
+          {variable.why} ({variable.source === 'contract' ? 'gönderen servisin sözleşmesi' : 'operatör işaretledi'})
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /**
  * Why a save, a Main source change or a publish did not happen: the editor's
  * own reasons (a source with no render), or the API's — by missing Required
@@ -78,16 +93,7 @@ export function RefusalNotice({
       <p className="font-medium">{title}</p>
       <div className="mt-1.5 space-y-2">
         {problem ? <p>{problem.message}</p> : null}
-        {problem?.kind === 'missing-variables' && problem.missing.length > 0 ? (
-          <ul className="space-y-1.5">
-            {problem.missing.map((variable) => (
-              <li key={`${variable.source}:${variable.name}`}>
-                <code className="rounded bg-red-500/10 px-1 font-mono text-xs">{`{{.${variable.name}}}`}</code>{' '}
-                {variable.why} ({variable.source === 'contract' ? 'gönderen servisin sözleşmesi' : 'operatör işaretledi'})
-              </li>
-            ))}
-          </ul>
-        ) : null}
+        {problem?.kind === 'missing-variables' && problem.missing.length > 0 ? <MissingVariables missing={problem.missing} /> : null}
         {problem?.kind === 'unparseable' && problem.detail ? (
           <pre className="overflow-x-auto rounded bg-red-500/10 px-2 py-1 font-mono text-xs whitespace-pre-wrap">{problem.detail}</pre>
         ) : null}
