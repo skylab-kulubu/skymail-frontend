@@ -16,7 +16,7 @@ export const meta: TemplateMeta = {
     elseIfEq("Decision", "rejected") + "Gönderimin reddedildi" +
     elseIfEq("Decision", "returned") + "Gönderimin sana geri döndü" +
     elseIfEq("Decision", "expired") + "Gönderimin süresi doldu" +
-    elseIfEq("Decision", "declined") + "Düzenlemen kabul edilmedi" +
+    elseIfEq("Decision", "declined") + "Gönderimdeki düzenleme kabul edilmedi" +
     elseBranch + "Gönderim isteğin sonuçlandı" + end,
   system: false,
   brand: "skylab",
@@ -51,8 +51,11 @@ export const meta: TemplateMeta = {
  * matters is the one that would then be missed.
  *
  * `declined` is the odd one: it goes to the approvers rather than to whoever
- * submitted. Its wording says who did what rather than "your send", so it reads
- * correctly for that audience.
+ * submitted, and it is impersonal on purpose — "the edit that was made", never
+ * "your edit". More than one approver can receive it and only one of them made
+ * the edit; an approver may also approve their own request, in which case the
+ * reader is the person who declined, and "your edit was not accepted" would be
+ * exactly backwards.
  */
 export default function MailApprovalResolved() {
   const approved = ifEq("Decision", "approved");
@@ -68,7 +71,7 @@ export default function MailApprovalResolved() {
         {rejected}Gönderimin Reddedildi
         {returned}Gönderimin Sana Geri Döndü
         {expired}Gönderimin Süresi Doldu
-        {declined}Düzenlemen Kabul Edilmedi
+        {declined}Düzenleme Kabul Edilmedi
         {elseBranch}Gönderim İsteğin Sonuçlandı
         {end}
       </Heading>
@@ -101,7 +104,7 @@ export default function MailApprovalResolved() {
         <Strong>{v("TemplateName")}</Strong> gönderimi için süresi içinde karar verilmedi, o yüzden
         gönderilmedi. Bu isteği yeniden sunamazsın; hâlâ gerekiyorsa yeni bir istek aç.
         {declined}
-        <Strong>{v("TemplateName")}</Strong> gönderiminde yaptığın düzenlemeyi {v("DecidedBy")} kabul
+        <Strong>{v("TemplateName")}</Strong> gönderiminde yapılan düzenlemeyi {v("DecidedBy")} kabul
         etmedi, gönderim yapılmadı.
         {elseBranch}
         <Strong>{v("TemplateName")}</Strong> gönderim isteğinin durumu {v("DecidedBy")} tarafından
