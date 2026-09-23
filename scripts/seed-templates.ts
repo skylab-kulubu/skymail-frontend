@@ -63,11 +63,21 @@ function forcedKeys(): Set<string> | "all" {
   return keys;
 }
 
-/** A version a refusal names, as far as the report reads it. */
+/** A version a refusal or a force names, as far as the report reads it. */
 interface ConflictVersion {
+  id: string;
   seq: number;
-  author: { name: string | null };
+  subject: string;
+  author: { kind: string; name: string | null };
+  created_at: string;
   published_at: string | null;
+}
+
+/** What a forced seed wrote over, as a backend with the conflict rule answers it. */
+interface Override {
+  rules: string[];
+  published_version: ConflictVersion | null;
+  operator_versions: ConflictVersion[];
 }
 
 /** The params of 409 template.seed_conflict, as far as the report reads them. */
@@ -81,6 +91,37 @@ interface SeedConflict {
 }
 
 const who = (version: ConflictVersion) => version.author.name ?? "adı bilinmiyor";
+
+const DAY = new Intl.DateTimeFormat("tr-TR", { day: "numeric", month: "short", timeZone: "Europe/Istanbul" });
+
+/**
+ * What a forced template's line says. Only a backend with the conflict rule
+ * forces, and it says what it overrode; today's ignores ?force=true, so an
+ * answer that names nothing only says force was asked for.
+ */
+function forceNote(overrode: Override | undefined): string {
+  if (!overrode) {
+    return "zorla istendi";
+  }
+  const versions = new Map<string, ConflictVersion>();
+  const published = overrode.published_version;
+  if (published && published.author.kind === "operator") {
+    versions.set(published.id, published);
+  }
+  for (const version of overrode.operator_versions ?? []) {
+    versions.set(version.id, version);
+  }
+  const replaced = [...versions.values()]
+    .sort((a, b) => a.seq - b.seq)
+    .map((v) => `#${v.seq} ${v.published_at === null ? "taslak" : "yayımlanmış sürüm"}, ${who(v)}, ${DAY.format(new Date(v.published_at ?? v.created_at))}`);
+  if ((overrode.rules ?? []).includes("operator_subject") && published) {
+    replaced.push(`operatörün konusu "${published.subject}"`);
+  }
+  if (replaced.length === 0) {
+    replaced.push((overrode.rules ?? []).join(", "));
+  }
+  return `zorlandı: ${replaced.join("; ")} — geçmişte duruyor, geri getirilebilir`;
+}
 
 /** Each rule that held, in words, with the versions involved. */
 function reasons(conflict: SeedConflict): string[] {
@@ -171,12 +212,12 @@ async function main(): Promise<void> {
       system: meta.system,
     };
 
+    const forced = force === "all" || force.has(meta.key);
     if (DRY_RUN) {
-      console.log(`· ${meta.key.padEnd(34)} ${meta.system ? "[sistem]" : "        "} "${meta.subject}"`);
+      console.log(`· ${meta.key.padEnd(34)} ${meta.system ? "[sistem]" : "        "}${forced ? " [zorla]" : ""} "${meta.subject}"`);
       continue;
     }
 
-    const forced = force === "all" || force.has(meta.key);
     const response = await fetch(`${BASE_URL}/v1/templates/by-key/${encodeURIComponent(meta.key)}${forced ? "?force=true" : ""}`, {
       method: "PUT",
       headers: {
@@ -205,7 +246,14 @@ async function main(): Promise<void> {
       break;
     }
 
-    const saved = (await response.json()) as { id: string; subject: string };
+    let saved: { id: string; subject: string; overrode?: Override };
+    try {
+      saved = (await response.json()) as typeof saved;
+    } catch {
+      // Not the template; stop, and keep what was refused so far for the report.
+      failure = `${meta.key} yazılamadı: sunucudan okunamayan bir yanıt geldi (HTTP ${response.status})`;
+      break;
+    }
     seeded += 1;
 
     // A subject is seeded once and then belongs to the row, so an operator can
@@ -215,7 +263,7 @@ async function main(): Promise<void> {
     if (keptSubject) {
       kept.push({ key: meta.key, subject: saved.subject });
     }
-    console.log(`✓ ${meta.key.padEnd(34)} ${saved.id}${keptSubject ? "  · konu korundu" : ""}${forced ? "  (zorlandı)" : ""}`);
+    console.log(`✓ ${meta.key.padEnd(34)} ${saved.id}${keptSubject ? "  · konu korundu" : ""}${forced ? `  (${forceNote(saved.overrode)})` : ""}`);
   }
 
   if (!DRY_RUN) {
