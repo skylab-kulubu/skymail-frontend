@@ -161,7 +161,7 @@ export function isDirty(editing: Content, stored: Stored): boolean {
 export type EditorState = Readonly<{ editing: Content; renders: Renders; stored: Stored }>;
 
 /** The successful render of the source as it stands in `mode`, if the editor has it. */
-function currentRender({ editing, renders }: EditorState, mode: EditableMode) {
+export function currentRender({ editing, renders }: EditorState, mode: EditableMode) {
   const source = editing.sources[mode];
   if (source === undefined) return null;
   const render = renderOf(renders[mode], { mode, source });

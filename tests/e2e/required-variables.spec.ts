@@ -157,9 +157,11 @@ test("a publish is refused when the draft dropped a variable marked since it was
   await page.getByRole("button", { name: "Taslağı kaydet" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Taslak kaydedildi" })).toBeVisible();
 
-  // The sent mail still greets by name, so it can be marked; the draft no longer does.
+  // The sent mail still greets by name, so it can be marked; the saved draft no longer does, and the panel says so first.
+  await expect(panelOf(page)).toContainText("Taslağın buna başvurmuyor; işaretlersen taslağın yayımlanamaz.");
   await panelOf(page).getByRole("button", { name: "{{.firstName}} değişkenini zorunlu işaretle" }).click();
-  await expect(rowOf(page, "firstName")).toContainText("Düzenlediğin gövde buna artık başvurmuyor");
+  await expect(rowOf(page, "firstName")).toContainText("Kaydettiğin taslak buna başvurmuyor; bu hâliyle yayımlanamaz.");
+  await expect(rowOf(page, "firstName")).not.toContainText("Düzenlediğin");
 
   await page.getByRole("button", { name: "Yayımla", exact: true }).click();
   await page.getByRole("dialog", { name: "Taslağı yayımla" }).getByRole("button", { name: "Yayımla", exact: true }).click();
@@ -169,7 +171,11 @@ test("a publish is refused when the draft dropped a variable marked since it was
   expect(skymail.row(id).html_content).toBe(RESET_HTML);
 });
 
-test("a variable the contract took over since the page opened is not released, and the panel says why", async ({ page, skymail, signIn }) => {
+test("a variable the contract took over since the page opened is not released, and the panel re-reads it, again if that fails", async ({
+  page,
+  skymail,
+  signIn,
+}) => {
   await signIn("writer");
   const id = resetPassword(skymail, ["linkExpirationMinutes"]);
   await page.goto(`/templates/edit/${id}`);
@@ -181,15 +187,144 @@ test("a variable the contract took over since the page opened is not released, a
   const template = skymail.row(id);
   template.contract_required_variables.push({ name: "linkExpirationMinutes", reason });
   template.operator_required_variables = [];
+  // The first re-read of the template fails.
+  await page.route(
+    `**/e2e-api/v1/templates/${id}`,
+    (route) => route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ code: "server.service_unavailable" }) }),
+    { times: 1 },
+  );
 
   await row.getByRole("button", { name: /^Çıkar/ }).click();
-  await expect(panelOf(page).getByRole("alert")).toHaveText(
+  const panel = panelOf(page);
+  await expect(panel.getByRole("alert").filter({ hasText: "çıkarılamaz" })).toHaveText(
     "{{.linkExpirationMinutes}} gönderen servisin sözleşmesinde; panelden çıkarılamaz.",
   );
+  const stale = panel.getByRole("status").filter({ hasText: "Panel güncel olmayabilir" });
+  await expect(stale).toContainText("SkyMail şu anda yanıt vermiyor.");
+  await expect(row).not.toContainText(reason);
+  await stale.getByRole("button", { name: "Yeniden dene" }).click();
+
   // Shown as it is now: locked, with the contract's reason.
+  await expect(stale).toHaveCount(0);
   await expect(row).toContainText(reason);
   await expect(row).toContainText("Sözleşme");
   await expect(row.getByRole("button")).toHaveCount(0);
+});
+
+test("mark and release wait while a save is in flight, and a mark on its way keeps its variable's name", async ({ page, skymail, signIn }) => {
+  await signIn("writer");
+  const id = resetPassword(skymail, ["linkExpirationMinutes"]);
+  await page.goto(`/templates/edit/${id}`);
+  const panel = panelOf(page);
+  const mark = panel.getByRole("button", { name: "{{.firstName}} değişkenini zorunlu işaretle" });
+  const release = rowOf(page, "linkExpirationMinutes").getByRole("button", { name: "Çıkar {{.linkExpirationMinutes}}" });
+  await expect(mark).toBeEnabled();
+
+  const save = skymail.hold("POST", `/templates/${id}/drafts`, "answer");
+  await page.getByLabel("Konu").fill("SKY LAB parolanı sıfırla");
+  await page.getByRole("button", { name: "Taslağı kaydet" }).click();
+  await save.reached;
+  await expect(mark).toBeDisabled();
+  await expect(release).toBeDisabled();
+  save.release();
+  await expect(page.getByRole("status").filter({ hasText: "Taslak kaydedildi" })).toBeVisible();
+  await expect(mark).toBeEnabled();
+  await expect(release).toBeEnabled();
+
+  const marking = skymail.hold("POST", `/templates/${id}/required-variables`, "answer");
+  await mark.click();
+  await marking.reached;
+  await expect(panel.getByRole("button", { name: "{{.firstName}} işaretleniyor…" })).toBeDisabled();
+  marking.release();
+  await expect(rowOf(page, "firstName")).toBeVisible();
+});
+
+test("a save refused while a release was on its way does not bring the released variable back", async ({ page, skymail, signIn }) => {
+  await signIn("writer");
+  const id = resetPassword(skymail, ["firstName"]);
+  await page.goto(`/templates/edit/${id}`);
+  await writeSource(page, "html", RESET_HTML.replace(GREETING, "<p>Parolanı sıfırlamak için bir istek aldık.</p>"));
+  await expect(rowOf(page, "firstName")).toContainText("Düzenlediğin gövde buna artık başvurmuyor");
+
+  // The release reaches the server after the save, and is answered first.
+  const release = skymail.hold("DELETE", `/templates/${id}/required-variables/firstName`, "request");
+  const save = skymail.hold("POST", `/templates/${id}/drafts`, "answer");
+  await rowOf(page, "firstName").getByRole("button", { name: "Çıkar {{.firstName}}" }).click();
+  await release.reached;
+  await page.getByRole("button", { name: "Taslağı kaydet" }).click();
+  await save.reached;
+  release.release();
+  await expect(panelOf(page).getByRole("status").filter({ hasText: "{{.firstName}} artık zorunlu değil." })).toBeVisible();
+  await expect(rowOf(page, "firstName")).toHaveCount(0);
+
+  // The refusal still names it: firstName was required when the server saw the save.
+  const reread = page.waitForResponse((response) => response.request().method() === "GET" && response.url().endsWith(`/templates/${id}`));
+  save.release();
+  await expect(page.getByRole("alert").filter({ hasText: "Kaydedilmedi" })).toContainText("{{.firstName}}");
+  await expect(rowOf(page, "firstName")).toHaveCount(0);
+  await reread;
+  await expect(rowOf(page, "firstName")).toHaveCount(0);
+  expect(skymail.row(id).operator_required_variables).toEqual([]);
+});
+
+test("a variable someone marked since the page opened is shown, pointed at, when a save is refused for it", async ({ page, skymail, signIn }) => {
+  await signIn("writer");
+  const id = resetPassword(skymail);
+  await page.goto(`/templates/edit/${id}`);
+  await expect(preview(page, "Mail önizlemesi")).toContainText("Merhaba");
+  skymail.row(id).operator_required_variables = ["firstName"];
+
+  await writeSource(page, "html", RESET_HTML.replace(GREETING, "<p>Parolanı sıfırlamak için bir istek aldık.</p>"));
+  // Before the click, the panel says what marking it would do to this body.
+  await expect(panelOf(page)).toContainText(
+    "Düzenlediğin gövde buna başvurmuyor; işaretlersen bu hâliyle kaydedilemez ve yayımlanamaz.",
+  );
+  await page.getByRole("button", { name: "Taslağı kaydet" }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "Kaydedilmedi" })).toContainText("{{.firstName}}");
+  await expect(rowOf(page, "firstName")).toContainText("Kaydedilmedi: gövde bu değişkene başvurmuyor.");
+  await expect(rowOf(page, "firstName").getByRole("button", { name: "Çıkar {{.firstName}}" })).toBeVisible();
+});
+
+test("a mark the server refuses for another variable names that one, with why", async ({ page, skymail, signIn }) => {
+  await signIn("writer");
+  // A contract variable the sent mail does not reference, left from before the check.
+  const codeReason = "Account center'a girilecek doğrulama kodu; kaldırılırsa kişisel e-posta onaylanamaz.";
+  const id = skymail.addTemplate({
+    name: "Keycloak · Parola Sıfırlama",
+    key: "keycloak.reset-password",
+    system: true,
+    subject: "SKY LAB parola sıfırlama isteği",
+    mainMode: "html",
+    html: RESET_HTML,
+    htmlContent: RESET_HTML,
+    plainText: "Parolanı Sıfırla",
+    requiredVariables: [
+      { name: "code", reason: codeReason },
+      { name: "link", reason: RESET_REASON },
+    ],
+  }).id;
+  await page.goto(`/templates/edit/${id}`);
+  await expect(rowOf(page, "code")).toContainText("Gönderilen sürüm buna başvurmuyor");
+
+  await panelOf(page).getByRole("button", { name: "{{.firstName}} değişkenini zorunlu işaretle" }).click();
+  const refusal = panelOf(page).getByRole("alert").filter({ hasText: "işaretlenemedi" });
+  await expect(refusal).toContainText("{{.firstName}} işaretlenemedi");
+  await expect(refusal).toContainText(`{{.code}} ${codeReason} (gönderen servisin sözleşmesi)`);
+  await expect(refusal).not.toContainText("{{.firstName}} gönderilen mailde geçmiyor");
+  expect(skymail.row(id).operator_required_variables).toEqual([]);
+});
+
+test("marking on a template archived since the page opened is refused as not found", async ({ page, skymail, signIn }) => {
+  await signIn("writer");
+  const id = resetPassword(skymail);
+  await page.goto(`/templates/edit/${id}`);
+  const mark = panelOf(page).getByRole("button", { name: "{{.firstName}} değişkenini zorunlu işaretle" });
+  await expect(mark).toBeVisible();
+  skymail.row(id).archived_at = "2026-09-23T07:30:00Z";
+
+  await mark.click();
+  await expect(panelOf(page).getByRole("alert")).toHaveText("Aradığın kayıt bulunamadı. Silinmiş ya da arşivlenmiş olabilir.");
+  expect(skymail.row(id).operator_required_variables).toEqual([]);
 });
 
 test("a reader sees the Required variables locked and read-only", async ({ page, skymail, signIn }) => {

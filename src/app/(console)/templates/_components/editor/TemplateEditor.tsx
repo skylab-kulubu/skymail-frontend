@@ -363,7 +363,7 @@ function Editor({
         <TemplateKey template={template} />
       </div>
 
-      <RequiredVariablesPanel template={template} editing={{ state, refusal }} />
+      <RequiredVariablesPanel template={template} editing={{ state, refusal, writing: busy !== null }} />
 
       <div className="grid gap-6 xl:grid-cols-2">
         <section aria-label="Kaynak" className="min-w-0">
