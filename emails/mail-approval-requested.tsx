@@ -10,7 +10,7 @@ export const meta: TemplateMeta = {
   system: false,
   brand: "skylab",
   trigger:
-    "SkyMail, gönderme yetkisi olmayan biri taslak gönderdiğinde onaycılara (ADR-0031, CONTEXT.md \"Mail onayı\"). NOT: onay akışı henüz yazılmadı.",
+    "SkyMail, gönderme yetkisi olmayan biri taslak gönderdiğinde onaycılara (ADR-0031, CONTEXT.md \"Mail onayı\", ticket 19).",
   variables: ["RequesterName", "TemplateName", "AudienceName", "RecipientCount", "PreviewUrl", "ApproveUrl"],
   sample: {
     RequesterName: "Elif Yıldız",
