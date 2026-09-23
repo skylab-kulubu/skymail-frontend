@@ -1,14 +1,22 @@
 /**
  * How the editor gets renders: from a sandboxed frame, one render at a time.
  *
- * A JSX source is code, and the code it compiles to runs in the frame, so a
- * frame renders at most one JSX source and is thrown away after it. That
- * source cannot leave anything behind for the next — patch the renderer so a
- * later source renders as it likes, keep a timer running — and a frame stuck
- * in a loop is simply dropped. HTML is only read, never run, so HTML renders
- * share a frame until it runs JSX. While the editor is open, a clean frame is
- * kept loading for the next render, so a render waits for the frame to load
- * only the first time.
+ * A JSX source is code, and the code it compiles to runs in the frame's
+ * worker (src/render-sandbox/), so a frame renders at most one JSX source and
+ * is thrown away after it: that source cannot leave anything behind for the
+ * next — patch the renderer so a later source renders as it likes, keep a
+ * timer running. HTML is only read, never run, so HTML renders share a frame
+ * until it runs JSX. While the editor is open, a clean frame is kept loading
+ * for the next render, so a render waits for the frame to load only the
+ * first time.
+ *
+ * A render that never finishes is stopped in the frame, which terminates its
+ * worker at a deadline and answers with a failure. A frame that does not
+ * answer at all by this module's own, later deadline is dropped. That timer
+ * runs on the editor's thread, so it cannot help where the loop holds that
+ * thread: in an engine that will not start the frame's worker, the frame
+ * renders itself, and a synchronous loop there can hold the editor until the
+ * browser stops the frame.
  *
  * The frames themselves (sandbox-frame.ts) are iframes; this module only needs
  * to post to them and hear from them, so it runs in Node tests as it does in

@@ -27,8 +27,13 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        // Its script is named by a hash of its content.
-        source: "/render-sandbox/:file(render\\.[0-9a-f]{16}\\.js)",
+        // Its scripts are named by a hash of their content.
+        source: "/render-sandbox/:file((?:frame|worker)\\.[0-9a-f]{16}\\.js)",
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
+      },
+      {
+        // Monaco, under the version it was copied from (scripts/build-editor-assets.ts).
+        source: "/monaco/:version(\\d+\\.\\d+\\.\\d+)/vs/:path*",
         headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
       },
     ];

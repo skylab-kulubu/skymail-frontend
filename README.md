@@ -84,9 +84,10 @@ ilk seferde `yarn playwright install chromium` ile indirilir.
 
 `dev` ve `build`, Next.js'ten önce `scripts/build-editor-assets.ts`'i koşar
 (`yarn editor:assets`): Mail template editörünün render sandbox'ı
-(`public/render-sandbox/`, opak kökenli iframe'de açılan tek betik) ve Monaco
-(`public/monaco/vs`, CDN yerine panelin kendisinden). İkisi de üretilir,
-git'e girmez.
+(`public/render-sandbox/`: opak kökenli iframe'in betiği ve render'ın koştuğu
+worker) ve Monaco (`public/monaco/<sürüm>/vs`, CDN yerine panelin kendisinden).
+İkisi de üretilir, git'e girmez; dosya adları ya da yolları içeriğe/sürüme
+bağlı olduğu için kalıcı önbelleklenir.
 
 İmaj: `docker build -t skymail-frontend .` — build argümanı yok; konteyner
 `node server.js` ile başlar ve ayarlarını ortamdan okur.

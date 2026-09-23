@@ -6,9 +6,12 @@
  * writes down what it got; it gets nothing, and the editor's own session
  * carries on untouched.
  */
-import { expect, preview, test } from "./fixtures";
+import { expect, preview, test, writeSource } from "./fixtures";
+import { E2E_BASE_URL } from "./fixtures/env";
 import { SESSION_COOKIE, accessToken, readSession } from "./fixtures/session";
 
+// The session endpoint by its full address: the code runs in a worker started
+// from a blob URL, where a relative URL would not even name the panel.
 const PROBE = `import * as React from "react";
 import { use } from "react";
 import { Text } from "@react-email/components";
@@ -21,10 +24,11 @@ const tried = (attempt) => {
   }
 };
 
+const scope = typeof WorkerGlobalScope !== "undefined" ? "worker" : "frame";
 const cookie = tried(() => document.cookie);
 const parentPage = tried(() => window.parent.document.title);
 const storage = tried(() => window.localStorage.getItem("colorMode"));
-const session = fetch("/api/auth/session", { credentials: "include" }).then(
+const session = fetch("${E2E_BASE_URL}/api/auth/session", { credentials: "include" }).then(
   (response) => response.text().then((text) => "ULAŞTI " + text.slice(0, 80)),
   (error) => "engellendi:" + error.name,
 );
@@ -35,7 +39,7 @@ try {
 export default function Probe() {
   return (
     <Text>
-      cookie={cookie} parent={parentPage} storage={storage} session={use(session)}
+      scope={scope} cookie={cookie} parent={parentPage} storage={storage} session={use(session)}
     </Text>
   );
 }
@@ -55,7 +59,12 @@ test("a template's code cannot reach the operator's session", async ({ page, con
   const sessionRequests: Promise<{ cookie: string | undefined; frame: string }>[] = [];
   page.on("request", (request) => {
     if (!request.url().endsWith("/api/auth/session")) return;
-    const frame = request.frame().url();
+    let frame = "worker";
+    try {
+      frame = request.frame().url();
+    } catch {
+      // A worker's request has no frame.
+    }
     sessionRequests.push(request.allHeaders().then((headers) => ({ cookie: headers.cookie, frame })));
   });
 
@@ -63,14 +72,18 @@ test("a template's code cannot reach the operator's session", async ({ page, con
   const body = preview(page, "Mail önizlemesi");
   await expect(body).toContainText("session=", { timeout: 30_000 });
 
-  await expect(body).toContainText("cookie=engellendi:SecurityError");
-  await expect(body).toContainText("parent=engellendi:SecurityError");
-  await expect(body).toContainText("storage=engellendi:SecurityError");
+  // It ran in the sandbox's worker, which has no document, parent or storage
+  // at all (an engine without the worker runs it in the frame, where each
+  // of them is another origin's: SecurityError).
+  await expect(body).toContainText("scope=worker");
+  await expect(body).toContainText(/cookie=engellendi:(ReferenceError|SecurityError)/);
+  await expect(body).toContainText(/parent=engellendi:(ReferenceError|SecurityError)/);
+  await expect(body).toContainText(/storage=engellendi:(ReferenceError|SecurityError)/);
   await expect(body).toContainText("session=engellendi:TypeError");
   await expect(body).not.toContainText("ULAŞTI");
 
   // The probe's request left without the session cookie.
-  const fromSandbox = (await Promise.all(sessionRequests)).filter((request) => request.frame.includes("/render-sandbox/"));
+  const fromSandbox = (await Promise.all(sessionRequests)).filter((request) => !request.frame.startsWith(`${E2E_BASE_URL}/templates/`));
   expect(fromSandbox.length).toBeGreaterThan(0);
   for (const request of fromSandbox) expect(request.cookie ?? "").not.toContain(SESSION_COOKIE);
 
@@ -115,4 +128,54 @@ test("a script in an HTML body does not run in the preview", async ({ page, skym
   await expect(preview(page, "Mail önizlemesi")).toContainText("durağan metin");
   await expect(preview(page, "Mail önizlemesi")).not.toContainText("script çalıştı");
   expect(await page.title()).not.toContain("ele geçirildi");
+});
+
+// Stored JSX renders the moment the editor opens. A source stuck in a loop
+// must not take the editor down with it, or the template could never be
+// fixed from the panel: the render is stopped and says so, and meanwhile the
+// page keeps answering — its own timers run and its fields take typing.
+const LOOP = `import * as React from "react";
+import { Text } from "@react-email/components";
+
+export default function Mail() {
+  while (true) {}
+  return <Text>hiç gelmez</Text>;
+}
+`;
+
+test("a template stuck in a loop is stopped, and the editor stays usable", async ({ page, skymail, signIn }) => {
+  await signIn("writer");
+  const { id } = skymail.addTemplate({
+    name: "Takılan template",
+    subject: "Merhaba",
+    mainMode: "jsx",
+    jsx: LOOP,
+    htmlContent: "<p>stored</p>",
+    plainText: "stored",
+  });
+  await page.addInitScript(() => {
+    if (window.top !== window) return;
+    const clock = window as unknown as { ticks: number };
+    clock.ticks = 0;
+    setInterval(() => {
+      clock.ticks += 1;
+    }, 100);
+  });
+
+  await page.goto(`/templates/edit/${id}`);
+  await expect(page.getByLabel("Konu")).toBeVisible();
+  // By now the loop has started in the render sandbox.
+  await page.waitForTimeout(3_000);
+  const before = await page.evaluate(() => (window as unknown as { ticks: number }).ticks);
+  await page.waitForTimeout(2_000);
+  const after = await page.evaluate(() => (window as unknown as { ticks: number }).ticks);
+  expect(after - before, "the editor's own timer keeps running").toBeGreaterThanOrEqual(10);
+  await page.getByLabel("Konu").fill("Döngüye rağmen yazılıyor");
+  await expect(page.getByText("Döngüye rağmen yazılıyor")).toBeVisible();
+
+  await expect(page.getByRole("alert").filter({ hasText: "bitmedi" })).toBeVisible({ timeout: 30_000 });
+
+  // And the source can be fixed from the panel.
+  await writeSource(page, "jsx", LOOP.replace("  while (true) {}\n", ""));
+  await expect(preview(page, "Mail önizlemesi")).toContainText("hiç gelmez");
 });

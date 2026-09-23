@@ -3,17 +3,18 @@
 /**
  * The code editor for a JSX or HTML source: Monaco, as the old panel had.
  *
- * Monaco loads from the panel itself — public/monaco/vs, copied from the
- * monaco-editor package by scripts/build-editor-assets.ts — not from the CDN
+ * Monaco loads from the panel itself — public/monaco/<version>/vs, copied
+ * from the monaco-editor package by scripts/build-editor-assets.ts — not from the CDN
  * @monaco-editor/react defaults to: the editor works without a third party,
  * at the version yarn.lock pins, and a later CSP needs no outside host for it.
  * Imported only through next/dynamic, so it never renders on the server.
  */
 import Editor, { loader, type BeforeMount } from '@monaco-editor/react';
 import type { EditableMode } from '@/lib/template-editor/editor-state';
+import { MONACO_VS_PATH } from '@/lib/template-editor/monaco-path';
 import { useDocumentTheme } from '@/lib/ui/use-document-theme';
 
-loader.config({ paths: { vs: '/monaco/vs' } });
+loader.config({ paths: { vs: MONACO_VS_PATH } });
 
 const LANGUAGE: Readonly<Record<EditableMode, string>> = { jsx: 'typescript', html: 'html' };
 
