@@ -61,6 +61,7 @@ import { DiscardDialog, MainSourceDialog, PublishDialog, StaleComparison } from 
 import { PreviewPane, useSample } from './PreviewPane';
 import { SourcePanel, SourceTabs } from './SourcePane';
 import { TemplateLoadFailure } from './TemplateLoadFailure';
+import { HistoryLinks } from '../history/HistoryParts';
 
 type Loaded = { template: MailTemplate; version: TemplateVersion | null; loadedAt: number };
 
@@ -294,6 +295,7 @@ function Editor({
           <>
             {template.system ? <Tag tone="system">System</Tag> : null}
             {template.key ? <span className="font-mono text-xs break-all text-neutral-400">{template.key}</span> : null}
+            <HistoryLinks template={template} />
           </>
         }
       />

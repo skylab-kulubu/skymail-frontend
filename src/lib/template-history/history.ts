@@ -12,6 +12,7 @@
  * by state (`published`, `draft` with discarded drafts flagged, `all`).
  */
 import { pageRange } from "../list-view";
+import { referencedVariables } from "../mail-render/go-template";
 import { formatSendTime } from "../sends";
 import {
   AUTHORING_MODE_LABEL,
@@ -190,6 +191,23 @@ export function comparisonFacts(older: Compared, newer: Compared): ComparisonFac
       same: older.html_content === newer.html_content && older.plain_text_content === newer.plain_text_content,
     },
   ];
+}
+
+/**
+ * The variables either body references, each once: both mails of a
+ * comparison are filled with the same sample values, so only what differs
+ * between the versions differs on screen.
+ */
+export function comparedVariables(...bodies: string[]): string[] {
+  const names = new Set<string>();
+  for (const body of bodies) {
+    try {
+      for (const name of referencedVariables(body)) names.add(name);
+    } catch {
+      // A body the scanner cannot read previews with placeholders.
+    }
+  }
+  return [...names];
 }
 
 /** What a restore did, as the page says it, and whether the editor should open the result. */

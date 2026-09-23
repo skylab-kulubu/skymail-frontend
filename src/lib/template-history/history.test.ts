@@ -12,6 +12,7 @@ import { TEST_BASE_URL, json, scriptedClient, type RecordedCall } from "../api/t
 import { fetchVersionPage, restoreVersion, templateHref, type TemplateVersion, type TemplateVersionSummary } from "../templates";
 import {
   HISTORY_PAGE_SIZE,
+  comparedVariables,
   comparisonFacts,
   defaultComparison,
   historyQuery,
@@ -163,6 +164,12 @@ describe("who wrote a version", () => {
     assert.deepEqual(versionAuthor(seeded, VIEWER), { label: "Template seed", kind: "seed", mine: false, beforeHistory: true });
   });
 
+  // Only the migration wrote a first version with no one on record; a later one without a subject is not older than the history.
+  it("is not older than the history for a later version with no subject on record", () => {
+    const later = summary(3, { author: { kind: "template_seed", sub: null, name: null } });
+    assert.equal(versionAuthor(later, VIEWER).beforeHistory, false);
+  });
+
   it("is never the viewer's when the viewer has no subject", () => {
     const nameless = summary(1, { author: { kind: "operator", sub: null, name: null } });
     assert.equal(versionAuthor(nameless, null).mine, false);
@@ -311,6 +318,16 @@ describe("what a comparison says in words", () => {
   it("does not claim a name a backend did not send", () => {
     const [name] = comparisonFacts(version(2, { name: undefined }), version(3));
     assert.deepEqual(name, { label: "Ad", older: null, newer: "Hoş geldin", same: false });
+  });
+});
+
+describe("the sample values a comparison fills both mails with", () => {
+  it("are for every variable either body references, each once", () => {
+    assert.deepEqual(comparedVariables("<p>{{.FirstName}} {{.Link}}</p>", "<p>{{.FirstName}}</p>{{if .EventUrl}}x{{end}}"), [
+      "FirstName",
+      "Link",
+      "EventUrl",
+    ]);
   });
 });
 

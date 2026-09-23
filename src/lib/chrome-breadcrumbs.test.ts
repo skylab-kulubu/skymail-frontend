@@ -33,6 +33,14 @@ describe("the breadcrumb", () => {
     assert.deepEqual(crumbs(`/templates/edit/${ID}`)[1], ["Düzenle", "/templates/edit", false]);
   });
 
+  it("names a Mail template's version history, and links only the page itself", () => {
+    assert.deepEqual(crumbs(`/templates/history/${ID}`), [
+      ["Mail template'ler", "/templates", true],
+      ["Sürüm geçmişi", "/templates/history", false],
+      ["Kayıt", `/templates/history/${ID}`, true],
+    ]);
+  });
+
   it("does not link a segment outside the address contract", () => {
     assert.deepEqual(crumbs("/nope/missing"), [
       ["Nope", "/nope", false],
