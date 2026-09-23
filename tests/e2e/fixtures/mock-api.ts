@@ -8,6 +8,8 @@
  *    from the same base, or else the base; a source left out or null is kept
  *    from that version, and so is the name; a save that changes nothing
  *    writes nothing and answers 200;
+ *  - a Visual source is a JSON object (400 otherwise), stored as jsonb
+ *    stores it: its keys come back in jsonb's order, not the one sent;
  *  - publishing a draft whose base is no longer the published version is
  *    refused with 409 template.stale_base naming the three versions, until
  *    the request names the published version it replaces
@@ -100,6 +102,17 @@ const refuse = (status: number, code: string, params?: Record<string, unknown>):
 
 const asFields = (body: unknown): Record<string, unknown> =>
   typeof body === "object" && body !== null ? (body as Record<string, unknown>) : {};
+
+const isObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+/** A JSON value as Postgres jsonb gives it back: object keys shorter first, then in byte order. */
+function asJsonb(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(asJsonb);
+  if (!isObject(value)) return value;
+  const keys = Object.keys(value).sort((a, b) => a.length - b.length || (a < b ? -1 : a > b ? 1 : 0));
+  return Object.fromEntries(keys.map((key) => [key, asJsonb(value[key])]));
+}
 
 const sourceOf = (content: Content, mode: Mode) =>
   mode === "jsx" ? content.jsx_source : mode === "html" ? content.html_source : content.visual_source;
@@ -353,6 +366,10 @@ export class MockSkymail {
     );
     if (missing.length > 0) return refuse(400, "validation.error", { errors: missing.map((field) => ({ field, code: "required" })) });
 
+    if (body.visual_source !== undefined && body.visual_source !== null && !isObject(body.visual_source)) {
+      return refuse(400, "validation.error", { errors: [{ field: "visual_source", code: "invalid" }] });
+    }
+
     const base = typeof body.base_version_id === "string" ? this.versions.get(body.base_version_id) : undefined;
     if (!base || base.template_id !== templateId || !base.published_at) return refuse(400, "template.invalid_base");
 
@@ -365,7 +382,7 @@ export class MockSkymail {
       subject: body.subject as string,
       main_mode: body.main_mode as Mode,
       jsx_source: kept("jsx_source"),
-      visual_source: continued.visual_source,
+      visual_source: isObject(body.visual_source) ? asJsonb(body.visual_source) : continued.visual_source,
       html_source: kept("html_source"),
       html_content: body.html_content as string,
       plain_text_content: body.plain_text_content as string,

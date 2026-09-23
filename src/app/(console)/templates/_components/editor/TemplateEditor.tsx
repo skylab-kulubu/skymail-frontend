@@ -43,6 +43,7 @@ import {
 import { versionProblem } from '@/lib/template-editor/refusals';
 import { useRepoSample } from '@/lib/template-editor/use-repo-sample';
 import { useRenderBridge, useSourceRenders } from '@/lib/template-editor/use-renders';
+import { offeredVariables } from '@/lib/template-editor/visual-variables';
 import {
   AUTHORING_MODE_LABEL,
   discardDraft,
@@ -166,6 +167,11 @@ function Editor({
   const previewHtml = lastGood?.html ?? (untouchedMain || shown === null ? stored.html : null);
   const current = shown && shownSource !== undefined ? renderOf(renders[shown], { mode: shown, source: shownSource }) : null;
   const failure = current && !current.ok ? current.message : null;
+
+  const variables = useMemo(
+    () => offeredVariables(template, { storedHtml: stored.html, renders, subject: editing.subject }),
+    [template, stored.html, renders, editing.subject],
+  );
 
   const repo = useRepoSample(template.key);
   const samples = useSample(lastGood?.variables, previewHtml, editing.subject, repo, template.id);
@@ -377,6 +383,7 @@ function Editor({
             mode={active}
             source={editing.sources[active]}
             onChange={(value) => setSource(active, value)}
+            variables={variables}
             toolbar={
               active !== main || changed(active) ? (
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -410,7 +417,9 @@ function Editor({
                 <p className="mx-auto mt-1 max-w-md text-xs text-neutral-500">
                   {active === 'html'
                     ? 'Eklediğin HTML kaynağı, Main source’un render edilmiş HTML’inden başlar. Diğer kaynaklar olduğu gibi kalır; Main source değişmez.'
-                    : 'Eklediğin JSX kaynağı kulübün mail bileşenleriyle yazılmış bir başlangıçtan başlar. Diğer kaynaklar olduğu gibi kalır; Main source değişmez.'}
+                    : active === 'visual'
+                      ? 'Eklediğin Visual kaynağı boş başlar: JSX ya da HTML kaynağından dönüştürülmez. Başlık, paragraf, buton, görsel ve değişkenlerle yazarsın; mail kulübün mail bileşenleriyle çizilir. Diğer kaynaklar olduğu gibi kalır; Main source değişmez.'
+                      : 'Eklediğin JSX kaynağı kulübün mail bileşenleriyle yazılmış bir başlangıçtan başlar. Diğer kaynaklar olduğu gibi kalır; Main source değişmez.'}
                 </p>
                 <div className="mt-4 flex justify-center">
                   <Button variant="outlineBrand" onClick={() => added && setEditing(added)} disabled={!added || busy !== null}>

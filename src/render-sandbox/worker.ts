@@ -10,6 +10,8 @@
  * that will not start a worker from the opaque origin; it then only exposes
  * `render` (see frame.ts).
  */
+// First: before anything that can load Prism.
+import "./quiet-prism";
 import { renderSource, type RenderResult, type SourceInput } from "@/lib/mail-render";
 
 /** How long the render module lets a render wait on something asynchronous; the frame's own deadline is longer. */

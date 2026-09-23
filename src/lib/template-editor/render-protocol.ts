@@ -37,7 +37,7 @@ export type SandboxRendered = Readonly<{
 
 export type SandboxMessage = SandboxReady | SandboxRendered;
 
-const MODES: readonly AuthoringMode[] = ["jsx", "html"];
+const MODES: readonly AuthoringMode[] = ["jsx", "visual", "html"];
 const FAILURE_REASONS: readonly RenderFailureReason[] = ["compile", "no-component", "render", "empty", "invalid"];
 
 type Fields = Record<string, unknown>;

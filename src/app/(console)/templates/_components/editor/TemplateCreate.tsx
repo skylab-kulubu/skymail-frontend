@@ -4,7 +4,8 @@
  * A new Mail template (`/templates/create`): its name, subject and first
  * source, JSX or HTML, with the same live preview as the editor. Creating goes
  * through today's `POST /templates`, which publishes the first version at
- * once; later changes are drafts in the editor.
+ * once; later changes are drafts in the editor. `POST /templates` takes no
+ * Visual source, so a Visual source is added in the editor.
  */
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -19,14 +20,19 @@ import { useApi } from '@/lib/api/react';
 import { flashNotice } from '@/lib/notice';
 import { renderOf } from '@/lib/mail-render/save';
 import { versionProblem } from '@/lib/template-editor/refusals';
-import { EDITABLE_MODES, HTML_STARTER, JSX_STARTER, planCreate, type EditableMode } from '@/lib/template-editor/editor-state';
+import { HTML_STARTER, JSX_STARTER, planCreate } from '@/lib/template-editor/editor-state';
 import { useRenderBridge, useSourceRenders } from '@/lib/template-editor/use-renders';
 import { AUTHORING_MODE_LABEL, createTemplate, templateHref } from '@/lib/templates';
 import { RefusalNotice, type Refusal } from './EditorParts';
 import { PreviewPane, useSample } from './PreviewPane';
 import { SourcePanel } from './SourcePane';
 
-const MODE_OPTIONS = EDITABLE_MODES.map((mode) => ({ value: mode, label: AUTHORING_MODE_LABEL[mode] }));
+/** The modes a template can be created in: the ones `POST /templates` takes. */
+const CREATE_MODES = ['jsx', 'html'] as const;
+
+type CreateMode = (typeof CREATE_MODES)[number];
+
+const MODE_OPTIONS = CREATE_MODES.map((mode) => ({ value: mode, label: AUTHORING_MODE_LABEL[mode] }));
 
 const NO_REPO_SAMPLE = {};
 
@@ -43,9 +49,9 @@ function CreateForm() {
   const router = useRouter();
   const [name, setName] = useState('');
   const [subject, setSubject] = useState('');
-  const [mode, setMode] = useState<EditableMode>('jsx');
+  const [mode, setMode] = useState<CreateMode>('jsx');
   // Both starters are kept: switching the first source's mode converts nothing and loses nothing.
-  const [sources, setSources] = useState<Record<EditableMode, string>>({ jsx: JSX_STARTER, html: HTML_STARTER });
+  const [sources, setSources] = useState<Record<CreateMode, string>>({ jsx: JSX_STARTER, html: HTML_STARTER });
   const [refusal, setRefusal] = useState<Refusal | null>(null);
   const [saving, setSaving] = useState(false);
 

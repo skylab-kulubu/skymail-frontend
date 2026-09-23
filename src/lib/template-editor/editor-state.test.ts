@@ -7,7 +7,8 @@
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { renderSource, type SourceRender } from "../mail-render";
+import { renderSource, type AuthoringMode, type SourceRender } from "../mail-render";
+import { EMPTY_VISUAL_SOURCE, visualSource, type VisualDocument } from "../mail-render/visual-document";
 import type { MailTemplate, TemplateVersion, TemplateVersionSummary } from "../templates";
 import {
   HTML_STARTER,
@@ -33,6 +34,21 @@ const JSX = 'import { Text } from "@react-email/components";\n\nexport default (
 const JSX_EDITED = JSX.replace("Merhaba", "Selam");
 const BROKEN_JSX = "export default () => <Text>";
 const HTML = "<p>Merhaba {{.FirstName}}</p>";
+
+const VISUAL_DOCUMENT: VisualDocument = {
+  type: "skymail.visual",
+  version: 1,
+  blocks: [
+    { type: "heading", content: [{ type: "text", text: "Merhaba " }, { type: "variable", name: "FirstName" }] },
+    { type: "button", label: "Bilete git", link: { variable: "TicketUrl" } },
+  ],
+};
+const VISUAL = visualSource(VISUAL_DOCUMENT);
+
+/** The document as jsonb hands it back: the same, keys in another order. */
+const FROM_JSONB = JSON.parse(
+  '{"type":"skymail.visual","blocks":[{"content":[{"text":"Merhaba ","type":"text"},{"name":"FirstName","type":"variable"}],"type":"heading"},{"link":{"variable":"TicketUrl"},"type":"button","label":"Bilete git"}],"version":1}',
+);
 
 function summary(overrides: Partial<TemplateVersionSummary> = {}): TemplateVersionSummary {
   return {
@@ -86,7 +102,7 @@ function template(overrides: Partial<MailTemplate> = {}): MailTemplate {
   };
 }
 
-const render = async (mode: "jsx" | "html", source: string): Promise<SourceRender> => renderSource({ mode, source });
+const render = async (mode: AuthoringMode, source: string): Promise<SourceRender> => renderSource({ mode, source });
 
 describe("the version the editor opens", () => {
   it("is the viewer's own draft in progress when there is one", () => {
@@ -120,6 +136,20 @@ describe("what the editor holds of a version", () => {
     const stored = storedFromVersion(version(), "Hoş geldin");
     assert.equal(stored.draftId, null);
     assert.equal(stored.baseVersionId, PUBLISHED);
+  });
+
+  it("holds a Visual source as the document's text, the same whatever order jsonb keeps its keys in", () => {
+    const stored = storedFromVersion(version({ visual_source: FROM_JSONB }), "Hoş geldin");
+    assert.equal(stored.sources.visual, VISUAL);
+    assert.equal(isDirty(contentOf(stored), stored), false);
+  });
+
+  // An unknown block is never dropped on the way in: the render says what is
+  // wrong, and a save that does not touch the source sends it back as it came.
+  it("holds a Visual document the panel cannot read as it came", () => {
+    const unknown = { type: "skymail.visual", version: 1, blocks: [{ type: "quote", text: "x" }] };
+    const stored = storedFromVersion(version({ visual_source: unknown }), "Hoş geldin");
+    assert.deepEqual(JSON.parse(stored.sources.visual ?? "null"), unknown);
   });
 
   it("takes the row's name when the version carries none", () => {
@@ -217,11 +247,29 @@ describe("a save", () => {
     );
   });
 
-  it("never sends a Visual source, which the editor does not write yet, so the API keeps it", async () => {
-    const stored = storedFromVersion(version({ visual_source: { type: "doc" } }), "Hoş geldin");
-    const plan = planSave({ editing: contentOf(stored), renders: { jsx: await render("jsx", JSX) }, stored });
-    assert.ok(plan.ok);
-    assert.equal("visual_source" in plan.body, false);
+  it("sends a Visual source as the document itself, and its render when it is main", async () => {
+    const stored = storedFromVersion(version({ main_mode: "visual", jsx_source: JSX, visual_source: FROM_JSONB }), "Hoş geldin");
+    const edited = visualSource({ ...VISUAL_DOCUMENT, blocks: [...VISUAL_DOCUMENT.blocks, { type: "divider" }] });
+    const main = await render("visual", edited);
+    const plan = planSave({ editing: { ...contentOf(stored), sources: { jsx: JSX, visual: edited } }, renders: { visual: main }, stored });
+
+    assert.ok(plan.ok, plan.ok ? "" : plan.blockers.map((blocker) => blocker.message).join());
+    assert.ok(main.ok);
+    assert.deepEqual(plan.body.visual_source, JSON.parse(edited));
+    assert.equal(plan.body.jsx_source, JSX);
+    assert.equal(plan.body.html_content, main.html);
+    assert.equal(plan.body.plain_text_content, main.plainText);
+  });
+
+  it("never writes a Visual source that does not render, and says why", async () => {
+    const stored = storedFromVersion(version(), "Hoş geldin");
+    const plan = planSave({
+      editing: { ...contentOf(stored), sources: { jsx: JSX, visual: EMPTY_VISUAL_SOURCE } },
+      renders: { jsx: await render("jsx", JSX), visual: await render("visual", EMPTY_VISUAL_SOURCE) },
+      stored,
+    });
+    assert.equal(!plan.ok && plan.blockers.map((blocker) => blocker.mode).join(), "visual");
+    assert.match((!plan.ok && plan.blockers[0].message) || "", /Visual kaynağı render edilemedi/);
   });
 });
 
@@ -240,6 +288,22 @@ describe("making another source the Main source", () => {
       html_source: HTML,
       html_content: html.html,
       plain_text_content: html.plainText,
+      base_version_id: PUBLISHED,
+    });
+  });
+
+  it("makes a Visual source main with its render and the document itself", async () => {
+    const stored = storedFromVersion(version({ visual_source: FROM_JSONB }), "Hoş geldin");
+    const visual = await render("visual", VISUAL);
+    const plan = planMainChange("visual", { editing: contentOf(stored), renders: { visual }, stored });
+
+    assert.ok(plan.ok && visual.ok);
+    assert.deepEqual(plan.body, {
+      subject: "Merhaba {{.FirstName}}",
+      main_mode: "visual",
+      visual_source: VISUAL_DOCUMENT,
+      html_content: visual.html,
+      plain_text_content: visual.plainText,
       base_version_id: PUBLISHED,
     });
   });
@@ -279,6 +343,15 @@ describe("adding a source in another Authoring mode", () => {
     const stored = storedFromVersion(version(), "Hoş geldin");
     const editing: Content = { ...contentOf(stored), sources: { jsx: BROKEN_JSX } };
     assert.equal(addSource("html", { editing, renders: { jsx: await render("jsx", BROKEN_JSX) }, stored }), null);
+  });
+
+  // No conversion (spec, Out of Scope): not from the Main source's HTML, not from JSX.
+  it("starts a new Visual source empty, and keeps every other source and the Main source", async () => {
+    const stored = storedFromVersion(version({ html_source: HTML }), "Hoş geldin");
+    const added = addSource("visual", { editing: contentOf(stored), renders: { jsx: await render("jsx", JSX) }, stored });
+    assert.equal(added?.sources.visual, EMPTY_VISUAL_SOURCE);
+    assert.deepEqual(added && { ...added.sources, visual: undefined }, { jsx: JSX, html: HTML, visual: undefined });
+    assert.equal(added?.mainMode, "jsx");
   });
 
   it("never replaces a source that is there", () => {

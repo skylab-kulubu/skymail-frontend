@@ -273,6 +273,8 @@ export type DraftBody = {
   main_mode: AuthoringMode;
   /** Left out: kept. */
   jsx_source?: string;
+  /** The Visual editor's document, as JSON (a JSON object, not its text). Left out: kept. */
+  visual_source?: Record<string, unknown>;
   /** Left out: kept. */
   html_source?: string;
   html_content: string;

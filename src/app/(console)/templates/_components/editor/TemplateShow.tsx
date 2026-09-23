@@ -27,7 +27,7 @@ import {
 } from '@/lib/templates';
 import { TemplateKey, versionLine } from './EditorParts';
 import { PreviewPane, useSample } from './PreviewPane';
-import { SourceTabs } from './SourcePane';
+import { SourcePanel, SourceTabs } from './SourcePane';
 import { TemplateLoadFailure } from './TemplateLoadFailure';
 
 export function TemplateShow({ id }: { id: string }) {
@@ -93,6 +93,16 @@ function Show({ template, version }: { template: MailTemplate; version: Template
               <p className="rounded-lg border border-dashed border-white/15 px-4 py-8 text-center text-sm text-neutral-400">
                 Bu template&apos;in {AUTHORING_MODE_LABEL[active]} kaynağı yok.
               </p>
+            ) : active === 'visual' ? (
+              <SourcePanel
+                idPrefix="show-visual"
+                mode="visual"
+                source={source}
+                onChange={() => {}}
+                empty={null}
+                underTabs={false}
+                readOnly
+              />
             ) : (
               <pre
                 tabIndex={0}
@@ -102,9 +112,6 @@ function Show({ template, version }: { template: MailTemplate; version: Template
                 {source}
               </pre>
             )}
-            {stored.hasVisual ? (
-              <p className="mt-2 text-xs text-neutral-500">Bu sürümün bir Visual kaynağı da var; Visual editör geldiğinde görünecek.</p>
-            ) : null}
           </div>
         </section>
         <PreviewPane html={stored.html} pending={false} failure={null} subject={stored.subject} samples={samples} />

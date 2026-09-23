@@ -18,6 +18,11 @@ describe("a render request, as the sandbox reads it", () => {
     });
   });
 
+  it("carries a Visual source, the document's JSON text", () => {
+    const request = renderRequest("r2", { mode: "visual", source: '{"type":"skymail.visual","version":1,"blocks":[]}' });
+    assert.deepEqual(readRenderRequest(structuredClone(request))?.input, request.input);
+  });
+
   it("is nothing else", () => {
     const good = renderRequest("r1", { mode: "html", source: "<p>x</p>" });
     for (const other of [
@@ -27,7 +32,7 @@ describe("a render request, as the sandbox reads it", () => {
       { ...good, type: "ready" },
       { ...good, id: 7 },
       { ...good, id: "" },
-      { ...good, input: { mode: "visual", source: "{}" } },
+      { ...good, input: { mode: "mjml", source: "<mjml/>" } },
       { ...good, input: { mode: "html", source: 5 } },
       { ...good, input: null },
     ]) {
