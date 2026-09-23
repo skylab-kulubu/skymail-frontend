@@ -116,6 +116,14 @@ const darkModeCss = `
 */
 body { background-color: #f4f1f7; }
 
+/*
+  The free-form body is the one place markup comes from the sender, so its links
+  are plain <a> with nothing on them — a client colours those its own default
+  blue, which is close to unreadable on the dark card. The rule cannot live on
+  the element: the server's allowlist drops style and class inside that body.
+*/
+.free-body a { color: #6e4576; }
+
 @media (prefers-color-scheme: dark) {
   .email-bg   { background-color: #08070b !important; background-image: ${darkStarfield} !important; }
   .card       { background-color: ${darkColors.cardBg} !important; border-color: #2a292c !important; }
@@ -133,6 +141,7 @@ body { background-color: #f4f1f7; }
   .alert-chip { background-color: #2b272b !important; border-color: #51484c !important; color: #f3e8ea !important; }
   .alert-note { border-left-color: #c0848f !important; }
   .code-block { background-color: #201f23 !important; color: #f3e8f5 !important; border-color: #2a292c !important; }
+  .free-body a { color: #e0c8e5 !important; }
 }
 
 /*
@@ -158,6 +167,7 @@ body { background-color: #f4f1f7; }
 [data-ogsc] .cta, .cta[data-ogsc] { color: #ffffff !important; }
 [data-ogsb] .code-block, .code-block[data-ogsb] { background-color: #201f23 !important; }
 [data-ogsc] .code-block, .code-block[data-ogsc] { color: #f3e8f5 !important; }
+[data-ogsc] .free-body a { color: #e0c8e5 !important; }
 
 .brand-link:hover { opacity: 0.85; }
 .dev-link:hover   { color: #e0c8e5 !important; }
