@@ -5,31 +5,11 @@ import { FormTextArea } from '@/components/chrome/FormField';
 import { Modal } from '@/components/ui/Modal';
 import { ModalDangerActions, ModalPrimaryActions } from '@/components/ui/modal-actions';
 import type { MailApproval } from '@/lib/mail-approvals/approvals';
+import { DECISIONS, type Decision } from '@/lib/mail-approvals/decisions';
 import type { PinnedSource } from '@/lib/mail-approvals/edit';
 import type { VariableField } from '@/lib/send-form/fields';
 import { audienceLabel, formatCount } from '@/lib/sends';
 import { EditComparison } from './EditComparison';
-
-/** A decision on a request, confirmed before it is sent. */
-export type Decision = 'approve' | 'approveEdited' | 'return' | 'reject' | 'accept' | 'decline';
-
-const TITLE: Readonly<Record<Decision, string>> = {
-  approve: 'Onayla ve gönder',
-  approveEdited: 'Düzenlemeyle gönder',
-  return: 'Sunana geri gönder',
-  reject: 'Reddet',
-  accept: 'Kabul et ve gönder',
-  decline: 'Düzenlemeyi kabul etme',
-};
-
-const PENDING: Readonly<Record<Decision, string>> = {
-  approve: 'Gönderiliyor…',
-  approveEdited: 'Gönderiliyor…',
-  return: 'Geri gönderiliyor…',
-  reject: 'Reddediliyor…',
-  accept: 'Gönderiliyor…',
-  decline: 'Kaydediliyor…',
-};
 
 /** Who it goes to, and how many, in words. */
 function audienceText(approval: MailApproval): string {
@@ -72,9 +52,8 @@ export function DecisionDialog({
   const [tried, setTried] = useState(false);
   if (decision === null) return null;
 
-  const reject = decision === 'reject';
-  const missingReason = reject && text.trim() === '';
-  const withEdit = decision === 'approveEdited' || decision === 'return';
+  const words = DECISIONS[decision];
+  const missingReason = words.text?.required === true && text.trim() === '';
   const close = busy ? () => {} : onCancel;
 
   function confirm() {
@@ -85,7 +64,7 @@ export function DecisionDialog({
   }
 
   return (
-    <Modal isOpen onClose={close} title={TITLE[decision]} size={withEdit ? 'wide' : 'md'}>
+    <Modal isOpen onClose={close} title={words.title} size={words.withEdit ? 'wide' : 'md'}>
       <div className="space-y-3">
         <dl className="space-y-2">
           <div>
@@ -98,7 +77,7 @@ export function DecisionDialog({
           </div>
         </dl>
 
-        {withEdit ? (
+        {words.withEdit ? (
           <EditComparison
             before={approval.body_variables}
             after={edited}
@@ -109,37 +88,25 @@ export function DecisionDialog({
           />
         ) : null}
 
-        <p className="text-xs text-neutral-400">
-          {decision === 'approve'
-            ? 'Sunulduğu gibi hemen gönderilir; gönderim açıldıktan sonra geri alınamaz. Sunana karar mail olarak bildirilir.'
-            : decision === 'approveEdited'
-              ? 'Düzenlenmiş hâli hemen gönderilir; gönderim açıldıktan sonra geri alınamaz. Neyi değiştirdiğin kayda geçer ve sunana bildirilir.'
-              : decision === 'return'
-                ? 'Hiçbir şey gönderilmez: istek düzenlemenle sunana döner, kabul ederse gönderilir. Sunanın karar vermek için 7 günü olur.'
-                : decision === 'reject'
-                  ? 'Hiçbir şey gönderilmez. Sunan gerekçeni görür; isteği düzenleyip yeniden sunabilir.'
-                  : decision === 'accept'
-                    ? 'Onaycının düzenlemesiyle hemen gönderilir; gönderim açıldıktan sonra geri alınamaz.'
-                    : 'Hiçbir şey gönderilmez. Sonra isteği kendi değerlerinle düzenleyip yeniden sunabilirsin.'}
-        </p>
+        <p className="text-xs text-neutral-400">{words.explains}</p>
 
-        {decision === 'accept' ? null : (
+        {words.text ? (
           <FormTextArea
-            label={reject ? 'Ret gerekçesi' : decision === 'decline' ? 'Neden (isteğe bağlı)' : 'Sunana not (isteğe bağlı)'}
+            label={words.text.label}
             value={text}
             onChange={(event) => setText(event.target.value)}
             rows={3}
             maxLength={2000}
-            required={reject}
-            placeholder={reject ? 'Sunan neden reddedildiğini görecek.' : undefined}
+            required={words.text.required}
+            placeholder={words.text.placeholder}
             error={tried && missingReason ? 'Gerekçe yaz: sunan neden reddedildiğini görecek.' : null}
           />
-        )}
+        ) : null}
       </div>
-      {reject || decision === 'decline' ? (
-        <ModalDangerActions onCancel={onCancel} onConfirm={confirm} confirmLabel={TITLE[decision]} pendingLabel={PENDING[decision]} isPending={busy} />
+      {words.refusal ? (
+        <ModalDangerActions onCancel={onCancel} onConfirm={confirm} confirmLabel={words.title} pendingLabel={words.pending} isPending={busy} />
       ) : (
-        <ModalPrimaryActions onCancel={onCancel} onConfirm={confirm} confirmLabel={TITLE[decision]} pendingLabel={PENDING[decision]} isPending={busy} />
+        <ModalPrimaryActions onCancel={onCancel} onConfirm={confirm} confirmLabel={words.title} pendingLabel={words.pending} isPending={busy} />
       )}
     </Modal>
   );

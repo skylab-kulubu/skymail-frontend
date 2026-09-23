@@ -37,6 +37,7 @@ import {
   type MailApproval,
 } from '@/lib/mail-approvals/approvals';
 import { approvalsChanged } from '@/lib/mail-approvals/changes';
+import { DECISIONS, decisionBody, type Decision } from '@/lib/mail-approvals/decisions';
 import {
   approvalFields,
   editedVariables,
@@ -52,7 +53,7 @@ import { fieldWarnings, type FieldInput, type VariableField } from '@/lib/send-f
 import { audienceLabel, formatCount, sendHref } from '@/lib/sends';
 import { ApprovalStateBadge, Deadline, Submitter } from './ApprovalParts';
 import { ApprovalHistory } from './ApprovalHistory';
-import { DecisionDialog, type Decision } from './DecisionDialog';
+import { DecisionDialog } from './DecisionDialog';
 import { EditComparison } from './EditComparison';
 
 export function ApprovalDetail({ id }: { id: string }) {
@@ -78,25 +79,6 @@ export function ApprovalDetail({ id }: { id: string }) {
   }
   return <ApprovalView approval={approval.data} reload={approval.reload} notice={notice} setNotice={setNotice} />;
 }
-
-/** What the page says once a decision went through. */
-const DONE: Readonly<Record<Decision, string>> = {
-  approve: 'Onaylandı: gönderim kuyruğa alındı.',
-  approveEdited: 'Düzenlemeyle onaylandı: gönderim kuyruğa alındı. Değişiklik kayda geçti ve sunana bildirildi.',
-  return: 'Düzenleme sunana geri gönderildi: kabul ederse gönderilir. Sunanın karar vermek için 7 günü var.',
-  reject: 'Reddedildi: sunan gerekçeni görecek ve isteği düzenleyip yeniden sunabilir.',
-  accept: 'Düzenlemeyi kabul ettin: gönderim kuyruğa alındı.',
-  decline: 'Düzenlemeyi kabul etmedin: isteği kendi değerlerinle düzenleyip yeniden sunabilirsin.',
-};
-
-const PATH: Readonly<Record<Decision, string>> = {
-  approve: 'approve',
-  approveEdited: 'approve',
-  return: 'return',
-  reject: 'reject',
-  accept: 'accept',
-  decline: 'decline',
-};
 
 type Editing = Readonly<{ initial: FieldInput; current: FieldInput; inexact: string[] }>;
 
@@ -160,7 +142,7 @@ function ApprovalView({
 
   function ask(next: Decision) {
     setNotice(null);
-    if (next === 'approveEdited' || next === 'return') {
+    if (DECISIONS[next].withEdit) {
       setTried(true);
       if (!edit?.ok || edit.changed.length === 0) return;
     }
@@ -169,21 +151,15 @@ function ApprovalView({
 
   async function decide(chosen: Decision, text: string) {
     setBusy(true);
-    const body =
-      chosen === 'reject'
-        ? { reason: text }
-        : chosen === 'approveEdited' || chosen === 'return'
-          ? { body_variables: edit?.ok ? edit.variables : approval.body_variables, ...(text ? { note: text } : {}) }
-          : text
-            ? { note: text }
-            : undefined;
+    const body = decisionBody(chosen, text, edit?.ok ? edit.variables : null);
     try {
-      const answer = await api.post<MailApproval>(`/mail_approvals/${encodeURIComponent(approval.id)}/${PATH[chosen]}`, body);
+      const answer = await api.post<MailApproval>(`/mail_approvals/${encodeURIComponent(approval.id)}/${DECISIONS[chosen].path}`, body);
       approvalsChanged();
       await reload();
       setEditing(null);
       const problem = notificationNote(answer.notification);
-      setNotice({ tone: problem ? 'warning' : 'success', text: problem ? `${DONE[chosen]} ${problem}` : DONE[chosen] });
+      const done = DECISIONS[chosen].done;
+      setNotice({ tone: problem ? 'warning' : 'success', text: problem ? `${done} ${problem}` : done });
     } catch (error) {
       const refusal = approvalRefusal(error, chosen);
       if (refusal.reload) await reload();
