@@ -396,7 +396,7 @@ export class MockSkymail {
   }
 
   /**
-   * A request for approval, submitted `submittedAgo` ago (a day by default)
+   * A request for approval, submitted `submittedAgo` ago (23 hours by default)
    * with the version its template publishes now, then left in `state` by
    * `decided` — the approver's rejection, say. Its times are the real
    * clock's: the page counts its deadline from the browser's.
@@ -414,7 +414,7 @@ export class MockSkymail {
     decided?: { kind: ApprovalEventRecord["kind"]; actor: Person | null; note?: string; changes?: ApprovalChange[] };
   }): string {
     const id = this.nextId("5d1e7c2a");
-    const submitted = Date.now() - (input.submittedAgo ?? 24 * 3600_000);
+    const submitted = Date.now() - (input.submittedAgo ?? 23 * 3600_000);
     const at = new Date(submitted).toISOString();
     const record: ApprovalRecord = {
       id,
