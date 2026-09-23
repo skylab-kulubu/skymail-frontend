@@ -35,7 +35,8 @@ type Frame =
 
 const NAME = String.raw`[\p{L}_][\p{L}\p{N}_]*`;
 const ONLY_FIELD = new RegExp(String.raw`^\$?\.(${NAME})$`, "u");
-const SAFE_HTML = new RegExp(String.raw`^safeHTML\s+\$?\.(${NAME})$`, "u");
+/** An action that prints a field as markup, not escaped (`safeHTML .X`, free.basic's BodyHtml): the field's name in group 1. */
+export const SAFE_HTML = new RegExp(String.raw`^safeHTML\s+\$?\.(${NAME})$`, "u");
 const NOT_FIELD = new RegExp(String.raw`^not\s+\$?\.(${NAME})$`, "u");
 const EQ = new RegExp(String.raw`^eq\s+\$?\.(${NAME})\s+([\s\S]+)$`, "u");
 const LITERAL = /"(?:[^"\\\n]|\\.)*"|`[^`]*`|[+-]?\d+(?:\.\d+)?/gy;

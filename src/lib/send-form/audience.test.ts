@@ -7,7 +7,7 @@
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { parsePeople, peopleProblems, type PersonRow } from "./audience";
+import { parsePeople, peopleProblems, peopleReady, type PersonRow } from "./audience";
 
 const row = (name: string, email: string): PersonRow => ({ name, email });
 
@@ -16,12 +16,13 @@ describe("the people a send goes to", () => {
     assert.deepEqual(peopleProblems([row(" Ayşe Yılmaz ", " ayse@ornek.com "), row("", ""), row("Ali", "ali@ornek.com")]), {
       people: [row("Ayşe Yılmaz", "ayse@ornek.com"), row("Ali", "ali@ornek.com")],
       rows: [{}, {}, {}],
+      warnings: [null, null, null],
       none: false,
     });
   });
 
   it("need someone", () => {
-    assert.deepEqual(peopleProblems([row("", ""), row(" ", " ")]), { people: [], rows: [{}, {}], none: true });
+    assert.deepEqual(peopleProblems([row("", ""), row(" ", " ")]), { people: [], rows: [{}, {}], warnings: [null, null], none: true });
   });
 
   it("need an address that looks like one, and say which row lacks it", () => {
@@ -50,10 +51,13 @@ describe("the people a send goes to", () => {
     assert.equal(people.length, 4);
   });
 
-  it("need each name when the mail greets people by it", () => {
-    const { rows } = peopleProblems([row("", "ayse@ornek.com"), row("Ali", "ali@ornek.com")], { nameRequired: true });
-    assert.deepEqual(rows, [{ name: "Bu mail alıcıyı adıyla anıyor ({{.FullName}}); adını yaz." }, {}]);
-    assert.deepEqual(peopleProblems([row("", "ayse@ornek.com")]).rows, [{}]);
+  // The API does not need a name, and the old form did not either: a missing one is a slip to point out, not a stop.
+  it("warn about a missing name when the mail greets people by it, and still send", () => {
+    const check = peopleProblems([row("", "ayse@ornek.com"), row("Ali", "ali@ornek.com")], { nameExpected: true });
+    assert.deepEqual(check.rows, [{}, {}]);
+    assert.deepEqual(check.warnings, ["Bu mail alıcıyı adıyla anıyor ({{.FullName}}); adı boş giderse selamlama eksik kalır.", null]);
+    assert.equal(peopleReady(check), true);
+    assert.deepEqual(peopleProblems([row("", "ayse@ornek.com")]).warnings, [null]);
   });
 });
 

@@ -122,7 +122,7 @@ describe("what a row allows", () => {
 
   const READER = ["skymail:access", "skymail:lists:read"];
   const WRITER = [...READER, "skymail:lists:write"];
-  const SENDER = [...WRITER, "skymail:mails:write"];
+  const SENDER = [...WRITER, "skymail:mails:write", "skymail:templates:read"];
 
   const allowed = (actions: ReturnType<typeof listActions>) =>
     Object.entries(actions)
@@ -134,14 +134,17 @@ describe("what a row allows", () => {
     assert.deepEqual(allowed(listActions(current, WRITER)), ["change", "open"]);
   });
 
-  // Creating a send needs mails:write. The API sends to an internal list and
-  // to a Keycloak group's members alike (handlers/mail.go CreateTask), never
-  // to an archived list.
-  it("lets someone who may send start a send to a current list or group", () => {
+  // Creating a send is the send form's list send (send-form/access.ts):
+  // mails:write, and a template to send. The API sends to an internal list
+  // and to a Keycloak group's members alike (handlers/mail.go CreateTask),
+  // never to an archived list.
+  it("lets someone who may send to a list start a send to a current list or group", () => {
     assert.deepEqual(allowed(listActions(current, SENDER)), ["change", "compose", "open"]);
     assert.equal(listActions(keycloak, SENDER).compose, true);
     assert.equal(listActions(archived, SENDER).compose, false);
     assert.equal(listActions(current, WRITER).compose, false);
+    assert.equal(listActions(current, SENDER.filter((role) => role !== "skymail:templates:read")).compose, false);
+    assert.equal(listActions(current, [...READER, "skymail:templates:read", "skymail:mails:send"]).compose, false);
   });
 
   // The API hides an archived list from every read, so it cannot be opened.

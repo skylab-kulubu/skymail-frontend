@@ -13,6 +13,7 @@ import { ROLE, hasRole } from "./access";
 import type { ApiClient } from "./api/client";
 import { ApiError } from "./api/errors";
 import { listViewQuery, pageRange, type ListView } from "./list-view";
+import { sendAccess } from "./send-form/access";
 
 /** One list as the API sends it (`handlers.MailingListItem`). */
 export type MailingList = {
@@ -95,7 +96,11 @@ export type ListActions = Readonly<{
   /** Rename and archive it, add and remove its recipients. */
   change: boolean;
   restore: boolean;
-  /** Start a send to it: the API sends to an internal list and to a Keycloak group's members, never to an archived list. */
+  /**
+   * Start a send to it, where the send form would offer a list
+   * (send-form/access.ts): the API sends to an internal list and to a
+   * Keycloak group's members, never to an archived list.
+   */
   compose: boolean;
   /** A Keycloak group: no one can change it in SkyMail, and every viewer is told so. */
   readOnly: boolean;
@@ -109,7 +114,7 @@ export function listActions(row: ListRow, roles: readonly string[]): ListActions
     open: !archived,
     change: owned && canWrite,
     restore: archived && canWrite,
-    compose: !archived && hasRole(roles, ROLE.mailsWrite),
+    compose: !archived && sendAccess(roles).list,
     readOnly: row.external,
   };
 }

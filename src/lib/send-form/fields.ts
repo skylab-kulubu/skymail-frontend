@@ -5,9 +5,12 @@
  * Required variables:
  *
  *  - a Required variable's field is required and says why, with the
- *    contract's reason when the sending service's contract holds it;
- *  - a variable the subject uses is required too: the subject is one line,
- *    and one with a hole reads broken;
+ *    contract's reason when the sending service's contract holds it: a mail
+ *    without it cannot do its job, so an empty one keeps the send from going;
+ *  - any other field may go empty, as the old form let it (CONTEXT.md:
+ *    not every variable a sender supplies is required). An empty one the
+ *    subject uses, an address that does not look like one and an empty
+ *    announcement are warned about, not refused;
  *  - a variable the body takes as markup (`{{safeHTML .X}}`, free.basic's
  *    BodyHtml) is written in the Visual editor and sent as its render
  *    (free-body.ts); one named like a link (…Url, …Link, …Href) is an address;
@@ -18,6 +21,7 @@
  */
 import { freeBodyFromSource } from "../mail-render/free-body";
 import { actionInside, findActions, referencedVariables } from "../mail-render/go-template";
+import { SAFE_HTML } from "../mail-render/preview";
 import { linkAddressProblem } from "../mail-render/visual-document";
 import type { MailTemplate } from "../templates";
 
@@ -28,9 +32,12 @@ export type VariableField = Readonly<{
   /** In words where the name is a known one (free.basic's), else the name. */
   label: string;
   kind: FieldKind;
+  /** A Required variable of the template: the send does not go while it is empty. */
   required: boolean;
   /** Why it is required; null when it is not. */
   why: string | null;
+  /** The subject uses it: an empty one is warned about. */
+  inSubject: boolean;
 }>;
 
 /** What a template's fields are built from: the published copy on its row. */
@@ -48,8 +55,6 @@ const LABELS: ReadonlyMap<string, string> = new Map([
   ["CtaLabel", "Buton yazısı"],
   ["CtaUrl", "Buton bağlantısı"],
 ]);
-
-const SAFE_HTML = /^safeHTML\s+\$?\.([\p{L}_][\p{L}\p{N}_]*)$/u;
 
 /** The variables a body takes as markup: `{{safeHTML .X}}`. */
 function markupVariables(html: string): Set<string> {
@@ -98,11 +103,9 @@ export function variableFields(template: FieldSource): VariableField[] {
       ? `Required variable: ${contract.get(name) ?? "gönderen servisin sözleşmesinde."}`
       : operator.has(name)
         ? "Required variable: bu template'te zorunlu işaretlenmiş."
-        : inSubject.includes(name)
-          ? "Konuda geçiyor: boş kalırsa konu eksik görünür."
-          : null;
+        : null;
     const kind: FieldKind = markup.has(name) ? "rich" : /(url|link|href)$/i.test(name) ? "url" : "text";
-    return { name, label: LABELS.get(name) ?? name, kind, required: why !== null, why };
+    return { name, label: LABELS.get(name) ?? name, kind, required: why !== null, why, inSubject: inSubject.includes(name) };
   });
 }
 
@@ -125,33 +128,48 @@ function richBody(input: FieldInput, name: string) {
 }
 
 /**
- * What is wrong with each field, by name; empty when the send may go.
- * `require` names fields the form needs beyond the template's own — a free
- * announcement's body.
+ * What keeps the send from going, by field; empty when it may go: an empty
+ * Required variable, or a body the server would not keep.
  */
-export function fieldProblems(
-  fields: readonly VariableField[],
-  input: FieldInput,
-  { require = [] }: { require?: readonly string[] } = {},
-): Record<string, string> {
+export function fieldProblems(fields: readonly VariableField[], input: FieldInput): Record<string, string> {
   const problems: Record<string, string> = {};
   for (const field of fields) {
-    const required = field.required || require.includes(field.name);
     if (field.kind === "rich") {
       const body = richBody(input, field.name);
       if (!body.ok) problems[field.name] = `${field.label} gönderilemez: ${body.problems.join("; ")}`;
-      else if (required && body.html === "") problems[field.name] = `${field.label} boş bırakılamaz.`;
-      continue;
+      else if (field.required && body.html === "") problems[field.name] = `${field.label} boş bırakılamaz: bir Required variable.`;
+    } else if (field.required && (input.values[field.name] ?? "").trim() === "") {
+      problems[field.name] = `${field.label} boş bırakılamaz: bir Required variable.`;
     }
-    const value = (input.values[field.name] ?? "").trim();
+  }
+  return problems;
+}
+
+/**
+ * What may be a slip but goes if the sender wants it, by field: an empty
+ * field the subject uses, an address that does not look like one, and an
+ * empty field `expected` names (a free announcement's body).
+ */
+export function fieldWarnings(
+  fields: readonly VariableField[],
+  input: FieldInput,
+  { expected = [] }: { expected?: readonly string[] } = {},
+): Record<string, string> {
+  const warnings: Record<string, string> = {};
+  const values = fieldValues(fields, input);
+  for (const field of fields) {
+    const value = values[field.name];
     if (value === "") {
-      if (required) problems[field.name] = `${field.label} boş bırakılamaz.`;
+      // An empty Required variable is a problem (fieldProblems), not a warning.
+      if (field.required) continue;
+      if (field.inSubject) warnings[field.name] = "Konuda geçiyor: boş giderse konu eksik görünür.";
+      else if (expected.includes(field.name)) warnings[field.name] = `${field.label} boş: duyuru metinsiz gider.`;
       continue;
     }
     const address = field.kind === "url" ? linkAddressProblem(value) : null;
-    if (address) problems[field.name] = `Geçerli bir adres gir: ${address}.`;
+    if (address) warnings[field.name] = `Bir adres gibi görünmüyor: ${address}.`;
   }
-  return problems;
+  return warnings;
 }
 
 /**
@@ -172,8 +190,7 @@ export function fieldValues(fields: readonly VariableField[], input: FieldInput)
 export function bodyVariables(
   fields: readonly VariableField[],
   input: FieldInput,
-  options: { require?: readonly string[] } = {},
 ): { ok: true; variables: Record<string, string> } | { ok: false; problems: Record<string, string> } {
-  const problems = fieldProblems(fields, input, options);
+  const problems = fieldProblems(fields, input);
   return Object.keys(problems).length > 0 ? { ok: false, problems } : { ok: true, variables: fieldValues(fields, input) };
 }

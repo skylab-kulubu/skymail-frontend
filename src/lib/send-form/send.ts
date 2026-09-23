@@ -12,20 +12,25 @@
  * A free announcement is free.basic sent the same way, its body the Visual
  * editor's render (free-body.ts). Only the template row's published copy is
  * ever sent (ticket 04); a draft in progress is said to stay unsent.
- * Whatever the API refuses is said in plain words, with what to do next.
+ *
+ * A failed send is said plainly and never mails anyone twice by accident. A
+ * refusal (403, 404, 400, 422…) is final: trying again gets the same answer.
+ * A request the server never took (401, 429) may be tried again. A server
+ * error or no answer at all means the send may already be open — the API
+ * may have queued it before failing — so it is said so, and sending again
+ * takes a confirmation that names who may get the mail twice.
  */
 import type { ApiClient } from "../api/client";
 import { ApiError, apiErrorMessage, asApiError } from "../api/errors";
-import { sanitizeLikeServer } from "../mail-render/server-allowlist";
 import { fetchList, fetchRecipientPage, isInternal, toListRow, type ListRow, type MailingList } from "../mailing-lists";
 import { authorName, fetchTemplate, type MailTemplate } from "../templates";
 import { peopleProblems, peopleReady, type PeopleCheck, type PersonRow } from "./audience";
-import { bodyVariables, usesRecipientName, variableFields, type FieldInput } from "./fields";
+import { bodyVariables, fieldWarnings, usesRecipientName, variableFields, type FieldInput } from "./fields";
 
 /** The Template key of the free-form template a free announcement is sent with. */
 export const FREE_TEMPLATE_KEY = "free.basic";
 
-/** What a free announcement must have beyond free.basic's own fields: a body. */
+/** free.basic's body: a free announcement without one is warned about. */
 export const FREE_BODY_VARIABLE = "BodyHtml";
 
 export type ListSendRequest = { template_id: string; mail_list_id: string; body_variables: Record<string, string> };
@@ -63,28 +68,52 @@ export type SendProblems = Readonly<{
   fields: Readonly<Record<string, string>>;
 }>;
 
+/** What may be a slip but goes if the sender wants: by field, by person row, and all of it in words for the confirmation. */
+export type SendWarnings = Readonly<{
+  fields: Readonly<Record<string, string>>;
+  people: readonly (string | null)[];
+  lines: readonly string[];
+}>;
+
 export const NO_FREE_TEMPLATE = `Serbest duyuru template'i (${FREE_TEMPLATE_KEY}) SkyMail'de yok ya da arşivlenmiş; serbest duyuru gönderilemez.`;
 
-/** The requests a draft sends, or what keeps it from going out. */
-export function sendPlan(draft: SendDraft): { ok: true; plan: SendPlan } | { ok: false; problems: SendProblems } {
+/** The requests a draft sends, or what keeps it from going out; and either way, what may be a slip in it. */
+export function sendPlan(
+  draft: SendDraft,
+): { ok: true; plan: SendPlan; warnings: SendWarnings } | { ok: false; problems: SendProblems; warnings: SendWarnings } {
   const { template } = draft;
+  const fields = template ? variableFields(template) : [];
   const templateProblem = template ? null : draft.what === "free" ? NO_FREE_TEMPLATE : "Gönderilecek Mail template'i seç.";
   const listProblem = draft.audience === "list" && !draft.list ? "Gönderilecek mail listesini seç." : null;
   const people =
-    draft.audience === "people" ? peopleProblems(draft.people, { nameRequired: template ? usesRecipientName(template) : false }) : null;
-  const variables = template
-    ? bodyVariables(variableFields(template), draft.fields, { require: draft.what === "free" ? [FREE_BODY_VARIABLE] : [] })
-    : null;
+    draft.audience === "people" ? peopleProblems(draft.people, { nameExpected: template ? usesRecipientName(template) : false }) : null;
+  const variables = template ? bodyVariables(fields, draft.fields) : null;
+
+  const fieldWarned = fieldWarnings(fields, draft.fields, { expected: draft.what === "free" ? [FREE_BODY_VARIABLE] : [] });
+  const peopleWarned = people?.warnings ?? [];
+  const warnings: SendWarnings = {
+    fields: fieldWarned,
+    people: peopleWarned,
+    lines: [
+      ...fields.flatMap((field) => (fieldWarned[field.name] ? [`${field.label}: ${fieldWarned[field.name]}`] : [])),
+      ...peopleWarned.flatMap((warning, index) => (warning ? [`${index + 1}. kişi (${draft.people[index].email.trim()}): ${warning}`] : [])),
+    ],
+  };
 
   if (!template || !variables?.ok || listProblem || (people && !peopleReady(people))) {
     return {
       ok: false,
       problems: { template: templateProblem, list: listProblem, people, fields: variables && !variables.ok ? variables.problems : {} },
+      warnings,
     };
   }
   const body_variables = variables.variables;
   if (draft.audience === "list") {
-    return { ok: true, plan: { kind: "list", request: { template_id: template.id, mail_list_id: draft.list!.id, body_variables } } };
+    return {
+      ok: true,
+      plan: { kind: "list", request: { template_id: template.id, mail_list_id: draft.list!.id, body_variables } },
+      warnings,
+    };
   }
   return {
     ok: true,
@@ -97,6 +126,7 @@ export function sendPlan(draft: SendDraft): { ok: true; plan: SendPlan } | { ok:
         body_variables,
       })),
     },
+    warnings,
   };
 }
 
@@ -106,10 +136,22 @@ export async function sendToList(api: ApiClient, request: ListSendRequest): Prom
   return id;
 }
 
+/**
+ * How a failed send stands: `final` — refused, and trying again gets the
+ * same answer; `notSent` — the server never took it, so trying again is
+ * safe; `uncertain` — a server error or no answer, so it may already be open.
+ */
+export type FailureKind = "final" | "notSent" | "uncertain";
+
+export type SendFailure = Readonly<{ kind: FailureKind; reason: string }>;
+
 /** How a send to one person went. */
 export type PersonOutcome = Readonly<
-  { name: string; email: string } & ({ ok: true; sendId: string } | { ok: false; reason: string })
+  { name: string; email: string } & ({ status: "sent"; sendId: string } | { status: FailureKind; reason: string })
 >;
+
+/** Who the send's outcome can be checked by: the viewer, if they read sends (`mails:read`). */
+export type Checking = Readonly<{ canSeeSends: boolean }>;
 
 /**
  * Sends to each person in turn, going on past a failure: each is a send of
@@ -119,47 +161,104 @@ export type PersonOutcome = Readonly<
 export async function sendToPeople(
   api: ApiClient,
   requests: readonly SingleSendRequest[],
-  onEach?: (done: number) => void,
+  { canSeeSends, onEach }: Checking & { onEach?: (done: number) => void },
 ): Promise<PersonOutcome[]> {
   const outcomes: PersonOutcome[] = [];
   for (const request of requests) {
     const person = { name: request.recipient_full_name, email: request.recipient_email };
     try {
       const { id } = await api.post<{ id: string }>("/mail_tasks/single", request);
-      outcomes.push({ ...person, ok: true, sendId: id });
+      outcomes.push({ ...person, status: "sent", sendId: id });
     } catch (error) {
-      outcomes.push({ ...person, ok: false, reason: sendRefusal(error, "person") });
+      const failure = sendFailure(error, "person", { canSeeSends });
+      outcomes.push({ ...person, status: failure.kind, reason: failure.reason });
     }
     onEach?.(outcomes.length);
   }
   return outcomes;
 }
 
-const CHECK_THE_LIST = "Gönderimler listesine bakıp gerekirse tekrar dene.";
+/** Who a retry would send to: the ones who have not got the mail for sure — never a refusal — and who of them may get it twice. */
+export type Retry = Readonly<{
+  requests: readonly SingleSendRequest[];
+  /** The send may already be open for them: sending again may mail them twice. */
+  uncertain: readonly PersonRow[];
+  /** The server never took their send. */
+  notSent: readonly PersonRow[];
+}>;
 
-/** A refused send in plain words: to a list, or to one person. */
-export function sendRefusal(error: unknown, to: "list" | "person"): string {
+export function retryOf(requests: readonly SingleSendRequest[], outcomes: readonly PersonOutcome[]): Retry {
+  const who = (status: FailureKind) =>
+    outcomes.filter((outcome) => outcome.status === status).map(({ name, email }) => ({ name, email }));
+  const again = new Set(outcomes.filter((outcome) => outcome.status === "uncertain" || outcome.status === "notSent").map((outcome) => outcome.email));
+  return {
+    requests: requests.filter((request) => again.has(request.recipient_email)),
+    uncertain: who("uncertain"),
+    notSent: who("notSent"),
+  };
+}
+
+/** The outcomes, each person's latest in place of the one before. */
+export function mergeOutcomes(previous: readonly PersonOutcome[], again: readonly PersonOutcome[]): PersonOutcome[] {
+  return previous.map((outcome) => again.find((next) => next.email === outcome.email) ?? outcome);
+}
+
+/** A list send that may already be open: the same template to the same list waits for a confirmed re-send. */
+export type UncertainListSend = Readonly<{ templateId: string; listId: string; listName: string }>;
+
+export function repeatsUncertainSend(draft: Pick<SendDraft, "audience" | "template" | "list">, uncertain: UncertainListSend | null): boolean {
+  return (
+    uncertain !== null &&
+    draft.audience === "list" &&
+    draft.template?.id === uncertain.templateId &&
+    draft.list?.id === uncertain.listId
+  );
+}
+
+/** How to find out whether a send that may be open is: the send list, or someone who can read it. */
+function checkAdvice({ canSeeSends }: Checking): string {
+  return canSeeSends
+    ? "Yeniden göndermeden önce Gönderimler listesine bak: orada görünüyorsa açılmıştır."
+    : "Gönderimleri görme yetkin (skymail:mails:read) yok: yeniden göndermeden önce bu yetkisi olan birine gönderimin açılıp açılmadığını sor.";
+}
+
+/** A failed send in plain words, and whether trying again is safe: to a list, or to one person. */
+export function sendFailure(error: unknown, to: "list" | "person", checking: Checking): SendFailure {
   const refusal = asApiError(error);
-  if (refusal.status === 403) {
-    return to === "list"
-      ? "Bu hesap bir mail listesine gönderemez: skymail:mails:write rolü gerekiyor."
-      : "Bu hesap mail gönderemez: skymail:mails:send ya da skymail:mails:write rolü gerekiyor.";
+  const { status } = refusal;
+  if (status === 0 || status === 408 || status >= 500) {
+    const cause = status === 0 ? "Sunucudan yanıt gelmedi." : `Sunucu bir hatayla yanıt verdi (HTTP ${status}).`;
+    const open = to === "list" ? "Gönderim açılmış olabilir." : "Bu kişiye gönderim açılmış olabilir.";
+    return { kind: "uncertain", reason: `${cause} ${open} ${checkAdvice(checking)}` };
   }
-  if (refusal.status === 404) {
-    return to === "list"
-      ? "Mail template ya da liste bulunamadı: template arşivlenmiş, liste arşivlenmiş ya da Keycloak grubu boş olabilir."
-      : "Mail template arşivlenmiş ya da artık yok; arşivlenmiş bir template gönderilmez.";
+  if (status === 401) {
+    return { kind: "notSent", reason: "Oturumun sona erdi; gönderim açılmadı. Yeniden giriş yapınca tekrar deneyebilirsin." };
+  }
+  if (status === 429) {
+    return { kind: "notSent", reason: "Kısa sürede çok fazla istek gönderildi; gönderim açılmadı. Biraz bekleyip tekrar dene." };
+  }
+  if (status === 403) {
+    return {
+      kind: "final",
+      reason:
+        to === "list"
+          ? "Bu hesap bir mail listesine gönderemez: skymail:mails:write rolü gerekiyor."
+          : "Bu hesap mail gönderemez: skymail:mails:send ya da skymail:mails:write rolü gerekiyor.",
+    };
+  }
+  if (status === 404) {
+    return {
+      kind: "final",
+      reason:
+        to === "list"
+          ? "Mail template ya da liste bulunamadı: template arşivlenmiş, liste arşivlenmiş ya da Keycloak grubu boş olabilir."
+          : "Mail template arşivlenmiş ya da artık yok; arşivlenmiş bir template gönderilmez.",
+    };
   }
   if (refusal.code === "validation.error" && invalidField(refusal) === "recipient_email") {
-    return "SkyMail bu adresi geçerli bir e-posta adresi saymadı.";
+    return { kind: "final", reason: "SkyMail bu adresi geçerli bir e-posta adresi saymadı." };
   }
-  if (refusal.status === 0) {
-    return to === "list"
-      ? `Sunucuya ulaşılamadı; gönderimin açılıp açılmadığı bilinmiyor. ${CHECK_THE_LIST}`
-      : `Sunucuya ulaşılamadı; bu kişiye gidip gitmediği bilinmiyor. ${CHECK_THE_LIST}`;
-  }
-  if (refusal.status >= 500) return `Sunucuda beklenmeyen bir hata oluştu. Gönderim açılmamış olabilir: ${CHECK_THE_LIST}`;
-  return apiErrorMessage(refusal);
+  return { kind: "final", reason: `SkyMail gönderimi reddetti: ${apiErrorMessage(refusal)}` };
 }
 
 /** The first field a validation error names (`params.errors[].field`). */
@@ -179,7 +278,7 @@ const isNotFound = (error: unknown) => asApiError(error).status === 404;
  * those with 404 too).
  */
 export async function whyNotFound(api: ApiClient, { templateId, list }: { templateId: string; list: ChosenList | null }): Promise<string> {
-  const fallback = sendRefusal(new ApiError(404, "server.not_found"), list ? "list" : "person");
+  const fallback = sendFailure(new ApiError(404, "server.not_found"), list ? "list" : "person", { canSeeSends: false }).reason;
   try {
     await fetchTemplate(api, templateId);
   } catch (error) {
@@ -259,21 +358,11 @@ export function publishedOnlyNote(template: Pick<MailTemplate, "drafts">): strin
 const SAMPLE_RECIPIENT: PersonRow = { name: "Ayşe Yılmaz", email: "ayse.yilmaz@example.com" };
 
 /**
- * The values the preview fills the published body with: the send's own
- * variables, a markup field as the server's allow-list keeps it, and a
- * recipient — the first person named, or a sample one. An empty field is
- * left out, so the preview shows «Name» where its value will go (and an
- * `{{if}}` on it stays shut, as it will).
+ * The values the preview fills the published body with: exactly what the
+ * send carries — an empty field as nothing — and a recipient, the first
+ * person named or a sample one.
  */
-export function previewValues(
-  variables: Readonly<Record<string, string>>,
-  recipient: PersonRow | null,
-  markup: readonly string[],
-): Record<string, string> {
-  const values: Record<string, string> = {};
-  for (const [name, value] of Object.entries(variables)) {
-    if (value !== "") values[name] = markup.includes(name) ? sanitizeLikeServer(value) : value;
-  }
+export function previewValues(variables: Readonly<Record<string, string>>, recipient: PersonRow | null): Record<string, string> {
   const person = recipient ?? SAMPLE_RECIPIENT;
-  return { ...values, FullName: person.name, Email: person.email };
+  return { ...variables, FullName: person.name, Email: person.email };
 }

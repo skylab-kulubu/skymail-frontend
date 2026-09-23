@@ -5,8 +5,13 @@
  * {template_id, recipient_email, recipient_full_name, body_variables}`, once
  * per person, since there is no route for a set of people. A free
  * announcement is free.basic sent the same way, its body the Visual editor's
- * render. What comes back is said plainly: which person failed and why, a
- * template refused because it was archived, a list that is gone.
+ * render.
+ *
+ * What comes back is said plainly, and never sends a mail twice by accident:
+ * a refusal (403, 404, 400, 422) is final and not offered again; a request
+ * the server never took (401, 429) may be tried again; a server error or no
+ * answer at all means the send may already be open, so it is said so and a
+ * re-send has to be confirmed as a possible duplicate.
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
@@ -20,15 +25,20 @@ import {
   fetchSendableLists,
   fetchSendableTemplates,
   freeTemplate,
+  mergeOutcomes,
   previewValues,
   publishedOnlyNote,
+  repeatsUncertainSend,
+  retryOf,
+  sendFailure,
   sendPlan,
-  sendRefusal,
   sendToList,
   sendToPeople,
   templateChoices,
   whyNotFound,
+  type PersonOutcome,
   type SendDraft,
+  type SingleSendRequest,
 } from "./send";
 
 const LIST_ID = "3f0c1a52-7b7e-4c1d-9a55-0d6f3b2c1e10";
@@ -91,6 +101,7 @@ describe("a send's requests", () => {
           body_variables: { EventName: "GECEKODU", DetailsUrl: "https://skyl.app/gecekodu" },
         },
       },
+      warnings: { fields: {}, people: [], lines: [] },
     });
   });
 
@@ -98,25 +109,23 @@ describe("a send's requests", () => {
     const plan = sendPlan(
       draft({ audience: "people", list: null, people: [{ name: "Ayşe Yılmaz", email: "ayse@ornek.com" }, { name: "", email: "" }, { name: "Ali Can", email: " ali@ornek.com" }] }),
     );
-    assert.deepEqual(plan, {
-      ok: true,
-      plan: {
-        kind: "people",
-        requests: [
-          {
-            template_id: "7e3a1c00-0000-4000-8000-000000000001",
-            recipient_email: "ayse@ornek.com",
-            recipient_full_name: "Ayşe Yılmaz",
-            body_variables: { EventName: "GECEKODU", DetailsUrl: "https://skyl.app/gecekodu" },
-          },
-          {
-            template_id: "7e3a1c00-0000-4000-8000-000000000001",
-            recipient_email: "ali@ornek.com",
-            recipient_full_name: "Ali Can",
-            body_variables: { EventName: "GECEKODU", DetailsUrl: "https://skyl.app/gecekodu" },
-          },
-        ],
-      },
+    assert.ok(plan.ok);
+    assert.deepEqual(plan.plan, {
+      kind: "people",
+      requests: [
+        {
+          template_id: "7e3a1c00-0000-4000-8000-000000000001",
+          recipient_email: "ayse@ornek.com",
+          recipient_full_name: "Ayşe Yılmaz",
+          body_variables: { EventName: "GECEKODU", DetailsUrl: "https://skyl.app/gecekodu" },
+        },
+        {
+          template_id: "7e3a1c00-0000-4000-8000-000000000001",
+          recipient_email: "ali@ornek.com",
+          recipient_full_name: "Ali Can",
+          body_variables: { EventName: "GECEKODU", DetailsUrl: "https://skyl.app/gecekodu" },
+        },
+      ],
     });
   });
 
@@ -128,42 +137,45 @@ describe("a send's requests", () => {
         fields: { values: { Subject: "GECEKODU başvuruları açıldı", Heading: "", CtaUrl: "", CtaLabel: "" }, rich: { BodyHtml: BODY } },
       }),
     );
-    assert.deepEqual(plan, {
-      ok: true,
-      plan: {
-        kind: "list",
-        request: {
-          template_id: FREE.id,
-          mail_list_id: LIST_ID,
-          body_variables: {
-            Subject: "GECEKODU başvuruları açıldı",
-            Heading: "",
-            BodyHtml: "<h2>Başvurular açıldı</h2><p>Son gün <strong>5 Nisan</strong>.</p>",
-            CtaUrl: "",
-            CtaLabel: "",
-          },
+    assert.ok(plan.ok);
+    assert.deepEqual(plan.plan, {
+      kind: "list",
+      request: {
+        template_id: FREE.id,
+        mail_list_id: LIST_ID,
+        body_variables: {
+          Subject: "GECEKODU başvuruları açıldı",
+          Heading: "",
+          BodyHtml: "<h2>Başvurular açıldı</h2><p>Son gün <strong>5 Nisan</strong>.</p>",
+          CtaUrl: "",
+          CtaLabel: "",
         },
       },
     });
   });
 
-  it("say what is missing instead: a template, a list, people, a field, the free announcement's body", () => {
+  it("say what keeps them from going: no template, no list, an empty Required variable, an address that is not one", () => {
     assert.deepEqual(sendPlan(draft({ template: null, list: null })), {
       ok: false,
       problems: { template: "Gönderilecek Mail template'i seç.", list: "Gönderilecek mail listesini seç.", people: null, fields: {} },
+      warnings: { fields: {}, people: [], lines: [] },
     });
-    const free = sendPlan(draft({ what: "free", template: FREE, fields: { values: { Subject: "Duyuru" }, rich: {} } }));
-    assert.deepEqual(free.ok ? null : free.problems.fields, { BodyHtml: "Gövde boş bırakılamaz." });
-    const nameless = sendPlan(draft({ audience: "people", people: [{ name: "", email: "ayse@ornek.com" }] }));
-    assert.deepEqual(nameless.ok ? null : nameless.problems.people, {
-      people: [{ name: "", email: "ayse@ornek.com" }],
-      rows: [{ name: "Bu mail alıcıyı adıyla anıyor ({{.FullName}}); adını yaz." }],
-      none: false,
-    });
-    const nobody = sendPlan(draft({ audience: "people", people: [{ name: "", email: "" }] }));
-    assert.deepEqual(nobody.ok ? null : nobody.problems.people, { people: [], rows: [{}], none: true });
+    const required = sendPlan(draft({ template: template({ contract_required_variables: [{ name: "DetailsUrl", reason: "Etkinliğin sayfası." }] }), fields: { values: { EventName: "x" }, rich: {} } }));
+    assert.deepEqual(required.ok ? null : required.problems.fields, { DetailsUrl: "DetailsUrl boş bırakılamaz: bir Required variable." });
+    const nobody = sendPlan(draft({ audience: "people", people: [{ name: "Ayşe", email: "ayse@" }] }));
+    assert.deepEqual(nobody.ok ? null : nobody.problems.people?.rows, [{ email: "Geçerli bir e-posta adresi gir." }]);
     const freeWithoutTemplate = sendPlan(draft({ what: "free", template: null }));
     assert.equal(freeWithoutTemplate.ok ? null : freeWithoutTemplate.problems.template, "Serbest duyuru template'i (free.basic) SkyMail'de yok ya da arşivlenmiş; serbest duyuru gönderilemez.");
+  });
+
+  it("go with what may be a slip said, as the old form let them: an empty subject field, an empty announcement, a nameless person", () => {
+    const free = sendPlan(draft({ what: "free", template: FREE, fields: { values: {}, rich: {} } }));
+    assert.ok(free.ok);
+    assert.deepEqual(free.warnings.lines, ["Konu: Konuda geçiyor: boş giderse konu eksik görünür.", "Gövde: Gövde boş: duyuru metinsiz gider."]);
+    const nameless = sendPlan(draft({ audience: "people", people: [{ name: "", email: "ayse@ornek.com" }] }));
+    assert.ok(nameless.ok);
+    assert.deepEqual(nameless.warnings.people, ["Bu mail alıcıyı adıyla anıyor ({{.FullName}}); adı boş giderse selamlama eksik kalır."]);
+    assert.deepEqual(nameless.warnings.lines, ["1. kişi (ayse@ornek.com): Bu mail alıcıyı adıyla anıyor ({{.FullName}}); adı boş giderse selamlama eksik kalır."]);
   });
 });
 
@@ -178,67 +190,87 @@ describe("sending", () => {
     assert.deepEqual(JSON.parse(calls[0].body!), plan.plan.request);
   });
 
-  it("to people goes on past a failure and says who failed and why", async () => {
+  it("to people goes on past a failure, and tells a refusal from a send that may have opened", async () => {
     const { api, calls } = scriptedClient(
       json(201, { id: TASK_ID }),
-      json(400, { code: "validation.error", message: "One or more validation errors occurred.", params: { errors: [{ field: "recipient_email", code: "invalid_email" }] } }),
-      json(201, { id: "b1c2d3e4-0000-4000-8000-000000000003" }),
+      json(400, { code: "validation.error", message: "x", params: { errors: [{ field: "recipient_email", code: "invalid_email" }] } }),
+      json(500, { code: "server.internal_server_error", message: "boom" }),
+      json(201, { id: "b1c2d3e4-0000-4000-8000-000000000004" }),
     );
-    const plan = sendPlan(
-      draft({
-        audience: "people",
-        people: [
-          { name: "Ayşe", email: "ayse@ornek.com" },
-          { name: "Ali", email: "ali@ornek" + ".c" },
-          { name: "Veli", email: "veli@ornek.com" },
-        ],
-      }),
-    );
-    assert.ok(plan.ok && plan.plan.kind === "people");
     const progress: number[] = [];
-    const outcomes = await sendToPeople(api, plan.plan.requests, (done) => progress.push(done));
+    const outcomes = await sendToPeople(api, REQUESTS, { canSeeSends: true, onEach: (done) => progress.push(done) });
     assert.deepEqual(outcomes, [
-      { name: "Ayşe", email: "ayse@ornek.com", ok: true, sendId: TASK_ID },
-      { name: "Ali", email: "ali@ornek.c", ok: false, reason: "SkyMail bu adresi geçerli bir e-posta adresi saymadı." },
-      { name: "Veli", email: "veli@ornek.com", ok: true, sendId: "b1c2d3e4-0000-4000-8000-000000000003" },
+      { name: "Ayşe", email: "ayse@ornek.com", status: "sent", sendId: TASK_ID },
+      { name: "Ali", email: "ali@ornek.c", status: "final", reason: "SkyMail bu adresi geçerli bir e-posta adresi saymadı." },
+      {
+        name: "Veli",
+        email: "veli@ornek.com",
+        status: "uncertain",
+        reason:
+          "Sunucu bir hatayla yanıt verdi (HTTP 500). Bu kişiye gönderim açılmış olabilir. Yeniden göndermeden önce Gönderimler listesine bak: orada görünüyorsa açılmıştır.",
+      },
+      { name: "Zeynep", email: "zeynep@ornek.com", status: "sent", sendId: "b1c2d3e4-0000-4000-8000-000000000004" },
     ]);
-    assert.deepEqual(progress, [1, 2, 3]);
+    assert.deepEqual(progress, [1, 2, 3, 4]);
     assert.deepEqual(
-      calls.map((call) => [call.url, JSON.parse(call.body!).recipient_email]),
-      [
-        [`${TEST_BASE_URL}/mail_tasks/single`, "ayse@ornek.com"],
-        [`${TEST_BASE_URL}/mail_tasks/single`, "ali@ornek.c"],
-        [`${TEST_BASE_URL}/mail_tasks/single`, "veli@ornek.com"],
-      ],
+      calls.map((call) => JSON.parse(call.body!).recipient_email),
+      ["ayse@ornek.com", "ali@ornek.c", "veli@ornek.com", "zeynep@ornek.com"],
     );
   });
 });
 
-describe("a refused send, in plain words", () => {
-  it("says which permission is missing", () => {
-    const forbidden = new ApiError(403, "server.forbidden");
-    assert.equal(sendRefusal(forbidden, "list"), "Bu hesap bir mail listesine gönderemez: skymail:mails:write rolü gerekiyor.");
-    assert.equal(sendRefusal(forbidden, "person"), "Bu hesap mail gönderemez: skymail:mails:send ya da skymail:mails:write rolü gerekiyor.");
-  });
+const REQUESTS: SingleSendRequest[] = [
+  ["Ayşe", "ayse@ornek.com"],
+  ["Ali", "ali@ornek.c"],
+  ["Veli", "veli@ornek.com"],
+  ["Zeynep", "zeynep@ornek.com"],
+].map(([name, email]) => ({ template_id: "t", recipient_email: email, recipient_full_name: name, body_variables: {} }));
 
-  it("says a template that is gone was archived, since only a current one is sent", () => {
-    assert.equal(
-      sendRefusal(new ApiError(404, "server.not_found"), "person"),
-      "Mail template arşivlenmiş ya da artık yok; arşivlenmiş bir template gönderilmez.",
-    );
-  });
+describe("a failed send, in plain words", () => {
+  const person = { canSeeSends: true };
 
-  it("says an address the server refused is not one, and a server error as one", () => {
+  it("is final when refused: a missing role, an archived template, an address that is not one, a body the server refused", () => {
+    assert.deepEqual(sendFailure(new ApiError(403, "server.forbidden"), "list", person), {
+      kind: "final",
+      reason: "Bu hesap bir mail listesine gönderemez: skymail:mails:write rolü gerekiyor.",
+    });
+    assert.deepEqual(sendFailure(new ApiError(403, "server.forbidden"), "person", person), {
+      kind: "final",
+      reason: "Bu hesap mail gönderemez: skymail:mails:send ya da skymail:mails:write rolü gerekiyor.",
+    });
+    assert.deepEqual(sendFailure(new ApiError(404, "server.not_found"), "person", person), {
+      kind: "final",
+      reason: "Mail template arşivlenmiş ya da artık yok; arşivlenmiş bir template gönderilmez.",
+    });
     const invalid = new ApiError(400, "validation.error", "x", { errors: [{ field: "recipient_email", code: "invalid_email" }] });
-    assert.equal(sendRefusal(invalid, "person"), "SkyMail bu adresi geçerli bir e-posta adresi saymadı.");
-    assert.equal(
-      sendRefusal(new ApiError(500, "server.internal_server_error"), "list"),
-      "Sunucuda beklenmeyen bir hata oluştu. Gönderim açılmamış olabilir: Gönderimler listesine bakıp gerekirse tekrar dene.",
-    );
-    assert.equal(
-      sendRefusal(new ApiError(0, "network"), "person"),
-      "Sunucuya ulaşılamadı; bu kişiye gidip gitmediği bilinmiyor. Gönderimler listesine bakıp gerekirse tekrar dene.",
-    );
+    assert.deepEqual(sendFailure(invalid, "person", person), { kind: "final", reason: "SkyMail bu adresi geçerli bir e-posta adresi saymadı." });
+    assert.deepEqual(sendFailure(new ApiError(422, "template.unparseable"), "list", person), {
+      kind: "final",
+      reason: "SkyMail gönderimi reddetti: Konu ya da gövde, mailer'ın okuyabileceği bir Go template değil.",
+    });
+  });
+
+  it("may be tried again when the server never took it: an ended session, too many requests", () => {
+    assert.deepEqual(sendFailure(new ApiError(401, "server.unauthorized"), "person", person), {
+      kind: "notSent",
+      reason: "Oturumun sona erdi; gönderim açılmadı. Yeniden giriş yapınca tekrar deneyebilirsin.",
+    });
+    assert.deepEqual(sendFailure(new ApiError(429, "server.too_many_requests"), "list", person), {
+      kind: "notSent",
+      reason: "Kısa sürede çok fazla istek gönderildi; gönderim açılmadı. Biraz bekleyip tekrar dene.",
+    });
+  });
+
+  it("may have opened on a server error or no answer, and says how to find out, for who can see the sends and who cannot", () => {
+    assert.deepEqual(sendFailure(new ApiError(0, "network"), "list", person), {
+      kind: "uncertain",
+      reason: "Sunucudan yanıt gelmedi. Gönderim açılmış olabilir. Yeniden göndermeden önce Gönderimler listesine bak: orada görünüyorsa açılmıştır.",
+    });
+    assert.deepEqual(sendFailure(new ApiError(503, "server.service_unavailable"), "person", { canSeeSends: false }), {
+      kind: "uncertain",
+      reason:
+        "Sunucu bir hatayla yanıt verdi (HTTP 503). Bu kişiye gönderim açılmış olabilir. Gönderimleri görme yetkin (skymail:mails:read) yok: yeniden göndermeden önce bu yetkisi olan birine gönderimin açılıp açılmadığını sor.",
+    });
   });
 
   it("finds out whether the template or the list is what is gone", async () => {
@@ -258,6 +290,43 @@ describe("a refused send, in plain words", () => {
       await whyNotFound(emptyGroup.api, { templateId: "t", list: { id: LIST_ID, name: "Grup", external: true } }),
       "Keycloak grubunda üye yok; boş bir gruba gönderim açılmaz.",
     );
+  });
+});
+
+describe("trying again", () => {
+  const outcome = (email: string, status: PersonOutcome["status"]): PersonOutcome =>
+    status === "sent" ? { name: email, email, status, sendId: `id-${email}` } : { name: email, email, status, reason: status };
+  const requests = REQUESTS.map((request) => ({ ...request, recipient_full_name: request.recipient_email }));
+  const outcomes = [
+    outcome("ayse@ornek.com", "sent"),
+    outcome("ali@ornek.c", "final"),
+    outcome("veli@ornek.com", "uncertain"),
+    outcome("zeynep@ornek.com", "notSent"),
+  ];
+
+  it("offers only who has not got it for sure, never a refusal, and names who may get it twice", () => {
+    const retry = retryOf(requests, outcomes);
+    assert.deepEqual(
+      retry.requests.map((request) => request.recipient_email),
+      ["veli@ornek.com", "zeynep@ornek.com"],
+    );
+    assert.deepEqual(retry.uncertain, [{ name: "veli@ornek.com", email: "veli@ornek.com" }]);
+    assert.deepEqual(retry.notSent, [{ name: "zeynep@ornek.com", email: "zeynep@ornek.com" }]);
+    assert.deepEqual(retryOf(requests, [outcomes[0], outcomes[1]]).requests, []);
+  });
+
+  it("puts each person's new outcome in place of the old one", () => {
+    const again = [outcome("veli@ornek.com", "sent"), outcome("zeynep@ornek.com", "uncertain")];
+    assert.deepEqual(mergeOutcomes(outcomes, again), [outcomes[0], outcomes[1], again[0], again[1]]);
+  });
+
+  it("holds back a list send that may already be open: the same template to the same list", () => {
+    const uncertain = { templateId: "7e3a1c00-0000-4000-8000-000000000001", listId: LIST_ID, listName: "GECEKODU katılımcıları" };
+    assert.equal(repeatsUncertainSend(draft({}), uncertain), true);
+    assert.equal(repeatsUncertainSend(draft({}), null), false);
+    assert.equal(repeatsUncertainSend(draft({ list: { id: "other", name: "Başka", external: false } }), uncertain), false);
+    assert.equal(repeatsUncertainSend(draft({ template: template({ id: "other" }) }), uncertain), false);
+    assert.equal(repeatsUncertainSend(draft({ audience: "people" }), uncertain), false);
   });
 });
 
@@ -324,18 +393,18 @@ describe("what the form offers and shows", () => {
     assert.equal(publishedOnlyNote(drafted), "Bu template'te yayımlanmamış bir taslak var (Mehmet Kaya). Gönderilen: yayımlanmış sürüm.");
   });
 
-  it("previews with what will be sent: the body as the server keeps it, and a recipient; an empty field shows where it goes", () => {
-    const values = previewValues(
-      { Subject: "Duyuru", Heading: "", BodyHtml: '<p><a href="https://skyl.app/x">x</a></p>' },
-      { name: "Ayşe Yılmaz", email: "ayse@ornek.com" },
-      ["BodyHtml"],
-    );
+  it("previews exactly what will be sent: an empty field as nothing, and a recipient", () => {
+    const values = previewValues({ Subject: "Duyuru", Heading: "", BodyHtml: '<p><a href="https://skyl.app/x">x</a></p>' }, {
+      name: "Ayşe Yılmaz",
+      email: "ayse@ornek.com",
+    });
     assert.deepEqual(values, {
       Subject: "Duyuru",
-      BodyHtml: '<p><a href="https://skyl.app/x" target="_blank" rel="noopener">x</a></p>',
+      Heading: "",
+      BodyHtml: '<p><a href="https://skyl.app/x">x</a></p>',
       FullName: "Ayşe Yılmaz",
       Email: "ayse@ornek.com",
     });
-    assert.deepEqual(previewValues({}, null, []), { FullName: "Ayşe Yılmaz", Email: "ayse.yilmaz@example.com" });
+    assert.deepEqual(previewValues({}, null), { FullName: "Ayşe Yılmaz", Email: "ayse.yilmaz@example.com" });
   });
 });

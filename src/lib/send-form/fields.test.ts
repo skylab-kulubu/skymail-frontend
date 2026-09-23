@@ -1,15 +1,17 @@
 /**
  * The variable fields a send asks for, built from the Mail template it sends:
- * its published body and subject, and its Required variables. A Required
- * variable's field is required and says why; so is one the subject uses. A
- * variable the body takes as markup (`safeHTML`) is written in the Visual
- * editor, one named like a link is an address. What the mailer fills per
- * recipient — Email, FullName — is not asked for.
+ * its published body and subject, and its Required variables. Only a Required
+ * variable's field keeps a send from going when empty — a mail without it
+ * cannot do its job (CONTEXT.md). An empty field the subject uses, an address
+ * that does not look like one or an empty announcement is warned about, as
+ * the old form warned. A variable the body takes as markup (`safeHTML`) is
+ * written in the Visual editor, one named like a link is an address. What the
+ * mailer fills per recipient — Email, FullName — is not asked for.
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { buildVisual as b, visualSource } from "../mail-render/visual-document";
-import { bodyVariables, fieldProblems, fieldValues, usesRecipientName, variableFields, type FieldInput } from "./fields";
+import { bodyVariables, fieldProblems, fieldValues, fieldWarnings, usesRecipientName, variableFields, type FieldInput } from "./fields";
 
 /** free.basic as the Template seed publishes it, trimmed to its actions. */
 const FREE_BASIC = {
@@ -32,28 +34,29 @@ const CERTIFICATE = {
 describe("a template's variable fields", () => {
   it("are free.basic's in the order the mail uses them, the body as markup, the button's link as an address", () => {
     assert.deepEqual(
-      variableFields(FREE_BASIC).map(({ name, label, kind, required }) => ({ name, label, kind, required })),
+      variableFields(FREE_BASIC).map(({ name, label, kind, required, inSubject }) => ({ name, label, kind, required, inSubject })),
       [
-        { name: "Subject", label: "Konu", kind: "text", required: true },
-        { name: "Heading", label: "Başlık", kind: "text", required: false },
-        { name: "BodyHtml", label: "Gövde", kind: "rich", required: false },
-        { name: "CtaUrl", label: "Buton bağlantısı", kind: "url", required: false },
-        { name: "CtaLabel", label: "Buton yazısı", kind: "text", required: false },
+        { name: "Subject", label: "Konu", kind: "text", required: false, inSubject: true },
+        { name: "Heading", label: "Başlık", kind: "text", required: false, inSubject: false },
+        { name: "BodyHtml", label: "Gövde", kind: "rich", required: false, inSubject: false },
+        { name: "CtaUrl", label: "Buton bağlantısı", kind: "url", required: false, inSubject: false },
+        { name: "CtaLabel", label: "Buton yazısı", kind: "text", required: false, inSubject: false },
       ],
     );
   });
 
-  it("mark Required variables required and say why, and the subject's too; leave out what the mailer fills", () => {
+  it("mark only Required variables required, and say why; leave out what the mailer fills", () => {
     assert.deepEqual(variableFields(CERTIFICATE), [
-      { name: "EventName", label: "EventName", kind: "text", required: true, why: "Konuda geçiyor: boş kalırsa konu eksik görünür." },
+      { name: "EventName", label: "EventName", kind: "text", required: false, why: null, inSubject: true },
       {
         name: "VerifyURL",
         label: "VerifyURL",
         kind: "url",
         required: true,
         why: "Required variable: Sertifika sayfasının adresi; kaldırılırsa katılımcı sertifikasına ulaşamaz.",
+        inSubject: false,
       },
-      { name: "Note", label: "Note", kind: "text", required: true, why: "Required variable: bu template'te zorunlu işaretlenmiş." },
+      { name: "Note", label: "Note", kind: "text", required: true, why: "Required variable: bu template'te zorunlu işaretlenmiş.", inSubject: false },
     ]);
   });
 
@@ -96,21 +99,31 @@ describe("the values a send carries", () => {
     });
   });
 
-  it("are refused while a required field is empty, an address is not one, or the body cannot go out", () => {
+  it("are refused only while a Required variable is empty, or the body cannot go out", () => {
     const broken = visualSource(b.document([b.paragraph([b.text("x", [{ type: "link", href: "https://ornek.com/%zz" }])])]));
     assert.deepEqual(fieldProblems(fields, { values: { Subject: " ", CtaUrl: "skyl.app" }, rich: { BodyHtml: broken } }), {
-      Subject: "Konu boş bırakılamaz.",
-      CtaUrl: 'Geçerli bir adres gir: "skyl.app" bir adres değil.',
       BodyHtml: 'Gövde gönderilemez: blocks[0].content[0]: "https://ornek.com/%zz" adresini sunucu kabul etmiyor; mailde bağlantı düşer. Adresi düzelt.',
     });
-    assert.deepEqual(fieldProblems(fields, input({ Subject: "GECEKODU" })), {});
-    assert.equal(bodyVariables(fields, { values: {}, rich: {} }).ok, false);
+    assert.deepEqual(fieldProblems(fields, { values: {}, rich: {} }), {});
+    const certificate = variableFields(CERTIFICATE);
+    assert.deepEqual(fieldProblems(certificate, { values: { Note: "x" }, rich: {} }), { VerifyURL: "VerifyURL boş bırakılamaz: bir Required variable." });
+    assert.equal(bodyVariables(certificate, { values: { Note: "x" }, rich: {} }).ok, false);
+    assert.equal(bodyVariables(certificate, { values: { Note: "x", VerifyURL: "https://skyl.app/v" }, rich: {} }).ok, true);
   });
 
-  it("need the body when the send needs one, and see an empty document as none", () => {
+  it("are warned about, not refused: an empty field the subject uses, an address that is not one, an empty announcement", () => {
     const empty = visualSource(b.document([b.paragraph([])]));
-    assert.deepEqual(fieldProblems(fields, { values: { Subject: "x" }, rich: { BodyHtml: empty } }, { require: ["BodyHtml"] }), {
-      BodyHtml: "Gövde boş bırakılamaz.",
+    assert.deepEqual(fieldWarnings(fields, { values: { Subject: " ", CtaUrl: "skyl.app" }, rich: { BodyHtml: empty } }, { expected: ["BodyHtml"] }), {
+      Subject: "Konuda geçiyor: boş giderse konu eksik görünür.",
+      CtaUrl: 'Bir adres gibi görünmüyor: "skyl.app" bir adres değil.',
+      BodyHtml: "Gövde boş: duyuru metinsiz gider.",
+    });
+    assert.deepEqual(fieldWarnings(fields, input({ Subject: "GECEKODU", CtaUrl: "https://skyl.app/g" }), { expected: ["BodyHtml"] }), {});
+    // A Required variable that is empty is a problem, not a warning; one that is filled in is checked as an address too.
+    const certificate = variableFields(CERTIFICATE);
+    assert.deepEqual(fieldWarnings(certificate, { values: { EventName: "GECEKODU" }, rich: {} }), {});
+    assert.deepEqual(fieldWarnings(certificate, { values: { EventName: "GECEKODU", VerifyURL: "sertifika" }, rich: {} }), {
+      VerifyURL: 'Bir adres gibi görünmüyor: "sertifika" bir adres değil.',
     });
   });
 });

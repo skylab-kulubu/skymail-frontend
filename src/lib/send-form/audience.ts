@@ -1,37 +1,45 @@
 /**
  * Individual people as a send's audience (ticket 16): name and e-mail rows,
  * each sent on its own (`POST /mail_tasks/single`). What the form catches
- * before anything goes out, row by row; the API checks addresses properly
- * and a refusal is reported per person (send.ts).
+ * before anything goes out, row by row: an address that is not one and the
+ * same address twice stop the send; a missing name where the mail greets by
+ * it is pointed out and goes if the sender wants (the API needs no name). The
+ * API checks addresses properly and a refusal is reported per person
+ * (send.ts).
  */
 import { isPlausibleEmail } from "../mailing-lists";
 
 export type PersonRow = Readonly<{ name: string; email: string }>;
 
-/** What is wrong with one row, by field. */
-export type RowProblems = Readonly<{ name?: string; email?: string }>;
+/** What keeps one row from being sent to. */
+export type RowProblems = Readonly<{ email?: string }>;
 
 export type PeopleCheck = Readonly<{
   /** The filled rows, trimmed: the people sent to once nothing is wrong. */
   people: readonly PersonRow[];
   /** One entry per row as given, empty where the row is fine or empty. */
   rows: readonly RowProblems[];
+  /** One entry per row as given: what may be a slip in it, or null. */
+  warnings: readonly (string | null)[];
   /** No row names anyone. */
   none: boolean;
 }>;
 
-export const NAME_NEEDED = "Bu mail alıcıyı adıyla anıyor ({{.FullName}}); adını yaz.";
+export const NAME_EXPECTED = "Bu mail alıcıyı adıyla anıyor ({{.FullName}}); adı boş giderse selamlama eksik kalır.";
 
-export function peopleProblems(rows: readonly PersonRow[], { nameRequired = false }: { nameRequired?: boolean } = {}): PeopleCheck {
+/** `nameExpected`: the mail uses the recipient's name. */
+export function peopleProblems(rows: readonly PersonRow[], { nameExpected = false }: { nameExpected?: boolean } = {}): PeopleCheck {
   const seen = new Map<string, number>();
   const people: PersonRow[] = [];
+  const warnings = rows.map((row) =>
+    nameExpected && row.name.trim() === "" && row.email.trim() !== "" ? NAME_EXPECTED : null,
+  );
   const problems = rows.map((row, index): RowProblems => {
     const name = row.name.trim();
     const email = row.email.trim();
     if (name === "" && email === "") return {};
     people.push({ name, email });
-    const found: { name?: string; email?: string } = {};
-    if (nameRequired && name === "") found.name = NAME_NEEDED;
+    const found: { email?: string } = {};
     if (email === "") {
       found.email = "E-posta adresini yaz.";
     } else if (!isPlausibleEmail(email)) {
@@ -45,11 +53,11 @@ export function peopleProblems(rows: readonly PersonRow[], { nameRequired = fals
     }
     return found;
   });
-  return { people, rows: problems, none: people.length === 0 };
+  return { people, rows: problems, warnings, none: people.length === 0 };
 }
 
 /** Whether the people may be sent to: someone, and nothing wrong with any row. */
-export const peopleReady = (check: PeopleCheck) => !check.none && check.rows.every((row) => !row.name && !row.email);
+export const peopleReady = (check: PeopleCheck) => !check.none && check.rows.every((row) => !row.email);
 
 /**
  * People pasted in at once: one per line, or split by commas and
