@@ -47,8 +47,38 @@ export function EditComparison({
 
   return (
     <div className="space-y-4">
-      <div className="overflow-x-auto rounded-lg border border-white/10">
-        <table className="w-full min-w-[32rem] table-fixed text-left text-xs">
+      {/* A phone reads each change as a block, before above after; a wider screen as a table. */}
+      <ul className="divide-y divide-white/5 rounded-lg border border-white/10 text-xs sm:hidden" aria-label="Değişen değişkenler">
+        {changes.length === 0 ? (
+          <li className="px-3 py-3 text-neutral-500">Hiçbir değişken değişmedi.</li>
+        ) : (
+          changes.map((change) => {
+            const field = fieldOf(change.name);
+            const kind = field?.kind ?? 'text';
+            return (
+              <li key={change.name} className="space-y-1.5 px-3 py-2.5">
+                <p className="font-medium text-neutral-300">{field?.label ?? change.name}</p>
+                <dl className="space-y-1.5">
+                  <div>
+                    <dt className="text-2xs text-neutral-500">{labels[0]}</dt>
+                    <dd>
+                      <Value value={change.before} kind={kind} />
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-2xs text-neutral-500">{labels[1]}</dt>
+                    <dd>
+                      <Value value={change.after} kind={kind} />
+                    </dd>
+                  </div>
+                </dl>
+              </li>
+            );
+          })
+        )}
+      </ul>
+      <div className="hidden overflow-x-auto rounded-lg border border-white/10 sm:block">
+        <table className="w-full table-fixed text-left text-xs">
           <caption className="sr-only">Değişen değişkenler</caption>
           <thead className="text-2xs text-neutral-500">
             <tr className="border-b border-white/10">

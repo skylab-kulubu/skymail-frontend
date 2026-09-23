@@ -44,14 +44,15 @@ export function Deadline({ item, now = new Date(), inline = false }: { item: Pic
   );
 }
 
-/** Who submitted it: a name and, under it, the address. */
-export function Submitter({ submitter }: { submitter: ApprovalSubmitter }) {
+/** Who submitted it: a name and, under it, when (`at`) or else the address. */
+export function Submitter({ submitter, at }: { submitter: ApprovalSubmitter; at?: string }) {
   const name = submitterName(submitter);
   const email = submitter.email?.trim() || null;
+  const under = at ? formatApprovalTime(at) : email && email !== name ? email : null;
   return (
-    <span className="flex max-w-[14rem] min-w-0 flex-col">
+    <span className="flex max-w-[14rem] min-w-0 flex-col" title={email ?? undefined}>
       <span className="truncate text-neutral-200">{name}</span>
-      {email && email !== name ? <span className="text-2xs truncate text-neutral-500">{email}</span> : null}
+      {under ? <span className={`text-2xs truncate text-neutral-500 ${at ? 'tabular-nums' : ''}`}>{under}</span> : null}
     </span>
   );
 }

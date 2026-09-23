@@ -74,20 +74,23 @@ export function ApprovalList() {
         title={sectionLabel('/mail-approvals')}
         description={
           approver
-            ? 'Onaya sunulan gönderimler. Bekleyen bir isteği olduğu gibi onaylayabilir, değişkenlerini düzenleyebilir ya da gerekçesiyle reddedebilirsin; 7 gün içinde karar verilmeyen istek gönderilmez.'
-            : 'Onaya sunduğun gönderimler. Bir onaycı onaylayınca gönderilir; reddedilen ya da düzenlemesini kabul etmediğin isteği düzenleyip yeniden sunabilirsin.'
+            ? 'Onaya sunulan gönderimler. 7 gün içinde karar verilmeyen istek gönderilmez.'
+            : 'Onaya sunduğun gönderimler. Bir onaycı onaylayınca gönderilir.'
         }
         actions={canCompose ? <CreatePageButton href={composeHref()}>Yeni gönderim</CreatePageButton> : undefined}
       />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
+        {/* On a phone the filter scrolls within itself, a label to a line. */}
         <div className="max-w-full overflow-x-auto">
-          <FilterPills
-            ariaLabel="Gösterilen istekler"
-            value={view.state}
-            options={APPROVAL_FILTERS}
-            onChange={(next) => show({ state: next, page: 1 })}
-          />
+          <div className="w-max">
+            <FilterPills
+              ariaLabel="Gösterilen istekler"
+              value={view.state}
+              options={APPROVAL_FILTERS}
+              onChange={(next) => show({ state: next, page: 1 })}
+            />
+          </div>
         </div>
         {/* Present from the start, so a screen reader hears the count change with the filter. */}
         <p className="text-xs text-neutral-500 tabular-nums" aria-live="polite">
@@ -128,13 +131,12 @@ export function ApprovalList() {
               {
                 key: 'audience',
                 header: 'Kitle',
-                render: (_, item) => <Audience audience={audienceLabel(item.audience)} className="max-w-[14rem]" />,
+                render: (_, item) => <Audience audience={audienceLabel(item.audience)} className="max-w-[12rem]" />,
               },
-              { key: 'submitter', header: 'Sunan', render: (_, item) => <Submitter submitter={item.submitter} /> },
               {
-                key: 'submitted_at',
-                header: 'Sunuldu',
-                render: (value: string) => <span className="text-neutral-400 tabular-nums">{formatApprovalTime(value)}</span>,
+                key: 'submitter',
+                header: 'Sunan',
+                render: (_, item) => <Submitter submitter={item.submitter} at={item.submitted_at} />,
               },
               { key: 'deadline_at', header: 'Son tarih', render: (_, item) => <Deadline item={item} now={now} /> },
               { key: 'state', header: 'Durum', render: (_, item) => <StateCell item={item} now={now} /> },

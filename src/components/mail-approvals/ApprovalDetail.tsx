@@ -354,8 +354,8 @@ function DecisionPanel({
       <>
         <Lead title="Bu istek onayını bekliyor">
           <p>
-            Olduğu gibi onaylayabilir, değişkenlerini düzenleyip gönderebilir ya da sunana geri gönderebilir, ya da gerekçesiyle
-            reddedebilirsin.{actions.mine ? ' Bu senin isteğin: geçmişte hem sunan hem karar veren olarak görünürsün.' : ''}
+            Olduğu gibi onayla; değişkenlerini düzenleyip gönder ya da sunana geri gönder; ya da gerekçesiyle reddet.
+            {actions.mine ? ' Bu senin isteğin: geçmişte hem sunan hem karar veren olarak görünürsün.' : ''}
           </p>
           <DeadlineLine approval={approval} />
         </Lead>
@@ -578,7 +578,8 @@ function PreviewSection({ approval }: { approval: MailApproval }) {
   const preview = approval.preview;
   const who = preview ? `${preview.rendered_for.full_name || preview.rendered_for.email} <${preview.rendered_for.email}>` : '';
   return (
-    <section id="preview" aria-labelledby="preview-title" className="scroll-mt-4 space-y-3">
+    // Scrolled to from the mail's #preview link: clear of the phone's sticky top bar.
+    <section id="preview" aria-labelledby="preview-title" className="scroll-mt-20 space-y-3 md:scroll-mt-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 id="preview-title" className="text-sm font-medium text-neutral-100">
           Önizleme
