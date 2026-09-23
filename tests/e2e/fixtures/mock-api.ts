@@ -15,15 +15,24 @@
  *    row;
  *  - creating a template publishes its first version; react_email_content
  *    with no code outside comments leaves HTML the Main source;
- *  - a draft whose HTML no longer names a contract Required variable is
- *    refused with 422 template.required_variables_missing — a rough stand-in
- *    for the server's parse, enough to see the refusal (ticket 13 owns it).
+ *  - a draft save, or a publish, whose HTML body does not reference every
+ *    Required variable is refused with 422 template.required_variables_missing,
+ *    naming each missing one by name with its source and reason, as
+ *    requiredvars.CheckBody does. The body is read with the rule the server is
+ *    held to (referencedVariables, pinned to the same cases on both sides), so
+ *    a link left only in an HTML comment is missing here as it is there. The
+ *    mock does not parse: a body the mailer cannot parse is not refused;
+ *  - an operator marks a variable (`POST …/required-variables`) only when the
+ *    published body references it, and releases one (`DELETE
+ *    …/required-variables/{name}`) unless the contract holds it (409); both
+ *    answer with the template, need the write role and write no version.
  *
  * Every request is recorded, with whether it carried the minted session's
  * bearer token and which frame sent it. Anything else answers 501, so a test
  * never passes on a route nobody mocked.
  */
 import type { Page, Route } from "@playwright/test";
+import { referencedVariables } from "../../../src/lib/mail-render/go-template";
 import { E2E_API_URL } from "./env";
 import { VIEWER, accessToken } from "./session";
 
@@ -135,6 +144,8 @@ export class MockSkymail {
     author?: Author;
     /** The contract's Required variables, with why the mail needs them. */
     requiredVariables?: { name: string; reason: string | null }[];
+    /** The Required variables operators marked. */
+    operatorRequired?: string[];
   }): { id: string; versionId: string } {
     const id = this.nextId("7e3a1c00");
     const at = this.now();
@@ -153,7 +164,7 @@ export class MockSkymail {
       archived_by: null,
       published_version_id: null,
       contract_required_variables: input.requiredVariables ?? [],
-      operator_required_variables: [],
+      operator_required_variables: input.operatorRequired ?? [],
     });
     const version = this.write(id, input.author ?? TEMPLATE_SEED, null, {
       name: input.name,
@@ -321,6 +332,7 @@ export class MockSkymail {
     if (!authorized) return refuse(401, "server.unauthorized");
 
     const templateMatch = /^\/templates\/([^/]+)$/.exec(path);
+    const requiredMatch = /^\/templates\/([^/]+)\/required-variables(?:\/([^/]+))?$/.exec(path);
     const versionMatch = /^\/templates\/([^/]+)\/versions\/([^/]+)(?:\/(publish|discard))?$/.exec(path);
     const draftsMatch = /^\/templates\/([^/]+)\/drafts$/.exec(path);
 
@@ -342,6 +354,13 @@ export class MockSkymail {
       }
     }
     if (method === "POST" && draftsMatch) return this.saveDraft(draftsMatch[1], asFields(body));
+    if (requiredMatch && ((method === "POST" && !requiredMatch[2]) || (method === "DELETE" && requiredMatch[2]))) {
+      if (request.authorization !== `Bearer ${accessToken("writer")}`) return refuse(403, "server.forbidden");
+      const [, templateId, name] = requiredMatch;
+      return method === "POST"
+        ? this.markRequired(templateId, asFields(body).name)
+        : this.releaseRequired(templateId, decodeURIComponent(name));
+    }
 
     return refuse(501, "e2e.not_mocked", { method, path });
   }
@@ -382,14 +401,50 @@ export class MockSkymail {
   }
 
   /**
-   * The Required variables a body no longer references. A rough stand-in for
-   * the server's parse (an action naming `.Name`), enough to see the refusal.
+   * The Required variables `html` does not reference, as requiredvars.CheckBody
+   * lists them: each with its source and reason, sorted by name byte by byte.
+   * `operator` stands in for the operator set, for a check before it is written.
    */
-  private missingRequired(templateId: string, html: string) {
-    const referenced = (name: string) => new RegExp(`\\{\\{[^}]*\\$?\\.${name}\\b`).test(html);
-    return this.row(templateId)
-      .contract_required_variables.filter((variable) => !referenced(variable.name))
-      .map((variable) => ({ name: variable.name, source: "contract", reason: variable.reason }));
+  private missingRequired(templateId: string, html: string, operator = this.row(templateId).operator_required_variables) {
+    const referenced = new Set(referencedVariables(html));
+    return [
+      ...this.row(templateId).contract_required_variables.map(({ name, reason }) => ({ name, source: "contract", reason })),
+      ...operator.map((name) => ({ name, source: "operator", reason: null })),
+    ]
+      .filter((variable) => !referenced.has(variable.name))
+      .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+  }
+
+  /** The server's variable name rule (validator.IsVariableName). */
+  private static isVariableName(name: unknown): name is string {
+    return typeof name === "string" && /^[A-Za-z_][A-Za-z0-9_]{0,63}$/.test(name);
+  }
+
+  private markRequired(templateId: string, name: unknown): Answer {
+    const row = this.rows.get(templateId);
+    if (!row) return refuse(404, "server.not_found");
+    if (!MockSkymail.isVariableName(name)) {
+      return refuse(400, "validation.error", { errors: [{ field: "name", code: "invalid_variable_name" }] });
+    }
+    // One the contract holds is required already, and stays the contract's.
+    const inContract = row.contract_required_variables.some((variable) => variable.name === name);
+    const operator = inContract || row.operator_required_variables.includes(name) ? row.operator_required_variables : [...row.operator_required_variables, name].sort();
+    // The published body must reference every Required variable, the new one too.
+    const missing = this.missingRequired(templateId, row.html_content, operator);
+    if (missing.length > 0) return refuse(422, "template.required_variables_missing", { missing });
+    row.operator_required_variables = operator;
+    return { status: 200, body: this.served(row) };
+  }
+
+  private releaseRequired(templateId: string, name: string): Answer {
+    const row = this.rows.get(templateId);
+    if (!row) return refuse(404, "server.not_found");
+    if (!MockSkymail.isVariableName(name)) return refuse(400, "template.invalid_variable_name");
+    if (row.contract_required_variables.some((variable) => variable.name === name)) {
+      return refuse(409, "template.required_variable_in_contract", { name });
+    }
+    row.operator_required_variables = row.operator_required_variables.filter((marked) => marked !== name);
+    return { status: 200, body: this.served(row) };
   }
 
   private publishDraft(version: Version, body: unknown): Answer {
@@ -406,6 +461,9 @@ export class MockSkymail {
         published_version_id: row.published_version_id,
       });
     }
+    // Against the Required variables as they are now, not as they were when the draft was saved.
+    const missing = this.missingRequired(row.id, version.html_content);
+    if (missing.length > 0) return refuse(422, "template.required_variables_missing", { missing });
     this.publish(version);
     return { status: 200, body: this.served(row) };
   }
