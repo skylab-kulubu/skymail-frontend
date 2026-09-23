@@ -27,9 +27,16 @@
  *   KEYCLOAK_CLIENT_ID
  *   KEYCLOAK_CLIENT_SECRET
  *
+ * The seed renders from the working tree, so a checkout missing a template
+ * commit writes the older wording over the newer one — and the run still prints
+ * a tick per template, which is why this is caught before the first request
+ * rather than read out of the output. --allow-stale seeds anyway.
+ *
  * Needs skymail:access + skymail:templates:write. Pass --dry-run to see what
  * would change without touching anything.
  */
+import { execFileSync } from "node:child_process";
+
 import React from "react";
 import { render } from "@react-email/render";
 import { templates } from "../emails";
@@ -37,6 +44,9 @@ import { templates } from "../emails";
 const BASE_URL = (process.env.SKYMAIL_URL ?? "http://localhost:3000").replace(/\/+$/, "");
 const DRY_RUN = process.argv.includes("--dry-run");
 const SEED_COMMAND = "corepack yarn emails:seed";
+/** Template sources a stale checkout would seed an older copy of. */
+const SEEDED_PATHS = ["emails", "scripts"];
+const ALLOW_STALE = process.argv.includes("--allow-stale");
 
 /** The keys --force=<key>[,<key>] names, or "all" for --force-all. A key the seed does not have is a mistake. */
 function forcedKeys(): Set<string> | "all" {
@@ -192,7 +202,65 @@ async function resolveToken(): Promise<string> {
   return payload.access_token;
 }
 
+/** Runs git, or null when it fails — a missing remote and a tarball both land here. */
+function git(args: string[]): string | null {
+  try {
+    return execFileSync("git", args, {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+      timeout: 15_000,
+      // A credential prompt would hang the seed instead of failing it.
+      env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },
+    }).trim();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Refuses to seed from a checkout that is behind origin/main in the template
+ * sources. Only missing commits are the hazard: uncommitted edits and a branch
+ * ahead of main are how the templates are written in the first place.
+ */
+function checkFreshness(): void {
+  if (ALLOW_STALE) {
+    return;
+  }
+  if (git(["rev-parse", "--is-inside-work-tree"]) !== "true") {
+    return;
+  }
+
+  const fetched = git(["fetch", "--quiet", "origin", "main"]) !== null;
+  const ref = fetched ? "FETCH_HEAD" : "origin/main";
+  const missing = git(["log", "--format=%h %s", `HEAD..${ref}`, "--", ...SEEDED_PATHS]);
+  if (missing === null) {
+    console.log(`Uyarı: ${ref} okunamadı, tazelik kontrolü yapılamadı.\n`);
+    return;
+  }
+  if (!fetched) {
+    console.log("Uyarı: origin'e ulaşılamadı; karşılaştırma yerel origin/main ile yapıldı.\n");
+  }
+  if (missing === "") {
+    return;
+  }
+
+  const commits = missing.split("\n");
+  throw new Error(
+    [
+      `Çalışma kopyası origin/main'in gerisinde: ${SEEDED_PATHS.join("/ ve ")}/ altında ${commits.length} commit eksik.`,
+      "Bu hâlde seed eski şablonları yeninin üstüne yazar ve çıktı bunu söylemez — her şablon yine ✓ görünür.",
+      "",
+      ...commits.map((commit) => `  ${commit}`),
+      "",
+      "  Düzeltmek için:  git pull --ff-only origin main && corepack yarn install",
+      `  Bilerek eskiyi yazacaksan: ${SEED_COMMAND} --allow-stale`,
+    ].join("\n"),
+  );
+}
+
 async function main(): Promise<void> {
+  checkFreshness();
+
   if (DRY_RUN) {
     console.log(`[kuru çalışma] ${BASE_URL} üzerine hiçbir şey yazılmayacak.\n`);
   }
