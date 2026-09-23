@@ -79,6 +79,8 @@ export function RestoreDialog({
           confirmLabel="Taslak olarak geri getir"
           pendingLabel="Geri getiriliyor…"
           isPending={busy}
+          // The copy itself was refused; the same restore would be refused again.
+          confirmDisabled={refusal?.problem?.kind === 'missing-variables' || refusal?.problem?.kind === 'unparseable'}
         />
       </div>
     </Modal>
@@ -86,7 +88,7 @@ export function RestoreDialog({
 }
 
 function Fact({ fact, older, newer }: { fact: ComparisonFact; older: number; newer: number }) {
-  const quote = (text: string | null) => (text === null ? '—' : `“${text}”`);
+  const quote = (text: string | null) => (text === null ? '—' : fact.kind === 'text' ? `“${text}”` : text);
   return (
     <div className="grid gap-x-3 gap-y-0.5 py-1.5 sm:grid-cols-[7rem_1fr]">
       <dt className="text-xs text-neutral-500">{fact.label}</dt>
@@ -95,8 +97,8 @@ function Fact({ fact, older, newer }: { fact: ComparisonFact; older: number; new
           <span className="text-neutral-400">
             Aynı{fact.newer !== null ? <span className="text-neutral-300">: {quote(fact.newer)}</span> : null}
           </span>
-        ) : fact.older === null && fact.newer === null ? (
-          <span className="text-amber-300">Farklı; aşağıda render edilmiş hâlleri yan yana.</span>
+        ) : fact.kind === 'body' ? (
+          <span className="text-amber-300">Farklı; render edilmiş hâlleri aşağıda.</span>
         ) : (
           <span className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
             <span className="text-neutral-400">

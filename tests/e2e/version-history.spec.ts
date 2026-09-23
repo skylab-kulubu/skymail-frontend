@@ -88,7 +88,7 @@ test("two versions compare side by side, and restoring one opens a new draft whi
   const facts = comparison.getByRole("definition");
   await expect(facts.nth(1)).toContainText("“Bu hafta SKY LAB'de”");
   await expect(facts.nth(1)).toContainText("“Mehmet'in konusu”");
-  await expect(facts.nth(2)).toContainText("Aynı: “HTML”");
+  await expect(facts.nth(2)).toContainText("Aynı: HTML");
   await expect(facts.nth(3)).toContainText("Farklı");
   const frames = comparison.locator("iframe");
   await expect(frames.first()).toHaveAttribute("title", "Sürüm #1");

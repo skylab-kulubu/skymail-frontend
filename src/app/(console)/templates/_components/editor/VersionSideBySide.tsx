@@ -33,18 +33,20 @@ function VersionColumn({
   scheme: MailScheme;
 }) {
   const { label, version, line, actions, emptyText = 'Yayımlanmış bir sürüm yok.' } = side;
+  // Beside a wide screen's other column, the rows line up (subgrid): the two
+  // mails start at the same height however long either heading runs.
   return (
-    <section aria-label={label} className="min-w-0 space-y-2">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0">
+    <section aria-label={label} className="grid min-w-0 content-start gap-2 md:row-span-3 md:grid-rows-subgrid">
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-sm font-medium text-neutral-100">{label}</h3>
-          {version ? (
-            <p className="text-xs text-neutral-500">
-              {line ?? `${versionLine(version, viewerSub)} · Main source ${AUTHORING_MODE_LABEL[version.main_mode]}`}
-            </p>
-          ) : null}
+          {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
         </div>
-        {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
+        {version ? (
+          <p className="text-xs text-neutral-500">
+            {line ?? `${versionLine(version, viewerSub)} · Main source ${AUTHORING_MODE_LABEL[version.main_mode]}`}
+          </p>
+        ) : null}
       </div>
       {version ? (
         <>
@@ -79,7 +81,7 @@ export function VersionSideBySide({
       <div className="flex justify-end">
         <SchemeToggle value={scheme} onChange={setScheme} />
       </div>
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2 md:gap-y-2">
         {sides.map((side) => (
           <VersionColumn key={side.label} side={side} viewerSub={viewerSub} sample={sample} scheme={scheme} />
         ))}

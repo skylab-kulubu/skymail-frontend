@@ -297,9 +297,9 @@ describe("what a comparison says in words", () => {
     const older = version(2, { name: "Hoş geldin", subject: "Merhaba {{.FirstName}}", main_mode: "html" });
     const newer = version(5, { name: "Hoş geldin maili", subject: "SKY LAB'e hoş geldin", main_mode: "jsx" });
     assert.deepEqual(comparisonFacts(older, newer).slice(0, 3), [
-      { label: "Ad", older: "Hoş geldin", newer: "Hoş geldin maili", same: false },
-      { label: "Konu", older: "Merhaba {{.FirstName}}", newer: "SKY LAB'e hoş geldin", same: false },
-      { label: "Main source", older: "HTML", newer: "JSX", same: false },
+      { label: "Ad", kind: "text", older: "Hoş geldin", newer: "Hoş geldin maili", same: false },
+      { label: "Konu", kind: "text", older: "Merhaba {{.FirstName}}", newer: "SKY LAB'e hoş geldin", same: false },
+      { label: "Main source", kind: "mode", older: "HTML", newer: "JSX", same: false },
     ]);
   });
 
@@ -308,6 +308,7 @@ describe("what a comparison says in words", () => {
     const body = (facts: ReturnType<typeof comparisonFacts>) => facts.find((fact) => fact.label === "Gövde");
     assert.deepEqual(body(comparisonFacts(version(2), version(3, { html_content: "<p>Selam</p>" }))), {
       label: "Gövde",
+      kind: "body",
       older: null,
       newer: null,
       same: false,
@@ -317,7 +318,7 @@ describe("what a comparison says in words", () => {
 
   it("does not claim a name a backend did not send", () => {
     const [name] = comparisonFacts(version(2, { name: undefined }), version(3));
-    assert.deepEqual(name, { label: "Ad", older: null, newer: "Hoş geldin", same: false });
+    assert.deepEqual(name, { label: "Ad", kind: "text", older: null, newer: "Hoş geldin", same: false });
   });
 });
 

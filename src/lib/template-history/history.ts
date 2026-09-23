@@ -165,6 +165,8 @@ export function togglePick(picked: readonly string[], id: string): string[] {
 /** One thing a comparison says in words beside the rendered mails. */
 export type ComparisonFact = Readonly<{
   label: string;
+  /** Words the operator wrote, quoted; an Authoring mode, named; or the body, compared as rendered mail. */
+  kind: "text" | "mode" | "body";
   /** Null where there is nothing to quote: a body is compared as rendered mail, not as text. */
   older: string | null;
   newer: string | null;
@@ -174,18 +176,21 @@ export type ComparisonFact = Readonly<{
 type Compared = Pick<TemplateVersion, "name" | "subject" | "main_mode" | "html_content" | "plain_text_content">;
 
 export function comparisonFacts(older: Compared, newer: Compared): ComparisonFact[] {
-  const quoted = (label: string, a: string | null, b: string | null): ComparisonFact => ({
+  const fact = (label: string, kind: "text" | "mode", a: string | null, b: string | null): ComparisonFact => ({
     label,
+    kind,
     older: a,
     newer: b,
     same: a !== null && a === b,
   });
+  const mode = (version: Compared) => AUTHORING_MODE_LABEL[version.main_mode] ?? version.main_mode;
   return [
-    quoted("Ad", older.name ?? null, newer.name ?? null),
-    quoted("Konu", older.subject, newer.subject),
-    quoted("Main source", AUTHORING_MODE_LABEL[older.main_mode] ?? older.main_mode, AUTHORING_MODE_LABEL[newer.main_mode] ?? newer.main_mode),
+    fact("Ad", "text", older.name ?? null, newer.name ?? null),
+    fact("Konu", "text", older.subject, newer.subject),
+    fact("Main source", "mode", mode(older), mode(newer)),
     {
       label: "Gövde",
+      kind: "body",
       older: null,
       newer: null,
       same: older.html_content === newer.html_content && older.plain_text_content === newer.plain_text_content,
