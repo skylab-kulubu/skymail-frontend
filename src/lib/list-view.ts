@@ -21,26 +21,50 @@ export type ListView = Readonly<{ lifecycle: Lifecycle; page: number }>;
 
 const DEFAULT_VIEW: ListView = { lifecycle: "current", page: 1 };
 
-function parseLifecycle(raw: string | null): Lifecycle {
-  return LIFECYCLE_FILTERS.find((filter) => filter.value === raw)?.value ?? DEFAULT_VIEW.lifecycle;
+/** One of a filter's values from the address's `key`; `fallback` for anything else. */
+export function readOption<T extends string>(
+  params: URLSearchParams,
+  key: string,
+  options: ReadonlyArray<{ value: T }>,
+  fallback: T,
+): T {
+  const raw = params.get(key);
+  return options.find((option) => option.value === raw)?.value ?? fallback;
 }
 
-function parsePage(raw: string | null): number {
-  return raw !== null && /^\d+$/.test(raw) && Number(raw) >= 1 ? Number(raw) : DEFAULT_VIEW.page;
+/** The address's positive whole page number; 1 for anything else. */
+export function readPage(params: URLSearchParams): number {
+  const raw = params.get("page");
+  return raw !== null && /^\d+$/.test(raw) && Number(raw) >= 1 ? Number(raw) : 1;
+}
+
+/**
+ * `pathname` with a view's parts as its query, each given as
+ * `[value, default]` and left out while it is its default.
+ */
+export function viewHref(
+  pathname: string,
+  parts: Readonly<Record<string, readonly [value: string | number, fallback: string | number]>>,
+): string {
+  const params = new URLSearchParams();
+  for (const [key, [value, fallback]] of Object.entries(parts)) {
+    if (value !== fallback) params.set(key, String(value));
+  }
+  const search = params.toString();
+  return search ? `${pathname}?${search}` : pathname;
 }
 
 /** The view an address asks for; anything it does not recognise falls back to the default. */
 export function readListView(params: URLSearchParams): ListView {
-  return { lifecycle: parseLifecycle(params.get("lifecycle")), page: parsePage(params.get("page")) };
+  return { lifecycle: readOption(params, "lifecycle", LIFECYCLE_FILTERS, DEFAULT_VIEW.lifecycle), page: readPage(params) };
 }
 
 /** The address of `view` on `pathname`, leaving the defaults out. */
 export function listViewHref(pathname: string, view: ListView): string {
-  const params = new URLSearchParams();
-  if (view.lifecycle !== DEFAULT_VIEW.lifecycle) params.set("lifecycle", view.lifecycle);
-  if (view.page !== DEFAULT_VIEW.page) params.set("page", String(view.page));
-  const search = params.toString();
-  return search ? `${pathname}?${search}` : pathname;
+  return viewHref(pathname, {
+    lifecycle: [view.lifecycle, DEFAULT_VIEW.lifecycle],
+    page: [view.page, DEFAULT_VIEW.page],
+  });
 }
 
 /** The slice of the whole list a page covers, as `_start` (inclusive) and `_end` (exclusive). */
@@ -59,4 +83,25 @@ export function listViewQuery(
 /** How many pages `total` rows fill; an empty list still has its one page. */
 export function pageCount(total: number, pageSize: number): number {
   return Math.max(1, Math.ceil(total / pageSize));
+}
+
+/**
+ * How many pages to offer. Without the API's total (X-Total-Count did not
+ * reach the browser) a full page may have another after it.
+ */
+export function knownPageCount(
+  loaded: { total: number | null; rows: number },
+  page: number,
+  pageSize: number,
+): number {
+  if (loaded.total !== null) return pageCount(loaded.total, pageSize);
+  return loaded.rows >= pageSize ? page + 1 : page;
+}
+
+/**
+ * Where a page past the end — its last row archived, or a stale link — moves
+ * to: the last page there is. Null while it exists or the count is unknown.
+ */
+export function pageToMoveTo(page: number, lastPage: number | null): number | null {
+  return lastPage !== null && page > lastPage ? lastPage : null;
 }

@@ -22,7 +22,7 @@ import { RoleGate } from '@/components/layout/RoleGate';
 import { Button } from '@/components/ui/Button';
 import { ROLE } from '@/lib/access';
 import { useApi, useApiLoad } from '@/lib/api/react';
-import { formatDateTime } from '@/lib/format';
+import { formatClubTime } from '@/lib/format';
 import { useFlashNotice, type NoticeData } from '@/lib/notice';
 import { renderOf } from '@/lib/mail-render/save';
 import {
@@ -41,6 +41,7 @@ import {
   type EditorState,
 } from '@/lib/template-editor/editor-state';
 import { versionProblem } from '@/lib/template-editor/refusals';
+import { authorLabel } from '@/lib/template-history/history';
 import { useRepoSample } from '@/lib/template-editor/use-repo-sample';
 import { useRenderBridge, useSourceRenders } from '@/lib/template-editor/use-renders';
 import { offeredVariables } from '@/lib/template-editor/visual-variables';
@@ -58,12 +59,13 @@ import {
   type StaleConflict,
   type TemplateVersion,
 } from '@/lib/templates';
-import { EditorNote, RefusalNotice, TemplateKey, authorLabel, type Refusal } from './EditorParts';
+import { EditorNote, RefusalNotice, TemplateKey, type Refusal } from './EditorParts';
 import { DiscardDialog, MainSourceDialog, PublishDialog, StaleComparison } from './EditorDialogs';
 import { PreviewPane, useSample } from './PreviewPane';
 import { RequiredVariablesPanel } from './RequiredVariablesPanel';
 import { SourcePanel, SourceTabs } from './SourcePane';
 import { TemplateLoadFailure } from './TemplateLoadFailure';
+import { HistoryLinks } from '../history/HistoryParts';
 
 type Loaded = { template: MailTemplate; version: TemplateVersion | null; loadedAt: number };
 
@@ -317,6 +319,8 @@ function Editor({
           <>
             {template.system ? <Tag tone="system">System</Tag> : null}
             {template.key ? <span className="font-mono text-xs break-all text-neutral-400">{template.key}</span> : null}
+            {/* A real navigation: beforeunload is the editor's only guard for unsaved changes. */}
+            <HistoryLinks template={template} fullNavigation />
           </>
         }
       />
@@ -326,7 +330,7 @@ function Editor({
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <p className="min-w-0 flex-1 text-sm text-neutral-400">
           {stored.draftId
-            ? `Taslağını düzenliyorsun: #${stored.seq}, ${formatDateTime(stored.savedAt)}.`
+            ? `Taslağını düzenliyorsun: #${stored.seq}, ${formatClubTime(stored.savedAt)}.`
             : `Gönderilen sürümü görüyorsun: #${stored.seq}. Kaydettiğinde taslağın olur.`}
           {dirty ? <span className="text-amber-300"> Kaydedilmemiş değişiklikler var.</span> : null}
         </p>
@@ -363,7 +367,7 @@ function Editor({
       {others.length > 0 ? (
         <EditorNote>
           Yayımlanmamış başka taslak var:{' '}
-          {others.map((draft) => `${authorLabel(draft.author, viewerSub)} (${formatDateTime(draft.created_at)})`).join(', ')}.
+          {others.map((draft) => `${authorLabel(draft.author, viewerSub)} (${formatClubTime(draft.created_at)})`).join(', ')}.
           Senin kaydettiğin onlarınkini değiştirmez.
         </EditorNote>
       ) : null}

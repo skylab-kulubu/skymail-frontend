@@ -2,20 +2,20 @@
 
 import { useId, useState } from 'react';
 import { ChevronDown, PenLine } from 'lucide-react';
-import { formatDateTime } from '@/lib/format';
+import { formatClubTime } from '@/lib/format';
 import type { DraftAuthor, DraftsInProgress } from '@/lib/templates';
 
 /** Marks the viewer's own draft. */
 function MineMark() {
   return (
     <span className="bg-skylab-500/15 text-skylab-300 text-3xs shrink-0 rounded px-1 py-px font-medium tracking-wider uppercase">
-      Senin
+      Sen
     </span>
   );
 }
 
 function describe(author: DraftAuthor): string {
-  return `${author.name}${author.mine ? ' (senin)' : ''}, ${formatDateTime(author.writtenAt)}`;
+  return `${author.name}${author.mine ? ' (sen)' : ''}, ${formatClubTime(author.writtenAt)}`;
 }
 
 /**
@@ -41,7 +41,7 @@ export function DraftIndicator({ drafts }: { drafts: DraftsInProgress }) {
           </span>
           {author.mine ? <MineMark /> : null}
         </span>
-        <span className="text-2xs block pl-[1.125rem] text-neutral-500">{formatDateTime(author.writtenAt)}</span>
+        <span className="text-2xs block pl-[1.125rem] text-neutral-500">{formatClubTime(author.writtenAt)}</span>
       </div>
     );
   }
@@ -73,7 +73,7 @@ export function DraftIndicator({ drafts }: { drafts: DraftsInProgress }) {
           <li key={author.versionId} className="flex flex-wrap items-center gap-x-1.5 text-xs text-neutral-300">
             <span>{author.name}</span>
             {author.mine ? <MineMark /> : null}
-            <span className="text-2xs text-neutral-500">{formatDateTime(author.writtenAt)}</span>
+            <span className="text-2xs text-neutral-500">{formatClubTime(author.writtenAt)}</span>
           </li>
         ))}
       </ul>

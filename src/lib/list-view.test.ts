@@ -7,10 +7,15 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   LIFECYCLE_FILTERS,
+  knownPageCount,
   listViewHref,
   listViewQuery,
   pageCount,
+  pageToMoveTo,
   readListView,
+  readOption,
+  readPage,
+  viewHref,
 } from "./list-view";
 
 const view = (search: string) => readListView(new URLSearchParams(search));
@@ -91,5 +96,52 @@ describe("the address", () => {
     const written = { lifecycle: "all", page: 4 } as const;
     const search = listViewHref("/x", written).split("?")[1];
     assert.deepEqual(view(search), written);
+  });
+});
+
+// Any list keeps its view the same way, whatever its filter is called.
+describe("a view in the address, for any list", () => {
+  const STATES = [{ value: "all" }, { value: "draft" }] as const;
+
+  it("reads one of the filter's values under its own name, else the default", () => {
+    assert.equal(readOption(new URLSearchParams("state=draft"), "state", STATES, "all"), "draft");
+    assert.equal(readOption(new URLSearchParams("state=nope"), "state", STATES, "all"), "all");
+    assert.equal(readOption(new URLSearchParams("lifecycle=draft"), "state", STATES, "all"), "all");
+  });
+
+  it("reads the page", () => {
+    assert.equal(readPage(new URLSearchParams("page=4")), 4);
+    assert.equal(readPage(new URLSearchParams("page=0")), 1);
+  });
+
+  it("writes what differs from the defaults, in the order given", () => {
+    assert.equal(viewHref("/x", { state: ["draft", "all"], page: [2, 1] }), "/x?state=draft&page=2");
+    assert.equal(viewHref("/x", { state: ["all", "all"], page: [1, 1] }), "/x");
+  });
+});
+
+describe("how many pages there are", () => {
+  it("is the API's count when it sent one", () => {
+    assert.equal(knownPageCount({ total: 0, rows: 0 }, 1, 25), 1);
+    assert.equal(knownPageCount({ total: 26, rows: 25 }, 1, 25), 2);
+  });
+
+  // Without X-Total-Count a full page may have another after it.
+  it("is one more than this page when this one is full and the total is unknown", () => {
+    assert.equal(knownPageCount({ total: null, rows: 25 }, 3, 25), 4);
+    assert.equal(knownPageCount({ total: null, rows: 7 }, 3, 25), 3);
+  });
+});
+
+describe("a page past the end", () => {
+  // Its last row archived, or a stale link: the list moves to the last page there is.
+  it("moves to the last page there is", () => {
+    assert.equal(pageToMoveTo(5, 3), 3);
+  });
+
+  it("stays while the count is unknown or the page exists", () => {
+    assert.equal(pageToMoveTo(5, null), null);
+    assert.equal(pageToMoveTo(3, 3), null);
+    assert.equal(pageToMoveTo(1, 1), null);
   });
 });

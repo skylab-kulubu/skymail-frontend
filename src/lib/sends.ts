@@ -14,10 +14,8 @@
  */
 import type { ApiClient, ApiPage } from "./api/client";
 import { ApiError } from "./api/errors";
-import { pageCount, pageRange } from "./list-view";
-
-/** The club's zone, and the summary's: send times are shown in it. */
-const CLUB_TIME_ZONE = "Europe/Istanbul";
+import { CLUB_TIME_ZONE, formatClubTime } from "./format";
+import { pageRange } from "./list-view";
 
 export const SEND_PAGE_SIZE = 25;
 export const RECIPIENT_PAGE_SIZE = 25;
@@ -116,19 +114,6 @@ function withSearch(path: string, status: string, page: number): string {
   if (page > 1) params.set("page", String(page));
   const search = params.toString();
   return search ? `${path}?${search}` : path;
-}
-
-/**
- * How many pages to offer. Without the API's total (X-Total-Count did not
- * reach the browser) a full page may have another after it.
- */
-export function knownPageCount(
-  loaded: { total: number | null; rows: number },
-  page: number,
-  pageSize: number,
-): number {
-  if (loaded.total !== null) return pageCount(loaded.total, pageSize);
-  return loaded.rows >= pageSize ? page + 1 : page;
 }
 
 // ---------------------------------------------------------------------------
@@ -380,35 +365,5 @@ export function noRecipientsNote(createdAt: string, now: Date = new Date()): str
     : "Bu gönderimde kimse kuyruğa alınmadı: Mail template işlenemedi ya da kitlede kimse yoktu. Kimseye mail gitmedi; gönderim başarısız sayılır.";
 }
 
-const SEND_TIME = new Map<string, Intl.DateTimeFormat>();
-
-function sendTimeFormat(timeZone: string): Intl.DateTimeFormat {
-  let format = SEND_TIME.get(timeZone);
-  if (!format) {
-    try {
-      format = new Intl.DateTimeFormat("tr-TR", {
-        timeZone,
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } catch {
-      // A zone this browser does not know: the club's.
-      return sendTimeFormat(CLUB_TIME_ZONE);
-    }
-    SEND_TIME.set(timeZone, format);
-  }
-  return format;
-}
-
-/**
- * "23 Eyl 2026 09:00" in `timeZone` — the summary's `time_zone` on the home
- * screen, the club's (Europe/Istanbul) elsewhere — whatever the browser's.
- */
-export function formatSendTime(iso: string | null | undefined, timeZone: string = CLUB_TIME_ZONE): string {
-  if (!iso) return "—";
-  const time = new Date(iso);
-  return Number.isNaN(time.getTime()) ? "—" : sendTimeFormat(timeZone).format(time);
-}
+/** A send's time, as every screen shows it (src/lib/format.ts). */
+export const formatSendTime = formatClubTime;

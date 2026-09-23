@@ -28,7 +28,13 @@
  *    published body references it, and releases one (`DELETE
  *    …/required-variables/{name}`) unless the contract holds it (409); both
  *    answer with the template, need the write role, write no version, and
- *    answer 404 for an archived template.
+ *    answer 404 for an archived template;
+ *  - the history (ticket 14, feat/seed-conflict): versions newest first,
+ *    filtered by `state` and paged with `_start`/`_end` and X-Total-Count;
+ *    restoring a version copies it into a new draft by the caller started
+ *    from what is published, or answers 200 with the version the copy would
+ *    repeat (the caller's draft in progress on the published version, else
+ *    the published one); a template carries `seed_refusal`.
  *
  * A test can hold a request (`hold`) to put two in the order it needs.
  *
@@ -66,6 +72,9 @@ export type Version = {
   plain_text_content: string;
 };
 
+/** A refused Template seed, as the template carries it (`handlers.SeedRefusal`). */
+export type SeedRefusal = { refused_at: string; rules: string[]; payload_sha256: string };
+
 type Row = {
   id: string;
   name: string;
@@ -83,6 +92,7 @@ type Row = {
   published_version_id: string | null;
   contract_required_variables: { name: string; reason: string | null }[];
   operator_required_variables: string[];
+  seed_refusal: SeedRefusal | null;
 };
 
 /**
@@ -119,8 +129,8 @@ const CONTENT_FIELDS = ["name", "subject", "main_mode", "jsx_source", "visual_so
 /** The server's template_jsx_source rule: code left once comments are removed. */
 const hasCode = (text: string) => text.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, "").trim() !== "";
 
-/** What an API route answers: a status and a JSON body, if any. */
-export type Answer = { status: number; body?: unknown };
+/** What an API route answers: a status, a JSON body if any, and headers such as X-Total-Count. */
+export type Answer = { status: number; body?: unknown; headers?: Record<string, string> };
 
 const refuse = (status: number, code: string, params?: Record<string, unknown>): Answer => ({
   status,
@@ -197,6 +207,7 @@ export class MockSkymail {
       published_version_id: null,
       contract_required_variables: input.requiredVariables ?? [],
       operator_required_variables: input.operatorRequired ?? [],
+      seed_refusal: null,
     });
     const version = this.write(id, input.author ?? TEMPLATE_SEED, null, {
       name: input.name,
@@ -213,13 +224,15 @@ export class MockSkymail {
   }
 
   /**
-   * Someone else publishes straight away — another operator's publish, or a
-   * Template seed — starting from what is published now.
+   * Someone else publishes straight away — another operator's publish,
+   * starting from what is published now, or a Template seed's, which starts
+   * from nothing (only a forced seed names what it replaced).
    */
   publishAs(templateId: string, author: Author, changes: Partial<Content>): Version {
     const row = this.row(templateId);
     const current = this.version(row.published_version_id!);
-    const version = this.write(templateId, author, current.id, { ...this.contentOf(current), ...changes });
+    const base = author.kind === "template_seed" ? null : current.id;
+    const version = this.write(templateId, author, base, { ...this.contentOf(current), ...changes });
     this.publish(version);
     return version;
   }
@@ -228,6 +241,11 @@ export class MockSkymail {
   addDraft(templateId: string, author: Author, changes: Partial<Content>): Version {
     const current = this.version(this.row(templateId).published_version_id!);
     return this.write(templateId, author, current.id, { ...this.contentOf(current), ...changes });
+  }
+
+  /** A Template seed refused for the template (ticket 09): the record the API keeps until a seed goes through. */
+  refuseSeed(templateId: string, rules: string[], refusedAt = "2026-09-22T21:10:00Z") {
+    this.row(templateId).seed_refusal = { refused_at: refusedAt, rules, payload_sha256: "e3".repeat(32) };
   }
 
   row(id: string): Row {
@@ -348,28 +366,37 @@ export class MockSkymail {
       // A request from no frame (a worker) has none.
     }
     const method = request.method();
-    const path = new URL(request.url()).pathname.slice(new URL(E2E_API_URL).pathname.length);
+    const url = new URL(request.url());
+    const path = url.pathname.slice(new URL(E2E_API_URL).pathname.length);
     const held = this.holds.find((hold) => !hold.used && hold.method === method && hold.path === path);
     if (held) {
       held.used = true;
       held.reach();
       if (held.stage === "request") await held.gate;
     }
-    const answer = this.respond({ method, path, body, authorization: request.headers().authorization, frameUrl });
+    const answer = this.respond({ method, path, search: url.search, body, authorization: request.headers().authorization, frameUrl });
     if (held?.stage === "answer") await held.gate;
     await route.fulfill({
       status: answer.status,
       contentType: "application/json",
+      headers: answer.headers,
       body: answer.body === undefined ? "" : JSON.stringify(answer.body),
     });
   }
 
   /**
-   * One request, answered: `path` is what follows the API base. The browser
-   * tests reach it through `attach`; the dev server's stand-in API can serve
-   * it over HTTP.
+   * One request, answered: `path` is what follows the API base, `search` its
+   * query string. The browser tests reach it through `attach`; the dev
+   * server's stand-in API can serve it over HTTP.
    */
-  respond(request: { method: string; path: string; body: unknown; authorization?: string; frameUrl?: string }): Answer {
+  respond(request: {
+    method: string;
+    path: string;
+    search?: string;
+    body: unknown;
+    authorization?: string;
+    frameUrl?: string;
+  }): Answer {
     const { method, path, body } = request;
     const authorized =
       request.authorization === `Bearer ${accessToken("writer")}` || request.authorization === `Bearer ${accessToken("reader")}`;
@@ -378,7 +405,8 @@ export class MockSkymail {
 
     const templateMatch = /^\/templates\/([^/]+)$/.exec(path);
     const requiredMatch = /^\/templates\/([^/]+)\/required-variables(?:\/([^/]+))?$/.exec(path);
-    const versionMatch = /^\/templates\/([^/]+)\/versions\/([^/]+)(?:\/(publish|discard))?$/.exec(path);
+    const versionMatch = /^\/templates\/([^/]+)\/versions\/([^/]+)(?:\/(publish|discard|restore))?$/.exec(path);
+    const historyMatch = /^\/templates\/([^/]+)\/versions$/.exec(path);
     const draftsMatch = /^\/templates\/([^/]+)\/drafts$/.exec(path);
 
     if (method === "GET" && templateMatch) {
@@ -386,12 +414,14 @@ export class MockSkymail {
       return row ? { status: 200, body: this.served(row) } : refuse(404, "server.not_found");
     }
     if (method === "POST" && path === "/templates") return this.create(asFields(body));
+    if (method === "GET" && historyMatch) return this.history(historyMatch[1], new URLSearchParams(request.search ?? ""));
     if (versionMatch) {
       const [, templateId, versionId, action] = versionMatch;
       const version = this.versions.get(versionId);
       if (!this.rows.has(templateId) || !version || version.template_id !== templateId) return refuse(404, "server.not_found");
       if (method === "GET" && !action) return { status: 200, body: this.full(version) };
       if (method === "POST" && action === "publish") return this.publishDraft(version, body);
+      if (method === "POST" && action === "restore") return this.restore(version);
       if (method === "POST" && action === "discard") {
         if (version.published_at) return refuse(409, "template.not_a_draft");
         version.discarded = true;
@@ -498,6 +528,45 @@ export class MockSkymail {
     }
     row.operator_required_variables = row.operator_required_variables.filter((marked) => marked !== name);
     return { status: 200, body: this.served(row) };
+  }
+
+  /** A page of the history, newest first: `state` published|draft|all, `_start`/`_end`, the total in X-Total-Count. */
+  private history(templateId: string, query: URLSearchParams): Answer {
+    if (!this.rows.has(templateId)) return refuse(404, "server.not_found");
+    const state = query.get("state") ?? "all";
+    if (!["all", "published", "draft"].includes(state)) {
+      return refuse(400, "validation.error", { errors: [{ field: "state", code: "oneof" }] });
+    }
+    const listed = this.versionsOf(templateId).filter(
+      (version) => state === "all" || (state === "published") === (version.published_at !== null),
+    );
+    const start = Number(query.get("_start") ?? 0);
+    const end = Number(query.get("_end") ?? start + 10);
+    return {
+      status: 200,
+      body: listed.slice(start, end).map((version) => this.summary(version)),
+      headers: { "X-Total-Count": String(listed.length) },
+    };
+  }
+
+  /**
+   * Any version, copied into a new draft by the caller, started from what is
+   * published now; checked as a saved draft is. A copy that would repeat the
+   * version it continues writes nothing and answers that version with 200.
+   */
+  private restore(version: Version): Answer {
+    const row = this.row(version.template_id);
+    const published = this.version(row.published_version_id!);
+    const mine = this.drafts(row.id).find((draft) => draft.author.sub === ME.sub);
+    const continued = mine && mine.base_version_id === published.id ? mine : published;
+    const content = this.contentOf(version);
+    const missingVariables = this.missingRequired(row.id, content.html_content);
+    if (missingVariables.length > 0) return refuse(422, "template.required_variables_missing", { missing: missingVariables });
+    const before = this.contentOf(continued);
+    if (CONTENT_FIELDS.every((field) => JSON.stringify(before[field]) === JSON.stringify(content[field]))) {
+      return { status: 200, body: this.full(continued) };
+    }
+    return { status: 201, body: this.full(this.write(row.id, ME, published.id, content)) };
   }
 
   private publishDraft(version: Version, body: unknown): Answer {

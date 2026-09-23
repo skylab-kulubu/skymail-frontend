@@ -4,31 +4,12 @@ import { Lock } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Field } from '@/components/chrome/Field';
 import { NoticeBox } from '@/components/chrome/Notice';
-import { formatDateTime } from '@/lib/format';
 import { variableAction } from '@/lib/mail-render/go-template';
 import type { SampleValues } from '@/lib/mail-render/preview';
 import { Button } from '@/components/ui/Button';
 import type { Blocker, EditableMode } from '@/lib/template-editor/editor-state';
 import type { MissingVariable, VersionProblem } from '@/lib/template-editor/refusals';
-import {
-  AUTHORING_MODE_LABEL,
-  SYSTEM_TEMPLATE_NOTE,
-  authorName,
-  writtenBy,
-  type MailTemplate,
-  type VersionAuthor,
-} from '@/lib/templates';
-
-/** Who wrote a version, in the words the history uses. */
-export function authorLabel(author: VersionAuthor, viewerSub: string | null): string {
-  if (author.kind === 'template_seed') return 'Template seed';
-  return writtenBy(author, viewerSub) ? 'sen' : authorName(author);
-}
-
-/** "#4 · Mehmet Kaya · 23 Eylül 2026 10:12" */
-export function versionLine(version: { seq: number; author: VersionAuthor; created_at: string; published_at: string | null }, viewerSub: string | null) {
-  return `#${version.seq} · ${authorLabel(version.author, viewerSub)} · ${formatDateTime(version.published_at ?? version.created_at)}`;
-}
+import { AUTHORING_MODE_LABEL, SYSTEM_TEMPLATE_NOTE, type MailTemplate } from '@/lib/templates';
 
 /** The Template key, read-only here: a service may address the template by it (ADR-0045). */
 export function TemplateKey({ template }: { template: MailTemplate }) {

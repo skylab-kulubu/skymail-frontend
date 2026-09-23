@@ -1,12 +1,13 @@
 'use client';
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { ApiClient } from '@/lib/api/client';
 import { apiErrorMessage } from '@/lib/api/errors';
 import { useApi, useApiLoad } from '@/lib/api/react';
 import { listViewHref, pageCount, readListView, type ListView } from '@/lib/list-view';
 import { useFlashNotice, type NoticeData } from '@/lib/notice';
+import { useLastPage } from './use-last-page';
 
 /** A record a list archives and restores, as its notices and dialog name it. */
 export type ArchivableRecord = Readonly<{ id: string; name: string }>;
@@ -55,12 +56,7 @@ export function useArchivableList<Page extends { total: number }>({
   }
 
   // A page that emptied — its last row archived, or a stale link — moves to the last page there is.
-  const { lifecycle, page } = view;
-  useEffect(() => {
-    if (lastPage !== null && page > lastPage) {
-      router.replace(listViewHref(pathname, { lifecycle, page: lastPage }), { scroll: false });
-    }
-  }, [lastPage, lifecycle, page, pathname, router]);
+  useLastPage(view.page, lastPage, (page) => router.replace(listViewHref(pathname, { lifecycle: view.lifecycle, page }), { scroll: false }));
 
   function markRestoring(id: string, busy: boolean) {
     setRestoring((current) => {
