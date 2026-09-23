@@ -149,7 +149,7 @@ describe("a save", () => {
     const stored = storedFromVersion(version({ html_source: HTML }), "Hoş geldin");
     const editing: Content = { ...contentOf(stored), subject: "Selam {{.FirstName}}", sources: { jsx: JSX_EDITED, html: HTML } };
     const main = await render("jsx", JSX_EDITED);
-    const plan = planSave(editing, { jsx: main, html: await render("html", HTML) }, stored);
+    const plan = planSave({ editing, renders: { jsx: main, html: await render("html", HTML) }, stored });
 
     assert.ok(plan.ok);
     assert.ok(main.ok);
@@ -168,7 +168,7 @@ describe("a save", () => {
   it("never writes a Main source that did not compile, and says why", async () => {
     const stored = storedFromVersion(version(), "Hoş geldin");
     const failed = await render("jsx", BROKEN_JSX);
-    const plan = planSave({ ...contentOf(stored), sources: { jsx: BROKEN_JSX } }, { jsx: failed }, stored);
+    const plan = planSave({ editing: { ...contentOf(stored), sources: { jsx: BROKEN_JSX } }, renders: { jsx: failed }, stored });
 
     assert.equal(plan.ok, false);
     assert.ok(!plan.ok && plan.blockers.length === 1);
@@ -178,17 +178,13 @@ describe("a save", () => {
 
   it("never writes another source that was edited and does not render either", async () => {
     const stored = storedFromVersion(version({ main_mode: "html", html_source: HTML, html_content: HTML }), "Hoş geldin");
-    const plan = planSave(
-      { ...contentOf(stored), sources: { jsx: BROKEN_JSX, html: HTML } },
-      { jsx: await render("jsx", BROKEN_JSX), html: await render("html", HTML) },
-      stored,
-    );
+    const plan = planSave({ editing: { ...contentOf(stored), sources: { jsx: BROKEN_JSX, html: HTML } }, renders: { jsx: await render("jsx", BROKEN_JSX), html: await render("html", HTML) }, stored });
     assert.equal(!plan.ok && plan.blockers.map((blocker) => blocker.mode).join(), "jsx");
   });
 
   it("waits for a render that has not caught up with the text", async () => {
     const stored = storedFromVersion(version(), "Hoş geldin");
-    const plan = planSave({ ...contentOf(stored), sources: { jsx: JSX_EDITED } }, { jsx: await render("jsx", JSX) }, stored);
+    const plan = planSave({ editing: { ...contentOf(stored), sources: { jsx: JSX_EDITED } }, renders: { jsx: await render("jsx", JSX) }, stored });
     assert.equal(plan.ok, false);
     assert.match((!plan.ok && plan.blockers[0].message) || "", /önizlemesi henüz hazır değil/);
   });
@@ -197,7 +193,7 @@ describe("a save", () => {
   // body of one the panel cannot render goes back unchanged.
   it("keeps the stored body of a Main source nobody touched, even one the panel cannot render", async () => {
     const stored = storedFromVersion(version({ jsx_source: BROKEN_JSX }), "Hoş geldin");
-    const plan = planSave({ ...contentOf(stored), subject: "Yeni konu" }, { jsx: await render("jsx", BROKEN_JSX) }, stored);
+    const plan = planSave({ editing: { ...contentOf(stored), subject: "Yeni konu" }, renders: { jsx: await render("jsx", BROKEN_JSX) }, stored });
     assert.ok(plan.ok);
     assert.equal(plan.body.html_content, "<p>stored</p>");
     assert.equal(plan.body.plain_text_content, "stored");
@@ -206,14 +202,14 @@ describe("a save", () => {
 
   it("does not keep the stored body under another Main source", async () => {
     const stored = storedFromVersion(version({ html_source: HTML }), "Hoş geldin");
-    const plan = planSave({ ...contentOf(stored), mainMode: "html" }, { jsx: await render("jsx", JSX) }, stored);
+    const plan = planSave({ editing: { ...contentOf(stored), mainMode: "html" }, renders: { jsx: await render("jsx", JSX) }, stored });
     assert.equal(plan.ok, false);
     assert.equal(!plan.ok && plan.blockers[0].mode, "html");
   });
 
   it("needs a name and a subject", async () => {
     const stored = storedFromVersion(version(), "Hoş geldin");
-    const plan = planSave({ ...contentOf(stored), name: " ", subject: "" }, { jsx: await render("jsx", JSX) }, stored);
+    const plan = planSave({ editing: { ...contentOf(stored), name: " ", subject: "" }, renders: { jsx: await render("jsx", JSX) }, stored });
     assert.deepEqual(
       !plan.ok && plan.blockers.map((blocker) => blocker.message),
       ["Template adı boş olamaz.", "Konu boş olamaz."],
@@ -222,7 +218,7 @@ describe("a save", () => {
 
   it("never sends a Visual source, which the editor does not write yet, so the API keeps it", async () => {
     const stored = storedFromVersion(version({ visual_source: { type: "doc" } }), "Hoş geldin");
-    const plan = planSave(contentOf(stored), { jsx: await render("jsx", JSX) }, stored);
+    const plan = planSave({ editing: contentOf(stored), renders: { jsx: await render("jsx", JSX) }, stored });
     assert.ok(plan.ok);
     assert.equal("visual_source" in plan.body, false);
   });
@@ -233,7 +229,7 @@ describe("making another source the Main source", () => {
     const stored = storedFromVersion(version({ html_source: HTML }), "Hoş geldin");
     const editing: Content = { ...contentOf(stored), sources: { jsx: JSX_EDITED, html: HTML } };
     const html = await render("html", HTML);
-    const plan = planMainChange("html", editing, { jsx: await render("jsx", JSX_EDITED), html }, stored);
+    const plan = planMainChange("html", { editing, renders: { jsx: await render("jsx", JSX_EDITED), html }, stored });
 
     assert.ok(plan.ok);
     assert.ok(html.ok);
@@ -250,13 +246,13 @@ describe("making another source the Main source", () => {
   it("needs a render of the candidate as it stands: that is what will be sent", async () => {
     const stored = storedFromVersion(version({ html_source: HTML }), "Hoş geldin");
     const editing: Content = { ...contentOf(stored), sources: { jsx: JSX, html: `${HTML}<p>more</p>` } };
-    const plan = planMainChange("html", editing, { html: await render("html", HTML) }, stored);
+    const plan = planMainChange("html", { editing, renders: { html: await render("html", HTML) }, stored });
     assert.equal(plan.ok, false);
   });
 
   it("is nothing to do for the source that is already main", async () => {
     const stored = storedFromVersion(version(), "Hoş geldin");
-    const plan = planMainChange("jsx", contentOf(stored), { jsx: await render("jsx", JSX) }, stored);
+    const plan = planMainChange("jsx", { editing: contentOf(stored), renders: { jsx: await render("jsx", JSX) }, stored });
     assert.equal(plan.ok, false);
   });
 });
@@ -266,7 +262,7 @@ describe("adding a source in another Authoring mode", () => {
     const stored = storedFromVersion(version(), "Hoş geldin");
     const editing: Content = { ...contentOf(stored), sources: { jsx: JSX_EDITED } };
     const main = await render("jsx", JSX_EDITED);
-    const added = addSource("html", editing, { jsx: main }, stored);
+    const added = addSource("html", { editing, renders: { jsx: main }, stored });
     assert.ok(main.ok);
     assert.equal(added?.sources.html, main.html);
     assert.equal(added?.sources.jsx, JSX_EDITED, "the other source stays");
@@ -275,23 +271,23 @@ describe("adding a source in another Authoring mode", () => {
 
   it("uses the stored render while the Main source is untouched", () => {
     const stored = storedFromVersion(version(), "Hoş geldin");
-    assert.equal(addSource("html", contentOf(stored), {}, stored)?.sources.html, "<p>stored</p>");
+    assert.equal(addSource("html", { editing: contentOf(stored), renders: {}, stored })?.sources.html, "<p>stored</p>");
   });
 
   it("cannot start from a Main source that has no render as it stands", async () => {
     const stored = storedFromVersion(version(), "Hoş geldin");
     const editing: Content = { ...contentOf(stored), sources: { jsx: BROKEN_JSX } };
-    assert.equal(addSource("html", editing, { jsx: await render("jsx", BROKEN_JSX) }, stored), null);
+    assert.equal(addSource("html", { editing, renders: { jsx: await render("jsx", BROKEN_JSX) }, stored }), null);
   });
 
   it("never replaces a source that is there", () => {
     const stored = storedFromVersion(version({ html_source: HTML }), "Hoş geldin");
-    assert.equal(addSource("html", contentOf(stored), {}, stored), null);
+    assert.equal(addSource("html", { editing: contentOf(stored), renders: {}, stored }), null);
   });
 
   it("starts a new JSX source from a starter that compiles with the club's components", async () => {
     const stored = storedFromVersion(version({ main_mode: "html", jsx_source: null, html_source: HTML, html_content: HTML }), "x");
-    const added = addSource("jsx", contentOf(stored), {}, stored);
+    const added = addSource("jsx", { editing: contentOf(stored), renders: {}, stored });
     assert.equal(added?.sources.jsx, JSX_STARTER);
     assert.equal(added?.sources.html, HTML);
     const rendered = await render("jsx", JSX_STARTER);

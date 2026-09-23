@@ -24,15 +24,7 @@ import { ROLE } from '@/lib/access';
 import { useApi, useApiLoad } from '@/lib/api/react';
 import { formatDateTime } from '@/lib/format';
 import { useFlashNotice, type NoticeData } from '@/lib/notice';
-import {
-  discardDraft,
-  fetchTemplate,
-  fetchVersion,
-  publishDraft,
-  saveDraft,
-  versionProblem,
-  type StaleConflict,
-} from '@/lib/template-editor/api';
+import { renderOf } from '@/lib/mail-render/save';
 import {
   EDITABLE_MODES,
   addSource,
@@ -45,10 +37,24 @@ import {
   versionToOpen,
   type Content,
   type EditableMode,
+  type EditorState,
 } from '@/lib/template-editor/editor-state';
+import { versionProblem } from '@/lib/template-editor/refusals';
 import { useRepoSample } from '@/lib/template-editor/use-repo-sample';
 import { useRenderBridge, useSourceRenders } from '@/lib/template-editor/use-renders';
-import { AUTHORING_MODE_LABEL, templateHref, type MailTemplate, type TemplateVersion } from '@/lib/templates';
+import {
+  AUTHORING_MODE_LABEL,
+  discardDraft,
+  fetchTemplate,
+  fetchVersion,
+  publishDraft,
+  saveDraft,
+  templateHref,
+  writtenBy,
+  type MailTemplate,
+  type StaleConflict,
+  type TemplateVersion,
+} from '@/lib/templates';
 import { EditorNote, RefusalNotice, TemplateKey, authorLabel, type Refusal } from './EditorParts';
 import { DiscardDialog, MainSourceDialog, PublishDialog, StaleComparison } from './EditorDialogs';
 import { PreviewPane, useSample } from './PreviewPane';
@@ -149,6 +155,7 @@ function Editor({
   }, [editing.sources, active, main, stored.sources]);
   const bridge = useRenderBridge();
   const { renders, good } = useSourceRenders(bridge, wanted);
+  const state: EditorState = { editing, renders, stored };
 
   // The preview shows the tab's source, or the Main source while the tab has none.
   const shown: EditableMode | null = editing.sources[active] !== undefined ? active : isEditableMode(main) ? main : null;
@@ -156,9 +163,8 @@ function Editor({
   const untouchedMain = shown !== null && shown === stored.mainMode && shownSource === stored.sources[shown];
   const lastGood = shown ? good[shown] : undefined;
   const previewHtml = lastGood?.html ?? (untouchedMain || shown === null ? stored.html : null);
-  const current = shown ? renders[shown] : undefined;
-  const upToDate = current !== undefined && current !== null && current.source === shownSource;
-  const failure = upToDate && current && !current.ok ? current.message : null;
+  const current = shown && shownSource !== undefined ? renderOf(renders[shown], { mode: shown, source: shownSource }) : null;
+  const failure = current && !current.ok ? current.message : null;
 
   const repo = useRepoSample(template.key);
   const samples = useSample(lastGood?.variables, previewHtml, editing.subject, repo);
@@ -171,14 +177,14 @@ function Editor({
   }, [dirty]);
 
   const stale = stored.draftId !== null && stored.baseVersionId !== template.published_version_id;
-  const others = (template.drafts ?? []).filter((draft) => !viewerSub || draft.author.sub !== viewerSub);
+  const others = (template.drafts ?? []).filter((draft) => !writtenBy(draft.author, viewerSub));
   const canPublish = stored.draftId !== null && !dirty && busy === null;
 
   const setSource = (mode: EditableMode, value: string) =>
     setEditing((previous) => ({ ...previous, sources: { ...previous.sources, [mode]: value } }));
 
   async function save() {
-    const plan = planSave(editing, renders, stored);
+    const plan = planSave(state);
     if (!plan.ok) {
       setRefusal({ title: 'Kaydedilmedi', blockers: plan.blockers });
       return;
@@ -248,7 +254,7 @@ function Editor({
   }
 
   async function makeMain(mode: EditableMode) {
-    const plan = planMainChange(mode, editing, renders, stored);
+    const plan = planMainChange(mode, state);
     if (!plan.ok) {
       setDialog({ kind: 'main', mode, refusal: { title: 'Main source değişmedi', blockers: plan.blockers } });
       return;
@@ -270,7 +276,7 @@ function Editor({
     }
   }
 
-  const added = addSource(active, editing, renders, stored);
+  const added = addSource(active, state);
   const activeLabel = AUTHORING_MODE_LABEL[active];
   const kept = (mode: EditableMode) => EDITABLE_MODES.filter((other) => other !== mode && editing.sources[other] !== undefined);
 
@@ -406,7 +412,7 @@ function Editor({
 
         <PreviewPane
           html={previewHtml}
-          pending={shown !== null && !upToDate}
+          pending={shown !== null && !current}
           failure={failure}
           failureKept={failure !== null && untouchedMain}
           note={

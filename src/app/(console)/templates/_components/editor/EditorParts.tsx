@@ -1,19 +1,19 @@
 'use client';
 
-import { AlertTriangle, Info, Lock } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Field } from '@/components/chrome/Field';
+import { NoticeBox } from '@/components/chrome/Notice';
 import { formatDateTime } from '@/lib/format';
 import type { SampleValues } from '@/lib/mail-render/preview';
-import type { VersionProblem } from '@/lib/template-editor/api';
 import type { Blocker } from '@/lib/template-editor/editor-state';
-import { SYSTEM_TEMPLATE_NOTE, type MailTemplate, type VersionAuthor } from '@/lib/templates';
+import type { VersionProblem } from '@/lib/template-editor/refusals';
+import { SYSTEM_TEMPLATE_NOTE, authorName, writtenBy, type MailTemplate, type VersionAuthor } from '@/lib/templates';
 
 /** Who wrote a version, in the words the history uses. */
 export function authorLabel(author: VersionAuthor, viewerSub: string | null): string {
   if (author.kind === 'template_seed') return 'Template seed';
-  if (viewerSub && author.sub === viewerSub) return 'sen';
-  return author.name?.trim() || 'Adı bilinmeyen operatör';
+  return writtenBy(author, viewerSub) ? 'sen' : authorName(author);
 }
 
 /** "#4 · Mehmet Kaya · 23 Eylül 2026 10:12" */
@@ -41,17 +41,7 @@ export function TemplateKey({ template }: { template: MailTemplate }) {
 
 /** A note beside the editor: a stale draft, someone else's draft, what the preview shows. */
 export function EditorNote({ tone = 'info', children }: { tone?: 'info' | 'warning'; children: ReactNode }) {
-  const Icon = tone === 'warning' ? AlertTriangle : Info;
-  const colours =
-    tone === 'warning'
-      ? 'border-amber-400/30 bg-amber-400/10 text-amber-300'
-      : 'border-white/10 bg-white/[0.03] text-neutral-300';
-  return (
-    <div className={`flex items-start gap-3 rounded-lg border px-4 py-3 text-sm ${colours}`}>
-      <Icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-      <div className="min-w-0 flex-1 break-words">{children}</div>
-    </div>
-  );
+  return <NoticeBox tone={tone}>{children}</NoticeBox>;
 }
 
 export type Refusal = Readonly<{ title: string; problem?: VersionProblem; blockers?: readonly Blocker[] }>;
@@ -64,21 +54,16 @@ export type Refusal = Readonly<{ title: string; problem?: VersionProblem; blocke
 export function RefusalNotice({ refusal }: { refusal: Refusal }) {
   const { title, problem, blockers } = refusal;
   return (
-    <div role="alert" className="rounded-lg border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-      <p className="flex items-start gap-2 font-medium">
-        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-        {title}
-      </p>
-      <div className="mt-1.5 space-y-2 pl-6 break-words">
+    <NoticeBox tone="error">
+      <p className="font-medium">{title}</p>
+      <div className="mt-1.5 space-y-2">
         {problem ? <p>{problem.message}</p> : null}
         {problem?.kind === 'missing-variables' && problem.missing.length > 0 ? (
           <ul className="space-y-1.5">
             {problem.missing.map((variable) => (
               <li key={`${variable.source}:${variable.name}`}>
                 <code className="rounded bg-red-500/10 px-1 font-mono text-xs">{`{{.${variable.name}}}`}</code>{' '}
-                <span className="text-red-300/90">
-                  {variable.why} ({variable.source === 'contract' ? 'gönderen servisin sözleşmesi' : 'operatör işaretledi'})
-                </span>
+                {variable.why} ({variable.source === 'contract' ? 'gönderen servisin sözleşmesi' : 'operatör işaretledi'})
               </li>
             ))}
           </ul>
@@ -94,7 +79,7 @@ export function RefusalNotice({ refusal }: { refusal: Refusal }) {
           </ul>
         ) : null}
       </div>
-    </div>
+    </NoticeBox>
   );
 }
 

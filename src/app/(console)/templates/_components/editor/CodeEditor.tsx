@@ -61,13 +61,11 @@ export default function CodeEditor({
   value,
   onChange,
   label,
-  readOnly = false,
 }: {
   mode: EditableMode;
   value: string;
-  onChange?: (value: string) => void;
+  onChange: (value: string) => void;
   label: string;
-  readOnly?: boolean;
 }) {
   const theme = useDocumentTheme();
   return (
@@ -75,13 +73,12 @@ export default function CodeEditor({
       path={MODEL_PATH[mode]}
       language={LANGUAGE[mode]}
       value={value}
-      onChange={(next) => onChange?.(next ?? '')}
+      onChange={(next) => onChange(next ?? '')}
       theme={theme === 'light' ? 'vs' : 'vs-dark'}
       beforeMount={configure}
       loading={<p className="p-4 text-xs text-neutral-500">Kod editörü yükleniyor…</p>}
       height="100%"
       options={{
-        readOnly,
         ariaLabel: label,
         minimap: { enabled: false },
         fontSize: 13,

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { ModalDangerActions, ModalPrimaryActions } from '@/components/ui/modal-actions';
 import type { SampleValues } from '@/lib/mail-render/preview';
+import { renderOf } from '@/lib/mail-render/save';
 import type { SourceRender } from '@/lib/mail-render';
 import type { MailScheme } from '@/lib/template-editor/preview';
 import { AUTHORING_MODE_LABEL, type TemplateVersion } from '@/lib/templates';
@@ -89,7 +90,7 @@ export function MainSourceDialog({
 }) {
   const [scheme, setScheme] = useState<MailScheme>('light');
   const label = AUTHORING_MODE_LABEL[candidate];
-  const current = render && render.source === source && render.mode === candidate ? render : null;
+  const current = renderOf(render, { mode: candidate, source });
   return (
     <Modal isOpen onClose={onCancel} title={`${label} kaynağını Main source yap`} size="wide">
       <div className="space-y-4">

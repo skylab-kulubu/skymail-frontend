@@ -22,7 +22,7 @@ import { DeadlineError, plainTextFromHtml, renderElement } from "./render";
 
 export { blockBalance, referencedVariables } from "./go-template";
 export { fillSampleValues, type FillOptions, type SampleValues } from "./preview";
-export { decideSave, type SaveDecision } from "./save";
+export { decideSave, renderOf, type SaveDecision } from "./save";
 
 /** The ways a Mail template's body is written (CONTEXT.md). Visual comes with the Visual editor. */
 export type AuthoringMode = "jsx" | "html";

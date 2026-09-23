@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type ReactNode } from 'react';
 import { Loader2 } from 'lucide-react';
+import { NoticeBox } from '@/components/chrome/Notice';
 import { referencedVariables } from '@/lib/mail-render/go-template';
 import type { SampleValues } from '@/lib/mail-render/preview';
 import type { MailScheme } from '@/lib/template-editor/preview';
@@ -81,7 +82,7 @@ export function PreviewPane({
       </div>
       {note ? <EditorNote>{note}</EditorNote> : null}
       {failure ? (
-        <div role="alert" className="rounded-lg border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm break-words text-red-300">
+        <NoticeBox tone="error">
           <p className="font-medium">
             {failureKept
               ? 'Bu kaynak panelde render edilemedi. Ona dokunmadığın sürece kaydetmek, kayıtlı gövdeyi olduğu gibi korur.'
@@ -89,7 +90,7 @@ export function PreviewPane({
           </p>
           <p className="mt-1 font-mono text-xs whitespace-pre-wrap">{failure}</p>
           {html !== null ? <p className="mt-1 text-xs">Aşağıda son başarılı render duruyor.</p> : null}
-        </div>
+        </NoticeBox>
       ) : null}
       <SubjectPreview subject={subject} sample={samples.sample} />
       <MailFrame

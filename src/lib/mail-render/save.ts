@@ -40,11 +40,19 @@ export function decideSave(
   lastRender: SourceRender | null,
   storedSource: SourceInput | null,
 ): SaveDecision {
-  const sameAs = (other: SourceInput | null) =>
-    other !== null && other.mode === editing.mode && other.source === editing.source;
-
-  if (lastRender?.ok && sameAs(lastRender)) {
+  if (renderOf(lastRender, editing)?.ok) {
     return "render";
   }
-  return sameAs(storedSource) ? "keep" : "blocked";
+  return storedSource !== null && sameSource(storedSource, editing) ? "keep" : "blocked";
+}
+
+const sameSource = (a: SourceInput, b: SourceInput) => a.mode === b.mode && a.source === b.source;
+
+/**
+ * `render` when it is the render of exactly `source` — the same Authoring
+ * mode and the same text — whether it succeeded or not; null for a render of
+ * anything else, such as the text before the last keystroke.
+ */
+export function renderOf(render: SourceRender | null | undefined, source: SourceInput): SourceRender | null {
+  return render && sameSource(render, source) ? render : null;
 }

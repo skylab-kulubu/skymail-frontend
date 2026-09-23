@@ -7,6 +7,12 @@
  * version's Main source and each operator's draft in progress. Templates are
  * archived, never deleted (ADR-0042); a System template is not archived at
  * all (ADR-0045).
+ *
+ * The editor's routes are here too (tickets 04, 07 and 08): a save writes a
+ * draft, which sends nothing to anyone; publishing it copies it onto the row.
+ * A draft started before someone else published is stale, and the API
+ * refuses to publish it until the operator has seen both versions and names
+ * the one they replace.
  */
 import { ROLE, hasRole } from "./access";
 import type { ApiClient } from "./api/client";
@@ -122,7 +128,22 @@ export function mainSourceLabel(mode: AuthoringMode | null): string {
 /** Why a System template has no Arşivle, short enough to stand on its row. */
 export const SYSTEM_TEMPLATE_NOTE = "Bir servis bunu Template key ile gönderir; arşivlenemez.";
 
-const UNKNOWN_AUTHOR = "Adı bilinmeyen operatör";
+/** What an author with no name on record is called. */
+export const UNKNOWN_AUTHOR = "Adı bilinmeyen operatör";
+
+/** An operator author's name as shown, whatever the version recorded. */
+export function authorName(author: VersionAuthor): string {
+  return author.name?.trim() || UNKNOWN_AUTHOR;
+}
+
+/**
+ * Whether the viewer wrote a version, told apart by their Keycloak subject:
+ * that is what the API records as a version's author, where a name may be
+ * shared or change.
+ */
+export function writtenBy(author: VersionAuthor, viewerSub: string | null): boolean {
+  return viewerSub !== null && author.sub === viewerSub;
+}
 
 /** One operator's draft in progress, as the indicator lists it. */
 export type DraftAuthor = Readonly<{
@@ -159,11 +180,7 @@ export type TemplateRow = Readonly<{
   archivedAt: string | null;
 }>;
 
-/**
- * The drafts in progress, told apart by the viewer's Keycloak subject: that is
- * what the API records as a version's author, where a name may be shared or
- * change.
- */
+/** The drafts in progress, the viewer's marked. */
 function draftsInProgress(
   drafts: readonly TemplateVersionSummary[],
   viewerSub: string | null,
@@ -171,8 +188,8 @@ function draftsInProgress(
   if (drafts.length === 0) return null;
   const authors = drafts.map((draft) => ({
     versionId: draft.id,
-    name: draft.author.name?.trim() || UNKNOWN_AUTHOR,
-    mine: viewerSub !== null && draft.author.sub === viewerSub,
+    name: authorName(draft.author),
+    mine: writtenBy(draft.author, viewerSub),
     writtenAt: draft.created_at,
   }));
   return {
@@ -246,4 +263,98 @@ export function restoreTemplate(api: ApiClient, id: string): Promise<MailTemplat
  */
 export function isSystemArchiveRefusal(error: unknown): boolean {
   return asApiError(error).code === "template.system_protected";
+}
+
+/** What `POST /templates/{id}/drafts` takes (`requests.SaveTemplateDraft`). */
+export type DraftBody = {
+  /** Left out: kept from the version the save continues. */
+  name?: string;
+  subject: string;
+  main_mode: AuthoringMode;
+  /** Left out: kept. */
+  jsx_source?: string;
+  /** Left out: kept. */
+  html_source?: string;
+  html_content: string;
+  plain_text_content: string;
+  base_version_id: string | null;
+};
+
+/** What `POST /templates` takes (`requests.CreateTemplate`); the API publishes it as the first version. */
+export type CreateBody = {
+  name: string;
+  subject: string;
+  html_content: string;
+  plain_text_content: string;
+  /** The JSX source, or for an HTML template NO_JSX_SOURCE: the field may not be empty. */
+  react_email_content: string;
+};
+
+/** One template, as the editor opens it. */
+export function fetchTemplate(api: ApiClient, id: string, signal?: AbortSignal): Promise<MailTemplate> {
+  return api.get<MailTemplate>(`/templates/${id}`, { signal });
+}
+
+export function fetchVersion(api: ApiClient, templateId: string, versionId: string, signal?: AbortSignal): Promise<TemplateVersion> {
+  return api.get<TemplateVersion>(`/templates/${templateId}/versions/${versionId}`, { signal });
+}
+
+/** Creates a template; the API publishes its first version at once. */
+export function createTemplate(api: ApiClient, body: CreateBody): Promise<MailTemplate> {
+  return api.post<MailTemplate>("/templates", body);
+}
+
+/** Writes a draft: 201 with the new version, or 200 with the one it would have repeated. */
+export function saveDraft(api: ApiClient, templateId: string, body: DraftBody): Promise<TemplateVersion> {
+  return api.post<TemplateVersion>(`/templates/${templateId}/drafts`, body);
+}
+
+export function discardDraft(api: ApiClient, templateId: string, versionId: string): Promise<TemplateVersion> {
+  return api.post<TemplateVersion>(`/templates/${templateId}/versions/${versionId}/discard`);
+}
+
+/** A draft someone else's publish overtook (409 `template.stale_base`). */
+export type StaleConflict = Readonly<{
+  draftId: string;
+  /** What the draft started from. */
+  baseVersionId: string | null;
+  /** What is sent now: the version a forced publish replaces. */
+  publishedVersionId: string | null;
+}>;
+
+export type PublishOutcome =
+  | { kind: "published"; template: MailTemplate }
+  | { kind: "stale"; conflict: StaleConflict };
+
+const idOrNull = (value: unknown): string | null => (typeof value === "string" && value !== "" ? value : null);
+
+/**
+ * Publishes a draft. `over` is the published version the operator was shown
+ * and chose to replace; only a stale draft needs it. If yet another version
+ * was published meanwhile, the answer is stale again, naming that one.
+ */
+export async function publishDraft(
+  api: ApiClient,
+  templateId: string,
+  versionId: string,
+  over?: string,
+): Promise<PublishOutcome> {
+  try {
+    const template = await api.post<MailTemplate>(
+      `/templates/${templateId}/versions/${versionId}/publish`,
+      over === undefined ? undefined : { force: { over_version_id: over } },
+    );
+    return { kind: "published", template };
+  } catch (error) {
+    const refusal = asApiError(error);
+    if (refusal.code !== "template.stale_base") throw error;
+    return {
+      kind: "stale",
+      conflict: {
+        draftId: idOrNull(refusal.params?.version_id) ?? versionId,
+        baseVersionId: idOrNull(refusal.params?.base_version_id),
+        publishedVersionId: idOrNull(refusal.params?.published_version_id),
+      },
+    };
+  }
 }

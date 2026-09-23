@@ -17,10 +17,11 @@ import { FormActions } from '@/components/ui/FormActions';
 import { ROLE } from '@/lib/access';
 import { useApi } from '@/lib/api/react';
 import { flashNotice } from '@/lib/notice';
-import { createTemplate, versionProblem } from '@/lib/template-editor/api';
+import { renderOf } from '@/lib/mail-render/save';
+import { versionProblem } from '@/lib/template-editor/refusals';
 import { EDITABLE_MODES, HTML_STARTER, JSX_STARTER, planCreate, type EditableMode } from '@/lib/template-editor/editor-state';
 import { useRenderBridge, useSourceRenders } from '@/lib/template-editor/use-renders';
-import { AUTHORING_MODE_LABEL, templateHref } from '@/lib/templates';
+import { AUTHORING_MODE_LABEL, createTemplate, templateHref } from '@/lib/templates';
 import { RefusalNotice, type Refusal } from './EditorParts';
 import { PreviewPane, useSample } from './PreviewPane';
 import { SourcePanel } from './SourcePane';
@@ -51,12 +52,11 @@ function CreateForm() {
   const bridge = useRenderBridge();
   const wanted = useMemo(() => ({ [mode]: sources[mode] }), [mode, sources]);
   const { renders, good } = useSourceRenders(bridge, wanted);
-  const current = renders[mode];
-  const upToDate = current !== undefined && current !== null && current.source === sources[mode];
+  const current = renderOf(renders[mode], { mode, source: sources[mode] });
   const samples = useSample(good[mode]?.variables, null, subject, NO_REPO_SAMPLE);
 
   async function create() {
-    const plan = planCreate({ name, subject, mode, source: sources[mode] }, current ?? null);
+    const plan = planCreate({ name, subject, mode, source: sources[mode] }, renders[mode] ?? null);
     if (!plan.ok) {
       setRefusal({ title: 'Oluşturulmadı', blockers: plan.blockers });
       return;
@@ -110,8 +110,8 @@ function CreateForm() {
         </section>
         <PreviewPane
           html={good[mode]?.html ?? null}
-          pending={!upToDate}
-          failure={upToDate && current && !current.ok ? current.message : null}
+          pending={!current}
+          failure={current && !current.ok ? current.message : null}
           subject={subject}
           samples={samples}
           repo={NO_REPO_SAMPLE}

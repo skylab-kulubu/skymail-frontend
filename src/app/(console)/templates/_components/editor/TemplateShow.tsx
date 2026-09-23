@@ -15,10 +15,16 @@ import { useCan, useConsole } from '@/components/layout/ConsoleContext';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { ROLE } from '@/lib/access';
 import { useApiLoad } from '@/lib/api/react';
-import { fetchTemplate, fetchVersion } from '@/lib/template-editor/api';
-import { storedFromVersion, type EditableMode } from '@/lib/template-editor/editor-state';
+import { isEditableMode, storedFromVersion, type EditableMode } from '@/lib/template-editor/editor-state';
 import { useRepoSample } from '@/lib/template-editor/use-repo-sample';
-import { AUTHORING_MODE_LABEL, templateHref, type MailTemplate, type TemplateVersion } from '@/lib/templates';
+import {
+  AUTHORING_MODE_LABEL,
+  fetchTemplate,
+  fetchVersion,
+  templateHref,
+  type MailTemplate,
+  type TemplateVersion,
+} from '@/lib/templates';
 import { TemplateKey, versionLine } from './EditorParts';
 import { PreviewPane, useSample } from './PreviewPane';
 import { SourceTabs } from './SourcePane';
@@ -52,9 +58,7 @@ function ShowLoader({ id }: { id: string }) {
 function Show({ template, version }: { template: MailTemplate; version: TemplateVersion }) {
   const { user } = useConsole();
   const stored = storedFromVersion(version, template.name);
-  const [active, setActive] = useState<EditableMode>(() =>
-    stored.mainMode === 'jsx' || stored.mainMode === 'html' ? stored.mainMode : 'jsx',
-  );
+  const [active, setActive] = useState<EditableMode>(() => (isEditableMode(stored.mainMode) ? stored.mainMode : 'jsx'));
   const repo = useRepoSample(template.key);
   const samples = useSample(undefined, stored.html, stored.subject, repo);
   const source = stored.sources[active];
