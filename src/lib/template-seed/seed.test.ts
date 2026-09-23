@@ -331,23 +331,31 @@ describe("the Template seed", () => {
 describe("the seed's command line", () => {
   const keys = ["free.basic", "core.welcome", "keycloak.reset-password"];
 
-  it("forces nothing and writes by default", () => {
-    assert.deepEqual(parseSeedArgs([], keys), { ok: true, dryRun: false, force: { all: false, keys: [] } });
+  it("forces nothing, checks freshness and writes by default", () => {
+    assert.deepEqual(parseSeedArgs([], keys), { ok: true, dryRun: false, allowStale: false, force: { all: false, keys: [] } });
   });
 
-  it("reads --dry-run, --force=<key>[,<key>] (repeatable) and --force-all", () => {
-    assert.deepEqual(parseSeedArgs(["--dry-run"], keys), { ok: true, dryRun: true, force: { all: false, keys: [] } });
+  it("reads --dry-run, --force=<key>[,<key>] (repeatable), --force-all and --allow-stale", () => {
+    assert.deepEqual(parseSeedArgs(["--dry-run"], keys), { ok: true, dryRun: true, allowStale: false, force: { all: false, keys: [] } });
     assert.deepEqual(parseSeedArgs(["--force=core.welcome,keycloak.reset-password"], keys), {
       ok: true,
       dryRun: false,
+      allowStale: false,
       force: { all: false, keys: ["core.welcome", "keycloak.reset-password"] },
     });
     assert.deepEqual(parseSeedArgs(["--force=core.welcome", "--force=free.basic,core.welcome", "--"], keys), {
       ok: true,
       dryRun: false,
+      allowStale: false,
       force: { all: false, keys: ["core.welcome", "free.basic"] },
     });
-    assert.deepEqual(parseSeedArgs(["--force-all", "--dry-run"], keys), { ok: true, dryRun: true, force: { all: true, keys: [] } });
+    assert.deepEqual(parseSeedArgs(["--force-all", "--dry-run"], keys), {
+      ok: true,
+      dryRun: true,
+      allowStale: false,
+      force: { all: true, keys: [] },
+    });
+    assert.deepEqual(parseSeedArgs(["--allow-stale"], keys), { ok: true, dryRun: false, allowStale: true, force: { all: false, keys: [] } });
   });
 
   // A mistyped key would otherwise run a seed that forces nothing, and a

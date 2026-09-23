@@ -16,6 +16,7 @@
  *   --dry-run                       nothing is sent; lists what would be
  *   --force=<key>[,<key>]           writes these even over an operator's change
  *   --force-all                     writes every template so
+ *   --allow-stale                   seeds even from a checkout behind origin/main
  *
  * Credentials come from the environment and are never printed:
  *
@@ -25,14 +26,35 @@
  *   KEYCLOAK_CLIENT_ID
  *   KEYCLOAK_CLIENT_SECRET
  *
+ * The seed renders from the working tree, so before the first request it
+ * refuses a checkout that is missing a commit of origin/main in the templates
+ * or in what renders them (src/lib/template-seed/freshness).
+ *
  * Needs skymail:access + skymail:templates:write, and a skymail-backend that
  * knows the conflict rule (ticket 09): an older one ignores --force and keeps
  * an operator's subject without a word.
  */
+import { execFileSync } from "node:child_process";
 import { templates } from "../emails";
-import { parseSeedArgs, runSeed, templateSources } from "../src/lib/template-seed";
+import { SEED_COMMAND, parseSeedArgs, runSeed, templateSources } from "../src/lib/template-seed";
+import { checkFreshness, staleMessage } from "../src/lib/template-seed/freshness";
 
 const BASE_URL = (process.env.SKYMAIL_URL ?? "http://localhost:3000").replace(/\/+$/, "");
+
+/** Runs git, or null when it fails — a missing remote and a tarball both land here. */
+function git(args: string[]): string | null {
+  try {
+    return execFileSync("git", args, {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+      timeout: 15_000,
+      // A credential prompt would hang the seed instead of failing it.
+      env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },
+    }).trim();
+  } catch {
+    return null;
+  }
+}
 
 async function resolveToken(): Promise<string> {
   const direct = process.env.SKYMAIL_TOKEN;
@@ -79,6 +101,17 @@ async function main(): Promise<number> {
   if (!args.ok) {
     console.error(args.message);
     return 2;
+  }
+
+  if (!args.allowStale) {
+    const freshness = checkFreshness(git);
+    for (const note of freshness.notes) {
+      console.log(`${note}\n`);
+    }
+    if (freshness.state === "stale") {
+      console.error(staleMessage(freshness.commits, SEED_COMMAND));
+      return 1;
+    }
   }
 
   const sources = await templateSources(templates);
