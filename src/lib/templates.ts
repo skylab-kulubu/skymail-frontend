@@ -42,6 +42,27 @@ export type TemplateVersionSummary = {
   discarded: boolean;
 };
 
+/**
+ * One version whole (`handlers.TemplateVersion`): at most one source per
+ * Authoring mode, and the Main source's render — what the version sends.
+ */
+export type TemplateVersion = TemplateVersionSummary & {
+  /**
+   * The template's name as this version has it; a publish copies it onto the
+   * row. Absent from a backend where the name is not a version field yet.
+   */
+  name?: string | null;
+  jsx_source: string | null;
+  /** The Visual editor's document (ticket 15). */
+  visual_source: unknown;
+  html_source: string | null;
+  html_content: string;
+  plain_text_content: string;
+};
+
+/** A Required variable from the sending service's contract, and why the mail needs it. */
+export type ContractRequiredVariable = { name: string; reason: string | null };
+
 /** One Mail template as the template routes serve it (`handlers.Template`). */
 export type MailTemplate = {
   id: string;
@@ -65,6 +86,10 @@ export type MailTemplate = {
   main_mode?: AuthoringMode | null;
   /** Each operator's draft in progress, newest first. Absent from a backend before ticket 07. */
   drafts?: TemplateVersionSummary[];
+  /** Required variables the sending service's contract declares (ticket 08). */
+  contract_required_variables?: ContractRequiredVariable[];
+  /** Required variables operators marked (ticket 08). */
+  operator_required_variables?: string[];
 };
 
 export const TEMPLATE_PAGE_SIZE = 25;
