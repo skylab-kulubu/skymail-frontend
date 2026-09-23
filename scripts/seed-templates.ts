@@ -231,10 +231,12 @@ function checkFreshness(): void {
   }
 
   const fetched = git(["fetch", "--quiet", "origin", "main"]) !== null;
+  // FETCH_HEAD, az önce çekilen origin/main'in ta kendisi ama okuyana bir şey
+  // anlatmaz, o yüzden metinlerde hep origin/main yazılır.
   const ref = fetched ? "FETCH_HEAD" : "origin/main";
   const missing = git(["log", "--format=%h %s", `HEAD..${ref}`, "--", ...SEEDED_PATHS]);
   if (missing === null) {
-    console.log(`Uyarı: ${ref} okunamadı, tazelik kontrolü yapılamadı.\n`);
+    console.log("Uyarı: origin/main okunamadı, tazelik kontrolü yapılamadı.\n");
     return;
   }
   if (!fetched) {
@@ -245,6 +247,23 @@ function checkFreshness(): void {
   }
 
   const commits = missing.split("\n");
+
+  // A branch kept in sync by squash — rewrite, production — never has origin/main
+  // as an ancestor, so every commit on main reads as missing there. Refusing on
+  // such a branch would fire on every single run, and a check that always fires
+  // is one people learn to pass --allow-stale to, including the time it is real.
+  // Only a checkout strictly behind origin/main is the hazard this guards; on a
+  // diverged branch the comparison cannot tell "behind" from "different", so it
+  // says what it saw and gets out of the way.
+  const behind = git(["merge-base", "--is-ancestor", "HEAD", ref]) !== null;
+  if (!behind) {
+    console.log(
+      "Uyarı: çalışma kopyası origin/main ile ayrışmış, tazelik kıyası geride olmayı farklı olmaktan ayıramıyor.",
+    );
+    console.log(`${commits.length} commit bu kopyada yok; eski bir sürümü seed etmediğinden emin ol.\n`);
+    return;
+  }
+
   throw new Error(
     [
       `Çalışma kopyası origin/main'in gerisinde: ${SEEDED_PATHS.join("/ ve ")}/ altında ${commits.length} commit eksik.`,
