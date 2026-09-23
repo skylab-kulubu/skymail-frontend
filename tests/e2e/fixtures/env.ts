@@ -5,7 +5,9 @@
  * answered at the network layer by mock-api.ts, on the panel's own origin so
  * no CORS preflight stands between a request and the mock.
  */
-export const E2E_PORT = 3013;
+// E2E_PORT lets two checkouts run their suites at once without one reusing
+// the other's server.
+export const E2E_PORT = Number(process.env.E2E_PORT ?? 3013);
 export const E2E_BASE_URL = `http://localhost:${E2E_PORT}`;
 export const E2E_API_URL = `${E2E_BASE_URL}/e2e-api/v1`;
 

@@ -77,7 +77,8 @@ yarn emails:render    # repodaki Mail template'leri render edip denetler
 yarn test:e2e         # tarayıcı testleri (Playwright): editörün riskli akışları, taklit API ile
 ```
 
-`yarn test:e2e` paneli production build olarak 3013 portunda başlatır; SkyMail
+`yarn test:e2e` paneli production build olarak 3013 portunda (ya da `E2E_PORT`'ta;
+iki checkout aynı anda koşarken biri diğerinin sunucusunu kullanmasın) başlatır; SkyMail
 API'si tarayıcıda ağ katmanında taklit edilir (`tests/e2e/fixtures/mock-api.ts`),
 oturum atılabilir bir `AUTH_SECRET` ile üretilir, Keycloak'a gidilmez. Chromium
 ilk seferde `yarn playwright install chromium` ile indirilir.
