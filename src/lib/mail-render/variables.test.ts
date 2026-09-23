@@ -5,6 +5,9 @@
  * in the text, not a comment, not a string.
  */
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { describe, it } from "node:test";
 import { blockBalance, referencedVariables, renderSource } from ".";
 
@@ -15,78 +18,43 @@ async function variablesOf(mode: "jsx" | "html", source: string): Promise<string
   return result.variables;
 }
 
-describe("the variables a body references", () => {
-  const cases: { name: string; source: string; expect: string[] }[] = [
-    { name: "a plain field", source: "<p>Merhaba {{.FirstName}}</p>", expect: ["FirstName"] },
-    {
-      name: "a field inside an if, and the if's own",
-      source: '{{if .ResetLink}}<a href="{{.ResetLink}}">Sıfırla</a>{{end}}',
-      expect: ["ResetLink"],
-    },
-    {
-      name: "a comparison and an else if",
-      source: "{{if eq .Decision `approved`}}Onay{{else if .Reason}}{{.Reason}}{{end}}",
-      expect: ["Decision", "Reason"],
-    },
-    {
-      name: "function arguments and pipes",
-      source: '{{safeHTML .BodyHtml}} {{printf "%s %s" .First .Last}} {{.Team | html}}',
-      expect: ["BodyHtml", "First", "Last", "Team"],
-    },
-    {
-      name: "the first field of a chain",
-      source: "{{.Event.Title}}",
-      expect: ["Event"],
-    },
-    {
-      name: "a field kept in a variable, not the variable's own fields",
-      source: "{{$event := .Event}}{{$event.Title}}",
-      expect: ["Event"],
-    },
-    {
-      // Inside range, dot is the element: .Title is a field of an item, and
-      // $ is how the body reaches back to the data the mailer passed.
-      name: "a range's list, and $ inside it, but not the element's fields",
-      source: "<ul>{{range .Items}}<li>{{.Title}} · {{$.EventName}}</li>{{end}}</ul>",
-      expect: ["EventName", "Items"],
-    },
-    {
-      // A with's else runs with the outer dot again.
-      name: "a with's value and its else branch",
-      source: "{{with .Organizer}}{{.Name}}{{else}}{{.FallbackName}}{{end}}",
-      expect: ["FallbackName", "Organizer"],
-    },
-    {
-      name: "nothing inside a define, whose data its caller decides",
-      source: '{{define "footer"}}{{.Team}} {{$.Year}}{{end}}{{.Name}}',
-      expect: ["Name"],
-    },
-    {
-      name: "a block given dot, read like the text around it",
-      source: '{{block "footer" .}}{{.Team}}{{end}}{{block "other" .Org}}{{.Inner}}{{end}}',
-      expect: ["Org", "Team"],
-    },
-    {
-      name: "each name once, sorted",
-      source: "{{.Name}} {{.Email}} {{if .Name}}{{.Name}}{{end}}",
-      expect: ["Email", "Name"],
-    },
-    {
-      name: "nothing from a comment",
-      source: "<p>{{/* .Secret buraya gelecek */}}Merhaba{{- /* .Other */ -}}</p>",
-      expect: [],
-    },
-    {
-      name: "nothing from the text around the actions",
-      source: "<p>Dosya adı .Name, tek parantez {.Link}, {{.Real}}</p>",
-      expect: ["Real"],
-    },
-    {
-      name: "nothing from a string or a number",
-      source: '{{if eq .Kind ".Other"}}x{{end}}{{if gt .Count .5}}y{{end}}',
-      expect: ["Count", "Kind"],
-    },
-  ];
+/**
+ * The cases skymail-backend's Required variable check is held to as well, from
+ * a copy of the same file: the panel shows a template's variables with this
+ * reading of a body and the server refuses a save with its own, so the two
+ * must not disagree. Change both copies together.
+ */
+interface SharedCase {
+  name: string;
+  source: string;
+  expect: string[];
+}
+
+const SHARED_CASES = join(import.meta.dirname, "testdata", "referenced-variables.json");
+
+/**
+ * The shared cases are one file kept in two repos: this copy, and
+ * skymail-backend's internal/mailer/testdata/referenced-variables.json, whose
+ * test pins the same hash. Changing either copy fails its own repo's test
+ * until both copies, and both hashes, change together.
+ */
+const SHARED_CASES_SHA256 = "b54be25614fedd3054e85589e27ea596b97d2023dc37817058a32d4c08d2bbab";
+
+it("holds the same shared cases as the server", async () => {
+  const sum = createHash("sha256").update(await readFile(SHARED_CASES)).digest("hex");
+  assert.equal(
+    sum,
+    SHARED_CASES_SHA256,
+    "testdata/referenced-variables.json değişmiş: skymail-backend'deki kopyayı (internal/mailer/testdata/referenced-variables.json) da aynı yap, sonra iki sabiti de güncelle",
+  );
+});
+
+describe("the variables a body references", async () => {
+  const { cases } = JSON.parse(await readFile(SHARED_CASES, "utf8")) as { cases: SharedCase[] };
+
+  it("reads the cases shared with the server", () => {
+    assert.ok(cases.length > 0, `${SHARED_CASES} içinde vaka yok`);
+  });
 
   for (const { name, source, expect } of cases) {
     it(`finds ${name}`, async () => {

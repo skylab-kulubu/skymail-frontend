@@ -6,6 +6,10 @@
  * longer in emails/ is left alone and reported, because archiving something a
  * live service still calls is how mail silently stops.
  *
+ * Each template's contract Required variables (meta.requiredVariables) go
+ * with it, each with why the mail needs it; SkyMail refuses a body that does
+ * not reference them and shows the reasons in its panel.
+ *
  * One field is not overwritten: a subject is seeded when the key is new and
  * then belongs to the row, so an operator can reword it without a release
  * (ADR-0045). A run that finds a reworded subject says so rather than leaving
@@ -91,6 +95,9 @@ async function main(): Promise<void> {
       // refuses to save one over the rendered body (see lib/mail-render).
       react_email_content: `// Kaynak: skymail-frontend/emails/${meta.key}.tsx — burada düzenlersen repodaki kaynakla ayrışır.\n`,
       system: meta.system,
+      // The repo is where the sending service's contract is known, so the seed
+      // always sends it: none declared is an empty set, not a set left alone.
+      contract_required_variables: meta.requiredVariables ?? [],
     };
 
     if (DRY_RUN) {
