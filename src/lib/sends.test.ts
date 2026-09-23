@@ -18,7 +18,6 @@ import {
   fetchSendPage,
   formatSendTime,
   homeTiles,
-  knownPageCount,
   noRecipientsNote,
   readRecipientView,
   readSendListView,
@@ -252,20 +251,6 @@ describe("a send and its recipients", () => {
       `${TEST_BASE_URL}/mail_tasks/${SEND_ID}/queue?status=failed&_start=${RECIPIENT_PAGE_SIZE}&_end=${2 * RECIPIENT_PAGE_SIZE}`,
     );
     assert.equal(calls[1].url, `${TEST_BASE_URL}/mail_tasks/${SEND_ID}/queue?_start=0&_end=${RECIPIENT_PAGE_SIZE}`);
-  });
-});
-
-describe("paging", () => {
-  it("counts the pages of a known total, never fewer than one", () => {
-    assert.equal(knownPageCount({ total: 0, rows: 0 }, 1, 25), 1);
-    assert.equal(knownPageCount({ total: 25, rows: 25 }, 1, 25), 1);
-    assert.equal(knownPageCount({ total: 26, rows: 25 }, 1, 25), 2);
-  });
-
-  // X-Total-Count did not reach the browser: a full page may have a next one.
-  it("without a total, offers one more page after a full one", () => {
-    assert.equal(knownPageCount({ total: null, rows: 25 }, 3, 25), 4);
-    assert.equal(knownPageCount({ total: null, rows: 7 }, 3, 25), 3);
   });
 });
 

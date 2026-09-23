@@ -7,7 +7,6 @@
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { FilterPills } from '@/components/chrome/FilterPills';
 import { Pagination } from '@/components/chrome/Pagination';
@@ -17,12 +16,12 @@ import { ResponsiveTable } from '@/components/tables/ResponsiveTable';
 import { Button } from '@/components/ui/Button';
 import { sectionLabel } from '@/lib/access';
 import { useApiLoad } from '@/lib/api/react';
+import { knownPageCount } from '@/lib/list-view';
 import {
   audienceLabel,
   fetchSendPage,
   formatCount,
   formatSendTime,
-  knownPageCount,
   readSendListView,
   recipientsLabel,
   recipientSummary,
@@ -36,6 +35,7 @@ import {
   type SendListView,
   type SendStatus,
 } from '@/lib/sends';
+import { useLastPage } from '@/lib/ui/use-last-page';
 import { Audience } from './Audience';
 import { SendItem } from './SendItem';
 import { SendStatusBadge } from './StatusBadge';
@@ -61,10 +61,7 @@ export function SendList() {
   }
 
   // A stale link past the end moves to the last page there is.
-  const { status, page } = view;
-  useEffect(() => {
-    if (lastPage !== null && page > lastPage) router.replace(sendListHref({ status, page: lastPage }), { scroll: false });
-  }, [lastPage, page, router, status]);
+  useLastPage(view.page, lastPage, (page) => router.replace(sendListHref({ status: view.status, page }), { scroll: false }));
 
   return (
     <div className="space-y-4">

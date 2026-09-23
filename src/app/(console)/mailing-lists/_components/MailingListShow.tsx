@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { AlertTriangle, Archive, Lock, Pencil, Send, UserPlus } from 'lucide-react';
 import { Pagination } from '@/components/chrome/Pagination';
 import { StateCard } from '@/components/chrome/StateCard';
@@ -13,6 +13,7 @@ import { ModalDangerActions } from '@/components/ui/modal-actions';
 import { apiErrorMessage } from '@/lib/api/errors';
 import { useApi, useApiLoad } from '@/lib/api/react';
 import { pageCount } from '@/lib/list-view';
+import { useLastPage } from '@/lib/ui/use-last-page';
 import {
   GROUP_READ_ONLY_REASON,
   RECIPIENT_PAGE_SIZE,
@@ -149,9 +150,7 @@ function Recipients({ list, external, editable }: { list: MailingList; external:
   const lastPage = state.status === 'success' ? pageCount(state.data.total, RECIPIENT_PAGE_SIZE) : null;
 
   // Removing the last recipient on a later page moves back to the last page there is.
-  useEffect(() => {
-    if (lastPage !== null && page > lastPage) setPage(lastPage);
-  }, [lastPage, page]);
+  useLastPage(page, lastPage, setPage);
 
   async function remove(recipient: Recipient) {
     setRemoving(true);

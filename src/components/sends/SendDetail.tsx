@@ -7,7 +7,7 @@
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { AlertTriangle, Inbox, SearchX } from 'lucide-react';
 import { FilterPills } from '@/components/chrome/FilterPills';
 import { Pagination } from '@/components/chrome/Pagination';
@@ -21,7 +21,6 @@ import {
   fetchRecipientPage,
   fetchSend,
   formatSendTime,
-  knownPageCount,
   noRecipientsNote,
   readRecipientView,
   RECIPIENT_PAGE_SIZE,
@@ -37,6 +36,8 @@ import {
   type RecipientView,
   type Send,
 } from '@/lib/sends';
+import { knownPageCount } from '@/lib/list-view';
+import { useLastPage } from '@/lib/ui/use-last-page';
 import { Audience } from './Audience';
 import { SectionTitle } from './SectionTitle';
 import { RecipientStatusBadge, SendStatusBadge } from './StatusBadge';
@@ -133,12 +134,7 @@ function Recipients({ send }: { send: Send }) {
   }
 
   // A stale link past the end moves to the last page there is.
-  const { status, page } = view;
-  useEffect(() => {
-    if (lastPage !== null && page > lastPage) {
-      router.replace(sendHref(send.id, { status, page: lastPage }), { scroll: false });
-    }
-  }, [lastPage, page, router, send.id, status]);
+  useLastPage(view.page, lastPage, (page) => router.replace(sendHref(send.id, { status: view.status, page }), { scroll: false }));
 
   const emptyText = EMPTY_TEXT[view.status];
 
