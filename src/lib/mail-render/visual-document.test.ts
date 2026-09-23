@@ -262,7 +262,7 @@ describe("a Visual document that is refused", () => {
   }
 
   it("will not serialise a document it would refuse to read", () => {
-    assert.throws(() => visualSource(withBlocks([{ type: "quote" }]) as unknown as VisualDocument), /quote/);
+    assert.throws(() => visualSource(withBlocks([{ type: "table" }]) as unknown as VisualDocument), /table/);
   });
 });
 
@@ -271,7 +271,13 @@ describe("a Visual document that is refused", () => {
 // reader refuses what a narrower allowance leaves out, as the editor offers
 // only what it allows.
 describe("a Visual document read with a narrower allowance", () => {
-  const plain: VisualAllowance = { blocks: ["heading", "paragraph", "button"], marks: ["bold", "italic"], variables: false, lineBreaks: false };
+  const plain: VisualAllowance = {
+    blocks: ["heading", "paragraph", "button"],
+    marks: ["bold", "italic"],
+    variables: false,
+    lineBreaks: false,
+    subheadings: false,
+  };
 
   it("reads what the allowance keeps", () => {
     const read = readVisualDocument(
@@ -309,12 +315,13 @@ describe("a Visual document read with a narrower allowance", () => {
 // A free announcement's body (ticket 16) has lists and line breaks, as the
 // markdown it replaces had; a Mail template's body does not, since the club's
 // mail components draw neither yet.
-describe("a list and a line break", () => {
+describe("a list, a line break, a quote and a sub-heading", () => {
   const announcement: VisualAllowance = {
-    blocks: ["heading", "paragraph", "list"],
+    blocks: ["heading", "paragraph", "list", "quote"],
     marks: ["bold", "italic", "link"],
     variables: false,
     lineBreaks: true,
+    subheadings: true,
   };
   const list = {
     type: "list",
@@ -358,5 +365,29 @@ describe("a list and a line break", () => {
       'blocks[3].items[0][0]: bilinmeyen alan "marks"',
     ]);
   });
-});
 
+  const quote = { type: "quote", content: [{ type: "text", text: "Alıntı", marks: [{ type: "italic" }] }, { type: "hardBreak" }, { type: "text", text: "— Ada" }] };
+  const subheading = { type: "heading", level: 3, content: [{ type: "text", text: "Program" }] };
+
+  it("read a quote and a sub-heading where the allowance has them; a heading without a level is the main one", () => {
+    const blocks = [{ type: "heading", content: [{ type: "text", text: "Duyuru" }] }, subheading, quote];
+    const read = readVisualDocument(reversedKeys(withBlocks(blocks)), announcement);
+    assert.ok(read.ok, read.ok ? "" : read.problems.join("\n"));
+    assert.equal(visualSource(read.document), JSON.stringify(withBlocks(blocks)));
+  });
+
+  it("are not a Mail template's either", () => {
+    const read = readVisualDocument(withBlocks([subheading, quote]), TEMPLATE_BODY_ALLOWANCE);
+    assert.ok(!read.ok);
+    assert.deepEqual(read.problems, ["blocks[0].level: alt başlık burada kullanılamaz", 'blocks[1]: "quote" bloğu burada kullanılamaz']);
+  });
+
+  it("know only one other heading level", () => {
+    const read = readVisualDocument(withBlocks([{ ...subheading, level: 4 }, { ...subheading, level: 2 }]), announcement);
+    assert.ok(!read.ok);
+    assert.deepEqual(read.problems, [
+      "blocks[0].level: başlığın seviyesi yalnız 3 (alt başlık) olabilir; ana başlıkta seviye yazılmaz",
+      "blocks[1].level: başlığın seviyesi yalnız 3 (alt başlık) olabilir; ana başlıkta seviye yazılmaz",
+    ]);
+  });
+});

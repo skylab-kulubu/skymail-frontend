@@ -39,9 +39,11 @@ export type VisualInline =
 export type ButtonLink = { url: string } | { variable: string };
 
 export type VisualBlock =
-  /** The house Heading: plain text and variables, no marks. */
-  | { type: "heading"; content: VisualInline[] }
+  /** The house Heading: plain text and variables, no marks. Level 3 is a sub-heading, and only a free announcement has one. */
+  | { type: "heading"; level?: 3; content: VisualInline[] }
   | { type: "paragraph"; content: VisualInline[] }
+  /** A quoted passage: a paragraph's content, set apart. */
+  | { type: "quote"; content: VisualInline[] }
   /** A bulleted or numbered list, an item a line of inline content. */
   | { type: "list"; ordered: boolean; items: VisualInline[][] }
   | { type: "button"; label: string; link: ButtonLink }
@@ -71,27 +73,29 @@ export type VisualMarkType = VisualMark["type"];
  * allowance leaves out, and the editor offers only what it allows.
  * `variables` covers inline variables and a button linking to one; a
  * conditional section needs them too. `lineBreaks` is a new line inside a
- * paragraph or a list item.
+ * paragraph, a list item or a quote; `subheadings` a heading of level 3.
  */
 export type VisualAllowance = Readonly<{
   blocks: readonly VisualBlockType[];
   marks: readonly VisualMarkType[];
   variables: boolean;
   lineBreaks: boolean;
+  subheadings: boolean;
 }>;
 
 /** Every block the model knows, whatever a body may use of them. */
-export const VISUAL_BLOCK_TYPES: readonly VisualBlockType[] = ["heading", "paragraph", "list", "button", "image", "divider", "conditional"];
+export const VISUAL_BLOCK_TYPES: readonly VisualBlockType[] = ["heading", "paragraph", "list", "quote", "button", "image", "divider", "conditional"];
 
 /**
  * What a Mail template's body may use: every block the club's mail
- * components draw. They draw no list or line break yet.
+ * components draw. They draw no list, quote, sub-heading or line break yet.
  */
 export const TEMPLATE_BODY_ALLOWANCE: VisualAllowance = {
   blocks: ["heading", "paragraph", "button", "image", "divider", "conditional"],
   marks: ["bold", "italic", "link"],
   variables: true,
   lineBreaks: false,
+  subheadings: false,
 };
 
 /** All of the model: what a document's source text may hold, whichever body it is. */
@@ -100,6 +104,7 @@ const WHOLE_MODEL: VisualAllowance = {
   marks: ["bold", "italic", "link"],
   variables: true,
   lineBreaks: true,
+  subheadings: true,
 };
 
 export { isVariableName };
@@ -132,9 +137,10 @@ export const buildVisual = {
   text: (text: string, marks?: readonly VisualMark[]): VisualInline => ({ type: "text", text, ...withMarks(marks) }),
   variable: (name: string, marks?: readonly VisualMark[]): VisualInline => ({ type: "variable", name, ...withMarks(marks) }),
   hardBreak: (): VisualInline => ({ type: "hardBreak" }),
-  heading: (content: VisualInline[]): VisualBlock => ({ type: "heading", content }),
+  heading: (content: VisualInline[], level?: 3): VisualBlock => ({ type: "heading", ...(level === 3 ? { level } : {}), content }),
   paragraph: (content: VisualInline[]): VisualBlock => ({ type: "paragraph", content }),
   list: (ordered: boolean, items: VisualInline[][]): VisualBlock => ({ type: "list", ordered, items }),
+  quote: (content: VisualInline[]): VisualBlock => ({ type: "quote", content }),
   button: (label: string, link: ButtonLink): VisualBlock => ({
     type: "button",
     label,
@@ -377,12 +383,25 @@ class Reader {
       return null;
     }
     switch (type) {
-      case "heading":
-      case "paragraph": {
+      case "heading": {
+        this.only(item, ["type", "level", "content"], path);
+        const content = this.inlines(item.content, `${path}.content`, { marksAllowed: false, breaksAllowed: false });
+        if (item.level === undefined) return buildVisual.heading(content);
+        if (item.level !== 3) {
+          this.problem(`${path}.level`, "başlığın seviyesi yalnız 3 (alt başlık) olabilir; ana başlıkta seviye yazılmaz");
+          return null;
+        }
+        if (!this.allowance.subheadings) {
+          this.problem(`${path}.level`, "alt başlık burada kullanılamaz");
+          return null;
+        }
+        return buildVisual.heading(content, 3);
+      }
+      case "paragraph":
+      case "quote": {
         this.only(item, ["type", "content"], path);
-        const paragraph = type === "paragraph";
-        const content = this.inlines(item.content, `${path}.content`, { marksAllowed: paragraph, breaksAllowed: paragraph });
-        return paragraph ? buildVisual.paragraph(content) : buildVisual.heading(content);
+        const content = this.inlines(item.content, `${path}.content`, { marksAllowed: true, breaksAllowed: true });
+        return type === "quote" ? buildVisual.quote(content) : buildVisual.paragraph(content);
       }
       case "list": {
         this.only(item, ["type", "ordered", "items"], path);
@@ -493,6 +512,7 @@ export function visualDocumentVariables(document: VisualDocument): string[] {
       switch (block.type) {
         case "heading":
         case "paragraph":
+        case "quote":
           for (const inline of block.content) if (inline.type === "variable") found.add(inline.name);
           break;
         case "list":

@@ -35,17 +35,21 @@ const italic: VisualMark = { type: "italic" };
 const link = (href: string): VisualMark => ({ type: "link", href });
 
 describe("a free announcement's body", () => {
-  it("is a heading as h2, a paragraph as p, a list as ul or ol, a line break as br", () => {
+  it("is a heading as h2 and a sub-heading as h3, a paragraph as p, a list as ul or ol, a quote as blockquote, a line break as br", () => {
     assert.equal(
       html(
         doc(
           b.heading([b.text("GECEKODU başvuruları açıldı")]),
+          b.heading([b.text("Program")], 3),
+          b.quote([b.text("Bir gecede bir ürün."), b.hardBreak(), b.text("— GECEKODU '25", [italic])]),
           b.paragraph([b.text("Bu yıl 12–13 Nisan'da,"), b.hardBreak(), b.text("Davutpaşa'da.")]),
           b.list(false, [[b.text("24 saat")], [b.text("Takım: "), b.text("3–5 kişi", [bold])]]),
           b.list(true, [[b.text("Başvur")], [b.text("Bekle"), b.hardBreak(), b.text("Gel")]]),
         ),
       ),
       "<h2>GECEKODU başvuruları açıldı</h2>" +
+        "<h3>Program</h3>" +
+        "<blockquote>Bir gecede bir ürün.<br><em>— GECEKODU &#39;25</em></blockquote>" +
         "<p>Bu yıl 12–13 Nisan&#39;da,<br>Davutpaşa&#39;da.</p>" +
         "<ul><li>24 saat</li><li>Takım: <strong>3–5 kişi</strong></li></ul>" +
         "<ol><li>Başvur</li><li>Bekle<br>Gel</li></ol>",
@@ -100,7 +104,7 @@ describe("a free announcement's body", () => {
 
   it("is nothing when nothing in it shows: empty blocks and empty items render nothing", () => {
     assert.deepEqual(renderFreeBody(doc()), { ok: true, html: "" });
-    assert.deepEqual(renderFreeBody(doc(b.paragraph([]), b.heading([]), b.list(true, [[], []]))), { ok: true, html: "" });
+    assert.deepEqual(renderFreeBody(doc(b.paragraph([]), b.heading([]), b.heading([], 3), b.quote([]), b.list(true, [[], []]))), { ok: true, html: "" });
     assert.equal(html(doc(b.list(false, [[], [b.text("bir")], []]))), "<ul><li>bir</li></ul>");
   });
 
@@ -126,7 +130,13 @@ describe("a free announcement's body", () => {
         'blocks[4]: "conditional" bloğu burada kullanılamaz',
       ],
     });
-    assert.deepEqual(FREE_BODY_ALLOWANCE, { blocks: ["heading", "paragraph", "list"], marks: ["bold", "italic", "link"], variables: false, lineBreaks: true });
+    assert.deepEqual(FREE_BODY_ALLOWANCE, {
+      blocks: ["heading", "paragraph", "list", "quote"],
+      marks: ["bold", "italic", "link"],
+      variables: false,
+      lineBreaks: true,
+      subheadings: true,
+    });
   });
 
   it("reads a Visual source and says what is wrong with one it cannot", () => {
@@ -187,7 +197,9 @@ function randomDocument(seed: number): VisualDocument {
   return doc(
     ...Array.from({ length: 1 + Math.floor(next() * 5) }, (): VisualBlock => {
       const kind = next();
-      if (kind < 0.25) return b.heading(line(false));
+      if (kind < 0.15) return b.heading(line(false));
+      if (kind < 0.25) return b.heading(line(false), 3);
+      if (kind < 0.35) return b.quote(line(true));
       if (kind < 0.7) return b.paragraph(line(true));
       return b.list(next() < 0.5, Array.from({ length: Math.floor(next() * 4) }, () => line(true)));
     }),
@@ -215,6 +227,8 @@ function outsideTheAllowList(body: string): string[] {
 describe("what the renderer writes, against the server's allow-list", () => {
   const every = doc(
     b.heading([b.text("Başlık")]),
+    b.heading([b.text("Alt başlık")], 3),
+    b.quote([b.text("q", [bold, link("https://skyl.app/q")]), b.hardBreak(), b.text("r")]),
     b.paragraph([b.text("a", [bold, italic, link("https://skyl.app/")]), b.hardBreak(), b.text("b", [link("mailto:a@b.co")])]),
     b.list(false, [[b.text("x", [bold])]]),
     b.list(true, [[b.text("y", [italic]), b.hardBreak(), b.text("z")]]),
@@ -224,8 +238,8 @@ describe("what the renderer writes, against the server's allow-list", () => {
     html: html(document),
   }));
 
-  it("uses every block, mark and line break, and writes only elements and attributes the allow-list keeps", () => {
-    assert.deepEqual([...new Set([...bodies[0].html.matchAll(TAG)].map((match) => match[2]))].sort(), ["a", "br", "em", "h2", "li", "ol", "p", "strong", "ul"]);
+  it("uses every block, level, mark and line break, and writes only elements and attributes the allow-list keeps", () => {
+    assert.deepEqual([...new Set([...bodies[0].html.matchAll(TAG)].map((match) => match[2]))].sort(), ["a", "blockquote", "br", "em", "h2", "h3", "li", "ol", "p", "strong", "ul"]);
     const outside = bodies.flatMap(({ document, html: body }) => outsideTheAllowList(body).map((what) => `${what} in ${JSON.stringify(document)}`));
     assert.deepEqual(outside, []);
   });

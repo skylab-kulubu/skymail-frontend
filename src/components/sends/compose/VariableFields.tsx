@@ -16,15 +16,16 @@ const VisualEditor = dynamic(() => import('@/components/visual-editor/VisualEdit
 
 /** The Visual editor speaks of the announcement it writes. */
 const BODY_WORDING = {
-  placeholder: 'Duyurunun metnini yaz; başlık, kalın, italik, bağlantı ve listeleri üstteki çubuktan ekle.',
+  placeholder: 'Duyurunun metnini yaz; başlık, alt başlık, kalın, italik, bağlantı, liste ve alıntıyı üstteki çubuktan ekle.',
 };
 
 /** What the body may hold, said under the editor: the server keeps nothing else. */
 function BodyNote() {
   return (
     <p className="border-t border-white/10 px-4 py-2 text-xs leading-relaxed text-neutral-500">
-      Gövdede başlık, paragraf, madde ve numaralı liste, kalın, italik ve bağlantı kullanılır; satır içinde alt satıra geçmek için
-      Shift+Enter. Sunucu gönderenin yazdığı gövdeden bunların dışındakini düşürür; buton için aşağıdaki buton alanlarını kullan.
+      Gövdede başlık, alt başlık, paragraf, madde ve numaralı liste, alıntı, kalın, italik ve bağlantı kullanılır; satır içinde alt
+      satıra geçmek için Shift+Enter. Sunucu gönderenin yazdığı gövdeden bunların dışındakini düşürür; buton için aşağıdaki buton
+      alanlarını kullan.
     </p>
   );
 }

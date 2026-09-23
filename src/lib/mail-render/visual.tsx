@@ -33,7 +33,7 @@ const TYPED_BRACE = "{{`{`}}";
  */
 export const asText = (typed: string) => typed.replaceAll("{", TYPED_BRACE);
 
-/** A Mail template's body has no line break or list: the club's components draw neither (TEMPLATE_BODY_ALLOWANCE). */
+/** A Mail template's body has no line break, list, quote or sub-heading: the club's components draw none (TEMPLATE_BODY_ALLOWANCE). */
 const notInATemplate = (what: string) => new Error(`Visual render ${what} yazmaz; bir Mail template'inin gövdesi onu kullanamaz.`);
 
 /** An inline node, its marks around it: a link inside, then italic, then bold. */
@@ -88,6 +88,7 @@ function blocks(list: readonly VisualBlock[], above: boolean): ReactNode[] {
   list.forEach((block, key) => {
     switch (block.type) {
       case "heading":
+        if (block.level === 3) throw notInATemplate("alt başlık");
         if (block.content.length === 0) return;
         nodes.push(
           <Heading key={key} spaced={above}>
@@ -121,6 +122,8 @@ function blocks(list: readonly VisualBlock[], above: boolean): ReactNode[] {
       }
       case "list":
         throw notInATemplate("liste");
+      case "quote":
+        throw notInATemplate("alıntı");
       case "image":
         nodes.push(<Figure key={key} src={block.src} alt={asText(block.alt)} width={block.width} />);
         break;

@@ -8,8 +8,9 @@
  * components carry their look in exactly those, so this renderer writes none
  * of them — free.basic's own frame gives the body its look — and it is not
  * the Visual render (visual.tsx), which draws a whole mail. It writes only
- * elements the allow-list keeps: a heading as `h2`, a paragraph as `p`, a
- * list as `ul` or `ol`, a line break as `br`, bold, italic and links
+ * elements the allow-list keeps: a heading as `h2` and a sub-heading as
+ * `h3`, a paragraph as `p`, a list as `ul` or `ol`, a quote as `blockquote`,
+ * a line break as `br`, bold, italic and links
  * (free-body.test.ts holds its output to that list). The server still
  * sanitises; nothing here is a second gate.
  *
@@ -31,10 +32,11 @@ import {
 
 /** What a free announcement's body may use: what the server's allow-list keeps. */
 export const FREE_BODY_ALLOWANCE: VisualAllowance = {
-  blocks: ["heading", "paragraph", "list"],
+  blocks: ["heading", "paragraph", "list", "quote"],
   marks: ["bold", "italic", "link"],
   variables: false,
   lineBreaks: true,
+  subheadings: true,
 };
 
 /** The body's markup — empty when nothing in the document shows — or what keeps it from going out. */
@@ -93,10 +95,14 @@ export function renderFreeBody(document: VisualDocument): FreeBody {
     .map((block, index) => {
       const path = `blocks[${index}]`;
       switch (block.type) {
-        case "heading":
-          return block.content.length === 0 ? "" : `<h2>${line(block.content, `${path}.content`)}</h2>`;
+        case "heading": {
+          const tag = block.level === 3 ? "h3" : "h2";
+          return block.content.length === 0 ? "" : `<${tag}>${line(block.content, `${path}.content`)}</${tag}>`;
+        }
         case "paragraph":
           return block.content.length === 0 ? "" : `<p>${line(block.content, `${path}.content`)}</p>`;
+        case "quote":
+          return block.content.length === 0 ? "" : `<blockquote>${line(block.content, `${path}.content`)}</blockquote>`;
         case "list": {
           const items = block.items
             .map((item, at) => (item.length === 0 ? "" : `<li>${line(item, `${path}.items[${at}]`)}</li>`))

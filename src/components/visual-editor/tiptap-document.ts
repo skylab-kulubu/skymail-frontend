@@ -30,8 +30,15 @@ function inlineTo(node: VisualInline): JSONContent {
 function blockTo(block: VisualBlock): JSONContent {
   switch (block.type) {
     case "heading":
-    case "paragraph":
-      return block.content.length > 0 ? { type: block.type, content: block.content.map(inlineTo) } : { type: block.type };
+    case "paragraph": {
+      const level = block.type === "heading" && block.level === 3 ? { attrs: { level: 3 } } : {};
+      return block.content.length > 0 ? { type: block.type, ...level, content: block.content.map(inlineTo) } : { type: block.type, ...level };
+    }
+    case "quote":
+      return {
+        type: "blockquote",
+        content: [block.content.length > 0 ? { type: "paragraph", content: block.content.map(inlineTo) } : { type: "paragraph" }],
+      };
     case "list":
       return {
         type: block.ordered ? "orderedList" : "bulletList",
@@ -97,20 +104,25 @@ function inlineFrom(node: JSONContent): VisualInline {
   }
 }
 
-/** A list item: the one line of text the schema lets it hold. */
-function itemFrom(node: JSONContent): VisualInline[] {
+/** A list item's or a quote's content: the one paragraph the schema lets it hold. */
+function oneLine(node: JSONContent, what: string): VisualInline[] {
   const [line, ...more] = node.content ?? [];
-  if (node.type !== "listItem" || more.length > 0 || (line && line.type !== "paragraph")) {
-    throw new Error("Visual editörde liste maddesi tek satır metin olmalı");
-  }
+  if (more.length > 0 || (line && line.type !== "paragraph")) throw new Error(`Visual editörde ${what} tek paragraf olmalı`);
   return (line?.content ?? []).map(inlineFrom);
+}
+
+function itemFrom(node: JSONContent): VisualInline[] {
+  if (node.type !== "listItem") throw new Error(`Visual editörde listede bilinmeyen öğe "${node.type}"`);
+  return oneLine(node, "liste maddesi");
 }
 
 function blockFrom(node: JSONContent): VisualBlock {
   const attrs = node.attrs ?? {};
   switch (node.type) {
     case "heading":
-      return buildVisual.heading((node.content ?? []).map(inlineFrom));
+      return buildVisual.heading((node.content ?? []).map(inlineFrom), attrs.level === 3 ? 3 : undefined);
+    case "blockquote":
+      return buildVisual.quote(oneLine(node, "alıntı"));
     case "paragraph":
       return buildVisual.paragraph((node.content ?? []).map(inlineFrom));
     case "bulletList":

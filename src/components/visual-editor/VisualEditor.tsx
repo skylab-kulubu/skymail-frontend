@@ -28,6 +28,7 @@ import {
   Braces,
   GitBranch,
   Heading2,
+  Heading3,
   Image as ImageIcon,
   Italic,
   List,
@@ -36,6 +37,7 @@ import {
   Minus,
   MousePointerClick,
   Pilcrow,
+  Quote,
   Redo2,
   Undo2,
   type LucideIcon,
@@ -203,7 +205,9 @@ function Toolbar({
   const state = useEditorState({
     editor,
     selector: ({ editor: current }) => ({
-      heading: current.isActive('heading'),
+      heading: allow.subheadings ? current.isActive('heading', { level: 2 }) : current.isActive('heading'),
+      subheading: allow.subheadings && current.isActive('heading', { level: 3 }),
+      quote: current.isActive('blockquote'),
       bulletList: current.isActive('bulletList'),
       orderedList: current.isActive('orderedList'),
       paragraph: current.isActive('paragraph'),
@@ -230,7 +234,15 @@ function Toolbar({
   const kinds: Tool[] = blocks.has('heading')
     ? [
         { icon: Pilcrow, label: 'Paragraf', pressed: state.paragraph, onClick: () => chain().setNode('paragraph').run() },
-        { icon: Heading2, label: 'Başlık', pressed: state.heading, onClick: () => chain().setNode('heading').run() },
+        {
+          icon: Heading2,
+          label: 'Başlık',
+          pressed: state.heading,
+          onClick: () => chain().setNode('heading', allow.subheadings ? { level: 2 } : {}).run(),
+        },
+        ...(allow.subheadings
+          ? [{ icon: Heading3, label: 'Alt başlık', pressed: state.subheading, onClick: () => chain().setNode('heading', { level: 3 }).run() }]
+          : []),
       ]
     : [];
   const styles: Tool[] = [
@@ -257,6 +269,9 @@ function Toolbar({
         { icon: List, label: 'Madde listesi', pressed: state.bulletList, onClick: () => chain().toggleBulletList().run() },
         { icon: ListOrdered, label: 'Numaralı liste', pressed: state.orderedList, onClick: () => chain().toggleOrderedList().run() },
       ]
+    : [];
+  const quotes: Tool[] = blocks.has('quote')
+    ? [{ icon: Quote, label: 'Alıntı', pressed: state.quote, onClick: () => chain().toggleWrap('blockquote').run() }]
     : [];
   const inserts: Tool[] = [
     ...(allow.variables
@@ -310,7 +325,7 @@ function Toolbar({
 
   const buttons = useRef<(HTMLButtonElement | null)[]>([]);
   const [tabStop, setTabStop] = useState(0);
-  const groups = [kinds, styles, lists, inserts, history].filter((group) => group.length > 0);
+  const groups = [kinds, styles, [...lists, ...quotes], inserts, history].filter((group) => group.length > 0);
   const count = groups.reduce((total, group) => total + group.length, 0);
   let index = 0;
   const button = (tool: Tool, role?: 'radio') => {
@@ -375,6 +390,8 @@ const CONTENT_CLASS = [
   '[&_h2]:mt-4 [&_h2]:mb-2 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:text-neutral-100 [&_h2:first-child]:mt-1',
   '[&_p]:my-2',
   '[&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_li_p]:my-0.5',
+  '[&_h3]:mt-3 [&_h3]:mb-1.5 [&_h3]:text-base [&_h3]:font-semibold [&_h3]:text-neutral-100',
+  '[&_blockquote]:my-2 [&_blockquote]:border-l-2 [&_blockquote]:border-white/20 [&_blockquote]:pl-3 [&_blockquote]:text-neutral-300',
   '[&_a]:text-skylab-300 [&_a]:underline [&_a]:underline-offset-2',
   '[&_strong]:font-semibold [&_strong]:text-neutral-100',
   '[&_hr]:my-4 [&_hr]:border-white/20 [&_hr.ProseMirror-selectednode]:border-skylab-400',

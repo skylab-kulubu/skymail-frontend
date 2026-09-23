@@ -9,8 +9,9 @@
  * their React views.
  *
  * Paste reads only what the schema knows: headings and paragraphs with bold,
- * italic and links, rules, and — where the body has them — lists and line
- * breaks. Anything else pasted from elsewhere comes in as its text. The editor's own blocks copy and paste within it by their data
+ * italic and links, rules, and — where the body has them — lists, quotes,
+ * sub-headings and line breaks. Anything else pasted from elsewhere comes in
+ * as its text. The editor's own blocks copy and paste within it by their data
  * attributes; an image from a web page does not become an image block.
  */
 import { Node, mergeAttributes, type Extensions } from "@tiptap/core";
@@ -125,6 +126,39 @@ export const ConditionalNode = Node.create({
 export const ListItemNode = ListItem.extend({ content: "paragraph" });
 
 /**
+ * A heading with a level, where the body has sub-headings: 2 the main one,
+ * 3 a sub-heading. What is pasted as h3 or deeper is a sub-heading.
+ */
+const LeveledHeading = HeadingNode.extend({
+  addAttributes: () => ({ level: { default: 2, rendered: false } }),
+  parseHTML: () => [1, 2, 3, 4, 5, 6].map((level) => ({ tag: `h${level}`, attrs: { level: level >= 3 ? 3 : 2 } })),
+  renderHTML: ({ node, HTMLAttributes }) => [`h${node.attrs.level === 3 ? 3 : 2}`, mergeAttributes(HTMLAttributes), 0],
+});
+
+/**
+ * A quoted passage: one paragraph, set apart. Enter leaves it for a new
+ * paragraph after it; Shift+Enter breaks a line inside it.
+ */
+export const QuoteNode = Node.create({
+  name: "blockquote",
+  group: "block",
+  content: "paragraph",
+  defining: true,
+  parseHTML: () => [{ tag: "blockquote" }],
+  renderHTML: ({ HTMLAttributes }) => ["blockquote", mergeAttributes(HTMLAttributes), 0],
+  addKeyboardShortcuts() {
+    return {
+      Enter: ({ editor }) => {
+        const { $from, empty } = editor.state.selection;
+        if (!empty || !editor.isActive(this.name)) return false;
+        const after = $from.after($from.depth - 1);
+        return editor.chain().insertContentAt(after, { type: "paragraph" }).setTextSelection(after + 1).run();
+      },
+    };
+  },
+});
+
+/**
  * Document, paragraph, text, the marks allowed and the editing aids, from
  * Skyforms' StarterKit; and where the body has them, its lists and line
  * breaks (Shift+Enter). Nothing else of it.
@@ -162,6 +196,7 @@ function basics({ marks, blocks, lineBreaks }: VisualAllowance) {
 /** The blocks of our own, by the model's name; the paragraph and the lists are the StarterKit's. */
 export const BLOCK_NODES: Readonly<Record<Exclude<VisualBlockType, "paragraph" | "list">, Node>> = {
   heading: HeadingNode,
+  quote: QuoteNode,
   button: ButtonNode,
   image: ImageNode,
   divider: DividerNode,
@@ -177,7 +212,11 @@ export const BLOCK_NODES: Readonly<Record<Exclude<VisualBlockType, "paragraph" |
 export function visualSchemaExtensions(allowance: VisualAllowance): Extensions {
   const blocks = (Object.keys(BLOCK_NODES) as (keyof typeof BLOCK_NODES)[])
     .filter((type) => allowance.blocks.includes(type) && (type !== "conditional" || allowance.variables))
-    .map((type) => (type === "heading" ? HeadingNode.extend({ content: allowance.variables ? "(text | variable)*" : "text*" }) : BLOCK_NODES[type]));
+    .map((type) =>
+      type === "heading"
+        ? (allowance.subheadings ? LeveledHeading : HeadingNode).extend({ content: allowance.variables ? "(text | variable)*" : "text*" })
+        : BLOCK_NODES[type],
+    );
   return [
     basics(allowance),
     ...(allowance.blocks.includes("list") ? [ListItemNode] : []),
