@@ -26,7 +26,7 @@ import { Button } from '@/components/ui/Button';
 import { ROLE, isApprover } from '@/lib/access';
 import { useApiLoad } from '@/lib/api/react';
 import { viewerActions } from '@/lib/mail-approvals/actions';
-import { APPROVAL_LIST_PATH, APPROVAL_STATE_LABEL, approvalHref, fetchApproval, type MailApproval } from '@/lib/mail-approvals/approvals';
+import { APPROVAL_LIST_PATH, APPROVAL_STATE_LABEL, approvalHref, fetchApproval } from '@/lib/mail-approvals/approvals';
 import { composePrefill, resubmission } from '@/lib/mail-approvals/edit';
 import type { ListRow } from '@/lib/mailing-lists';
 import { sendAccess } from '@/lib/send-form/access';
