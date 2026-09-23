@@ -95,7 +95,7 @@ export type ListActions = Readonly<{
   /** Rename and archive it, add and remove its recipients. */
   change: boolean;
   restore: boolean;
-  /** Start a send to it; the API sends only to a current internal list. */
+  /** Start a send to it: the API sends to an internal list and to a Keycloak group's members, never to an archived list. */
   compose: boolean;
   /** A Keycloak group: no one can change it in SkyMail, and every viewer is told so. */
   readOnly: boolean;
@@ -109,7 +109,7 @@ export function listActions(row: ListRow, roles: readonly string[]): ListActions
     open: !archived,
     change: owned && canWrite,
     restore: archived && canWrite,
-    compose: owned && hasRole(roles, ROLE.mailsWrite),
+    compose: !archived && hasRole(roles, ROLE.mailsWrite),
     readOnly: row.external,
   };
 }
@@ -228,12 +228,15 @@ export function validateListName(name: string): string | null {
 // checks the address properly; this only catches the obvious slip early.
 const PLAUSIBLE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/** An address that could be one; the send form's people rows use the same check. */
+export const isPlausibleEmail = (email: string) => PLAUSIBLE_EMAIL.test(email);
+
 export function validateRecipient(input: RecipientInput): Partial<Record<keyof RecipientInput, string>> {
   const errors: Partial<Record<keyof RecipientInput, string>> = {};
   if (!input.full_name.trim()) errors.full_name = "Ad soyad gir.";
   const email = input.email.trim();
   if (!email) errors.email = "E-posta adresi gir.";
-  else if (!PLAUSIBLE_EMAIL.test(email)) errors.email = "Geçerli bir e-posta adresi gir.";
+  else if (!isPlausibleEmail(email)) errors.email = "Geçerli bir e-posta adresi gir.";
   return errors;
 }
 

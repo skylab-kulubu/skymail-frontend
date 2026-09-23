@@ -11,6 +11,7 @@ import { ApiError } from "./api/errors";
 import { TEST_BASE_URL, json, scriptedClient } from "./api/testing";
 import {
   audienceLabel,
+  composeHref,
   dailySeries,
   dayLabel,
   fetchRecipientPage,
@@ -155,6 +156,15 @@ describe("the send list's address", () => {
       const search = new URL(sendListHref({ status: filter.value, page: 2 }), "http://x").searchParams;
       assert.deepEqual(readSendListView(search), { status: filter.value, page: 2 });
     }
+  });
+});
+
+describe("the send form's address", () => {
+  // superadmin links an Event's list to /mail-tasks/create?mail_list_id=<id>; so do the panel's own buttons.
+  it("is /mail-tasks/create, with the list to preselect", () => {
+    assert.equal(composeHref(), "/mail-tasks/create");
+    assert.equal(composeHref(SEND_ID), `/mail-tasks/create?mail_list_id=${SEND_ID}`);
+    assert.equal(composeHref("a b&c"), "/mail-tasks/create?mail_list_id=a+b%26c");
   });
 });
 

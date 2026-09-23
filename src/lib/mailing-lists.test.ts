@@ -134,11 +134,14 @@ describe("what a row allows", () => {
     assert.deepEqual(allowed(listActions(current, WRITER)), ["change", "open"]);
   });
 
-  // Creating a send needs mails:write, and the API sends only to a current internal list.
-  it("lets someone who may send start a send to a current internal list", () => {
+  // Creating a send needs mails:write. The API sends to an internal list and
+  // to a Keycloak group's members alike (handlers/mail.go CreateTask), never
+  // to an archived list.
+  it("lets someone who may send start a send to a current list or group", () => {
     assert.deepEqual(allowed(listActions(current, SENDER)), ["change", "compose", "open"]);
-    assert.equal(listActions(keycloak, SENDER).compose, false);
+    assert.equal(listActions(keycloak, SENDER).compose, true);
     assert.equal(listActions(archived, SENDER).compose, false);
+    assert.equal(listActions(current, WRITER).compose, false);
   });
 
   // The API hides an archived list from every read, so it cannot be opened.
@@ -147,8 +150,9 @@ describe("what a row allows", () => {
   });
 
   // Keycloak owns the group; everyone, a reader too, is told it is read-only.
+  // Sending to its members changes nothing about it.
   it("marks a Keycloak group read-only for everyone and lets no one change it", () => {
-    assert.deepEqual(allowed(listActions(keycloak, SENDER)), ["open", "readOnly"]);
+    assert.deepEqual(allowed(listActions(keycloak, SENDER)), ["compose", "open", "readOnly"]);
     assert.deepEqual(allowed(listActions(keycloak, READER)), ["open", "readOnly"]);
   });
 

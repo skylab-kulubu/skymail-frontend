@@ -56,7 +56,12 @@ describe("a page opened by its address", () => {
     assert.equal(requiredRoleFor("/templates"), "skymail:templates:read");
     assert.equal(requiredRoleFor("/templates/edit/123"), "skymail:templates:read");
     assert.equal(requiredRoleFor("/mailing-lists/show/abc"), "skymail:lists:read");
-    assert.equal(requiredRoleFor("/mail-tasks/create"), "skymail:mails:read");
+    assert.equal(requiredRoleFor("/mail-tasks/show/abc"), "skymail:mails:read");
+  });
+
+  it("leaves the send form to decide for itself: a sender need not read the send list", () => {
+    assert.equal(requiredRoleFor("/mail-tasks/create"), undefined);
+    assert.equal(requiredRoleFor("/mail-tasks"), "skymail:mails:read");
   });
 
   it("needs nothing beyond access on the home screen or an unknown address", () => {

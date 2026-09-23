@@ -152,6 +152,15 @@ export function fetchSendPage(api: ApiClient, view: SendListView, signal?: Abort
 }
 
 // ---------------------------------------------------------------------------
+// The send form: /mail-tasks/create?mail_list_id=<id> (ticket 16)
+
+/** The send form, with a list to preselect: the address superadmin links an Event's list to. */
+export function composeHref(listId?: string): string {
+  const path = `${SEND_LIST_PATH}/create`;
+  return listId ? `${path}?${new URLSearchParams({ mail_list_id: listId })}` : path;
+}
+
+// ---------------------------------------------------------------------------
 // One send: /mail-tasks/show/<id>?status=failed&page=2
 
 export type RecipientFilter = RecipientStatus | "all";

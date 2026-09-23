@@ -56,8 +56,16 @@ export function visibleNavigation(roles: readonly string[]): NavItem[] {
   return NAVIGATION.filter((item) => !item.requires || roles.includes(item.requires));
 }
 
+/**
+ * Pages that decide who may use them themselves, beyond their section's read
+ * role: the send form takes `mails:send` or `mails:write`, and a sender need
+ * not read the send list (src/lib/send-form/access.ts).
+ */
+const SELF_GATED: readonly string[] = ["/mail-tasks/create"];
+
 /** The role a page needs, by the section its address sits under. */
 export function requiredRoleFor(pathname: string): Role | undefined {
+  if (SELF_GATED.includes(pathname)) return undefined;
   const section = NAVIGATION.find(
     (item) => item.href !== "/" && (pathname === item.href || pathname.startsWith(`${item.href}/`)),
   );
