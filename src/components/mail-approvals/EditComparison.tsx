@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { MailFrame, SchemeToggle, SubjectPreview } from '@/components/mail-preview/MailPreview';
 import type { MailScheme } from '@/components/mail-preview/preview-document';
-import { valueText, variableChanges } from '@/lib/mail-approvals/edit';
-import type { FieldSource, VariableField } from '@/lib/send-form/fields';
+import { pinnedSourceNote, valueText, variableChanges, type PinnedSource } from '@/lib/mail-approvals/edit';
+import type { VariableField } from '@/lib/send-form/fields';
 
 type Variables = Readonly<Record<string, unknown>>;
 
@@ -27,15 +27,15 @@ export function EditComparison({
   before,
   after,
   fields,
-  source,
+  pinned,
   recipient,
   labels,
 }: {
   before: Variables | null;
   after: Variables | null;
   fields: readonly VariableField[];
-  /** The version the request is pinned to; null when it cannot be read. */
-  source: FieldSource | null;
+  /** The version the request is pinned to, or why it cannot be shown. */
+  pinned: PinnedSource;
   /** Whom the mails read as: the one recipient, or the submitter for a list. */
   recipient: Readonly<{ full_name: string; email: string }>;
   labels: readonly [before: string, after: string];
@@ -124,7 +124,7 @@ export function EditComparison({
         </table>
       </div>
 
-      {source ? (
+      {pinned.status === 'ready' ? (
         <>
           <div className="flex justify-end">
             <SchemeToggle value={scheme} onChange={setScheme} />
@@ -136,15 +136,15 @@ export function EditComparison({
             ] as const).map(([label, values]) => (
               <section key={label} aria-label={label} className="min-w-0 space-y-2">
                 <h3 className="text-sm font-medium text-neutral-100">{label}</h3>
-                <SubjectPreview subject={source.subject} sample={sample(values)} />
-                <MailFrame title={label} html={source.html_content} sample={sample(values)} scheme={scheme} className="h-[50vh] min-h-[320px]" />
+                <SubjectPreview subject={pinned.source.subject} sample={sample(values)} />
+                <MailFrame title={label} html={pinned.source.html_content} sample={sample(values)} scheme={scheme} className="h-[50vh] min-h-[320px]" />
               </section>
             ))}
           </div>
         </>
       ) : (
-        <p className="text-xs text-neutral-500">
-          Mailin iki hâlini yan yana görmek için skymail:templates:read rolü gerekiyor; değişen değişkenler yukarıda.
+        <p className="text-xs text-neutral-500" role={pinned.status === 'loading' ? 'status' : undefined}>
+          {pinnedSourceNote(pinned)}
         </p>
       )}
     </div>

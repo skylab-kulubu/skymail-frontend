@@ -17,6 +17,7 @@
  * The approval mails link here: `/mail-approvals/show/:id`, `#preview` for the
  * preview.
  */
+import { ROLE } from "../access";
 import type { ApiClient, ApiPage } from "../api/client";
 import { formatClubTime } from "../format";
 import { pageRange, readPage, viewHref } from "../list-view";
@@ -291,7 +292,7 @@ const NOTIFICATION_PROBLEM: ReadonlyMap<string, (notification: ApprovalNotificat
   [
     "no_approvers",
     () =>
-      "Onaycılara bildirim gitmedi: skymail:mails:approve rolü olan ve e-posta adresi bilinen kimse yok. İstek yine de bekliyor; bir onaycıya haber ver.",
+      `Onaycılara bildirim gitmedi: ${ROLE.mailsApprove} rolü olan ve e-posta adresi bilinen kimse yok. İstek yine de bekliyor; bir onaycıya haber ver.`,
   ],
   [
     "approver_lookup_failed",

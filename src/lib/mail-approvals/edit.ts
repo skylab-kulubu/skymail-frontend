@@ -15,6 +15,7 @@
  *  - What an edit changed, variable by variable, is shown before it is sent
  *    or returned, and to the submitter a returned edit waits on.
  */
+import { ROLE } from "../access";
 import { freeBodyFromSource } from "../mail-render/free-body";
 import { readFreeBody } from "../mail-render/free-body-read";
 import { visualSource, type VisualInline } from "../mail-render/visual-document";
@@ -61,6 +62,29 @@ export function approvalFields(source: FieldSource | null, variables: Variables 
     return [...fields, ...names.filter((name) => !fields.some((field) => field.name === name)).map((name) => namedField(name))];
   }
   return names.map((name) => namedField(name, templateKey === FREE_TEMPLATE_KEY && name === FREE_BODY_VARIABLE ? "rich" : undefined));
+}
+
+/** The version a request is pinned to, as a page has it: read, being read, or why it is not. */
+export type PinnedSource =
+  | Readonly<{ status: "ready"; source: FieldSource }>
+  /** The viewer lacks templates:read. */
+  | Readonly<{ status: "noRole" }>
+  /** It was asked for and could not be read. */
+  | Readonly<{ status: "unreadable" }>
+  | Readonly<{ status: "loading" }>;
+
+/** Why the mail is not shown before and after an edit; null when it is. */
+export function pinnedSourceNote(pinned: PinnedSource): string | null {
+  switch (pinned.status) {
+    case "ready":
+      return null;
+    case "loading":
+      return "Mailin iki hâli hazırlanıyor…";
+    case "noRole":
+      return `Mailin iki hâlini yan yana görmek için ${ROLE.templatesRead} rolü gerekiyor; değişen değişkenler yukarıda.`;
+    case "unreadable":
+      return "Mail template'in bu isteğin bağlı olduğu sürümü okunamadı; mailin iki hâli yan yana gösterilemiyor. Değişen değişkenler yukarıda.";
+  }
 }
 
 /**

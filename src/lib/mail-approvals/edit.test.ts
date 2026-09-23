@@ -31,6 +31,7 @@ import {
   editedVariables,
   fetchPinnedSource,
   inputFromVariables,
+  pinnedSourceNote,
   resubmission,
   valueText,
   valuesBeforeEdit,
@@ -476,5 +477,21 @@ describe("what a resubmission starts from", () => {
   // A rejected request goes back as it stands, an approver's direct edit included.
   it("is the request as it stands when it was rejected", () => {
     assert.deepEqual(resubmission(request("rejected")).body_variables, { Subject: "Onaycının konusu", Heading: "Başlık", Added: "onaycının" });
+  });
+});
+
+describe("why the mail is not shown both ways", () => {
+  // Someone who may read templates is not told to ask for the role when the read failed.
+  it("tells a missing role from a version that could not be read", () => {
+    assert.equal(
+      pinnedSourceNote({ status: "noRole" }),
+      "Mailin iki hâlini yan yana görmek için skymail:templates:read rolü gerekiyor; değişen değişkenler yukarıda.",
+    );
+    assert.equal(
+      pinnedSourceNote({ status: "unreadable" }),
+      "Mail template'in bu isteğin bağlı olduğu sürümü okunamadı; mailin iki hâli yan yana gösterilemiyor. Değişen değişkenler yukarıda.",
+    );
+    assert.equal(pinnedSourceNote({ status: "loading" }), "Mailin iki hâli hazırlanıyor…");
+    assert.equal(pinnedSourceNote({ status: "ready", source: FREE_SOURCE }), null);
   });
 });

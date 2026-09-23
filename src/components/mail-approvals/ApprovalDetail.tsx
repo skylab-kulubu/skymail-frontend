@@ -44,10 +44,11 @@ import {
   inputFromVariables,
   valueText,
   valuesBeforeEdit,
+  type PinnedSource,
 } from '@/lib/mail-approvals/edit';
 import { approvalRefusal } from '@/lib/mail-approvals/refusals';
 import { useFlashNotice, type NoticeData } from '@/lib/notice';
-import { fieldWarnings, type FieldInput, type FieldSource, type VariableField } from '@/lib/send-form/fields';
+import { fieldWarnings, type FieldInput, type VariableField } from '@/lib/send-form/fields';
 import { audienceLabel, formatCount, sendHref } from '@/lib/sends';
 import { ApprovalStateBadge, Deadline, Submitter } from './ApprovalParts';
 import { ApprovalHistory } from './ApprovalHistory';
@@ -122,7 +123,14 @@ function ApprovalView({
     (client, signal) => (canReadTemplates ? fetchPinnedSource(client, approval.template, signal) : Promise.resolve(null)),
     `${canReadTemplates}:${approval.template.id}:${approval.template.version_id}`,
   );
-  const source = pinned.status === 'success' ? pinned.data : null;
+  const pinnedSource: PinnedSource = !canReadTemplates
+    ? { status: 'noRole' }
+    : pinned.status === 'loading'
+      ? { status: 'loading' }
+      : pinned.status === 'success' && pinned.data
+        ? { status: 'ready', source: pinned.data }
+        : { status: 'unreadable' };
+  const source = pinnedSource.status === 'ready' ? pinnedSource.source : null;
   const fields = useMemo(() => approvalFields(source, approval.body_variables, approval.template.key), [source, approval]);
 
   const [started, setEditing] = useState<Editing | null>(null);
@@ -223,9 +231,8 @@ function ApprovalView({
             approval={approval}
             actions={actions}
             fields={fields}
-            source={source}
+            pinned={pinnedSource}
             recipient={recipient}
-            fieldsReady={pinned.status !== 'loading'}
             busy={busy}
             onDecide={ask}
             onEdit={startEditing}
@@ -277,7 +284,7 @@ function ApprovalView({
         approval={approval}
         edited={edit?.ok ? edit.variables : null}
         fields={fields}
-        source={source}
+        pinned={pinnedSource}
         recipient={recipient}
         busy={busy}
         onCancel={() => setDecision(null)}
@@ -321,9 +328,8 @@ function DecisionPanel({
   approval,
   actions,
   fields,
-  source,
+  pinned,
   recipient,
-  fieldsReady,
   busy,
   onDecide,
   onEdit,
@@ -331,9 +337,8 @@ function DecisionPanel({
   approval: MailApproval;
   actions: ViewerActions;
   fields: readonly VariableField[];
-  source: FieldSource | null;
+  pinned: PinnedSource;
   recipient: Readonly<{ full_name: string; email: string }>;
-  fieldsReady: boolean;
   busy: boolean;
   onDecide: (decision: Decision) => void;
   onEdit: () => void;
@@ -366,7 +371,7 @@ function DecisionPanel({
             </Button>
           ) : null}
           {can('edit') ? (
-            <Button variant="secondary" onClick={onEdit} disabled={busy || !fieldsReady}>
+            <Button variant="secondary" onClick={onEdit} disabled={busy || pinned.status === 'loading'}>
               Düzenle
             </Button>
           ) : null}
@@ -395,7 +400,7 @@ function DecisionPanel({
           before={before?.before ?? approval.body_variables}
           after={approval.body_variables}
           fields={fields}
-          source={source}
+          pinned={pinned}
           recipient={recipient}
           labels={['Senin sunduğun', 'Onaycının düzenlemesi']}
         />

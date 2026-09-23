@@ -5,7 +5,8 @@ import { FormTextArea } from '@/components/chrome/FormField';
 import { Modal } from '@/components/ui/Modal';
 import { ModalDangerActions, ModalPrimaryActions } from '@/components/ui/modal-actions';
 import type { MailApproval } from '@/lib/mail-approvals/approvals';
-import type { FieldSource, VariableField } from '@/lib/send-form/fields';
+import type { PinnedSource } from '@/lib/mail-approvals/edit';
+import type { VariableField } from '@/lib/send-form/fields';
 import { audienceLabel, formatCount } from '@/lib/sends';
 import { EditComparison } from './EditComparison';
 
@@ -49,7 +50,7 @@ export function DecisionDialog({
   approval,
   edited,
   fields,
-  source,
+  pinned,
   recipient,
   busy,
   onCancel,
@@ -60,7 +61,7 @@ export function DecisionDialog({
   /** The approver's edit, for approveEdited and return. */
   edited: Readonly<Record<string, unknown>> | null;
   fields: readonly VariableField[];
-  source: FieldSource | null;
+  pinned: PinnedSource;
   recipient: Readonly<{ full_name: string; email: string }>;
   busy: boolean;
   onCancel: () => void;
@@ -102,7 +103,7 @@ export function DecisionDialog({
             before={approval.body_variables}
             after={edited}
             fields={fields}
-            source={source}
+            pinned={pinned}
             recipient={recipient}
             labels={['Sunulan', 'Düzenlenmiş']}
           />
