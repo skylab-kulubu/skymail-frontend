@@ -9,7 +9,7 @@
 import type { Page } from "@playwright/test";
 import { expect, preview, test } from "./fixtures";
 import { OTHER_OPERATOR, type MockSkymail } from "./fixtures/mock-api";
-import { MEMBER, VIEWER } from "./fixtures/session";
+import { APPROVER, MEMBER, VIEWER } from "./fixtures/session";
 
 /** free.basic as the Template seed publishes it, trimmed to what the form reads. */
 function freeBasic(skymail: MockSkymail) {
@@ -387,6 +387,72 @@ test("an approval refused because someone else is acting on the request says so 
   await expect(page.getByRole("list").filter({ hasText: "değişkenleri düzenledi" })).toContainText(
     "Zeynep Arslan değişkenleri düzenledi",
   );
+});
+
+test("the submitter declines a returned edit, sees the decision, and resubmits from their own values", async ({ page, skymail, signIn }) => {
+  await signIn("member");
+  const edit = "GECEKODU 2026: başvurular açık";
+  const { id, free, listId } = submitted(skymail, {
+    state: "returned",
+    variables: { ...SUBMITTED, Subject: edit },
+    deadlineIn: 6 * 24 * 3600_000,
+    decided: [
+      { kind: "edited", actor: APPROVER, changes: [{ field: "variable", name: "Subject", before: SUBMITTED.Subject, after: edit }] },
+      { kind: "returned", actor: APPROVER, note: "Konuyu kısalttım." },
+    ],
+  });
+
+  await page.goto(`/mail-approvals/show/${id}`);
+  await decision(page).getByRole("button", { name: "Kabul etme…" }).click();
+  const decline = dialog(page, "Düzenlemeyi kabul etme");
+  await decline.getByLabel("Neden (isteğe bağlı)").fill("Konu böyle kalsın.");
+  await decline.getByRole("button", { name: "Düzenlemeyi kabul etme" }).click();
+
+  await expect(notice(page, "Düzenlemeyi kabul etmedin")).toHaveText(
+    "Düzenlemeyi kabul etmedin: isteği kendi değerlerinle düzenleyip yeniden sunabilirsin.",
+  );
+  await expect(decision(page)).toContainText("Onaycının düzenlemesini kabul etmedin");
+  await expect(page.getByText("Düzenleme kabul edilmedi", { exact: true })).toBeVisible();
+  const history = page.getByRole("list").filter({ hasText: "düzenlemeyi kabul etmedi" });
+  await expect(history).toContainText(`${MEMBER.name} düzenlemeyi kabul etmedi`);
+  await expect(history).toContainText("Not: “Konu böyle kalsın.”");
+  const declined = skymail.approvalRequests().at(-1)!;
+  expect([declined.path, declined.body]).toEqual([`/mail_approvals/${id}/decline`, { note: "Konu böyle kalsın." }]);
+  expect(skymail.sendRequests()).toEqual([]);
+
+  await page.goto("/mail-approvals");
+  await page.getByRole("button", { name: "Kabul edilmedi" }).click();
+  await expect(page).toHaveURL("/mail-approvals?state=declined");
+  await expect(page.getByRole("row").filter({ hasText: "Düzenleme kabul edilmedi" })).toHaveCount(1);
+
+  // The form starts from what the submitter sent, not the edit they refused.
+  await page.goto(`/mail-approvals/show/${id}`);
+  await decision(page).getByRole("button", { name: "Düzenleyip yeniden sun" }).click();
+  await expect(page.getByText("Onaycının düzenlemesini kabul etmedin (“Konu böyle kalsın.”)")).toBeVisible();
+  await expect(page.getByLabel("Konu")).toHaveValue(SUBMITTED.Subject);
+  await page.getByRole("button", { name: "Yeniden onaya sun…" }).click();
+  await dialog(page, "Yeniden onaya sun").getByRole("button", { name: "Yeniden onaya sun" }).click();
+  await expect(page).toHaveURL(`/mail-approvals/show/${id}`);
+  const resubmit = skymail.approvalRequests().at(-1)!;
+  expect([resubmit.path, resubmit.body]).toEqual([
+    `/mail_approvals/${id}/resubmit`,
+    { template_id: free.id, mail_list_id: listId, body_variables: SUBMITTED },
+  ]);
+});
+
+test("an approver narrows the list to the requests they submitted", async ({ page, skymail, signIn }) => {
+  await signIn("approver");
+  const { free, listId } = submitted(skymail);
+  skymail.addApproval({ templateId: free.id, listId, variables: { ...SUBMITTED, Subject: "Kendi duyurum" }, submitter: APPROVER, submittedAgo: 3600_000 });
+
+  await page.goto("/mail-approvals");
+  await expect(page.getByText("2 istek")).toBeVisible();
+  await page.getByRole("button", { name: "Benim sunduklarım" }).click();
+  await expect(page).toHaveURL("/mail-approvals?mine=true");
+  await expect(page.getByText("1 istek")).toBeVisible();
+  await expect(page.getByRole("row").filter({ hasText: APPROVER.name })).toHaveCount(1);
+  // The mock lists an approver's own only when asked with mine=true, as the API does.
+  await expect(page.getByRole("row").filter({ hasText: MEMBER.name })).toHaveCount(0);
 });
 
 test("someone without an approver's role sees only their own requests", async ({ page, skymail, signIn }) => {

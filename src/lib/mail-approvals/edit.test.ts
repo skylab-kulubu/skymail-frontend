@@ -31,6 +31,7 @@ import {
   editedVariables,
   fetchPinnedSource,
   inputFromVariables,
+  resubmission,
   valueText,
   valuesBeforeEdit,
   variableChanges,
@@ -440,5 +441,40 @@ describe("the version a request is pinned to, read for its fields", () => {
     });
     const gone = scriptedClient(json(404, { code: "server.not_found" }), json(404, { code: "server.not_found" }));
     assert.equal(await fetchPinnedSource(gone.api, pinned), null);
+  });
+});
+
+describe("what a resubmission starts from", () => {
+  const edited = (seq: number): ApprovalEvent => ({
+    seq,
+    kind: "edited",
+    actor: { sub: "approver", name: "Zeynep Arslan" },
+    note: null,
+    changes: [
+      { field: "variable", name: "Subject", before: "Benim konum", after: "Onaycının konusu" },
+      { field: "variable", name: "Added", before: null, after: "onaycının" },
+    ],
+    task_id: null,
+    at: "2026-09-23T09:00:00Z",
+  });
+  const request = (state: MailApproval["state"]) =>
+    ({
+      state,
+      body_variables: { Subject: "Onaycının konusu", Heading: "Başlık", Added: "onaycının" },
+      history: [
+        { ...edited(1), kind: "submitted", changes: [] },
+        edited(2),
+        { ...edited(3), kind: state === "declined" ? "declined" : "rejected", changes: [], actor: { sub: "s", name: "Ayşe" } },
+      ],
+    }) as Pick<MailApproval, "state" | "body_variables" | "history">;
+
+  // The submitter refused the approver's edit: they resubmit from their own values.
+  it("is the submitter's own values when they declined an approver's edit", () => {
+    assert.deepEqual(resubmission(request("declined")).body_variables, { Subject: "Benim konum", Heading: "Başlık" });
+  });
+
+  // A rejected request goes back as it stands, an approver's direct edit included.
+  it("is the request as it stands when it was rejected", () => {
+    assert.deepEqual(resubmission(request("rejected")).body_variables, { Subject: "Onaycının konusu", Heading: "Başlık", Added: "onaycının" });
   });
 });

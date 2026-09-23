@@ -218,6 +218,8 @@ export type ApprovalRecord = {
   history: ApprovalEventRecord[];
 };
 
+type Decided = { kind: ApprovalEventRecord["kind"]; actor: Person | null; note?: string; changes?: ApprovalChange[] };
+
 const WEEK = 7 * 24 * 3600_000;
 const MAILER_FILLS = ["FullName", "Email"];
 
@@ -411,7 +413,8 @@ export class MockSkymail {
     submittedAgo?: number;
     /** From now; seven days after submission by default. */
     deadlineIn?: number;
-    decided?: { kind: ApprovalEventRecord["kind"]; actor: Person | null; note?: string; changes?: ApprovalChange[] };
+    /** What happened after the submission, in order: an approver's edit and its return, say. */
+    decided?: Decided | Decided[];
   }): string {
     const id = this.nextId("5d1e7c2a");
     const submitted = Date.now() - (input.submittedAgo ?? 23 * 3600_000);
@@ -433,13 +436,14 @@ export class MockSkymail {
       history: [],
     };
     this.record(record, "submitted", input.submitter, { at });
-    if (input.decided) {
-      this.record(record, input.decided.kind, input.decided.actor, {
-        note: input.decided.note ?? null,
-        changes: input.decided.changes ?? [],
-        at: new Date(submitted + 3600_000).toISOString(),
-      });
-    }
+    const decided = input.decided === undefined ? [] : Array.isArray(input.decided) ? input.decided : [input.decided];
+    decided.forEach((event, index) =>
+      this.record(record, event.kind, event.actor, {
+        note: event.note ?? null,
+        changes: event.changes ?? [],
+        at: new Date(submitted + (index + 1) * 3600_000).toISOString(),
+      }),
+    );
     this.approvals.set(id, record);
     return id;
   }

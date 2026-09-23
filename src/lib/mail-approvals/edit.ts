@@ -212,6 +212,16 @@ export function valuesBeforeEdit(approval: Pick<MailApproval, "body_variables" |
   return { before, changes, editor: edit.actor, note: decision?.note ?? edit.note ?? null };
 }
 
+/**
+ * What a resubmission starts from: a declined request carries the approver's
+ * edit its submitter refused, so they start from their own values, the ones
+ * before it; a rejected one as it stands.
+ */
+export function resubmission<T extends Pick<MailApproval, "state" | "body_variables" | "history">>(approval: T): T {
+  if (approval.state !== "declined") return approval;
+  return { ...approval, body_variables: valuesBeforeEdit(approval)?.before ?? approval.body_variables };
+}
+
 // ---------------------------------------------------------------------------
 // A submission from the send form
 

@@ -27,7 +27,7 @@ import { ROLE, isApprover } from '@/lib/access';
 import { useApiLoad } from '@/lib/api/react';
 import { viewerActions } from '@/lib/mail-approvals/actions';
 import { APPROVAL_LIST_PATH, APPROVAL_STATE_LABEL, approvalHref, fetchApproval, type MailApproval } from '@/lib/mail-approvals/approvals';
-import { composePrefill, valuesBeforeEdit } from '@/lib/mail-approvals/edit';
+import { composePrefill, resubmission } from '@/lib/mail-approvals/edit';
 import type { ListRow } from '@/lib/mailing-lists';
 import { sendAccess } from '@/lib/send-form/access';
 import { fetchSendableLists, fetchSendableTemplates } from '@/lib/send-form/send';
@@ -52,15 +52,6 @@ export function ResubmitForm({ id }: { id: string }) {
 }
 
 type From = Readonly<{ kind: 'copy' | 'resubmit'; id: string }>;
-
-/**
- * A declined request carries the approver's edit; the submitter resubmits
- * from their own values, the ones before it.
- */
-function resubmitted(approval: MailApproval): MailApproval {
-  if (approval.state !== 'declined') return approval;
-  return { ...approval, body_variables: valuesBeforeEdit(approval)?.before ?? approval.body_variables };
-}
 
 /** The templates and lists to pick from, and the request the form is filled from, loaded once. */
 function ComposeCatalog({ from }: { from: From | null }) {
@@ -118,7 +109,7 @@ function ComposeCatalog({ from }: { from: From | null }) {
     }
   }
 
-  const source = from.kind === 'resubmit' ? resubmitted(approval) : approval;
+  const source = from.kind === 'resubmit' ? resubmission(approval) : approval;
   const prefill = composePrefill(source, { templates, lists, access });
   return (
     <Compose
