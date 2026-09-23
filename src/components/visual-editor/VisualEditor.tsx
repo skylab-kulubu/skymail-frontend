@@ -49,6 +49,7 @@ import {
   visualDocumentVariables,
   type VisualAllowance,
 } from '@/lib/mail-render/visual-document';
+import { createEchoes } from './echoes';
 import { visualEditorExtensions } from './extensions';
 import { fromEditorContent, toEditorContent } from './tiptap-document';
 import {
@@ -385,8 +386,9 @@ export function VisualEditor({
   /** Shown under the editing area. */
   footer?: ReactNode;
 }) {
-  // What the editor last handed out: a value that is not it came from outside.
-  const emitted = useRef(value);
+  // Which values coming back are the editor's own (echoes.ts); only another one replaces the content.
+  const [echoes] = useState(() => createEchoes(value));
+  const handedOut = useRef(value);
   const onChangeRef = useRef(onChange);
   useEffect(() => {
     onChangeRef.current = onChange;
@@ -415,8 +417,9 @@ export function VisualEditor({
     onUpdate: ({ editor: current }) => {
       const { text, variables: inDocument } = sourceOf(current);
       setUsed(inDocument);
-      if (text === emitted.current) return;
-      emitted.current = text;
+      if (text === handedOut.current) return;
+      handedOut.current = text;
+      echoes.handedOut(text);
       onChangeRef.current(text);
     },
   });
@@ -427,15 +430,15 @@ export function VisualEditor({
 
   // A value from outside — a change set back, a reload — replaces the content.
   useEffect(() => {
-    if (!editor || value === emitted.current) return;
-    emitted.current = value;
+    if (!editor || !echoes.isOutside(value)) return;
+    handedOut.current = value;
     const read = parseVisualSource(value, allow);
     setProblems(read.ok ? null : read.problems);
     if (read.ok) {
       editor.commands.setContent(toEditorContent(read.document), { emitUpdate: false });
       setUsed(visualDocumentVariables(read.document));
     }
-  }, [editor, value, allow]);
+  }, [editor, value, allow, echoes]);
 
   const offered = useMemo(
     () => (allow.variables ? [...new Set([...variables, ...used])].sort() : []),
