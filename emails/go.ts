@@ -9,6 +9,8 @@ export const v = (name: string) => `{{.${name}}}`;
 
 export const ifSet = (name: string) => `{{if .${name}}}`;
 
+export const ifNotSet = (name: string) => `{{if not .${name}}}`;
+
 export const ifEq = (name: string, value: string) => `{{if eq .${name} \`${value}\`}}`;
 
 export const elseBranch = "{{else}}";
