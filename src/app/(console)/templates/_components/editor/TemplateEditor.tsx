@@ -60,6 +60,7 @@ import {
 import { EditorNote, RefusalNotice, TemplateKey, type Refusal } from './EditorParts';
 import { DiscardDialog, MainSourceDialog, PublishDialog, StaleComparison } from './EditorDialogs';
 import { PreviewPane, useSample } from './PreviewPane';
+import { RequiredVariablesPanel } from './RequiredVariablesPanel';
 import { SourcePanel, SourceTabs } from './SourcePane';
 import { TemplateLoadFailure } from './TemplateLoadFailure';
 import { HistoryLinks } from '../history/HistoryParts';
@@ -365,6 +366,8 @@ function Editor({
         />
         <TemplateKey template={template} />
       </div>
+
+      <RequiredVariablesPanel template={template} editing={{ state, refusal, writing: busy !== null }} />
 
       <div className="grid gap-6 xl:grid-cols-2">
         <section aria-label="Kaynak" className="min-w-0">

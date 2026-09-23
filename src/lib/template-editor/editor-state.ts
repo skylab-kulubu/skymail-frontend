@@ -161,7 +161,7 @@ export function isDirty(editing: Content, stored: Stored): boolean {
 export type EditorState = Readonly<{ editing: Content; renders: Renders; stored: Stored }>;
 
 /** The successful render of the source as it stands in `mode`, if the editor has it. */
-function currentRender({ editing, renders }: EditorState, mode: EditableMode) {
+export function currentRender({ editing, renders }: EditorState, mode: EditableMode) {
   const source = editing.sources[mode];
   if (source === undefined) return null;
   const render = renderOf(renders[mode], { mode, source });
@@ -178,10 +178,10 @@ function notRendered(mode: EditableMode, source: string, render: SourceRender | 
 }
 
 /**
- * The Main source's body as it stands: its render, or the stored render when
- * the source is untouched and was already main.
+ * The Main source's body as it stands — what a save would send: its render,
+ * or the stored render when the source is untouched and was already main.
  */
-function mainBody(state: EditorState): { html: string; plainText: string } | null {
+export function mainBody(state: EditorState): { html: string; plainText: string } | null {
   const { editing, stored } = state;
   const main = editing.mainMode;
   if (!isEditableMode(main)) {

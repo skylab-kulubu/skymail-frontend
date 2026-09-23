@@ -28,6 +28,7 @@ import {
 } from '@/lib/templates';
 import { TemplateKey } from './EditorParts';
 import { PreviewPane, useSample } from './PreviewPane';
+import { RequiredVariablesPanel } from './RequiredVariablesPanel';
 import { SourceTabs } from './SourcePane';
 import { TemplateLoadFailure } from './TemplateLoadFailure';
 import { HistoryLinks } from '../history/HistoryParts';
@@ -86,6 +87,7 @@ function Show({ template, version }: { template: MailTemplate; version: Template
         </div>
         <TemplateKey template={template} />
       </div>
+      <RequiredVariablesPanel template={template} />
       <div className="grid gap-6 xl:grid-cols-2">
         <section aria-label="Kaynak" className="min-w-0">
           <SourceTabs
