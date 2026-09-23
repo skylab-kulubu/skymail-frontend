@@ -68,19 +68,20 @@ describe("a sandbox message, as the editor reads it", () => {
     });
   });
 
-  it("carries a failure with its reason and message", () => {
-    const message = readSandboxMessage({
-      channel: RENDER_CHANNEL,
-      type: "rendered",
-      id: "r2",
-      result: { ok: false, reason: "compile", message: "Kod derlenemedi: …" },
+  for (const [reason, text] of [
+    ["compile", "Kod derlenemedi: …"],
+    ["invalid", 'Visual belge okunamadı: blocks[0]: bilinmeyen blok "quote"'],
+  ]) {
+    it(`carries a failure with its reason and message: ${reason}`, () => {
+      const message = readSandboxMessage({
+        channel: RENDER_CHANNEL,
+        type: "rendered",
+        id: "r2",
+        result: { ok: false, reason, message: text },
+      });
+      assert.deepEqual(message?.type === "rendered" && message.result, { ok: false, reason, message: text });
     });
-    assert.deepEqual(message?.type === "rendered" && message.result, {
-      ok: false,
-      reason: "compile",
-      message: "Kod derlenemedi: …",
-    });
-  });
+  }
 
   it("is nothing when it is not a message the protocol has", () => {
     const rendered = (result: unknown) => ({ channel: RENDER_CHANNEL, type: "rendered", id: "r1", result });

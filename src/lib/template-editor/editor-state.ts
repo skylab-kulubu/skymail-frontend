@@ -15,7 +15,10 @@
  * source (ticket 15) is carried by the API, never sent from here.
  */
 import { decideSave, renderOf } from "../mail-render/save";
-import type { AuthoringMode as EditableMode, SourceRender } from "../mail-render";
+import type { AuthoringMode as RenderMode, SourceRender } from "../mail-render";
+
+/** The Authoring modes the editor writes. */
+type EditableMode = Extract<RenderMode, "jsx" | "html">;
 import {
   AUTHORING_MODE_LABEL,
   writtenBy,

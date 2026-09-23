@@ -8,9 +8,11 @@
  *
  *  - `.X` and `$.X` become the sample value, HTML-escaped as html/template
  *    would, or «X» when there is none; `safeHTML .X` goes in as markup;
- *  - `if` with a single field or an `eq` against literals shows the branch
- *    the sample values select, `else if` and `else` included; any other
- *    condition shows as true;
+ *  - `if` with a single field, `not` a single field or an `eq` against
+ *    literals shows the branch the sample values select, `else if` and `else`
+ *    included; any other condition shows as true;
+ *  - an action holding only a literal prints it (the Visual editor writes
+ *    braces an operator typed as {{`{{`}});
  *  - `range`, `with`, `define` and `block` stay as written, with everything
  *    inside them, since their dot is not the sample data;
  *  - comments go, trim markers trim, and any other action stays as written.
@@ -34,6 +36,7 @@ type Frame =
 const NAME = String.raw`[\p{L}_][\p{L}\p{N}_]*`;
 const ONLY_FIELD = new RegExp(String.raw`^\$?\.(${NAME})$`, "u");
 const SAFE_HTML = new RegExp(String.raw`^safeHTML\s+\$?\.(${NAME})$`, "u");
+const NOT_FIELD = new RegExp(String.raw`^not\s+\$?\.(${NAME})$`, "u");
 const EQ = new RegExp(String.raw`^eq\s+\$?\.(${NAME})\s+([\s\S]+)$`, "u");
 const LITERAL = /"(?:[^"\\\n]|\\.)*"|`[^`]*`|[+-]?\d+(?:\.\d+)?/gy;
 
@@ -72,6 +75,10 @@ function holds(condition: string, sample: SampleValues): boolean {
   const field = ONLY_FIELD.exec(condition);
   if (field) {
     return truthy(sample[field[1]]);
+  }
+  const not = NOT_FIELD.exec(condition);
+  if (not) {
+    return !truthy(sample[not[1]]);
   }
   const eq = EQ.exec(condition);
   const candidates = eq ? literals(eq[2]) : null;
@@ -144,6 +151,10 @@ export function fillSampleValues(body: string, sample: SampleValues, { as = "htm
     if (field) {
       const text = value(field[1]);
       return { emit: as === "html" ? escapeHtml(text) : text, trims: true };
+    }
+    const printed = literals(inside);
+    if (printed?.length === 1) {
+      return { emit: as === "html" ? escapeHtml(printed[0]) : printed[0], trims: true };
     }
     const safe = SAFE_HTML.exec(inside);
     if (safe) {
