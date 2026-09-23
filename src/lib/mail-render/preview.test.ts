@@ -125,6 +125,18 @@ describe("a preview with sample values", () => {
     assert.equal(fillSampleValues(body, { Items: ["a"], Title: "x", Done: true, Org: "o", Name: "n" }), body);
   });
 
+  // The pretty printer wraps long lines inside an action, even between `else`
+  // and `if` (mail.approval-resolved, main #50). The branch chosen must not
+  // depend on the whitespace.
+  it("picks the branch of an else-if the pretty printer wrapped", () => {
+    const body =
+      "<h1>{{if eq .Decision `approved`}}ONAY{{else\n                    if eq .Decision `returned`}}GERI{{else}}RED{{end}}</h1>";
+
+    assert.equal(fillSampleValues(body, { Decision: "approved" }), "<h1>ONAY</h1>");
+    assert.equal(fillSampleValues(body, { Decision: "returned" }), "<h1>GERI</h1>");
+    assert.equal(fillSampleValues(body, { Decision: "rejected" }), "<h1>RED</h1>");
+  });
+
   it("fills a subject as text, without escaping", () => {
     assert.equal(
       fillSampleValues("{{.EventName}} başvuruları açıldı", { EventName: "R&D <Kış>" }, { as: "text" }),
