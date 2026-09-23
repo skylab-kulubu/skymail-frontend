@@ -7,6 +7,7 @@
  * exactly these, so no button leads to a refusal the viewer could have been
  * spared.
  */
+import { isApprover } from "../access";
 import { effectiveState, type ApprovalItem, type ApprovalState } from "./approvals";
 
 export type ApprovalAction =
@@ -36,6 +37,11 @@ export type ViewerActions = Readonly<{
 }>;
 
 export type ApprovalViewer = Readonly<{ sub: string | null; approver: boolean }>;
+
+/** The signed-in person as the approval screens weigh them: their subject, and whether they approve. */
+export function approvalViewer(roles: readonly string[], user: Readonly<{ sub?: string | null }>): ApprovalViewer {
+  return { sub: user.sub ?? null, approver: isApprover(roles) };
+}
 
 export function viewerActions(
   request: Pick<ApprovalItem, "state" | "deadline_at" | "submitter" | "template">,

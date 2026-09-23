@@ -20,9 +20,9 @@ import { Audience } from '@/components/sends/Audience';
 import { SectionTitle } from '@/components/sends/SectionTitle';
 import { VariableFields } from '@/components/sends/compose/VariableFields';
 import { Button } from '@/components/ui/Button';
-import { ROLE, isApprover } from '@/lib/access';
+import { ROLE } from '@/lib/access';
 import { useApi, useApiLoad } from '@/lib/api/react';
-import { viewerActions, type ViewerActions } from '@/lib/mail-approvals/actions';
+import { approvalViewer, viewerActions, type ViewerActions } from '@/lib/mail-approvals/actions';
 import { formatClubTime } from '@/lib/format';
 import {
   APPROVAL_LIST_PATH,
@@ -114,7 +114,7 @@ function ApprovalView({
   const api = useApi();
   const { roles, user } = useConsole();
   const canReadTemplates = useCan(ROLE.templatesRead);
-  const viewer = { sub: user.sub ?? null, approver: isApprover(roles) };
+  const viewer = approvalViewer(roles, user);
   const now = new Date();
   const actions = viewerActions(approval, viewer, now);
 

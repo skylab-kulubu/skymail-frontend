@@ -23,9 +23,9 @@ import { StateCard } from '@/components/chrome/StateCard';
 import { useConsole } from '@/components/layout/ConsoleContext';
 import { RoleGate } from '@/components/layout/RoleGate';
 import { Button } from '@/components/ui/Button';
-import { ROLE, isApprover } from '@/lib/access';
+import { ROLE } from '@/lib/access';
 import { useApiLoad } from '@/lib/api/react';
-import { viewerActions } from '@/lib/mail-approvals/actions';
+import { approvalViewer, viewerActions } from '@/lib/mail-approvals/actions';
 import { APPROVAL_LIST_PATH, APPROVAL_STATE_LABEL, approvalHref, fetchApproval } from '@/lib/mail-approvals/approvals';
 import { composePrefill, resubmission } from '@/lib/mail-approvals/edit';
 import type { ListRow } from '@/lib/mailing-lists';
@@ -92,7 +92,7 @@ function ComposeCatalog({ from }: { from: From | null }) {
   if (!from || !approval) return <Compose access={access} templates={templates} lists={lists} />;
 
   if (from.kind === 'resubmit') {
-    const { state, actions } = viewerActions(approval, { sub: user.sub ?? null, approver: isApprover(roles) });
+    const { state, actions } = viewerActions(approval, approvalViewer(roles, user));
     if (!actions.includes('resubmit')) {
       return (
         <StateCard

@@ -8,7 +8,7 @@
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { viewerActions } from "./actions";
+import { approvalViewer, viewerActions } from "./actions";
 import type { ApprovalItem, ApprovalState } from "./approvals";
 
 const NOW = new Date("2026-09-23T09:00:00Z");
@@ -112,5 +112,13 @@ describe("what anyone else can do", () => {
       assert.deepEqual(viewerActions(request(state), bystander, NOW).actions, [], state);
     }
     assert.deepEqual(viewerActions(request("rejected"), { sub: null, approver: false }, NOW).actions, []);
+  });
+});
+
+describe("the viewer of a request", () => {
+  it("is their subject, and whether they hold the approver's role with access", () => {
+    assert.deepEqual(approvalViewer(["skymail:access", "skymail:mails:approve"], { sub: APPROVER }), { sub: APPROVER, approver: true });
+    assert.deepEqual(approvalViewer(["skymail:mails:approve"], { sub: SUBMITTER }), { sub: SUBMITTER, approver: false });
+    assert.deepEqual(approvalViewer(["skymail:access"], {}), { sub: null, approver: false });
   });
 });
