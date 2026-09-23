@@ -87,15 +87,19 @@ export interface SeedRun {
   print: (line: string) => void;
 }
 
-export type SeedArgs = { ok: true; dryRun: boolean; force: ForceOption } | { ok: false; message: string };
+export type SeedArgs =
+  | { ok: true; dryRun: boolean; allowStale: boolean; force: ForceOption }
+  | { ok: false; message: string };
 
 /**
- * Reads the command line: --dry-run, --force=<key>[,<key>] (repeatable) and
- * --force-all. keys are the templates the run seeds; forcing any other is a
- * mistake, since it would run a seed that forces nothing.
+ * Reads the command line: --dry-run, --force=<key>[,<key>] (repeatable),
+ * --force-all and --allow-stale (seed from a checkout behind origin/main).
+ * keys are the templates the run seeds; forcing any other is a mistake, since
+ * it would run a seed that forces nothing.
  */
 export function parseSeedArgs(argv: string[], keys: string[]): SeedArgs {
   let dryRun = false;
+  let allowStale = false;
   let all = false;
   const forced: string[] = [];
   for (const arg of argv) {
@@ -104,6 +108,8 @@ export function parseSeedArgs(argv: string[], keys: string[]): SeedArgs {
     }
     if (arg === "--dry-run") {
       dryRun = true;
+    } else if (arg === "--allow-stale") {
+      allowStale = true;
     } else if (arg === "--force-all") {
       all = true;
     } else if (arg === "--force" || arg.startsWith("--force=")) {
@@ -125,11 +131,11 @@ export function parseSeedArgs(argv: string[], keys: string[]): SeedArgs {
     } else {
       return {
         ok: false,
-        message: `Bilinmeyen seçenek: ${arg}. Seçenekler: --dry-run, --force=<anahtar>[,<anahtar>], --force-all.`,
+        message: `Bilinmeyen seçenek: ${arg}. Seçenekler: --dry-run, --force=<anahtar>[,<anahtar>], --force-all, --allow-stale.`,
       };
     }
   }
-  return { ok: true, dryRun, force: { all, keys: all ? [] : forced } };
+  return { ok: true, dryRun, allowStale, force: { all, keys: all ? [] : forced } };
 }
 
 /** A version a refusal or a force names: its summary, as skymail-backend's version routes serve it. */
