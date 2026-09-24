@@ -1,0 +1,229 @@
+@import 'tailwindcss';
+
+/*
+ * The house token set, copied from superadmin's globals.css (ADR-0017: a copy,
+ * not a shared package — the two may drift).
+ *
+ * superadmin is dark only. SkyMail also has a light theme, and gets it without
+ * rewriting the copied components: they paint with Tailwind's neutral scale,
+ * white-with-opacity borders and the skylab accents, so the light theme
+ * redefines those variables under [data-theme='light'] — the neutral scale runs
+ * the other way, "white" becomes the ink colour, and the accents darken until
+ * they read on a light surface. Markup stays identical to superadmin's, which
+ * keeps later re-copies easy.
+ */
+
+:root {
+  color-scheme: dark;
+  --background: #08070b;
+  --foreground: #f5f1ec;
+  --dark: #08070b;
+  --light: #f5f1ec;
+  --brand: #e0c8e5;
+  --purple: #ae7eb6;
+  --danger: #f87171;
+  --sl-bg: #08070b;
+  --sl-ink: #f5f1ec;
+  --sl-accent: #e0c8e5;
+  --logo: #e0c8e5;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --background: #fdfcfa;
+  --foreground: #1c1a18;
+  --brand: #8f5e98;
+  --purple: #8f5e98;
+  --danger: #c81e1e;
+  --sl-bg: #fdfcfa;
+  --sl-ink: #1c1a18;
+  --sl-accent: #8f5e98;
+  --logo: #8f5e98;
+
+  /* Neutral scale reversed: 950 is the chrome, 900 the page, 100 the ink. */
+  --color-neutral-50: #121014;
+  --color-neutral-100: #1c1a18;
+  --color-neutral-200: #2b2825;
+  --color-neutral-300: #45413c;
+  --color-neutral-400: #57524c;
+  --color-neutral-500: #6b665f;
+  --color-neutral-600: #8a847d;
+  --color-neutral-700: #c9c3bc;
+  --color-neutral-800: #e3ded8;
+  --color-neutral-900: #fdfcfa;
+  --color-neutral-950: #ece8e3;
+
+  /* Hairlines and hover washes are "white at n%" in the dark theme. */
+  --color-white: #000000;
+
+  /* Accents dark enough to read as text on a light surface. */
+  --color-skylab-300: #75447f;
+  --color-skylab-400: #8f5e98;
+  --color-skylab-500: #ae7eb6;
+  --color-red-300: #b91c1c;
+  --color-red-400: #c81e1e;
+  --color-amber-300: #92400e;
+  --color-amber-400: #b45309;
+  --color-emerald-300: #047857;
+  --color-emerald-400: #047857;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Not `inline`: utilities must read these through variables so the light theme can swap them. */
+@theme {
+  --color-skylab-300: #f3e8f5;
+  --color-skylab-400: #ebd5ee;
+  --color-skylab-500: #e0c8e5;
+  --color-skylab-600: #c8a4ce;
+  --color-skylab-700: #ae7eb6;
+  --color-skylab-800: #8f5e98;
+  --color-skylab-900: #6e4576;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-dark: var(--dark);
+  --color-light: var(--light);
+  --color-brand: var(--brand);
+  --color-purple: var(--purple);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-sans-loaded), 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono);
+  --text-4xs: 0.5rem;
+  --text-4xs--line-height: 0.75rem;
+  --text-3xs: 0.625rem;
+  --text-3xs--line-height: 0.875rem;
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+@layer base {
+  h1 {
+    color: var(--sl-ink);
+  }
+  h2 {
+    color: var(--sl-ink);
+  }
+  select,
+  option {
+    color: var(--foreground);
+  }
+  input,
+  textarea,
+  select {
+    color: var(--foreground);
+  }
+  ::placeholder {
+    color: #a3a3a3;
+    opacity: 0.7;
+  }
+  input[type='date'],
+  input[type='time'],
+  input[type='datetime-local'] {
+    color-scheme: light;
+    color: #1a1a1a;
+    background-color: var(--light);
+  }
+}
+
+@layer base {
+  :root {
+    --scrollbar-thumb-on-light: color-mix(in srgb, var(--color-dark) 30%, transparent);
+    --scrollbar-thumb-on-dark: color-mix(in srgb, var(--color-light) 30%, transparent);
+    --scrollbar-thumb: var(--scrollbar-thumb-on-dark);
+  }
+
+  :root[data-theme='light'] {
+    --scrollbar-thumb: var(--scrollbar-thumb-on-light);
+  }
+
+  body {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+
+  * {
+    scrollbar-color: inherit;
+  }
+
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+
+  *::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+
+  button:not(:disabled):not([disabled]),
+  input[type='button']:not(:disabled):not([disabled]),
+  input[type='submit']:not(:disabled):not([disabled]),
+  input[type='reset']:not(:disabled):not([disabled]),
+  input[type='file']:not(:disabled) {
+    cursor: pointer;
+  }
+  button:disabled,
+  button[disabled] {
+    cursor: not-allowed;
+  }
+  a[href] {
+    cursor: pointer;
+  }
+
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--color-white) 4%, transparent) 0%,
+      color-mix(in srgb, var(--color-white) 10%, transparent) 50%,
+      color-mix(in srgb, var(--color-white) 4%, transparent) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: 100% 0;
+    }
+    100% {
+      background-position: -100% 0;
+    }
+  }
+
+  summary {
+    cursor: pointer;
+  }
+  select:not(:disabled) {
+    cursor: pointer;
+  }
+}

@@ -39,3 +39,17 @@ _.sln
 
 # rendered e-mail output
 build/
+
+# The Mail template editor's generated assets (scripts/build-editor-assets.ts)
+/public/render-sandbox/
+/public/monaco/
+
+# Playwright
+/test-results/
+/playwright-report/
+/playwright/.cache/
+
+# Next.js
+.next/
+next-env.d.ts
+*.tsbuildinfo

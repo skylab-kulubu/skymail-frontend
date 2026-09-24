@@ -1,15 +1,22 @@
 /**
  * Puts the templates in emails/ into a SkyMail instance, addressed by key.
  *
- * Seeding is an upsert, so running it twice is the same as running it once, and
- * a template that was archived comes back. Nothing is deleted: a key that is no
- * longer in emails/ is left alone and reported, because archiving something a
- * live service still calls is how mail silently stops.
+ * Seeding is an upsert: a template that was archived comes back, and nothing
+ * is deleted — a key that is no longer in emails/ is left alone, because
+ * archiving something a live service still calls is how mail silently stops.
+ * Each template goes with its .tsx source as its JSX source, the render of
+ * that source, its subject and its contract Required variables.
  *
- * One field is not overwritten: a subject is seeded when the key is new and
- * then belongs to the row, so an operator can reword it without a release
- * (ADR-0045). A run that finds a reworded subject says so rather than leaving
- * it to look like the repo's wording quietly failed to apply.
+ * SkyMail refuses a template an operator changed since the last seed
+ * (ADR-0047). The run goes on with the others, lists the refused ones with
+ * why and the command that forces each, and exits non-zero. Forcing writes
+ * over the operator's change; their versions stay in the template's history.
+ * What the run does is src/lib/template-seed; this is its command line:
+ *
+ *   --dry-run                       nothing is sent; lists what would be
+ *   --force=<key>[,<key>]           writes these even over an operator's change
+ *   --force-all                     writes every template so
+ *   --allow-stale                   seeds even from a checkout behind origin/main
  *
  * Credentials come from the environment and are never printed:
  *
@@ -19,126 +26,81 @@
  *   KEYCLOAK_CLIENT_ID
  *   KEYCLOAK_CLIENT_SECRET
  *
- * Needs skymail:access + skymail:templates:write. Pass --dry-run to see what
- * would change without touching anything.
+ * The seed renders from the working tree, so before the first request it
+ * refuses a checkout that is behind origin/main in the templates or in what
+ * renders them, and warns about one that has diverged from it
+ * (src/lib/template-seed/freshness).
+ *
+ * Needs skymail:access + skymail:templates:write, and a skymail-backend that
+ * knows the conflict rule (ticket 09): an older one ignores --force and keeps
+ * an operator's subject without a word.
  */
-import React from "react";
-import { render } from "@react-email/render";
+import { execFileSync } from "node:child_process";
 import { templates } from "../emails";
+import { SEED_COMMAND, parseSeedArgs, runSeed, templateSources } from "../src/lib/template-seed";
+import { checkFreshness, divergedMessage, staleMessage } from "../src/lib/template-seed/freshness";
+import { seedToken } from "../src/lib/template-seed/token";
 
 const BASE_URL = (process.env.SKYMAIL_URL ?? "http://localhost:3000").replace(/\/+$/, "");
-const DRY_RUN = process.argv.includes("--dry-run");
 
-async function resolveToken(): Promise<string> {
-  const direct = process.env.SKYMAIL_TOKEN;
-  if (direct) {
-    return direct;
+/** Runs git, or null when it fails — a missing remote and a tarball both land here. */
+function git(args: string[]): string | null {
+  try {
+    return execFileSync("git", args, {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+      timeout: 15_000,
+      // A credential prompt would hang the seed instead of failing it.
+      env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },
+    }).trim();
+  } catch {
+    return null;
+  }
+}
+
+async function main(): Promise<number> {
+  const args = parseSeedArgs(
+    process.argv.slice(2),
+    templates.map(({ meta }) => meta.key),
+  );
+  if (!args.ok) {
+    console.error(args.message);
+    return 2;
   }
 
-  const tokenUrl = process.env.KEYCLOAK_TOKEN_URL;
-  const clientId = process.env.KEYCLOAK_CLIENT_ID;
-  const clientSecret = process.env.KEYCLOAK_CLIENT_SECRET;
-  if (!tokenUrl || !clientId || !clientSecret) {
-    throw new Error(
-      "Kimlik yok: ya SKYMAIL_TOKEN ver ya da KEYCLOAK_TOKEN_URL + KEYCLOAK_CLIENT_ID + KEYCLOAK_CLIENT_SECRET ver.",
-    );
+  if (!args.allowStale) {
+    const freshness = checkFreshness(git);
+    for (const note of freshness.notes) {
+      console.log(`${note}\n`);
+    }
+    if (freshness.state === "stale") {
+      console.error(staleMessage(freshness.commits, SEED_COMMAND));
+      return 1;
+    }
+    if (freshness.state === "diverged") {
+      console.log(`${divergedMessage(freshness.commits)}\n`);
+    }
   }
 
-  const response = await fetch(tokenUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "client_credentials",
-      client_id: clientId,
-      client_secret: clientSecret,
-    }),
+  const sources = await templateSources(templates);
+  const token = args.dryRun ? "" : await seedToken(process.env, fetch);
+  return runSeed({
+    baseUrl: BASE_URL,
+    token,
+    templates: sources,
+    dryRun: args.dryRun,
+    force: args.force,
+    fetch,
+    print: (line) => console.log(line),
   });
-
-  if (!response.ok) {
-    // The body can carry the client secret back in an error description.
-    throw new Error(`Keycloak token alınamadı: HTTP ${response.status}`);
-  }
-
-  const payload = (await response.json()) as { access_token?: string };
-  if (!payload.access_token) {
-    throw new Error("Keycloak yanıtında access_token yok.");
-  }
-  return payload.access_token;
 }
 
-async function main(): Promise<void> {
-  if (DRY_RUN) {
-    console.log(`[kuru çalışma] ${BASE_URL} üzerine hiçbir şey yazılmayacak.\n`);
-  }
-
-  const token = DRY_RUN ? "" : await resolveToken();
-  let seeded = 0;
-  const kept: { key: string; subject: string }[] = [];
-
-  for (const { meta, Component } of templates) {
-    const html = await render(React.createElement(Component), { pretty: true });
-    const plainText = await render(React.createElement(Component), { plainText: true });
-
-    const body = {
-      name: meta.name,
-      subject: meta.subject,
-      html_content: html,
-      plain_text_content: plainText,
-      // Not the .tsx source: a pointer back to it. The template's home is this
-      // repo, and SkyMail's Monaco pane cannot compile a comment, so the editor
-      // refuses to save one over the rendered body (see lib/template-render).
-      react_email_content: `// Kaynak: skymail-frontend/emails/${meta.key}.tsx — burada düzenlersen repodaki kaynakla ayrışır.\n`,
-      system: meta.system,
-    };
-
-    if (DRY_RUN) {
-      console.log(`· ${meta.key.padEnd(34)} ${meta.system ? "[sistem]" : "        "} "${meta.subject}"`);
-      continue;
-    }
-
-    const response = await fetch(`${BASE_URL}/v1/templates/by-key/${encodeURIComponent(meta.key)}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(body),
-    });
-
-    if (!response.ok) {
-      const detail = await response.text();
-      throw new Error(`${meta.key} yazılamadı: HTTP ${response.status} ${detail.slice(0, 200)}`);
-    }
-
-    const saved = (await response.json()) as { id: string; subject: string };
-    seeded += 1;
-
-    // A subject is seeded once and then belongs to the row, so an operator can
-    // reword it without a release. Saying so here is what keeps that from
-    // looking like the seed silently failed to apply the repo's wording.
-    const keptSubject = saved.subject !== meta.subject;
-    if (keptSubject) {
-      kept.push({ key: meta.key, subject: saved.subject });
-    }
-    console.log(`✓ ${meta.key.padEnd(34)} ${saved.id}${keptSubject ? "  · konu korundu" : ""}`);
-  }
-
-  if (!DRY_RUN) {
-    console.log(`\n${seeded} şablon ${BASE_URL} üzerine yazıldı.`);
-    if (kept.length > 0) {
-      console.log(
-        `\n${kept.length} şablonun konusu arayüzden değiştirilmiş, dokunulmadı — gövdeleri yine de güncellendi:`,
-      );
-      for (const { key, subject } of kept) {
-        console.log(`  ${key.padEnd(34)} "${subject}"`);
-      }
-      console.log("Repodaki konuyu dayatmak istersen şablonu arayüzden düzenle; seed bunu yapmaz.");
-    }
-    console.log("Repoda olmayan anahtarlar silinmedi — canlı bir servisin çağırdığı şablonu arşivlemek postayı sessizce durdurur.");
-  }
-}
-
-main().catch((error: unknown) => {
-  console.error(error instanceof Error ? error.message : error);
-  process.exit(1);
-});
+main().then(
+  (exitCode) => {
+    process.exitCode = exitCode;
+  },
+  (error: unknown) => {
+    console.error(error instanceof Error ? error.message : error);
+    process.exitCode = 1;
+  },
+);

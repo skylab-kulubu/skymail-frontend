@@ -4,11 +4,10 @@
 
 Her şablona ayrıca `Email` ve `FullName` değişkenleri mailer tarafından eklenir.
 
-**Konu sütunu yalnız ilk seed için geçerlidir.** Seed bir anahtarı ilk kez eklerken konusunu
-buradan tohumlar; var olan bir satırın konusunu bir daha yazmaz, çünkü konu o noktadan sonra
-operatörün olur. Yani buradaki konuyu değiştirmek canlıdaki bir şablonu değiştirmez —
-değişikliği SkyMail'de de yapmak gerekir. Seed, canlı konu farklıysa `· konu korundu` diye
-bildirir.
+**Konu sütunu canlıya seed ile gider.** Seed her koşuda konuyu da buradan yazar. Son seed'den
+sonra bir operatör şablonu SkyMail'de değiştirdiyse (konusu ya da bir taslağı dahil) SkyMail o
+şablonu reddeder ve hiçbir şeyini yazmaz; seed reddedilenleri, nedenini ve zorlama komutunu
+(`--force=<anahtar>`) listeler. Zorlamak operatörün sürümlerini silmez, geçmişte kalırlar (ADR-0047).
 
 Konu satırı ve düz metin Go `text/template` ile render edilir: eksik bir değişken orada
 `<no value>` basar (HTML tarafında boş basar), o yüzden konuda yalnızca gönderenin her
@@ -34,7 +33,7 @@ zaman verdiği değişkenler kullanılır.
 | Etkinlik · Güncellendi | `event.updated` | {{.EventName}} etkinliğinde değişiklik var | `EventName`, `ChangeSummary`, `NewStartsAt`, `NewVenue`, `EventUrl` |
 | Etkinlik · İptal Edildi | `event.cancelled` | {{.EventName}} iptal edildi | `EventName`, `CancelReason`, `ContactEmail` |
 | Mail Onayı · Onayını Bekliyor | `mail.approval-requested` | Onayını bekleyen bir gönderim var | `RequesterName`, `TemplateName`, `AudienceName`, `RecipientCount`, `PreviewUrl`, `ApproveUrl` |
-| Mail Onayı · Sonuçlandı | `mail.approval-resolved` | Gönderim talebin sonuçlandı | `TemplateName`, `AudienceName`, `Decision`, `DecidedBy`, `DecisionNote` |
+| Mail Onayı · Sonuçlandı | `mail.approval-resolved` | {{if eq .Decision `approved`}}Gönderimin onaylandı ve gitti{{else if eq .Decision `rejected`}}Gönderimin reddedildi{{else if eq .Decision `returned`}}Gönderimin sana geri döndü{{else if eq .Decision `expired`}}Gönderimin süresi doldu{{else if eq .Decision `declined`}}Gönderimdeki düzenleme kabul edilmedi{{else}}Gönderim isteğin sonuçlandı{{end}} | `TemplateName`, `AudienceName`, `Decision`, `DecidedBy`, `DecisionNote`, `RequestUrl`, `DeadlineAt` |
 | Operasyon · Gönderim Hatası | `ops.send-failed` | SkyMail gönderiminde hata | `TaskId`, `TemplateName`, `FailedCount`, `TotalCount`, `FirstError`, `TaskUrl` |
 | Kulüp · Takım Üyeliği Değişti | `club.team-membership` | SKY LAB takım üyeliğinde değişiklik | `TeamName`, `Action`, `EffectiveAt`, `LeaderName` |
 
@@ -59,7 +58,7 @@ zaman verdiği değişkenler kullanılır.
 - **Etkinlik · Hatırlatma** (`event.reminder`) — Etkinlikten bir gün önce, bileti olan herkese. NOT: zamanlayıcı ve gönderim kodu henüz yazılmadı; konu satırı T-1 varsayıyor.
 - **Etkinlik · Güncellendi** (`event.updated`) — Etkinliğin saati veya yeri değiştiğinde, bileti olan herkese. NOT: gönderim kodu henüz yazılmadı.
 - **Etkinlik · İptal Edildi** (`event.cancelled`) — Etkinlik iptal edildiğinde, bileti olan herkese. NOT: gönderim kodu henüz yazılmadı.
-- **Mail Onayı · Onayını Bekliyor** (`mail.approval-requested`) — SkyMail, gönderme yetkisi olmayan biri taslak gönderdiğinde onaycılara (ADR-0031, CONTEXT.md "Mail onayı"). NOT: onay akışı henüz yazılmadı.
-- **Mail Onayı · Sonuçlandı** (`mail.approval-resolved`) — SkyMail, bir onaycı gönderimi onayladığında ya da reddettiğinde, talebi açan kişiye.
+- **Mail Onayı · Onayını Bekliyor** (`mail.approval-requested`) — SkyMail, gönderme yetkisi olmayan biri taslak gönderdiğinde onaycılara (ADR-0031, CONTEXT.md "Mail onayı", ticket 19).
+- **Mail Onayı · Sonuçlandı** (`mail.approval-resolved`) — SkyMail, bir onay isteği sonuçlandığında. approved/rejected/returned/expired talebi açana, declined onaycılara gider (ADR-0031, ticket 19).
 - **Operasyon · Gönderim Hatası** (`ops.send-failed`) — SkyMail, bir görevdeki mailler yeniden denemeler bittikten sonra da gönderilemediğinde, gönderimi başlatan kişiye. NOT: bu uyarıyı gönderen kod henüz yazılmadı.
 - **Kulüp · Takım Üyeliği Değişti** (`club.team-membership`) — Superadmin'de bir kişi takıma eklendiğinde veya çıkarıldığında. NOT: gönderim kodu henüz yazılmadı.
