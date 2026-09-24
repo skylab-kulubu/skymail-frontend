@@ -92,6 +92,50 @@ test("superadmin's link preselects the list, and so does the list's own Yeni gö
   await expect(page.getByRole("group", { name: "Mail listesi" }).getByRole("radio", { checked: true })).toHaveCount(0);
 });
 
+test("a template or a list is picked by the name it shows; its key, tag or group is said after the name", async ({ page, skymail, signIn }) => {
+  await signIn("sender");
+  skymail.addTemplate({
+    name: "Sandbox testi",
+    key: "sandbox.test",
+    subject: "Sandbox",
+    mainMode: "html",
+    html: "<p>Sandbox gövdesi</p>",
+    htmlContent: "<p>Sandbox gövdesi</p>",
+    plainText: "Sandbox gövdesi",
+  });
+  skymail.addTemplate({
+    name: "Onay sonucu",
+    key: "mail.approval-resolved",
+    system: true,
+    subject: "Onay",
+    mainMode: "html",
+    html: "<p>…</p>",
+    htmlContent: "<p>Onaylandı.</p>",
+    plainText: "Onaylandı.",
+  });
+  skymail.addList({ name: "GECEKODU katılımcıları", recipients: PARTICIPANTS });
+  skymail.addList({ name: "WEBLAB", source: "keycloak", groupPath: "/UYELER/ARGE/WEBLAB", recipients: PARTICIPANTS.slice(0, 2) });
+
+  await page.goto("/mail-tasks/create");
+  const templates = page.getByRole("group", { name: "Mail template" });
+  const sandbox = templates.getByRole("radio", { name: "Sandbox testi", exact: true });
+  await sandbox.check();
+  await expect(sandbox).toBeChecked();
+  await expect(sandbox).toHaveAccessibleDescription("Template key: sandbox.test");
+  await expect(preview(page, "Gönderim önizlemesi")).toContainText("Sandbox gövdesi");
+  await expect(templates.getByRole("radio", { name: "Onay sonucu", exact: true })).toHaveAccessibleDescription(
+    "System Template key: mail.approval-resolved",
+  );
+
+  const lists = page.getByRole("group", { name: "Mail listesi" });
+  const weblab = lists.getByRole("radio", { name: "WEBLAB", exact: true });
+  await weblab.check();
+  await expect(weblab).toBeChecked();
+  await expect(weblab).toHaveAccessibleDescription("Harici /UYELER/ARGE/WEBLAB");
+  await expect(page.getByText("2 üye. E-posta adresi olmayan üyeye gönderilmez.")).toBeVisible();
+  await expect(lists.getByRole("radio", { name: "GECEKODU katılımcıları", exact: true })).toHaveAccessibleDescription("Internal liste");
+});
+
 test("a free announcement written in the Visual editor goes to a list as the allow-listed markup", async ({ page, skymail, signIn }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));

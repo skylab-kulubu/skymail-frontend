@@ -7,7 +7,7 @@ import type { ListRow } from '@/lib/mailing-lists';
 import { formatCount } from '@/lib/sends';
 import type { SendAccess } from '@/lib/send-form/access';
 import type { PeopleCheck } from '@/lib/send-form/audience';
-import { ChoiceList } from './ChoiceList';
+import { ChoiceList, type Choice } from './ChoiceList';
 import { PeopleEditor, type PersonEntry } from './PeopleEditor';
 
 export type Audience = 'list' | 'people';
@@ -17,18 +17,13 @@ const AUDIENCE_OPTIONS: ReadonlyArray<{ value: Audience; label: string }> = [
   { value: 'people', label: 'Kişiler' },
 ];
 
-function ListChoice({ list }: { list: ListRow }) {
-  return (
-    <span className="block min-w-0">
-      <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <span className="text-sm break-words text-neutral-100">{list.name}</span>
-        {list.external ? <Tag tone="external">Harici</Tag> : null}
-      </span>
-      <span className="text-2xs mt-0.5 block break-all text-neutral-500">
-        {list.external ? (list.groupPath ?? 'Keycloak grubu') : 'Internal liste'}
-      </span>
-    </span>
-  );
+/** A mailing list as the picker says it: by name, with its Harici tag and group, or as an internal list. */
+function listChoice(list: ListRow): Choice {
+  return {
+    name: list.name,
+    tag: list.external ? <Tag tone="external">Harici</Tag> : undefined,
+    detail: list.external ? (list.groupPath ?? 'Keycloak grubu') : 'Internal liste',
+  };
 }
 
 /** How many a list sends to, said under it: undefined while counting, null when unknown. */
@@ -87,7 +82,7 @@ export function AudiencePart({
             onChange={onList}
             searchLabel="Liste ara"
             searchText={(candidate) => `${candidate.name} ${candidate.groupPath ?? ''}`}
-            render={(candidate) => <ListChoice list={candidate} />}
+            choice={listChoice}
             empty="Gönderilebilecek bir mail listesi yok."
             error={listProblem}
           />

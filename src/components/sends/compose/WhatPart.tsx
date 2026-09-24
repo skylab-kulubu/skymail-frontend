@@ -5,7 +5,7 @@ import { NoticeBox } from '@/components/chrome/Notice';
 import { Tag } from '@/components/chrome/Tag';
 import { NO_FREE_TEMPLATE } from '@/lib/send-form/send';
 import type { MailTemplate } from '@/lib/templates';
-import { ChoiceList } from './ChoiceList';
+import { ChoiceList, type Choice } from './ChoiceList';
 
 export type What = 'template' | 'free';
 
@@ -14,21 +14,18 @@ const WHAT_OPTIONS: ReadonlyArray<{ value: What; label: string }> = [
   { value: 'template', label: 'Mail template' },
 ];
 
-function TemplateChoice({ template }: { template: MailTemplate }) {
-  return (
-    <span className="block min-w-0">
-      <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <span className="text-sm break-words text-neutral-100">{template.name}</span>
-        {template.system ? <Tag tone="system">System</Tag> : null}
+/** A Mail template as the picker says it: by name, with its System tag and key. */
+function templateChoice(template: MailTemplate): Choice {
+  return {
+    name: template.name,
+    tag: template.system ? <Tag tone="system">System</Tag> : undefined,
+    detail: template.key ? (
+      <span className="font-mono">
+        <span className="sr-only">Template key: </span>
+        {template.key}
       </span>
-      {template.key ? (
-        <span className="text-2xs mt-0.5 block font-mono break-all text-neutral-500">
-          <span className="sr-only">Template key: </span>
-          {template.key}
-        </span>
-      ) : null}
-    </span>
-  );
+    ) : undefined,
+  };
 }
 
 /** What is sent: a free announcement in free.basic's frame, or a Mail template picked by name, key and System tag. */
@@ -71,8 +68,8 @@ export function WhatPart({
           value={templateId}
           onChange={onTemplate}
           searchLabel="Template ara"
-          searchText={(choice) => `${choice.name} ${choice.key ?? ''}`}
-          render={(choice) => <TemplateChoice template={choice} />}
+          searchText={(template) => `${template.name} ${template.key ?? ''}`}
+          choice={templateChoice}
           empty="Gönderilebilecek bir Mail template yok."
           error={problem}
         />
