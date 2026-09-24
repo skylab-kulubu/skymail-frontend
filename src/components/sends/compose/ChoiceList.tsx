@@ -100,6 +100,9 @@ export function ChoiceList<T extends { id: string }>({
  * One radio, the whole row its label. The radio is named by the choice's name
  * alone and described by its tag and detail, so a screen reader says
  * "Sandbox testi, radio" and then the key, not the whole row as one name.
+ * The name is an aria-label, not an aria-labelledby: the app's browser pane
+ * reads only the former, and without it shows the radio's value, a UUID
+ * (ticket 25).
  */
 function ChoiceRow({
   group,
@@ -116,7 +119,6 @@ function ChoiceRow({
   onPick: () => void;
   invalid: boolean;
 }) {
-  const nameId = useId();
   const tagId = useId();
   const detailId = useId();
   const describedBy = [choice.tag ? tagId : null, choice.detail ? detailId : null].filter(Boolean).join(' ') || undefined;
@@ -128,16 +130,14 @@ function ChoiceRow({
         value={value}
         checked={checked}
         onChange={onPick}
-        aria-labelledby={nameId}
+        aria-label={choice.name}
         aria-describedby={describedBy}
         aria-invalid={invalid ? true : undefined}
         className="accent-skylab-400 mt-0.5 shrink-0 focus:outline-none"
       />
       <span className="block min-w-0 flex-1">
         <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span id={nameId} className="text-sm break-words text-neutral-100">
-            {choice.name}
-          </span>
+          <span className="text-sm break-words text-neutral-100">{choice.name}</span>
           {choice.tag ? <span id={tagId}>{choice.tag}</span> : null}
         </span>
         {choice.detail ? (
