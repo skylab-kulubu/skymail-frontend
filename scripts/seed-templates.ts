@@ -39,6 +39,7 @@ import { execFileSync } from "node:child_process";
 import { templates } from "../emails";
 import { SEED_COMMAND, parseSeedArgs, runSeed, templateSources } from "../src/lib/template-seed";
 import { checkFreshness, divergedMessage, staleMessage } from "../src/lib/template-seed/freshness";
+import { seedToken } from "../src/lib/template-seed/token";
 
 const BASE_URL = (process.env.SKYMAIL_URL ?? "http://localhost:3000").replace(/\/+$/, "");
 
@@ -55,43 +56,6 @@ function git(args: string[]): string | null {
   } catch {
     return null;
   }
-}
-
-async function resolveToken(): Promise<string> {
-  const direct = process.env.SKYMAIL_TOKEN;
-  if (direct) {
-    return direct;
-  }
-
-  const tokenUrl = process.env.KEYCLOAK_TOKEN_URL;
-  const clientId = process.env.KEYCLOAK_CLIENT_ID;
-  const clientSecret = process.env.KEYCLOAK_CLIENT_SECRET;
-  if (!tokenUrl || !clientId || !clientSecret) {
-    throw new Error(
-      "Kimlik yok: ya SKYMAIL_TOKEN ver ya da KEYCLOAK_TOKEN_URL + KEYCLOAK_CLIENT_ID + KEYCLOAK_CLIENT_SECRET ver.",
-    );
-  }
-
-  const response = await fetch(tokenUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "client_credentials",
-      client_id: clientId,
-      client_secret: clientSecret,
-    }),
-  });
-
-  if (!response.ok) {
-    // The body can carry the client secret back in an error description.
-    throw new Error(`Keycloak token alınamadı: HTTP ${response.status}`);
-  }
-
-  const payload = (await response.json()) as { access_token?: string };
-  if (!payload.access_token) {
-    throw new Error("Keycloak yanıtında access_token yok.");
-  }
-  return payload.access_token;
 }
 
 async function main(): Promise<number> {
@@ -119,7 +83,7 @@ async function main(): Promise<number> {
   }
 
   const sources = await templateSources(templates);
-  const token = args.dryRun ? "" : await resolveToken();
+  const token = args.dryRun ? "" : await seedToken(process.env, fetch);
   return runSeed({
     baseUrl: BASE_URL,
     token,
