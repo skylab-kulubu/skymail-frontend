@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { Suspense } from 'react';
 import { ResubmitForm } from '@/components/sends/compose/SendForm';
 
 export const metadata: Metadata = { title: 'İsteği yeniden sun' };
@@ -8,9 +7,5 @@ export const metadata: Metadata = { title: 'İsteği yeniden sun' };
 // submitted again (ticket 20).
 export default async function Page({ params }: PageProps<'/mail-approvals/edit/[id]'>) {
   const { id } = await params;
-  return (
-    <Suspense>
-      <ResubmitForm id={id} />
-    </Suspense>
-  );
+  return <ResubmitForm id={id} />;
 }
