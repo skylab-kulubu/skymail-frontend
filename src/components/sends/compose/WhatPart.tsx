@@ -68,7 +68,7 @@ export function WhatPart({
           value={templateId}
           onChange={onTemplate}
           searchLabel="Template ara"
-          searchText={(choice) => `${choice.name} ${choice.key ?? ''}`}
+          searchText={(template) => `${template.name} ${template.key ?? ''}`}
           choice={templateChoice}
           empty="Gönderilebilecek bir Mail template yok."
           error={problem}
