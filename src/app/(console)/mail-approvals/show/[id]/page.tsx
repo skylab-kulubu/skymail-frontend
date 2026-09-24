@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { Suspense } from 'react';
 import { ApprovalDetail } from '@/components/mail-approvals/ApprovalDetail';
 
 export const metadata: Metadata = { title: 'Mail onayı' };
@@ -8,9 +7,5 @@ export const metadata: Metadata = { title: 'Mail onayı' };
 // with `#preview`.
 export default async function Page({ params }: PageProps<'/mail-approvals/show/[id]'>) {
   const { id } = await params;
-  return (
-    <Suspense>
-      <ApprovalDetail id={id} />
-    </Suspense>
-  );
+  return <ApprovalDetail id={id} />;
 }
