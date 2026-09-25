@@ -6,9 +6,15 @@
  * expiry, another state, a template published again — is followed by the
  * request as it is now; so is an answer that never came, since the action
  * may have gone through.
+ *
+ * A submission to people (ticket 21) is refused with the roles it lacks
+ * (403 `params.missing_roles`) or, in a 400, with what is wrong with each
+ * person (`recipients[i].email`), which the form puts on that person's row.
  */
+import { ROLE } from "../access";
 import { asApiError, type ApiError } from "../api/errors";
-import { APPROVAL_STATE_LABEL, type ApprovalState } from "./approvals";
+import { EMAIL_MISSING, repeatedAddress, sentRows, type PersonRow, type RowProblems } from "../send-form/audience";
+import { APPROVAL_PEOPLE_LIMIT, APPROVAL_STATE_LABEL, type ApprovalState } from "./approvals";
 
 export type ApprovalActionName =
   | "submit"
@@ -37,6 +43,74 @@ function missingVariables(error: ApiError): string {
 function stateLabel(error: ApiError): string | null {
   const state = error.params?.state;
   return typeof state === "string" && Object.hasOwn(APPROVAL_STATE_LABEL, state) ? APPROVAL_STATE_LABEL[state as ApprovalState] : null;
+}
+
+/** The roles a refused submission lacks, as the API names them. */
+function missingRoles(error: ApiError): string[] {
+  const roles = error.params?.missing_roles;
+  return Array.isArray(roles) ? roles.filter((role): role is string => typeof role === "string" && role !== "") : [];
+}
+
+function forbiddenSubmission(error: ApiError): string {
+  const roles = missingRoles(error);
+  if (roles.length === 0) return error.message;
+  if (roles.length === 1 && roles[0] === ROLE.listsRead) {
+    return `Bir mail listesine onaya sunmak için ${ROLE.listsRead} rolü de gerekiyor; kişilere onaya sunabilirsin.`;
+  }
+  return `Onaya sunmak için ${roles.join(" ve ")} ${roles.length === 1 ? "rolü" : "rolleri"} gerekiyor.`;
+}
+
+type FieldError = Readonly<{ field: string; code: string; params?: Readonly<Record<string, unknown>> }>;
+
+function fieldErrors(error: ApiError): FieldError[] {
+  const errors = error.params?.errors;
+  if (error.code !== "validation.error" || !Array.isArray(errors)) return [];
+  return errors.filter((entry): entry is FieldError => typeof entry?.field === "string" && typeof entry?.code === "string");
+}
+
+/** `recipients[3].email` → 3. */
+function personAt(field: unknown): number | null {
+  const match = typeof field === "string" ? /^recipients\[(\d+)\]\.email$/.exec(field) : null;
+  return match ? Number(match[1]) : null;
+}
+
+/** What a 400 to a submission says of its audience, in words; null when it is about something else. */
+function invalidSubmission(error: ApiError): string | null {
+  const errors = fieldErrors(error);
+  if (errors.some((entry) => personAt(entry.field) !== null)) return "SkyMail bazı adresleri kabul etmedi: işaretli kişileri düzelt.";
+  const found = (field: string, code: string) => errors.some((entry) => entry.field === field && entry.code === code);
+  if (found("recipients", "max_length")) {
+    return `Onaya en çok ${APPROVAL_PEOPLE_LIMIT} kişi sunulur. Daha kalabalık bir gönderim için bir mail listesi seç.`;
+  }
+  if (found("recipients", "duplicate")) {
+    return "SkyMail aynı adresi iki kez buldu; büyük ve küçük harfle yazılmışı da aynı adres sayılır. Her adresi bir kez yaz.";
+  }
+  if (found("mail_list_id", "exactly_one_of")) return "Onaya ya bir mail listesi ya da kişiler sunulur: birini seç.";
+  return null;
+}
+
+/**
+ * What a refused submission found wrong with its people, on the form's rows
+ * as the submitter left them (`rows`): `recipients[i]` is the `i`th row that
+ * names someone. Null when it names no row.
+ */
+export function submissionRowProblems(thrown: unknown, rows: readonly PersonRow[]): RowProblems[] | null {
+  const sent = sentRows(rows);
+  const problems: Array<{ email?: string }> = rows.map(() => ({}));
+  let named = false;
+  for (const entry of fieldErrors(asApiError(thrown))) {
+    const row = sent[personAt(entry.field) ?? -1];
+    if (row === undefined) continue;
+    const first = sent[personAt(entry.params?.first) ?? -1];
+    problems[row].email =
+      entry.code === "required"
+        ? EMAIL_MISSING
+        : entry.code === "duplicate" && first !== undefined
+          ? repeatedAddress(first)
+          : "SkyMail bu adresi geçerli bir e-posta adresi saymadı.";
+    named = true;
+  }
+  return named ? problems : null;
 }
 
 /** An answer that never came, or a server error: the action may have gone through. */
@@ -100,9 +174,11 @@ export function approvalRefusal(thrown: unknown, action: ApprovalActionName): Ap
   }
   if (error.status === 0 || error.status >= 500) return unanswered(error, action);
   if (error.status === 403) {
-    return say(APPROVER_ACTIONS.includes(action) ? "Bu işlem için skymail:mails:approve rolü gerekiyor." : error.message);
+    if (SUBMISSIONS.includes(action)) return say(forbiddenSubmission(error));
+    return say(APPROVER_ACTIONS.includes(action) ? `Bu işlem için ${ROLE.mailsApprove} rolü gerekiyor.` : error.message);
   }
   if (error.status === 404) return say("İstek bulunamadı: yok ya da görme yetkin yok.");
   if (error.code === "validation.error" && action === "reject") return say("Ret gerekçesi boş olamaz.");
+  if (SUBMISSIONS.includes(action)) return say(invalidSubmission(error) ?? error.message);
   return say(error.message);
 }

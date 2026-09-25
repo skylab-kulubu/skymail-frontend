@@ -13,6 +13,10 @@
  *    and is never sent. Reads already show an overdue request as `expired`;
  *    the sweep records it within a minute.
  *  - An approver lists everyone's requests; anyone else only their own.
+ *  - A request goes to a mailing list or to 1..100 people (ticket 21); once
+ *    approved, a list gets one send and each person a send of their own.
+ *    An API from before that (ticket 19) named one person in the audience
+ *    and had one send: the screens read that too.
  *
  * The approval mails link here: `/mail-approvals/show/:id`, `#preview` for the
  * preview.
@@ -20,7 +24,7 @@
 import { ROLE } from "../access";
 import type { ApiClient, ApiPage } from "../api/client";
 import { pageRange, readPage, viewHref } from "../list-view";
-import { SEND_LIST_PATH, type SendAudience } from "../sends";
+import { SEND_LIST_PATH, audienceLabel, type AudienceLabel, type SendAudience } from "../sends";
 
 export const APPROVAL_PAGE_SIZE = 25;
 
@@ -72,10 +76,20 @@ export type ApprovalEvent = Readonly<{
   /** A rejection's reason, or a note the approver or the submitter left. */
   note: string | null;
   changes: readonly ApprovalChange[] | null;
-  /** The send an approval or an acceptance queued. */
+  /** The send an approval or an acceptance queued; the first, when it queued one per person. */
   task_id: string | null;
   at: string;
 }>;
+
+/** Someone a request goes to. */
+export type ApprovalRecipient = Readonly<{
+  /** Empty when the submitter knew only the address. */
+  full_name: string;
+  email: string;
+}>;
+
+/** The most people one request goes to (ticket 21): more go to a mailing list. */
+export const APPROVAL_PEOPLE_LIMIT = 100;
 
 /** A request as the list shows it (`handlers.MailApprovalItem`). */
 export type ApprovalItem = Readonly<{
@@ -83,7 +97,10 @@ export type ApprovalItem = Readonly<{
   state: ApprovalState;
   submitter: ApprovalSubmitter;
   template: ApprovalTemplate;
+  /** A send's: `single` for one person, `people` for several, `mailing_list`. */
   audience: SendAudience;
+  /** The people, in the order submitted; empty for a list. Absent from an API before ticket 21: approvalPeople reads either. */
+  recipients?: readonly ApprovalRecipient[];
   /** As submitted, or as an approver edited them. */
   body_variables: Readonly<Record<string, unknown>> | null;
   created_at: string;
@@ -92,7 +109,10 @@ export type ApprovalItem = Readonly<{
   /** Pending or returned past this, it expires. */
   deadline_at: string;
   updated_at: string;
+  /** The first send; deprecated for task_ids. */
   task_id: string | null;
+  /** Once approved: a list's one send, or each person's, `task_ids[i]` to `recipients[i]`. Absent before ticket 21: approvalSends reads either. */
+  task_ids?: readonly string[];
   last_event: ApprovalEvent | null;
 }>;
 
@@ -109,8 +129,8 @@ export type ApprovalPreview = Readonly<{
   /** Operators' template markup with the values: shown only in a sandboxed frame. */
   html: string;
   plain_text: string;
-  /** The single recipient, or for a list the submitter, as if they were on it. */
-  rendered_for: Readonly<{ full_name: string; email: string }>;
+  /** The first person, or for a list the submitter, as if they were on it. */
+  rendered_for: ApprovalRecipient;
 }>;
 
 /** A request whole (`handlers.MailApproval`). */
@@ -120,6 +140,8 @@ export type MailApproval = ApprovalItem &
     recipient_count: number | null;
     preview: ApprovalPreview | null;
     preview_error: string | null;
+    /** Who the preview is rendered for, given even when it does not render. Absent before ticket 21: previewRecipient reads either. */
+    preview_recipient?: ApprovalRecipient | null;
     history: readonly ApprovalEvent[] | null;
     /** On the answer to an action. */
     notification?: ApprovalNotification;
@@ -210,6 +232,69 @@ export async function pendingCount(api: ApiClient, signal?: AbortSignal): Promis
 
 export function fetchApproval(api: ApiClient, id: string, signal?: AbortSignal): Promise<MailApproval> {
   return api.get<MailApproval>(`/mail_approvals/${encodeURIComponent(id)}`, { signal });
+}
+
+// ---------------------------------------------------------------------------
+// Who it goes to
+
+/** The people a request goes to, in order: none for a list; from an older API, the one person its audience names. */
+export function approvalPeople(item: Pick<ApprovalItem, "audience" | "recipients">): ApprovalRecipient[] {
+  if (item.recipients && item.recipients.length > 0) return [...item.recipients];
+  const { audience } = item;
+  if (audience.kind === "single" && audience.recipient_email) {
+    return [{ full_name: audience.recipient_full_name ?? "", email: audience.recipient_email }];
+  }
+  return [];
+}
+
+const personName = (person: ApprovalRecipient) => person.full_name.trim() || person.email.trim();
+
+/**
+ * Who a request goes to, as the list and the request's page say it: a list
+ * or a group as a send's; one person by name and address; several by the
+ * first `shown` of them, and how many more.
+ */
+export function approvalAudience(item: Pick<ApprovalItem, "audience" | "recipients">, shown = 2): AudienceLabel {
+  const people = approvalPeople(item);
+  if (people.length === 0) return audienceLabel(item.audience);
+  if (people.length === 1) {
+    const [person] = people;
+    const name = person.full_name.trim();
+    return { kind: "person", name: name || person.email.trim(), detail: name ? person.email.trim() : null, listId: null };
+  }
+  const named = people.slice(0, shown);
+  return { kind: "people", name: named.map(personName).join(", "), detail: null, listId: null, more: people.length - named.length };
+}
+
+/** The sends an approved request opened, `[i]` to its `i`th person; from an older API, its one send. */
+export function approvalSends(item: Pick<ApprovalItem, "task_id" | "task_ids">): string[] {
+  if (item.task_ids) return [...item.task_ids];
+  return item.task_id ? [item.task_id] : [];
+}
+
+/**
+ * Who the preview reads as: whom the API names; from an older API, whom the
+ * preview was rendered for, else the one person, else — a list's members
+ * each get their own — the submitter.
+ */
+export function previewRecipient(
+  approval: Pick<MailApproval, "audience" | "recipients" | "submitter" | "preview" | "preview_recipient">,
+): ApprovalRecipient {
+  if (approval.preview_recipient) return approval.preview_recipient;
+  if (approval.preview) return approval.preview.rendered_for;
+  const [first] = approvalPeople(approval);
+  return first ?? { full_name: submitterName(approval.submitter), email: approval.submitter.email ?? "" };
+}
+
+/** What the preview says of whose name it reads with: everyone on a list or among several people gets their own. */
+export function previewNote(approval: Pick<MailApproval, "audience" | "recipients" | "submitter" | "preview" | "preview_recipient">): string {
+  const person = previewRecipient(approval);
+  const name = person.full_name.trim();
+  const who = name ? `${name} <${person.email}>` : person.email;
+  const people = approvalPeople(approval).length;
+  if (people === 1) return `${who} için, sunucunun göndereceği hâliyle.`;
+  if (people > 1) return `Her kişi kendi adıyla alır; önizleme ilk kişi, ${who} için, sunucunun göndereceği hâliyle.`;
+  return `Listedeki her alıcı kendi adıyla alır; önizleme ${who} için, sunucunun göndereceği hâliyle.`;
 }
 
 // ---------------------------------------------------------------------------

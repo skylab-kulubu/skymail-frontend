@@ -8,7 +8,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { ApiError } from "../api/errors";
-import { approvalRefusal } from "./refusals";
+import { approvalRefusal, submissionRowProblems } from "./refusals";
 
 const refusal = (status: number, code: string, params?: Record<string, unknown>) => new ApiError(status, code, "english", params);
 
@@ -107,5 +107,79 @@ describe("a refused approval action", () => {
       text: "Oturumun sona erdi. Devam etmek için yeniden giriş yap.",
       reload: false,
     });
+  });
+});
+
+describe("a refused submission", () => {
+  // The screens already ask for templates:read (and lists:read to pick a list); the API holds the same rule (ticket 21).
+  it("names the roles the API says are missing", () => {
+    const forbidden = (roles: string[]) => refusal(403, "server.forbidden", { missing_roles: roles });
+    assert.deepEqual(approvalRefusal(forbidden(["skymail:templates:read"]), "submit"), {
+      text: "Onaya sunmak için skymail:templates:read rolü gerekiyor.",
+      reload: false,
+    });
+    assert.equal(
+      approvalRefusal(forbidden(["skymail:templates:read", "skymail:lists:read"]), "resubmit").text,
+      "Onaya sunmak için skymail:templates:read ve skymail:lists:read rolleri gerekiyor.",
+    );
+    assert.equal(
+      approvalRefusal(forbidden(["skymail:lists:read"]), "submit").text,
+      "Bir mail listesine onaya sunmak için skymail:lists:read rolü de gerekiyor; kişilere onaya sunabilirsin.",
+    );
+    assert.equal(approvalRefusal(refusal(403, "server.forbidden"), "submit").text, "Bu işlem için yetkin yok.");
+  });
+
+  const invalid = (...errors: Array<{ field: string; code: string; params?: Record<string, unknown> }>) =>
+    refusal(400, "validation.error", { errors });
+
+  it("says what is wrong with its people", () => {
+    assert.equal(
+      approvalRefusal(invalid({ field: "recipients[1].email", code: "invalid_email" }), "submit").text,
+      "SkyMail bazı adresleri kabul etmedi: işaretli kişileri düzelt.",
+    );
+    assert.equal(
+      approvalRefusal(invalid({ field: "recipients", code: "max_length", params: { limit: "100" } }), "resubmit").text,
+      "Onaya en çok 100 kişi sunulur. Daha kalabalık bir gönderim için bir mail listesi seç.",
+    );
+    // Found only by Postgres: its lower() and Go's differ on an unusual address, so the API cannot say which.
+    assert.equal(
+      approvalRefusal(invalid({ field: "recipients", code: "duplicate" }), "submit").text,
+      "SkyMail aynı adresi iki kez buldu; büyük ve küçük harfle yazılmışı da aynı adres sayılır. Her adresi bir kez yaz.",
+    );
+    assert.equal(
+      approvalRefusal(invalid({ field: "mail_list_id", code: "exactly_one_of", params: { fields: ["mail_list_id", "recipients"] } }), "submit").text,
+      "Onaya ya bir mail listesi ya da kişiler sunulur: birini seç.",
+    );
+    assert.equal(approvalRefusal(invalid({ field: "template_id", code: "required" }), "submit").text, "Gönderilen bilgiler geçersiz. Alanları kontrol edip tekrar dene.");
+  });
+
+  const rows = [
+    { name: "Ali Can", email: "ali@ornek.com" },
+    { name: "", email: "" },
+    { name: "Zeynep Kaya", email: "zeynep@ornek" },
+    { name: "Mert Demir", email: "ALİ@ornek.com" },
+    { name: "Ece Ak", email: "" },
+  ];
+
+  // recipients[i] is the ith row that names someone: an empty row is not sent.
+  it("puts what the API found on the rows it was about", () => {
+    assert.deepEqual(
+      submissionRowProblems(
+        invalid(
+          { field: "recipients[1].email", code: "invalid_email" },
+          { field: "recipients[2].email", code: "duplicate", params: { first: "recipients[0].email" } },
+          { field: "recipients[3].email", code: "required" },
+        ),
+        rows,
+      ),
+      [{}, {}, { email: "SkyMail bu adresi geçerli bir e-posta adresi saymadı." }, { email: "Bu adres 1. satırda da var; herkese bir kez gönderilir." }, { email: "E-posta adresini yaz." }],
+    );
+  });
+
+  it("is nothing when the refusal is about no row", () => {
+    assert.equal(submissionRowProblems(invalid({ field: "recipients", code: "duplicate" }), rows), null);
+    assert.equal(submissionRowProblems(invalid({ field: "recipients[9].email", code: "invalid_email" }), rows), null);
+    assert.equal(submissionRowProblems(refusal(403, "server.forbidden", { missing_roles: [] }), rows), null);
+    assert.equal(submissionRowProblems(new ApiError(0, "network"), rows), null);
   });
 });

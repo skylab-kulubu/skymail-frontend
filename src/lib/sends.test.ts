@@ -315,6 +315,11 @@ describe("the audience of a send", () => {
       { kind: "person", name: "ayse@example.com", detail: null, listId: null },
     );
   });
+
+  // Only a Mail onayı request goes to several people; it names them itself (approvalAudience).
+  it("is people, not a list, for an audience of several", () => {
+    assert.deepEqual(audienceLabel(audience({ kind: "people" })), { kind: "people", name: "Kişiler", detail: null, listId: null });
+  });
 });
 
 describe("a send's Mail template", () => {

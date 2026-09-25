@@ -42,7 +42,7 @@ describe("what the send form offers", () => {
     assert.deepEqual(writer.send, { list: false, people: true });
     assert.equal(writer.listNote, "Mail listelerini görmek için skymail:lists:read rolü gerekiyor; bu hesapla kişilere gönderebilirsin.");
     const member = sendAccess(roles(ROLE.templatesRead));
-    assert.equal(member.listNote, "Mail listelerini görmek için skymail:lists:read rolü gerekiyor; bu hesapla bir kişiye gönderimi onaya sunabilirsin.");
+    assert.equal(member.listNote, "Mail listelerini görmek için skymail:lists:read rolü gerekiyor; bu hesapla kişilere gönderimi onaya sunabilirsin.");
   });
 
   it("offers nothing without a template to send", () => {
@@ -69,7 +69,7 @@ describe("whether the audience chosen is sent at once or submitted for approval"
 });
 
 describe("what the form says when a send goes for approval", () => {
-  it("names the role a direct send would take, and says one person at most goes for approval", () => {
+  it("names the role a direct send would take, and says how many people one request takes", () => {
     const member = sendAccess(roles(ROLE.templatesRead, ROLE.listsRead));
     assert.equal(
       approvalNote(member, "list"),
@@ -77,7 +77,7 @@ describe("what the form says when a send goes for approval", () => {
     );
     assert.equal(
       approvalNote(member, "people"),
-      "Bu hesap mail gönderemez (skymail:mails:send ya da skymail:mails:write rolü gerekiyor): gönderim onaya sunulur, bir onaycı onaylayınca gider. Onaya tek bir kişi sunulur.",
+      "Bu hesap mail gönderemez (skymail:mails:send ya da skymail:mails:write rolü gerekiyor): gönderim onaya sunulur, bir onaycı onaylayınca her kişiye ayrı gider. Onaya en çok 100 kişi sunulur.",
     );
   });
 

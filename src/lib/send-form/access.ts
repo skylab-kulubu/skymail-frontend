@@ -3,12 +3,14 @@
  * looking at it, by the roles skymail-backend checks (main.go): a send to a
  * mailing list needs `mails:write`, a send to one person `mails:send` or
  * `mails:write`. What the viewer may not send they submit for approval
- * (ticket 20): `POST /mail_approvals` needs only access. Either way the form
+ * (ticket 20): to a list, or to 1..100 people as one request (ticket 22);
+ * `POST /mail_approvals` asks for read access to what it submits. Either way the form
  * sends a Mail template, so it needs `templates:read` to offer anything, and
  * `lists:read` to pick a list. Who may open the page at all is RoleGate's to
  * say (access.ts requiredRolesFor).
  */
 import { ROLE, hasRole } from "../access";
+import { APPROVAL_PEOPLE_LIMIT } from "../mail-approvals/approvals";
 
 export type SendAccess = Readonly<{
   /** A mailing list can be picked: `lists:read` and `templates:read`. */
@@ -33,7 +35,7 @@ export function sendAccess(roles: readonly string[]): SendAccess {
       ? null
       : sendsPeople
         ? `Mail listelerini görmek için ${ROLE.listsRead} rolü gerekiyor; bu hesapla kişilere gönderebilirsin.`
-        : `Mail listelerini görmek için ${ROLE.listsRead} rolü gerekiyor; bu hesapla bir kişiye gönderimi onaya sunabilirsin.`;
+        : `Mail listelerini görmek için ${ROLE.listsRead} rolü gerekiyor; bu hesapla kişilere gönderimi onaya sunabilirsin.`;
   return {
     list,
     people: templates,
@@ -53,7 +55,7 @@ export function approvalNote(access: SendAccess, audience: "list" | "people"): s
   if (directSend(access, audience)) return null;
   return audience === "list"
     ? `Bu hesap bir mail listesine doğrudan gönderemez (${ROLE.mailsWrite} rolü gerekiyor): gönderim onaya sunulur, bir onaycı onaylayınca gider.`
-    : `Bu hesap mail gönderemez (${ROLE.mailsSend} ya da ${ROLE.mailsWrite} rolü gerekiyor): gönderim onaya sunulur, bir onaycı onaylayınca gider. Onaya tek bir kişi sunulur.`;
+    : `Bu hesap mail gönderemez (${ROLE.mailsSend} ya da ${ROLE.mailsWrite} rolü gerekiyor): gönderim onaya sunulur, bir onaycı onaylayınca her kişiye ayrı gider. Onaya en çok ${APPROVAL_PEOPLE_LIMIT} kişi sunulur.`;
 }
 
 /**
