@@ -21,8 +21,9 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { FormActions } from '@/components/ui/FormActions';
 import { useApiLoad } from '@/lib/api/react';
-import { APPROVAL_PEOPLE_LIMIT, approvalHref, type MailApproval } from '@/lib/mail-approvals/approvals';
+import { approvalHref, type MailApproval } from '@/lib/mail-approvals/approvals';
 import { approvalRequest, type ComposePrefill } from '@/lib/mail-approvals/edit';
+import { refusalNow, withRefusedRows } from '@/lib/mail-approvals/refusals';
 import type { ListRow } from '@/lib/mailing-lists';
 import { SEND_LIST_PATH, formatCount } from '@/lib/sends';
 import { approvalNote, defaultAudience, directSend, type SendAccess } from '@/lib/send-form/access';
@@ -143,14 +144,8 @@ export function Compose({
   const direct = !resubmit && directSend(access, audience);
   const forApproval = check.ok ? approvalRequest(check.plan, { lists: access.list }) : null;
   const approvalProblem = intent === 'submit' && attempts > 0 && forApproval && !forApproval.ok ? forApproval.problem : null;
-  const audienceNote = resubmit
-    ? audience === 'people'
-      ? `Onaya en çok ${APPROVAL_PEOPLE_LIMIT} kişi sunulur.`
-      : null
-    : approvalNote(access, audience);
-  // A refused submission; one about its people is on their rows until the rows change.
-  const refusal = submitting.failure && (submitting.failure.rows === null || submitting.failure.of === people) ? submitting.failure : null;
-  const refusedRows = refusal?.rows ?? null;
+  const audienceNote = approvalNote(access, audience, { resubmit: resubmit !== null });
+  const refusal = submitting.failure ? refusalNow(submitting.failure, people) : null;
 
   function send() {
     if (busy || held) return;
@@ -163,10 +158,10 @@ export function Compose({
     if (busy) return;
     setIntent('submit');
     setAttempts((count) => count + 1);
+    if (!check.ok || !forApproval?.ok) return;
+    // The API's last refusal, and the rows it marked, stand until another submission is on its way.
     submitting.clear();
-    if (!check.ok) return;
-    const request = approvalRequest(check.plan, { lists: access.list });
-    if (request.ok) setConfirming({ kind: 'submit', plan: check.plan, request: request.request, resubmit: resubmit !== null });
+    setConfirming({ kind: 'submit', plan: check.plan, request: forApproval.request, resubmit: resubmit !== null });
   }
 
   /** Enter in a field does what the form's first action does. */
@@ -306,7 +301,7 @@ export function Compose({
               listProblem={problems?.list ?? null}
               people={people}
               onPeople={setPeople}
-              peopleCheck={problems?.people ?? (refusedRows ? { rows: refusedRows, none: false } : null)}
+              peopleCheck={withRefusedRows(problems?.people ?? null, refusal?.rows ?? null)}
               peopleWarnings={check.warnings.people}
               onSend={submit}
             />

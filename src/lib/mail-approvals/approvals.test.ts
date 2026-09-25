@@ -27,6 +27,7 @@ import {
   fetchApprovalPage,
   notificationNote,
   pendingCount,
+  previewFailureNote,
   previewNote,
   previewRecipient,
   readApprovalListView,
@@ -309,6 +310,19 @@ describe("who a request goes to", () => {
     assert.equal(
       previewNote(whole({ audience: toMany, recipients: PEOPLE.slice(1), preview_recipient: PEOPLE[1] })),
       "Her kişi kendi adıyla alır; önizleme ilk kişi, zeynep@ornek.com için, sunucunun göndereceği hâliyle.",
+    );
+  });
+
+  // The API names who the preview was for even when it did not render.
+  it("says whose preview did not render, and why", () => {
+    const failed = { audience: toMany, recipients: PEOPLE, submitter, preview: null, preview_recipient: PEOPLE[0] };
+    assert.equal(
+      previewFailureNote({ ...failed, preview_error: "template: x:1: unexpected EOF" }),
+      "Önizleme Ali Can <ali@ornek.com> için hazırlanamadı: template: x:1: unexpected EOF. Mail template bu değerlerle işlenemiyor olabilir.",
+    );
+    assert.equal(
+      previewFailureNote({ ...failed, preview_error: null, preview_recipient: PEOPLE[1] }),
+      "Önizleme zeynep@ornek.com için hazırlanamadı. Mail template bu değerlerle işlenemiyor olabilir.",
     );
   });
 });

@@ -37,6 +37,7 @@ import {
   eventActorName,
   fetchApproval,
   notificationNote,
+  previewFailureNote,
   previewNote,
   previewRecipient,
   RECIPIENTS_ANCHOR,
@@ -60,10 +61,13 @@ import { approvalRefusal } from '@/lib/mail-approvals/refusals';
 import { useFlashNotice, type NoticeData } from '@/lib/notice';
 import { fieldWarnings, type FieldInput, type VariableField } from '@/lib/send-form/fields';
 import { formatCount, sendHref } from '@/lib/sends';
-import { ApprovalStateBadge, Deadline, Submitter } from './ApprovalParts';
+import { ApprovalStateBadge, Deadline, SendsLink, Submitter } from './ApprovalParts';
 import { ApprovalHistory } from './ApprovalHistory';
 import { DecisionDialog } from './DecisionDialog';
 import { EditComparison } from './EditComparison';
+
+/** How many of a request's people the facts name before "+N kişi"; all of them are listed below. */
+const PEOPLE_NAMED = 3;
 
 export function ApprovalDetail({ id }: { id: string }) {
   const approval = useApiLoad((api, signal) => fetchApproval(api, id, signal), id);
@@ -185,7 +189,7 @@ function ApprovalView({
     }
   }
 
-  const audience = approvalAudience(approval, 3);
+  const audience = approvalAudience(approval, PEOPLE_NAMED);
   const warnings = editing && edit?.ok ? fieldWarnings(fields.filter((field) => edit.changed.includes(field.name)), editing.current) : {};
 
   return (
@@ -336,7 +340,6 @@ function DecisionPanel({
   onDecide: (decision: Decision) => void;
   onEdit: () => void;
 }) {
-  const canSeeSends = useCan(ROLE.mailsRead);
   const can = (action: ViewerActions['actions'][number]) => actions.actions.includes(action);
   const decision = [...(approval.history ?? [])].sort((a, b) => a.seq - b.seq).findLast((event) => event.kind === 'rejected' || event.kind === 'declined');
   const republished = (
@@ -467,15 +470,7 @@ function DecisionPanel({
           <Lead title="Onaylandı ve gönderildi">
             {sends.length > 1 ? <p>Her kişiye ayrı bir gönderim açıldı: {formatCount(sends.length)} gönderim.</p> : null}
           </Lead>
-          {canSeeSends && sends.length === 1 ? (
-            <Link href={sendHref(sends[0])} className="text-skylab-300 text-sm hover:underline">
-              Gönderimi gör
-            </Link>
-          ) : canSeeSends && sends.length > 1 ? (
-            <a href={`#${RECIPIENTS_ANCHOR}`} className="text-skylab-300 text-sm hover:underline">
-              Gönderimleri gör
-            </a>
-          ) : null}
+          <SendsLink item={approval} />
         </>
       );
     }
@@ -591,7 +586,6 @@ function Recipients({ approval }: { approval: MailApproval }) {
       <SectionTitle id="recipients-title">Kişiler ({formatCount(people.length)})</SectionTitle>
       <ol className="max-h-80 divide-y divide-white/5 overflow-y-auto rounded-lg border border-white/5">
         {people.map((person, index) => {
-          const name = person.full_name.trim();
           const send = sends[index];
           return (
             <li key={`${index}:${person.email}`} className="flex items-center gap-3 px-3.5 py-2 text-sm">
@@ -599,8 +593,8 @@ function Recipients({ approval }: { approval: MailApproval }) {
                 {index + 1}.
               </span>
               <span className="flex min-w-0 flex-1 flex-col sm:flex-row sm:items-baseline sm:gap-3">
-                <span className="truncate text-neutral-200">{name || person.email}</span>
-                {name ? <span className="text-2xs truncate text-neutral-500">{person.email}</span> : null}
+                <span className="truncate text-neutral-200">{recipientName(person)}</span>
+                {person.full_name.trim() ? <span className="text-2xs truncate text-neutral-500">{person.email}</span> : null}
               </span>
               {send && canSeeSends ? (
                 <Link
@@ -642,10 +636,7 @@ function PreviewSection({ approval }: { approval: MailApproval }) {
           <MailFrame title="İsteğin önizlemesi" html={preview.html} scheme={scheme} className="h-[70vh] min-h-[420px]" />
         </>
       ) : (
-        <NoticeBox tone="warning">
-          Önizleme hazırlanamadı{approval.preview_error ? `: ${approval.preview_error}` : '.'} Mail template bu değerlerle işlenemiyor
-          olabilir.
-        </NoticeBox>
+        <NoticeBox tone="warning">{previewFailureNote(approval)}</NoticeBox>
       )}
     </section>
   );

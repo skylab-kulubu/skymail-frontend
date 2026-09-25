@@ -269,10 +269,7 @@ export type ApprovalRequest =
  * filled rows, in order — or its list. More people than a request takes
  * are pointed to a list; `lists` says whether the viewer can pick one.
  */
-export function approvalRequest(
-  plan: SendPlan,
-  { lists = true }: { lists?: boolean } = {},
-): { ok: true; request: ApprovalRequest } | { ok: false; problem: string } {
+export function approvalRequest(plan: SendPlan, { lists }: { lists: boolean }): { ok: true; request: ApprovalRequest } | { ok: false; problem: string } {
   if (plan.kind === "list") return { ok: true, request: plan.request };
   const count = plan.requests.length;
   if (count > APPROVAL_PEOPLE_LIMIT) {

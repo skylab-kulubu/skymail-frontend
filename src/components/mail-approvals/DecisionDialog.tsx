@@ -7,6 +7,7 @@ import { ModalDangerActions, ModalPrimaryActions } from '@/components/ui/modal-a
 import { approvalAudience, approvalPeople, recipientName, type MailApproval } from '@/lib/mail-approvals/approvals';
 import { DECISIONS, type Decision } from '@/lib/mail-approvals/decisions';
 import type { PinnedSource } from '@/lib/mail-approvals/edit';
+import { peopleSentApart } from '@/lib/send-form/audience';
 import type { VariableField } from '@/lib/send-form/fields';
 import { formatCount } from '@/lib/sends';
 import { EditComparison } from './EditComparison';
@@ -14,7 +15,7 @@ import { EditComparison } from './EditComparison';
 /** Who it goes to, and how many, in words: several people as the send form's confirmation says them. */
 function audienceText(approval: MailApproval): string {
   const people = approvalPeople(approval);
-  if (people.length > 1) return `${formatCount(people.length)} kişi, her biri ayrı bir gönderim`;
+  if (people.length > 1) return peopleSentApart(people.length);
   const audience = approvalAudience(approval);
   if (audience.kind === 'person') return audience.detail ? `${audience.name} <${audience.detail}>` : audience.name;
   const count = approval.recipient_count === null ? 'alıcı sayısı bilinmiyor' : `${formatCount(approval.recipient_count)} alıcı`;

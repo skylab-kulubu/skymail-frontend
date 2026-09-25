@@ -278,7 +278,7 @@ describe("a submission from the send form", () => {
   };
 
   it("to a list is the list send's own body", () => {
-    assert.deepEqual(approvalRequest(planOf(draft({}))), {
+    assert.deepEqual(approvalRequest(planOf(draft({})), { lists: true }), {
       ok: true,
       request: {
         template_id: FREE_ID,
@@ -291,7 +291,7 @@ describe("a submission from the send form", () => {
   // The API still takes recipient_email for one person, until ticket 21's follow-up drops it.
   it("to one person names them among the recipients, not in the fields for one", () => {
     const plan = planOf(draft({ audience: "people", list: null, people: [{ name: "Ayşe Yılmaz", email: " ayse@ornek.com " }] }));
-    assert.deepEqual(approvalRequest(plan), {
+    assert.deepEqual(approvalRequest(plan, { lists: true }), {
       ok: true,
       request: {
         template_id: FREE_ID,
@@ -314,7 +314,7 @@ describe("a submission from the send form", () => {
         ],
       }),
     );
-    const submitted = approvalRequest(plan);
+    const submitted = approvalRequest(plan, { lists: true });
     assert.ok(submitted.ok);
     assert.deepEqual("recipients" in submitted.request && submitted.request.recipients, [
       { email: "b@ornek.com", full_name: "" },

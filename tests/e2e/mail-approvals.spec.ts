@@ -175,8 +175,18 @@ test("a sender who may send can still submit several people as one request, the 
   await expect(page.getByRole("alert").filter({ hasText: "onaya sunulamadı" })).toContainText("SkyMail bazı adresleri kabul etmedi: işaretli kişileri düzelt.");
   await expect(page.getByLabel("3. kişinin e-posta adresi")).toHaveAttribute("aria-invalid", "true");
   await expect(page.getByText("SkyMail bu adresi geçerli bir e-posta adresi saymadı.")).toBeVisible();
+  // The mark stays on the refused address while other rows and fields change, the form's own problems beside it.
+  await page.getByLabel("1. kişinin adı soyadı").fill("Ali Can Yıldız");
+  await page.getByLabel("EventName").fill("");
+  await page.getByRole("button", { name: "Onaya sun…" }).click();
+  await expect(page.getByText("EventName boş bırakılamaz: bir Required variable.")).toBeVisible();
+  await expect(page.getByLabel("3. kişinin e-posta adresi")).toHaveAttribute("aria-invalid", "true");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByLabel("EventName").fill("GECEKODU");
+  await page.getByLabel("1. kişinin adı soyadı").fill("Ali Can");
   await page.getByLabel("3. kişinin e-posta adresi").fill("zeynep.kaya@ornek.com");
   await expect(page.getByText("SkyMail bu adresi geçerli bir e-posta adresi saymadı.")).toHaveCount(0);
+  await expect(page.getByRole("alert").filter({ hasText: "onaya sunulamadı" })).toHaveCount(0);
 
   await page.getByRole("button", { name: "Onaya sun…" }).click();
   await dialog(page, "Onaya sun").getByRole("button", { name: "Onaya sun", exact: true }).click();
@@ -353,7 +363,7 @@ test("resubmitting a request to several people, and starting a new one from it, 
 
 test("a request as the API answered before several people still reads: one person, one send", async ({ page, skymail, signIn }) => {
   await signIn("approver");
-  skymail.serveApprovalsAsTicket19();
+  skymail.serveApprovalsWithoutRecipients();
   const { id: templateId } = reminder(skymail);
   const id = skymail.addApproval({
     templateId,

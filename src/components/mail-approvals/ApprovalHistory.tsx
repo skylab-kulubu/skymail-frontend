@@ -1,21 +1,10 @@
 'use client';
 
-import Link from 'next/link';
-import { useCan } from '@/components/layout/ConsoleContext';
-import { ROLE } from '@/lib/access';
 import { formatClubTime } from '@/lib/format';
-import {
-  approvalSends,
-  eventActorName,
-  eventLabel,
-  RECIPIENTS_ANCHOR,
-  type ApprovalChange,
-  type ApprovalEvent,
-  type MailApproval,
-} from '@/lib/mail-approvals/approvals';
+import { eventActorName, eventLabel, type ApprovalChange, type ApprovalEvent, type MailApproval } from '@/lib/mail-approvals/approvals';
 import { valueText } from '@/lib/mail-approvals/edit';
 import type { VariableField } from '@/lib/send-form/fields';
-import { sendHref } from '@/lib/sends';
+import { SendsLink } from './ApprovalParts';
 
 /** An approver's events: the ones a submitter deciding their own request is marked on. */
 const DECISIONS: readonly ApprovalEvent['kind'][] = ['edited', 'returned', 'approved', 'rejected'];
@@ -45,8 +34,6 @@ function ChangeLine({ change, fields }: { change: ApprovalChange; fields: readon
  * it names only the first send; each person's is beside them on the page.
  */
 export function ApprovalHistory({ approval, fields }: { approval: MailApproval; fields: readonly VariableField[] }) {
-  const canSeeSends = useCan(ROLE.mailsRead);
-  const several = approvalSends(approval).length > 1;
   const events = [...(approval.history ?? [])].sort((a, b) => a.seq - b.seq);
   if (events.length === 0) return <p className="text-xs text-neutral-500">Kayıt yok.</p>;
   return (
@@ -79,17 +66,7 @@ export function ApprovalHistory({ approval, fields }: { approval: MailApproval; 
                 ))}
               </ul>
             ) : null}
-            {event.task_id && canSeeSends ? (
-              several ? (
-                <a href={`#${RECIPIENTS_ANCHOR}`} className="text-skylab-300 text-xs hover:underline">
-                  Gönderimleri gör
-                </a>
-              ) : (
-                <Link href={sendHref(event.task_id)} className="text-skylab-300 text-xs hover:underline">
-                  Gönderimi gör
-                </Link>
-              )
-            ) : null}
+            {event.task_id ? <SendsLink item={approval} className="text-xs" /> : null}
           </li>
         );
       })}

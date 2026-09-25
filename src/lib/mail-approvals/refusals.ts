@@ -9,11 +9,12 @@
  *
  * A submission to people (ticket 21) is refused with the roles it lacks
  * (403 `params.missing_roles`) or, in a 400, with what is wrong with each
- * person (`recipients[i].email`), which the form puts on that person's row.
+ * person (`recipients[i].email`). The form puts that on the person's row
+ * and keeps it there while the row still has the address refused.
  */
 import { ROLE } from "../access";
 import { asApiError, type ApiError } from "../api/errors";
-import { EMAIL_MISSING, repeatedAddress, sentRows, type PersonRow, type RowProblems } from "../send-form/audience";
+import { EMAIL_MISSING, repeatedAddress, sentRowIndexes, type PeopleCheck, type PersonRow, type RowProblems } from "../send-form/audience";
 import { APPROVAL_PEOPLE_LIMIT, APPROVAL_STATE_LABEL, type ApprovalState } from "./approvals";
 
 export type ApprovalActionName =
@@ -69,7 +70,7 @@ function fieldErrors(error: ApiError): FieldError[] {
 }
 
 /** `recipients[3].email` → 3. */
-function personAt(field: unknown): number | null {
+function recipientIndex(field: unknown): number | null {
   const match = typeof field === "string" ? /^recipients\[(\d+)\]\.email$/.exec(field) : null;
   return match ? Number(match[1]) : null;
 }
@@ -77,10 +78,12 @@ function personAt(field: unknown): number | null {
 /** What a 400 to a submission says of its audience, in words; null when it is about something else. */
 function invalidSubmission(error: ApiError): string | null {
   const errors = fieldErrors(error);
-  if (errors.some((entry) => personAt(entry.field) !== null)) return "SkyMail bazı adresleri kabul etmedi: işaretli kişileri düzelt.";
-  const found = (field: string, code: string) => errors.some((entry) => entry.field === field && entry.code === code);
-  if (found("recipients", "max_length")) {
-    return `Onaya en çok ${APPROVAL_PEOPLE_LIMIT} kişi sunulur. Daha kalabalık bir gönderim için bir mail listesi seç.`;
+  if (errors.some((entry) => recipientIndex(entry.field) !== null)) return "SkyMail bazı adresleri kabul etmedi.";
+  const found = (field: string, code: string) => errors.find((entry) => entry.field === field && entry.code === code);
+  const tooMany = found("recipients", "max_length");
+  if (tooMany) {
+    const limit = Number(tooMany.params?.limit) || APPROVAL_PEOPLE_LIMIT;
+    return `Onaya en çok ${limit} kişi sunulur; daha kalabalık bir gönderim bir mail listesine gider.`;
   }
   if (found("recipients", "duplicate")) {
     return "SkyMail aynı adresi iki kez buldu; büyük ve küçük harfle yazılmışı da aynı adres sayılır. Her adresi bir kez yaz.";
@@ -89,28 +92,66 @@ function invalidSubmission(error: ApiError): string | null {
   return null;
 }
 
+/** What the API found wrong with an address it was sent; a duplicate names the address it repeats. */
+type RefusedAddress = Readonly<{ problem: "missing" }> | Readonly<{ problem: "invalid" }> | Readonly<{ problem: "duplicate"; first: string }>;
+
+/** A refused submission: in words, and — when it named people — what it found, by the address as sent. */
+export type SubmissionRefusal = ApprovalRefusal & Readonly<{ addresses: ReadonlyMap<string, RefusedAddress> | null }>;
+
+const address = (row: PersonRow) => row.email.trim();
+
 /**
- * What a refused submission found wrong with its people, on the form's rows
- * as the submitter left them (`rows`): `recipients[i]` is the `i`th row that
- * names someone. Null when it names no row.
+ * A submission refused, made from the form's rows `rows`: `recipients[i]`
+ * is the `i`th row that names someone.
  */
-export function submissionRowProblems(thrown: unknown, rows: readonly PersonRow[]): RowProblems[] | null {
-  const sent = sentRows(rows);
-  const problems: Array<{ email?: string }> = rows.map(() => ({}));
-  let named = false;
+export function submissionRefusal(thrown: unknown, action: "submit" | "resubmit", rows: readonly PersonRow[]): SubmissionRefusal {
+  const sent = sentRowIndexes(rows).map((index) => rows[index]);
+  const addresses = new Map<string, RefusedAddress>();
   for (const entry of fieldErrors(asApiError(thrown))) {
-    const row = sent[personAt(entry.field) ?? -1];
-    if (row === undefined) continue;
-    const first = sent[personAt(entry.params?.first) ?? -1];
-    problems[row].email =
+    const person = sent[recipientIndex(entry.field) ?? -1];
+    if (!person) continue;
+    const first = sent[recipientIndex(entry.params?.first) ?? -1];
+    addresses.set(
+      address(person),
       entry.code === "required"
-        ? EMAIL_MISSING
-        : entry.code === "duplicate" && first !== undefined
-          ? repeatedAddress(first)
-          : "SkyMail bu adresi geçerli bir e-posta adresi saymadı.";
-    named = true;
+        ? { problem: "missing" }
+        : entry.code === "duplicate" && first
+          ? { problem: "duplicate", first: address(first) }
+          : { problem: "invalid" },
+    );
   }
-  return named ? problems : null;
+  if (addresses.size === 0) return { ...approvalRefusal(thrown, action), addresses: null };
+  return { text: "SkyMail bazı adresleri kabul etmedi: işaretli kişileri düzelt.", reload: false, addresses };
+}
+
+/**
+ * A refused submission as the form shows it now, its rows `rows`: its words,
+ * and what each row still carries — a row keeps what the API found while it
+ * has the address refused. Null once every refused address is gone.
+ */
+export function refusalNow(refusal: SubmissionRefusal, rows: readonly PersonRow[]): { text: string; rows: RowProblems[] | null } | null {
+  const { addresses } = refusal;
+  if (!addresses) return { text: refusal.text, rows: null };
+  const sent = new Set(sentRowIndexes(rows));
+  const marks = rows.map((row, index): RowProblems => {
+    const found = sent.has(index) ? addresses.get(address(row)) : undefined;
+    if (!found) return {};
+    if (found.problem === "missing") return { email: EMAIL_MISSING };
+    if (found.problem === "invalid") return { email: "SkyMail bu adresi geçerli bir e-posta adresi saymadı." };
+    const first = rows.findIndex((other) => address(other) === found.first);
+    return { email: first >= 0 ? repeatedAddress(first) : "SkyMail bu adresi başka bir kişininkiyle aynı saydı; herkese bir kez gönderilir." };
+  });
+  return marks.some((mark) => mark.email) ? { text: refusal.text, rows: marks } : null;
+}
+
+/** The rows' problems: the form's own where a row has one, what the API found where it has none. */
+export function withRefusedRows(
+  check: Pick<PeopleCheck, "rows" | "none"> | null,
+  refused: readonly RowProblems[] | null,
+): Pick<PeopleCheck, "rows" | "none"> | null {
+  if (!refused) return check;
+  if (!check) return { rows: [...refused], none: false };
+  return { ...check, rows: check.rows.map((row, index) => (row.email ? row : (refused[index] ?? row))) };
 }
 
 /** An answer that never came, or a server error: the action may have gone through. */

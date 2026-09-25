@@ -9,6 +9,7 @@
  * the row it names (mail-approvals/refusals.ts).
  */
 import { isPlausibleEmail } from "../mailing-lists";
+import { formatCount } from "../sends";
 
 export type PersonRow = Readonly<{ name: string; email: string }>;
 
@@ -37,7 +38,10 @@ export const repeatedAddress = (firstRow: number) => `Bu adres ${firstRow + 1}. 
 const namesSomeone = (row: PersonRow) => row.name.trim() !== "" || row.email.trim() !== "";
 
 /** The rows a send goes to, by their place among the rows as given: `[i]` is the row of its `i`th person. */
-export const sentRows = (rows: readonly PersonRow[]): number[] => rows.flatMap((row, index) => (namesSomeone(row) ? [index] : []));
+export const sentRowIndexes = (rows: readonly PersonRow[]): number[] => rows.flatMap((row, index) => (namesSomeone(row) ? [index] : []));
+
+/** "3 kişi, her biri ayrı bir gönderim": people as a confirmation counts them. */
+export const peopleSentApart = (count: number) => `${formatCount(count)} kişi, her biri ayrı bir gönderim`;
 
 /** `nameExpected`: the mail uses the recipient's name. */
 export function peopleProblems(rows: readonly PersonRow[], { nameExpected = false }: { nameExpected?: boolean } = {}): PeopleCheck {

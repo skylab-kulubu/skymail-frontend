@@ -263,8 +263,7 @@ export function approvalAudience(item: Pick<ApprovalItem, "audience" | "recipien
   if (people.length === 0) return audienceLabel(item.audience);
   if (people.length === 1) {
     const [person] = people;
-    const name = person.full_name.trim();
-    return { kind: "person", name: name || person.email.trim(), detail: name ? person.email.trim() : null, listId: null };
+    return audienceLabel({ ...item.audience, kind: "single", recipient_full_name: person.full_name, recipient_email: person.email });
   }
   const named = people.slice(0, shown);
   return { kind: "people", name: named.map(recipientName).join(", "), detail: null, listId: null, more: people.length - named.length };
@@ -290,15 +289,28 @@ export function previewRecipient(
   return first ?? { full_name: submitterName(approval.submitter), email: approval.submitter.email ?? "" };
 }
 
-/** What the preview says of whose name it reads with: everyone on a list or among several people gets their own. */
-export function previewNote(approval: Pick<MailApproval, "audience" | "recipients" | "submitter" | "preview" | "preview_recipient">): string {
+type Previewed = Pick<MailApproval, "audience" | "recipients" | "submitter" | "preview" | "preview_recipient">;
+
+/** Whom the preview is for: "Ali Can <ali@…>", or the address alone. */
+function previewedFor(approval: Previewed): string {
   const person = previewRecipient(approval);
   const name = person.full_name.trim();
-  const who = name ? `${name} <${person.email}>` : person.email;
+  return name ? `${name} <${person.email}>` : person.email;
+}
+
+/** What the preview says of whose name it reads with: everyone on a list or among several people gets their own. */
+export function previewNote(approval: Previewed): string {
+  const who = previewedFor(approval);
   const people = approvalPeople(approval).length;
   if (people === 1) return `${who} için, sunucunun göndereceği hâliyle.`;
   if (people > 1) return `Her kişi kendi adıyla alır; önizleme ilk kişi, ${who} için, sunucunun göndereceği hâliyle.`;
   return `Listedeki her alıcı kendi adıyla alır; önizleme ${who} için, sunucunun göndereceği hâliyle.`;
+}
+
+/** What is said when the server could not render the preview: for whom, and why. */
+export function previewFailureNote(approval: Previewed & Pick<MailApproval, "preview_error">): string {
+  const why = approval.preview_error ? `: ${approval.preview_error}.` : ".";
+  return `Önizleme ${previewedFor(approval)} için hazırlanamadı${why} Mail template bu değerlerle işlenemiyor olabilir.`;
 }
 
 // ---------------------------------------------------------------------------

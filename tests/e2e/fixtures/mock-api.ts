@@ -74,7 +74,7 @@
  *    (`[i]` the send to `recipients[i]`, a list's one send; `task_id` the
  *    first) and, whole, `preview_recipient`; `audience.kind` is single for
  *    one person, with the fields for one filled, people for several;
- *    `serveApprovalsAsTicket19` answers as before ticket 21 instead;
+ *    `serveApprovalsWithoutRecipients` answers as before ticket 21 instead;
  *  - an approver (`mails:approve`) lists and reads everyone's requests,
  *    anyone else only their own (404 for another's); a request past its
  *    deadline reads as expired; an action on it records the expiry and
@@ -293,7 +293,7 @@ export class MockSkymail {
   private readonly approvals = new Map<string, ApprovalRecord>();
   private readonly approvalRefusals = new Map<string, Answer>();
   private notificationProblem: string | null = null;
-  private approvalsAsTicket19 = false;
+  private approvalsWithoutRecipients = false;
   private clock = Date.parse("2026-09-23T06:00:00Z");
   private ids = 0;
 
@@ -487,8 +487,8 @@ export class MockSkymail {
    * `recipients`, `task_ids` or `preview_recipient`, the one person in the
    * audience.
    */
-  serveApprovalsAsTicket19() {
-    this.approvalsAsTicket19 = true;
+  serveApprovalsWithoutRecipients() {
+    this.approvalsWithoutRecipients = true;
   }
 
   /** Every notification an approval action sends reports this problem. */
@@ -901,28 +901,30 @@ export class MockSkymail {
       task_ids: record.task_ids,
       last_event: record.history.at(-1) ?? null,
     };
-    const version = this.version(record.versionId);
-    const renderedFor = people[0] ?? { full_name: record.submitter.name, email: record.submitter.email };
-    const values = { ...record.body_variables, FullName: renderedFor.full_name, Email: renderedFor.email };
-    const view = whole
-      ? {
-          ...item,
-          recipient_count: list ? list.recipients.length : people.length,
-          preview: {
-            subject: fillSampleValues(version.subject, values, { as: "text" }),
-            html: fillSampleValues(version.html_content, values),
-            plain_text: fillSampleValues(version.plain_text_content, values, { as: "text" }),
-            rendered_for: renderedFor,
-          },
-          preview_error: null,
-          preview_recipient: renderedFor,
-          history: record.history,
-        }
-      : item;
-    if (!this.approvalsAsTicket19) return view;
+    const view = whole ? { ...item, ...this.approvalDetail(record, list) } : item;
+    if (!this.approvalsWithoutRecipients) return view;
     const before: Record<string, unknown> = { ...view };
     for (const added of ["recipients", "task_ids", "preview_recipient"]) delete before[added];
     return before;
+  }
+
+  /** What only a whole request carries: how many it reaches, its preview and whom it is for, its history. */
+  private approvalDetail(record: ApprovalRecord, list: ListFixture | null) {
+    const version = this.version(record.versionId);
+    const renderedFor = record.recipients[0] ?? { full_name: record.submitter.name, email: record.submitter.email };
+    const values = { ...record.body_variables, FullName: renderedFor.full_name, Email: renderedFor.email };
+    return {
+      recipient_count: list ? list.recipients.length : record.recipients.length,
+      preview: {
+        subject: fillSampleValues(version.subject, values, { as: "text" }),
+        html: fillSampleValues(version.html_content, values),
+        plain_text: fillSampleValues(version.plain_text_content, values, { as: "text" }),
+        rendered_for: renderedFor,
+      },
+      preview_error: null,
+      preview_recipient: renderedFor,
+      history: record.history,
+    };
   }
 
   private notified(templateKey: string) {

@@ -12,6 +12,8 @@
 import { ROLE, hasRole } from "../access";
 import { APPROVAL_PEOPLE_LIMIT } from "../mail-approvals/approvals";
 
+const PEOPLE_LIMIT_NOTE = `Onaya en çok ${APPROVAL_PEOPLE_LIMIT} kişi sunulur.`;
+
 export type SendAccess = Readonly<{
   /** A mailing list can be picked: `lists:read` and `templates:read`. */
   list: boolean;
@@ -50,12 +52,18 @@ export function directSend(access: SendAccess, audience: "list" | "people"): boo
   return audience === "list" ? access.send.list : access.send.people;
 }
 
-/** What the form says when a send to `audience` goes for approval: the role a direct send takes. Null when it goes at once. */
-export function approvalNote(access: SendAccess, audience: "list" | "people"): string | null {
+/**
+ * What the form says when a send to `audience` goes for approval: the role a
+ * direct send takes, and how many people one request takes. A resubmission
+ * goes for approval whoever makes it: only the latter. Null when it goes at
+ * once.
+ */
+export function approvalNote(access: SendAccess, audience: "list" | "people", { resubmit = false }: { resubmit?: boolean } = {}): string | null {
+  if (resubmit) return audience === "people" ? PEOPLE_LIMIT_NOTE : null;
   if (directSend(access, audience)) return null;
   return audience === "list"
     ? `Bu hesap bir mail listesine doğrudan gönderemez (${ROLE.mailsWrite} rolü gerekiyor): gönderim onaya sunulur, bir onaycı onaylayınca gider.`
-    : `Bu hesap mail gönderemez (${ROLE.mailsSend} ya da ${ROLE.mailsWrite} rolü gerekiyor): gönderim onaya sunulur, bir onaycı onaylayınca her kişiye ayrı gider. Onaya en çok ${APPROVAL_PEOPLE_LIMIT} kişi sunulur.`;
+    : `Bu hesap mail gönderemez (${ROLE.mailsSend} ya da ${ROLE.mailsWrite} rolü gerekiyor): gönderim onaya sunulur, bir onaycı onaylayınca her kişiye ayrı gider. ${PEOPLE_LIMIT_NOTE}`;
 }
 
 /**

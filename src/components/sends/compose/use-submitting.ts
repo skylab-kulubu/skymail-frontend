@@ -13,18 +13,15 @@ import { useApi } from '@/lib/api/react';
 import { approvalHref, notificationNote, type MailApproval } from '@/lib/mail-approvals/approvals';
 import { approvalsChanged } from '@/lib/mail-approvals/changes';
 import type { ApprovalRequest } from '@/lib/mail-approvals/edit';
-import { approvalRefusal, submissionRowProblems, type ApprovalRefusal } from '@/lib/mail-approvals/refusals';
+import { submissionRefusal, type SubmissionRefusal } from '@/lib/mail-approvals/refusals';
 import { flashNotice } from '@/lib/notice';
-import type { PersonRow, RowProblems } from '@/lib/send-form/audience';
-
-/** A refused submission: in words, and on the rows it was about — while the form still has `of`, the rows it was made from. */
-export type SubmitFailure = ApprovalRefusal & Readonly<{ rows: RowProblems[] | null; of: readonly PersonRow[] }>;
+import type { PersonRow } from '@/lib/send-form/audience';
 
 export function useSubmitting() {
   const api = useApi();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
-  const [failure, setFailure] = useState<SubmitFailure | null>(null);
+  const [failure, setFailure] = useState<SubmissionRefusal | null>(null);
 
   /**
    * Submits `request`, or resubmits the request `resubmitId`; `said` is what
@@ -49,7 +46,7 @@ export function useSubmitting() {
       router.push(approvalHref(approval.id));
       return true;
     } catch (error) {
-      setFailure({ ...approvalRefusal(error, resubmitId ? 'resubmit' : 'submit'), rows: submissionRowProblems(error, people), of: people });
+      setFailure(submissionRefusal(error, resubmitId ? 'resubmit' : 'submit', people));
       setBusy(false);
       return false;
     }

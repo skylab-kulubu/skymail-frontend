@@ -81,6 +81,13 @@ describe("what the form says when a send goes for approval", () => {
     );
   });
 
+  // A resubmission goes for approval whoever resubmits it.
+  it("says only how many people a resubmission takes", () => {
+    const sender = sendAccess(roles(ROLE.templatesRead, ROLE.listsRead, ROLE.mailsWrite));
+    assert.equal(approvalNote(sender, "people", { resubmit: true }), "Onaya en çok 100 kişi sunulur.");
+    assert.equal(approvalNote(sender, "list", { resubmit: true }), null);
+  });
+
   it("says nothing where the viewer sends at once", () => {
     const sender = sendAccess(roles(ROLE.templatesRead, ROLE.listsRead, ROLE.mailsWrite));
     assert.equal(approvalNote(sender, "list"), null);
