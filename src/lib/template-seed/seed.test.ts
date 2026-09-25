@@ -240,6 +240,38 @@ describe("the Template seed", () => {
     assert.ok(all.calls.every(({ url }) => url.endsWith("?force=true")), "--force-all forces every template");
   });
 
+  // The Actions logs of this public repo are public: a run there names nobody,
+  // while a person seeding in their own terminal still sees who changed what.
+  it("names no operator when told to hide names, and says the same thing otherwise", async () => {
+    const templates = [template("keycloak.reset-password", "Parola"), template("core.welcome", "Hoş geldin")];
+    const { fetch } = scriptedFetch(
+      refused("keycloak.reset-password", {
+        rules: ["published_by_operator", "newer_operator_version"],
+        published_version: { id: "v3", seq: 3, author: operator("Ada Yılmaz"), published_at: "2026-09-20T09:00:00Z" },
+        last_seed_version: { id: "v1", seq: 1, author: templateSeed, published_at: "2026-09-01T09:00:00Z" },
+        operator_versions: [
+          { id: "v2", seq: 2, author: operator("Ada Yılmaz"), published_at: null },
+          { id: "v4", seq: 4, author: operator("Can Demir"), published_at: null },
+        ],
+      }),
+      json(200, {
+        id: "id-core.welcome",
+        overrode: {
+          rules: ["published_by_operator"],
+          published_version: summary(3, operator("Can Demir"), "2026-09-22T09:00:00Z", "Aramıza hoş geldin"),
+          operator_versions: [summary(3, operator("Can Demir"), "2026-09-22T09:00:00Z", "Aramıza hoş geldin")],
+        },
+      }),
+    );
+
+    const { output } = await run({ templates, fetch, force: { all: false, keys: ["core.welcome"] }, hideNames: true });
+
+    assert.doesNotMatch(output, /Ada Yılmaz|Can Demir/);
+    assert.match(output, /Gönderilen sürüm #3 bir operatörün \(bir operatör\); son seed #1\./);
+    assert.match(output, /Son seed'den sonra operatör sürümleri var: #2 taslak \(bir operatör\), #4 taslak \(bir operatör\)\./);
+    assert.match(output, /zorlandı: #3 yayımlanmış sürüm, bir operatör, 22 Eyl/);
+  });
+
   // A report must not be more fragile than what it reports on: one malformed
   // timestamp in an answer must not throw away the list of refused templates.
   it("says a missing or malformed date instead of losing the report to it", async () => {
@@ -332,30 +364,36 @@ describe("the seed's command line", () => {
   const keys = ["free.basic", "core.welcome", "keycloak.reset-password"];
 
   it("forces nothing, checks freshness and writes by default", () => {
-    assert.deepEqual(parseSeedArgs([], keys), { ok: true, dryRun: false, allowStale: false, force: { all: false, keys: [] } });
+    assert.deepEqual(parseSeedArgs([], keys), { ok: true, dryRun: false, allowStale: false,
+      hideNames: false, force: { all: false, keys: [] } });
   });
 
-  it("reads --dry-run, --force=<key>[,<key>] (repeatable), --force-all and --allow-stale", () => {
-    assert.deepEqual(parseSeedArgs(["--dry-run"], keys), { ok: true, dryRun: true, allowStale: false, force: { all: false, keys: [] } });
+  it("reads --dry-run, --force=<key>[,<key>] (repeatable), --force-all, --allow-stale and --hide-names", () => {
+    assert.deepEqual(parseSeedArgs(["--dry-run"], keys), { ok: true, dryRun: true, allowStale: false,
+      hideNames: false, force: { all: false, keys: [] } });
     assert.deepEqual(parseSeedArgs(["--force=core.welcome,keycloak.reset-password"], keys), {
       ok: true,
       dryRun: false,
       allowStale: false,
+      hideNames: false,
       force: { all: false, keys: ["core.welcome", "keycloak.reset-password"] },
     });
     assert.deepEqual(parseSeedArgs(["--force=core.welcome", "--force=free.basic,core.welcome", "--"], keys), {
       ok: true,
       dryRun: false,
       allowStale: false,
+      hideNames: false,
       force: { all: false, keys: ["core.welcome", "free.basic"] },
     });
     assert.deepEqual(parseSeedArgs(["--force-all", "--dry-run"], keys), {
       ok: true,
       dryRun: true,
       allowStale: false,
+      hideNames: false,
       force: { all: true, keys: [] },
     });
-    assert.deepEqual(parseSeedArgs(["--allow-stale"], keys), { ok: true, dryRun: false, allowStale: true, force: { all: false, keys: [] } });
+    assert.deepEqual(parseSeedArgs(["--allow-stale"], keys), { ok: true, dryRun: false, allowStale: true, hideNames: false, force: { all: false, keys: [] } });
+    assert.deepEqual(parseSeedArgs(["--hide-names"], keys), { ok: true, dryRun: false, allowStale: false, hideNames: true, force: { all: false, keys: [] } });
   });
 
   // A mistyped key would otherwise run a seed that forces nothing, and a
