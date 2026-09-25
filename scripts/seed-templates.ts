@@ -17,6 +17,7 @@
  *   --force=<key>[,<key>]           writes these even over an operator's change
  *   --force-all                     writes every template so
  *   --allow-stale                   seeds even from a checkout behind origin/main
+ *   --hide-names                    names no operator in the report (public CI logs)
  *
  * Credentials come from the environment and are never printed:
  *
@@ -90,6 +91,7 @@ async function main(): Promise<number> {
     templates: sources,
     dryRun: args.dryRun,
     force: args.force,
+    hideNames: args.hideNames,
     fetch,
     print: (line) => console.log(line),
   });

@@ -3,7 +3,8 @@
 // Mail onayı's list (ticket 20): an approver sees everyone's requests,
 // pending first, or only the ones they submitted, and filters by state;
 // anyone else sees their own. The filters and the page live in the address
-// (`?state=returned&mine=true&page=2`).
+// (`?state=returned&mine=true&page=2`). A request to several people shows
+// the first few and how many more (ticket 22).
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -25,6 +26,7 @@ import {
   APPROVAL_FILTERS,
   APPROVAL_PAGE_SIZE,
   APPROVAL_SCOPES,
+  approvalAudience,
   approvalHref,
   approvalListHref,
   effectiveState,
@@ -36,7 +38,7 @@ import {
   type ApprovalListView,
 } from '@/lib/mail-approvals/approvals';
 import { sendAccess } from '@/lib/send-form/access';
-import { audienceLabel, composeHref, formatCount } from '@/lib/sends';
+import { composeHref, formatCount } from '@/lib/sends';
 import { useLastPage } from '@/lib/ui/use-last-page';
 import { ApprovalStateBadge, Deadline, Submitter } from './ApprovalParts';
 
@@ -146,7 +148,7 @@ export function ApprovalList() {
               {
                 key: 'audience',
                 header: 'Kitle',
-                render: (_, item) => <Audience audience={audienceLabel(item.audience)} className="max-w-[12rem]" />,
+                render: (_, item) => <Audience audience={approvalAudience(item)} className="max-w-[12rem]" />,
               },
               {
                 key: 'submitter',
@@ -197,7 +199,7 @@ function ApprovalRow({ item, now }: { item: ApprovalItem; now: Date }) {
               <ApprovalStateBadge state={effectiveState(item, now)} />
             </span>
           </div>
-          <Audience audience={audienceLabel(item.audience)} className="text-xs" />
+          <Audience audience={approvalAudience(item)} className="text-xs" />
           <p className="text-2xs text-neutral-500">
             {submitterName(item.submitter)} · {formatClubTime(item.submitted_at)}
           </p>

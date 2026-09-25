@@ -6,7 +6,7 @@ import { ModalPrimaryActions } from '@/components/ui/modal-actions';
 import type { ApprovalRequest } from '@/lib/mail-approvals/edit';
 import type { ListRow } from '@/lib/mailing-lists';
 import { formatCount } from '@/lib/sends';
-import type { PersonRow } from '@/lib/send-form/audience';
+import { peopleSentApart, type PersonRow } from '@/lib/send-form/audience';
 import type { Retry, SendPlan } from '@/lib/send-form/send';
 import type { Progress } from './use-sending';
 
@@ -101,10 +101,10 @@ export function ConfirmSend({
                 {submission && people.length === 1
                   ? person(people[0])
                   : people.length > 0
-                    ? `${formatCount(people.length)} kişi, her biri ayrı bir gönderim`
+                    ? peopleSentApart(people.length)
                     : audienceText(list, size)}
               </dd>
-              {people.length > 0 && !submission ? (
+              {people.length > 0 && !(submission && people.length === 1) ? (
                 <dd className="mt-1 max-h-32 overflow-y-auto text-xs text-neutral-400">{people.map(({ name, email }) => name || email).join(', ')}</dd>
               ) : null}
             </div>

@@ -61,8 +61,8 @@ export function AudiencePart({
   listProblem: string | null;
   people: readonly PersonEntry[];
   onPeople: (rows: PersonEntry[]) => void;
-  /** Shown once the sender has tried to send. */
-  peopleCheck: PeopleCheck | null;
+  /** Shown once the sender has tried to send, or the API refused a person. */
+  peopleCheck: Pick<PeopleCheck, 'rows' | 'none'> | null;
   peopleWarnings: readonly (string | null)[];
   onSend: () => void;
 }) {

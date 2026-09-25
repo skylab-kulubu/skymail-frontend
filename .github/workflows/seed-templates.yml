@@ -1,0 +1,185 @@
+name: Seed templates
+
+# The Template seed (scripts/seed-templates.ts) from a button: Actions → Seed
+# templates → Run workflow, or `gh workflow run seed-templates.yml`. A person
+# starts every run; nothing seeds on merge.
+#
+# It writes as the `skymail-seed` Keycloak service account. Its client secret is
+# only in the seed-<environment> GitHub environment, put there by a wizard
+# without anyone seeing it (sky_lab_genel ops/wizards/skymail-seed-github-wizard.sh).
+# It is a GitHub secret rather than an OpenBao reference because OpenBao is
+# internal-only and CI secrets stay in GitHub for now (ADR-0049). seed-production
+# waits for a reviewer, and both environments take deployments from main only.
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Hangi SkyMail'e
+        type: choice
+        options: [sandbox, production]
+        default: sandbox
+        required: true
+      dry_run:
+        description: Kuru çalışma (hiçbir şablon yazılmaz; servis hesabı yine denenir)
+        type: boolean
+        default: true
+      force:
+        description: "Operatörün değişikliğinin üstüne yaz: boş, all, ya da anahtar[,anahtar]"
+        type: string
+        default: ""
+        required: false
+
+permissions:
+  contents: read
+
+# Two seeds into the same SkyMail never overlap; a second one waits.
+concurrency:
+  group: seed-templates-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  seed:
+    name: seed (${{ inputs.environment }})
+    # Only main's templates are seeded. Skipped before the environment is
+    # entered, so a run from another branch never asks for approval or a secret.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: seed-${{ inputs.environment }}
+
+    defaults:
+      run:
+        shell: bash
+
+    # Inputs reach the scripts only through the environment, never spliced
+    # into them. The client secret is given only to the two steps that use it,
+    # so dependency install scripts never see it.
+    env:
+      SEED_ENVIRONMENT: ${{ inputs.environment }}
+      DRY_RUN: ${{ inputs.dry_run }}
+      FORCE: ${{ inputs.force }}
+      SKYMAIL_URL: ${{ vars.SKYMAIL_URL }}
+      KEYCLOAK_TOKEN_URL: ${{ vars.KEYCLOAK_TOKEN_URL }}
+      KEYCLOAK_CLIENT_ID: ${{ vars.KEYCLOAK_CLIENT_ID }}
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+
+    steps:
+      - name: Check the inputs and the environment's settings
+        run: |
+          force_pattern='^(all|[a-z0-9.-]+(,[a-z0-9.-]+)*)$'
+          if [[ -n "$FORCE" && ! "$FORCE" =~ $force_pattern ]]; then
+            echo "::error::force yalnız boş, 'all' ya da virgülle ayrılmış şablon anahtarları olabilir (ör. core.welcome,event.updated)."
+            exit 1
+          fi
+          case "$DRY_RUN" in
+            true | false) ;;
+            *) echo "::error::dry_run true ya da false olmalı."; exit 1 ;;
+          esac
+          missing=()
+          for name in SKYMAIL_URL KEYCLOAK_TOKEN_URL KEYCLOAK_CLIENT_ID; do
+            [[ -n "${!name}" ]] || missing+=("$name")
+          done
+          if (( ${#missing[@]} )); then
+            echo "::error::seed-$SEED_ENVIRONMENT ortamında değişken eksik: ${missing[*]}. Kurulum: skymail-seed-github-wizard.sh"
+            exit 1
+          fi
+
+      # Full history: the seed refuses a checkout behind origin/main by
+      # comparing the two (src/lib/template-seed/freshness.ts).
+      - name: Checkout main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      # The seed fetches origin/main itself, but a fetch that fails there only
+      # warns and seeds unchecked. Here it must not.
+      - name: Make sure the freshness check can run
+        run: |
+          if ! GIT_TERMINAL_PROMPT=0 git fetch --quiet origin main; then
+            echo "::error::origin/main alınamadı; seed'in tazelik kontrolü yapılamaz."
+            exit 1
+          fi
+
+      # No dependency cache: this job holds a production secret, so it installs
+      # from the lockfile alone.
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      # Everything the real run needs, without writing: the secret, a token
+      # with the openid scope, Keycloak's userinfo (SkyMail asks it), the
+      # account gate and skymail:access + skymail:templates:read. So a dry run
+      # proves the credentials too. Nothing about the token is printed.
+      - name: Check the service account (writes nothing)
+        env:
+          KEYCLOAK_CLIENT_SECRET: ${{ secrets.KEYCLOAK_CLIENT_SECRET }}
+        run: |
+          if [[ -z "$KEYCLOAK_CLIENT_SECRET" ]]; then
+            echo "::error::seed-$SEED_ENVIRONMENT ortamında KEYCLOAK_CLIENT_SECRET yok. Kurulum: skymail-seed-github-wizard.sh"
+            exit 1
+          fi
+          # The secret goes in on stdin, the token in a header file: neither is
+          # ever an argument.
+          token=$(printf '%s' "$KEYCLOAK_CLIENT_SECRET" | curl -sS --fail "$KEYCLOAK_TOKEN_URL" \
+            --data-urlencode grant_type=client_credentials --data-urlencode scope=openid \
+            --data-urlencode "client_id=$KEYCLOAK_CLIENT_ID" --data-urlencode client_secret@- \
+            | jq -r '.access_token // empty') || true
+          if [[ -z "$token" ]]; then
+            echo "::error::Keycloak skymail-seed için token vermedi (secret yanlış ya da istemci yok)."
+            exit 1
+          fi
+          code=$(curl -sS -o /dev/null -w '%{http_code}' -H @<(printf 'Authorization: Bearer %s\n' "$token") \
+            "${SKYMAIL_URL%/}/v1/templates?_start=0&_end=1") || code="bağlantı yok"
+          token=""
+          if [[ "$code" != 200 ]]; then
+            echo "::error::SkyMail servis hesabının token'ına $code dedi (beklenen 200)."
+            exit 1
+          fi
+          echo "Servis hesabı tamam: token alındı, SkyMail GET /v1/templates → 200."
+
+      - name: Seed
+        env:
+          KEYCLOAK_CLIENT_SECRET: ${{ secrets.KEYCLOAK_CLIENT_SECRET }}
+        run: |
+          # This repo is public, and so are its Actions logs: the report
+          # names no operator here.
+          args=(--hide-names)
+          [[ "$DRY_RUN" == true ]] && args+=(--dry-run)
+          case "$FORCE" in
+            "") ;;
+            all) args+=(--force-all) ;;
+            *) args+=("--force=$FORCE") ;;
+          esac
+
+          set +e
+          yarn emails:seed "${args[@]}" 2>&1 | tee "$RUNNER_TEMP/seed.log"
+          status=${PIPESTATUS[0]}
+          set -e
+
+          # The seed prints template keys, subjects and SkyMail ids; with
+          # --hide-names no operator's name, and never a credential.
+          {
+            if [[ "$DRY_RUN" == true ]]; then mode="kuru çalışma"; else mode="gerçek çalışma"; fi
+            echo "### Template seed · $SEED_ENVIRONMENT · $mode"
+            echo
+            echo "- SkyMail: \`$SKYMAIL_URL\`"
+            echo "- Commit: \`$GITHUB_SHA\`"
+            echo "- Seçenekler: \`${args[*]}\`"
+            echo "- Çıkış kodu: $status"
+            if (( status != 0 )); then
+              echo
+              echo "Reddedilen bir şablonu zorlamak için \`force\` girdisine anahtarını (ya da \`all\`) yazıp yeniden çalıştır; çıktıdaki \`corepack yarn …\` komutu yerel kullanım içindir."
+            fi
+            echo
+            echo '```text'
+            cat "$RUNNER_TEMP/seed.log"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"
