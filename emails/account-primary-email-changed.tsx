@@ -13,6 +13,8 @@ export const meta: TemplateMeta = {
   trigger:
     "Account center, birincil e-posta değiştiğinde — ESKİ adrese gider. Yeni adres zaten doğrulama postası aldığı için bu, değişikliği kaçıran kişiye tek uyarıdır.",
   variables: ["OldEmail", "NewEmail", "OccurredAt", "SecureAccountUrl"],
+  // Nothing yet: no service sends it. Its sender declares the contract (SecureAccountUrl, likely).
+  requiredVariables: [],
   sample: {
     OldEmail: "yusuf@std.yildiz.edu.tr",
     NewEmail: "yusuf@yildizskylab.com",

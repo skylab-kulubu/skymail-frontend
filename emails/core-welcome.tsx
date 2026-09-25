@@ -14,6 +14,8 @@ export const meta: TemplateMeta = {
   // core-backend/internal/mail/mail.go gönderdiği set budur. Username YOK —
   // eski şablon {{.Username}} kullandığı için canlıda "Selam ." yazıyordu.
   variables: ["FirstName", "LastName", "Email", "SkyNumber", "CreatedAt"],
+  // Nothing: the mail welcomes without an action, and every fact in it is also in Account center.
+  requiredVariables: [],
   sample: {
     FirstName: "Yusuf",
     LastName: "Durusoy",

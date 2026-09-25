@@ -23,6 +23,7 @@ import {
   Column,
   Container,
   Head,
+  Hr,
   Html,
   Img,
   Link,
@@ -64,6 +65,9 @@ export const colors = {
   alertBorder: "#dcb6bd",
   alertText: "#9e5560",
 } as const;
+
+/** The dark theme's card, which the stylesheet below paints; editors show images on it. */
+export const darkColors = { cardBg: "#121115" } as const;
 
 export const fontStack = "'Space Grotesk', Helvetica, Arial, sans-serif";
 
@@ -122,7 +126,7 @@ body { background-color: #f4f1f7; }
 
 @media (prefers-color-scheme: dark) {
   .email-bg   { background-color: #08070b !important; background-image: ${darkStarfield} !important; }
-  .card       { background-color: #121115 !important; border-color: #2a292c !important; }
+  .card       { background-color: ${darkColors.cardBg} !important; border-color: #2a292c !important; }
   .t-primary  { color: #ffffff !important; }
   .t-body     { color: #dcdcdc !important; }
   .t-muted    { color: #a3a3a3 !important; }
@@ -147,7 +151,7 @@ body { background-color: #f4f1f7; }
   attributes is the only way to tell it what we actually want. Other clients
   never set them, so these rules simply never match there.
 */
-[data-ogsb] .card, .card[data-ogsb] { background-color: #121115 !important; border-color: #2a292c !important; }
+[data-ogsb] .card, .card[data-ogsb] { background-color: ${darkColors.cardBg} !important; border-color: #2a292c !important; }
 [data-ogsb] .email-bg, .email-bg[data-ogsb] { background-color: #08070b !important; }
 [data-ogsc] .t-primary, .t-primary[data-ogsc] { color: #ffffff !important; }
 [data-ogsc] .t-body, .t-body[data-ogsc] { color: #dcdcdc !important; }
@@ -253,7 +257,8 @@ export function Shell({
   );
 }
 
-export function Heading({ children }: { children: React.ReactNode }) {
+/** The mail's heading; `spaced` gives one further down the mail room above it. */
+export function Heading({ children, spaced }: { children: React.ReactNode; spaced?: boolean }) {
   // A <Text> rather than a <Heading>: react-email upper-cases headings in the
   // plain-text part, which would mangle a Go template action inside one.
   return (
@@ -268,6 +273,7 @@ export function Heading({ children }: { children: React.ReactNode }) {
         lineHeight: "1.25",
         color: colors.textPrimary,
         fontFamily: fontStack,
+        ...(spaced ? { marginTop: "28px" } : {}),
       }}
     >
       {children}
@@ -300,6 +306,54 @@ export function Strong({ children }: { children: React.ReactNode }) {
     <strong className="t-primary" style={{ color: colors.textPrimary }}>
       {children}
     </strong>
+  );
+}
+
+/** Italic inside running text; it keeps the colour of the text around it. */
+export function Em({ children }: { children: React.ReactNode }) {
+  return <em>{children}</em>;
+}
+
+/** A link inside running text, in the brand colour both themes read. */
+export function TextLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <Link href={href} className="t-brand" style={{ color: colors.skylab800, textDecoration: "underline" }}>
+      {children}
+    </Link>
+  );
+}
+
+/**
+ * An image in the body. It has no background of its own: a transparent PNG
+ * sits on the card in either theme, while one with a white background stays a
+ * white block in the dark theme. PNG or JPG only — Gmail and Outlook do not
+ * show SVG (see LOGO).
+ */
+export function Figure({ src, alt, width }: { src: string; alt: string; width?: number }) {
+  return (
+    <Section style={{ marginTop: "24px" }}>
+      <Img
+        src={src}
+        alt={alt}
+        width={width}
+        style={{
+          display: "block",
+          ...(width === undefined ? { width: "100%" } : { maxWidth: "100%" }),
+          height: "auto",
+          borderRadius: "12px",
+        }}
+      />
+    </Section>
+  );
+}
+
+/** A rule between two parts of the body. */
+export function Divider() {
+  return (
+    <Hr
+      className="divider"
+      style={{ margin: "28px 0 0", border: "none", borderTop: `1px solid ${colors.divider}` }}
+    />
   );
 }
 

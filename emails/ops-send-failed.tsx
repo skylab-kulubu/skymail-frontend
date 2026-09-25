@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Text } from "@react-email/components";
-import { Chip, Cta, DetailRow, Heading, Label, Paragraph, Shell, colors, fontStack } from "./theme";
+import { Chip, Cta, DetailRow, Heading, Label, Paragraph, Shell, colors } from "./theme";
 import { end, ifSet, v } from "./go";
 import type { TemplateMeta } from "./types";
 
