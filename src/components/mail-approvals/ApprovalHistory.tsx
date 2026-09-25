@@ -5,8 +5,10 @@ import { useCan } from '@/components/layout/ConsoleContext';
 import { ROLE } from '@/lib/access';
 import { formatClubTime } from '@/lib/format';
 import {
+  approvalSends,
   eventActorName,
   eventLabel,
+  RECIPIENTS_ANCHOR,
   type ApprovalChange,
   type ApprovalEvent,
   type MailApproval,
@@ -39,10 +41,12 @@ function ChangeLine({ change, fields }: { change: ApprovalChange; fields: readon
 /**
  * Everything that happened to a request, oldest first: who did what and
  * when, a reason or a note, and each edit's changes before and after. An
- * approver who decided their own request is marked so.
+ * approver who decided their own request is marked so. The event that sent
+ * it names only the first send; each person's is beside them on the page.
  */
 export function ApprovalHistory({ approval, fields }: { approval: MailApproval; fields: readonly VariableField[] }) {
   const canSeeSends = useCan(ROLE.mailsRead);
+  const several = approvalSends(approval).length > 1;
   const events = [...(approval.history ?? [])].sort((a, b) => a.seq - b.seq);
   if (events.length === 0) return <p className="text-xs text-neutral-500">Kayıt yok.</p>;
   return (
@@ -76,9 +80,15 @@ export function ApprovalHistory({ approval, fields }: { approval: MailApproval; 
               </ul>
             ) : null}
             {event.task_id && canSeeSends ? (
-              <Link href={sendHref(event.task_id)} className="text-skylab-300 text-xs hover:underline">
-                Gönderimi gör
-              </Link>
+              several ? (
+                <a href={`#${RECIPIENTS_ANCHOR}`} className="text-skylab-300 text-xs hover:underline">
+                  Gönderimleri gör
+                </a>
+              ) : (
+                <Link href={sendHref(event.task_id)} className="text-skylab-300 text-xs hover:underline">
+                  Gönderimi gör
+                </Link>
+              )
             ) : null}
           </li>
         );

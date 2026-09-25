@@ -104,7 +104,7 @@ export function ConfirmSend({
                     ? `${formatCount(people.length)} kişi, her biri ayrı bir gönderim`
                     : audienceText(list, size)}
               </dd>
-              {people.length > 0 && !submission ? (
+              {people.length > 0 && !(submission && people.length === 1) ? (
                 <dd className="mt-1 max-h-32 overflow-y-auto text-xs text-neutral-400">{people.map(({ name, email }) => name || email).join(', ')}</dd>
               ) : null}
             </div>

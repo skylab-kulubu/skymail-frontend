@@ -158,6 +158,9 @@ export const approvalHref = (id: string) => `${APPROVAL_LIST_PATH}/show/${encode
 /** A request's preview (`PreviewUrl` in the approval mail). */
 export const approvalPreviewHref = (id: string) => `${approvalHref(id)}#preview`;
 
+/** Where a request's page lists its people, each with their send once approved. */
+export const RECIPIENTS_ANCHOR = "recipients";
+
 /** The send form, filled from a rejected or declined request, resubmitting it. */
 export const resubmitHref = (id: string) => `${APPROVAL_LIST_PATH}/edit/${encodeURIComponent(id)}`;
 
@@ -247,7 +250,8 @@ export function approvalPeople(item: Pick<ApprovalItem, "audience" | "recipients
   return [];
 }
 
-const personName = (person: ApprovalRecipient) => person.full_name.trim() || person.email.trim();
+/** Someone by name, or by address when the submitter knew only that. */
+export const recipientName = (person: ApprovalRecipient) => person.full_name.trim() || person.email.trim();
 
 /**
  * Who a request goes to, as the list and the request's page say it: a list
@@ -263,7 +267,7 @@ export function approvalAudience(item: Pick<ApprovalItem, "audience" | "recipien
     return { kind: "person", name: name || person.email.trim(), detail: name ? person.email.trim() : null, listId: null };
   }
   const named = people.slice(0, shown);
-  return { kind: "people", name: named.map(personName).join(", "), detail: null, listId: null, more: people.length - named.length };
+  return { kind: "people", name: named.map(recipientName).join(", "), detail: null, listId: null, more: people.length - named.length };
 }
 
 /** The sends an approved request opened, `[i]` to its `i`th person; from an older API, its one send. */

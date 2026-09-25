@@ -8,8 +8,9 @@
 // What the viewer may not send they submit for approval (ticket 20,
 // use-submitting.ts): "Onaya sun" is the form's action for an audience they
 // cannot send to, and beside "Gönder" for one they can, since anyone may
-// submit. The same form resubmits a rejected or declined request, and starts
-// a new one from an expired request, filled from it (mail-approvals/edit.ts).
+// submit — a list, or up to 100 people as one request (ticket 22). The same
+// form resubmits a rejected or declined request, and starts a new one from
+// an expired request, filled from it with every person (mail-approvals/edit.ts).
 
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
@@ -20,10 +21,10 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { FormActions } from '@/components/ui/FormActions';
 import { useApiLoad } from '@/lib/api/react';
-import { approvalHref, type MailApproval } from '@/lib/mail-approvals/approvals';
+import { APPROVAL_PEOPLE_LIMIT, approvalHref, type MailApproval } from '@/lib/mail-approvals/approvals';
 import { approvalRequest, type ComposePrefill } from '@/lib/mail-approvals/edit';
 import type { ListRow } from '@/lib/mailing-lists';
-import { SEND_LIST_PATH } from '@/lib/sends';
+import { SEND_LIST_PATH, formatCount } from '@/lib/sends';
 import { approvalNote, defaultAudience, directSend, type SendAccess } from '@/lib/send-form/access';
 import { fieldValues, variableFields } from '@/lib/send-form/fields';
 import {
@@ -140,9 +141,16 @@ export function Compose({
   const busy = sending.progress !== null || submitting.busy;
   // A resubmission only goes for approval; anything else goes at once where the viewer may send it.
   const direct = !resubmit && directSend(access, audience);
-  const forApproval = check.ok ? approvalRequest(check.plan) : null;
+  const forApproval = check.ok ? approvalRequest(check.plan, { lists: access.list }) : null;
   const approvalProblem = intent === 'submit' && attempts > 0 && forApproval && !forApproval.ok ? forApproval.problem : null;
-  const audienceNote = resubmit ? (audience === 'people' ? 'Onaya tek bir kişi sunulur.' : null) : approvalNote(access, audience);
+  const audienceNote = resubmit
+    ? audience === 'people'
+      ? `Onaya en çok ${APPROVAL_PEOPLE_LIMIT} kişi sunulur.`
+      : null
+    : approvalNote(access, audience);
+  // A refused submission; one about its people is on their rows until the rows change.
+  const refusal = submitting.failure && (submitting.failure.rows === null || submitting.failure.of === people) ? submitting.failure : null;
+  const refusedRows = refusal?.rows ?? null;
 
   function send() {
     if (busy || held) return;
@@ -157,7 +165,7 @@ export function Compose({
     setAttempts((count) => count + 1);
     submitting.clear();
     if (!check.ok) return;
-    const request = approvalRequest(check.plan);
+    const request = approvalRequest(check.plan, { lists: access.list });
     if (request.ok) setConfirming({ kind: 'submit', plan: check.plan, request: request.request, resubmit: resubmit !== null });
   }
 
@@ -167,7 +175,8 @@ export function Compose({
   /** Who it goes to, as the request's page says it. */
   function audienceWords(chosen: Extract<Confirming, { kind: 'submit' }>) {
     if (chosen.plan.kind === 'list') return `“${list?.name ?? ''}” listesine`;
-    return `${chosen.plan.requests[0]?.recipient_email ?? ''} adresine`;
+    const { requests } = chosen.plan;
+    return requests.length === 1 ? `${requests[0].recipient_email} adresine` : `${formatCount(requests.length)} kişiye`;
   }
 
   function resendList() {
@@ -180,7 +189,7 @@ export function Compose({
       const said = resubmit
         ? `Yeniden onaya sunuldu: ${whatLabel}, ${audienceWords(chosen)}. 7 günlük süre yeniden başladı.`
         : `Onaya sunuldu: ${whatLabel}, ${audienceWords(chosen)}. Bir onaycı onaylayınca gönderilir.`;
-      const went = await submitting.submit(chosen.request, { resubmitId: resubmit?.id ?? null, said });
+      const went = await submitting.submit(chosen.request, { resubmitId: resubmit?.id ?? null, said, people });
       if (!went) setConfirming(null);
       return;
     }
@@ -297,7 +306,7 @@ export function Compose({
               listProblem={problems?.list ?? null}
               people={people}
               onPeople={setPeople}
-              peopleCheck={problems?.people ?? null}
+              peopleCheck={problems?.people ?? (refusedRows ? { rows: refusedRows, none: false } : null)}
               peopleWarnings={check.warnings.people}
               onSend={submit}
             />
@@ -328,10 +337,10 @@ export function Compose({
             </NoticeBox>
           ) : null}
           {approvalProblem ? <NoticeBox tone="error">{approvalProblem}</NoticeBox> : null}
-          {submitting.failure ? (
+          {refusal ? (
             <NoticeBox tone="error">
               <p className="font-medium">{resubmit ? 'İstek yeniden onaya sunulamadı.' : 'Gönderim onaya sunulamadı.'}</p>
-              <p className="mt-1">{submitting.failure.text}</p>
+              <p className="mt-1">{refusal.text}</p>
             </NoticeBox>
           ) : null}
           {failure && held ? (

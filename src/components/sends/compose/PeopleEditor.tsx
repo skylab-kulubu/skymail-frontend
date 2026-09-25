@@ -40,7 +40,7 @@ export function PeopleEditor({
   rows: readonly PersonEntry[];
   onChange: (rows: PersonEntry[]) => void;
   /** What is wrong with the rows, shown once the sender has tried to send; what may be a slip, always. */
-  check: { shown: PeopleCheck | null; warnings: readonly (string | null)[] };
+  check: { shown: Pick<PeopleCheck, 'rows' | 'none'> | null; warnings: readonly (string | null)[] };
   onSend: () => void;
 }) {
   const [pasting, setPasting] = useState(false);
