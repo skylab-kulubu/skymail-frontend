@@ -148,7 +148,9 @@ jobs:
         env:
           KEYCLOAK_CLIENT_SECRET: ${{ secrets.KEYCLOAK_CLIENT_SECRET }}
         run: |
-          args=()
+          # This repo is public, and so are its Actions logs: the report
+          # names no operator here.
+          args=(--hide-names)
           [[ "$DRY_RUN" == true ]] && args+=(--dry-run)
           case "$FORCE" in
             "") ;;
@@ -161,15 +163,15 @@ jobs:
           status=${PIPESTATUS[0]}
           set -e
 
-          # The seed prints template keys, subjects, SkyMail ids and, for a
-          # refused or forced template, the operator's name: no credentials.
+          # The seed prints template keys, subjects and SkyMail ids; with
+          # --hide-names no operator's name, and never a credential.
           {
             if [[ "$DRY_RUN" == true ]]; then mode="kuru çalışma"; else mode="gerçek çalışma"; fi
             echo "### Template seed · $SEED_ENVIRONMENT · $mode"
             echo
             echo "- SkyMail: \`$SKYMAIL_URL\`"
             echo "- Commit: \`$GITHUB_SHA\`"
-            echo "- Seçenekler: \`${args[*]:-(yok)}\`"
+            echo "- Seçenekler: \`${args[*]}\`"
             echo "- Çıkış kodu: $status"
             if (( status != 0 )); then
               echo
