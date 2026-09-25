@@ -7,7 +7,7 @@
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { parsePeople, peopleProblems, peopleReady, type PersonRow } from "./audience";
+import { parsePeople, peopleProblems, peopleReady, peopleSentApart, sentRowIndexes, type PersonRow } from "./audience";
 
 const row = (name: string, email: string): PersonRow => ({ name, email });
 
@@ -71,5 +71,15 @@ describe("people pasted in at once", () => {
 
   it("keep what is not an address as typed, for the row to say so", () => {
     assert.deepEqual(parsePeople("Mehmet"), [row("", "Mehmet")]);
+  });
+});
+
+describe("the rows a send goes to", () => {
+  it("are the ones that name someone, by their place in the form", () => {
+    assert.deepEqual(sentRowIndexes([row("", ""), row("Ali", ""), row(" ", " "), row("", "zeynep@ornek.com")]), [1, 3]);
+  });
+
+  it("are said as how many, each a send of its own", () => {
+    assert.equal(peopleSentApart(1532), "1.532 kişi, her biri ayrı bir gönderim");
   });
 });

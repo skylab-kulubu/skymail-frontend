@@ -2,8 +2,9 @@
  * The bodies the approval screens send (ticket 20), built from the same
  * variable fields as the send form (ticket 16):
  *
- *  - a submission and a resubmission are the send form's own request, to a
- *    list or to one person (`POST /mail_approvals`, `…/resubmit`);
+ *  - a submission and a resubmission are the send form's request, to a list
+ *    or to 1..100 people as one request (`POST /mail_approvals`,
+ *    `…/resubmit`, ticket 22);
  *  - an approver's edit is the request's variables, whole, with only the
  *    fields they changed in their new values: an untouched field goes back
  *    exactly as it came, a free announcement's body too, even where the
@@ -277,7 +278,7 @@ describe("a submission from the send form", () => {
   };
 
   it("to a list is the list send's own body", () => {
-    assert.deepEqual(approvalRequest(planOf(draft({}))), {
+    assert.deepEqual(approvalRequest(planOf(draft({})), { lists: true }), {
       ok: true,
       request: {
         template_id: FREE_ID,
@@ -287,28 +288,54 @@ describe("a submission from the send form", () => {
     });
   });
 
-  it("to a person is the single send's own body", () => {
+  // The API still takes recipient_email for one person, until ticket 21's follow-up drops it.
+  it("to one person names them among the recipients, not in the fields for one", () => {
     const plan = planOf(draft({ audience: "people", list: null, people: [{ name: "Ayşe Yılmaz", email: " ayse@ornek.com " }] }));
-    assert.deepEqual(approvalRequest(plan), {
+    assert.deepEqual(approvalRequest(plan, { lists: true }), {
       ok: true,
       request: {
         template_id: FREE_ID,
-        recipient_email: "ayse@ornek.com",
-        recipient_full_name: "Ayşe Yılmaz",
+        recipients: [{ email: "ayse@ornek.com", full_name: "Ayşe Yılmaz" }],
         body_variables: { Subject: "Duyuru", Heading: "", BodyHtml: "<p>Merhaba.</p>", CtaUrl: "", CtaLabel: "" },
       },
     });
   });
 
-  // A request goes to one audience; approvers would otherwise get one request
-  // per person to decide.
-  it("goes to one person at most", () => {
+  // Approvers decide it once; each person gets a send of their own.
+  it("to several people is one request, each in the order the form has them, the empty rows left out", () => {
     const plan = planOf(
-      draft({ audience: "people", list: null, people: [{ name: "", email: "a@ornek.com" }, { name: "", email: "b@ornek.com" }] }),
+      draft({
+        audience: "people",
+        list: null,
+        people: [
+          { name: "", email: "b@ornek.com" },
+          { name: "", email: "" },
+          { name: " Ali Can ", email: "a@ornek.com" },
+        ],
+      }),
     );
-    assert.deepEqual(approvalRequest(plan), {
+    const submitted = approvalRequest(plan, { lists: true });
+    assert.ok(submitted.ok);
+    assert.deepEqual("recipients" in submitted.request && submitted.request.recipients, [
+      { email: "b@ornek.com", full_name: "" },
+      { email: "a@ornek.com", full_name: "Ali Can" },
+    ]);
+  });
+
+  const crowd = (count: number) => Array.from({ length: count }, (_, index) => ({ name: "", email: `kisi${index + 1}@ornek.com` }));
+
+  it("goes to 100 people at most, and points a crowd to a list", () => {
+    const hundred = approvalRequest(planOf(draft({ audience: "people", list: null, people: crowd(100) })), { lists: true });
+    assert.ok(hundred.ok);
+    assert.equal("recipients" in hundred.request && hundred.request.recipients.length, 100);
+    assert.deepEqual(approvalRequest(planOf(draft({ audience: "people", list: null, people: crowd(101) })), { lists: true }), {
       ok: false,
-      problem: "Onaya tek bir kişi ya da bir mail listesi sunulur: 2 kişiye göndermek için bir liste seç ya da her kişiyi ayrı sun.",
+      problem: "Onaya en çok 100 kişi sunulur; burada 101 kişi var. Daha kalabalık bir gönderim için bir mail listesi seç.",
+    });
+    assert.deepEqual(approvalRequest(planOf(draft({ audience: "people", list: null, people: crowd(101) })), { lists: false }), {
+      ok: false,
+      problem:
+        "Onaya en çok 100 kişi sunulur; burada 101 kişi var. Daha kalabalık bir gönderim bir mail listesine gider: listeleri görmek için skymail:lists:read rolü gerekiyor.",
     });
   });
 });
@@ -364,6 +391,29 @@ describe("the send form filled from a request", () => {
     assert.equal(prefill.audience, "people");
     assert.deepEqual(prefill.people, [{ name: "Ali Can", email: "ali@ornek.com" }]);
     assert.deepEqual(prefill.values, { EventName: "GECEKODU", DetailsUrl: "https://skyl.app/g" });
+  });
+
+  it("picks every person again, in the order submitted", () => {
+    const people = [
+      { full_name: "Ali Can", email: "ali@ornek.com" },
+      { full_name: "", email: "zeynep@ornek.com" },
+      { full_name: "Mert Demir", email: "mert@ornek.com" },
+    ];
+    const prefill = composePrefill(
+      approval({
+        audience: { kind: "people", mail_list_id: null, name: null, source: null, recipient_full_name: null, recipient_email: null },
+        recipients: people,
+      }),
+      { templates: [FREE], lists, access: member },
+    );
+    assert.equal(prefill.audience, "people");
+    assert.equal(prefill.listId, null);
+    assert.deepEqual(prefill.people, [
+      { name: "Ali Can", email: "ali@ornek.com" },
+      { name: "", email: "zeynep@ornek.com" },
+      { name: "Mert Demir", email: "mert@ornek.com" },
+    ]);
+    assert.deepEqual(prefill.notes, []);
   });
 
   it("says what it could not fill: a template or a list gone, a list the viewer cannot see, a body not read back exactly", () => {
