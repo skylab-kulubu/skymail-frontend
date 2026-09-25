@@ -4,16 +4,19 @@ import { useState } from 'react';
 import { FormTextArea } from '@/components/chrome/FormField';
 import { Modal } from '@/components/ui/Modal';
 import { ModalDangerActions, ModalPrimaryActions } from '@/components/ui/modal-actions';
-import type { MailApproval } from '@/lib/mail-approvals/approvals';
+import { approvalAudience, approvalPeople, recipientName, type MailApproval } from '@/lib/mail-approvals/approvals';
 import { DECISIONS, type Decision } from '@/lib/mail-approvals/decisions';
 import type { PinnedSource } from '@/lib/mail-approvals/edit';
+import { peopleSentApart } from '@/lib/send-form/audience';
 import type { VariableField } from '@/lib/send-form/fields';
-import { audienceLabel, formatCount } from '@/lib/sends';
+import { formatCount } from '@/lib/sends';
 import { EditComparison } from './EditComparison';
 
-/** Who it goes to, and how many, in words. */
+/** Who it goes to, and how many, in words: several people as the send form's confirmation says them. */
 function audienceText(approval: MailApproval): string {
-  const audience = audienceLabel(approval.audience);
+  const people = approvalPeople(approval);
+  if (people.length > 1) return peopleSentApart(people.length);
+  const audience = approvalAudience(approval);
   if (audience.kind === 'person') return audience.detail ? `${audience.name} <${audience.detail}>` : audience.name;
   const count = approval.recipient_count === null ? 'alıcı sayısı bilinmiyor' : `${formatCount(approval.recipient_count)} alıcı`;
   return `“${audience.name}” ${audience.kind === 'group' ? 'Keycloak grubu' : 'listesi'} (${count})`;
@@ -53,6 +56,7 @@ export function DecisionDialog({
   if (decision === null) return null;
 
   const words = DECISIONS[decision];
+  const people = approvalPeople(approval);
   const missingReason = words.text?.required === true && text.trim() === '';
   const close = busy ? () => {} : onCancel;
 
@@ -74,6 +78,11 @@ export function DecisionDialog({
           <div>
             <dt className="text-xs text-neutral-500">Kime</dt>
             <dd className="break-words text-neutral-100">{audienceText(approval)}</dd>
+            {people.length > 1 ? (
+              <dd className="mt-1 max-h-32 overflow-y-auto text-xs text-neutral-400">
+                {people.map(recipientName).join(', ')}
+              </dd>
+            ) : null}
           </div>
         </dl>
 

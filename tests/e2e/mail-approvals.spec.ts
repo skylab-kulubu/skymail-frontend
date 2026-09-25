@@ -4,7 +4,9 @@
  * the edit, or rejects it with a reason; the submitter accepts or declines a
  * returned edit and resubmits a rejected request. An expired request is
  * final, and a template published again since a request is explained rather
- * than refused without a word. The API is the mock's (ticket 19's rules).
+ * than refused without a word. A request may go to several people, decided
+ * once, each person getting a send of their own (ticket 22). The API is the
+ * mock's (ticket 19's rules, ticket 21's for people).
  */
 import type { Page } from "@playwright/test";
 import { expect, preview, test } from "./fixtures";
@@ -62,6 +64,10 @@ const notice = (page: Page, text: string) => page.getByRole("status").filter({ h
 const menu = (page: Page) => page.getByRole("navigation", { name: "Ana navigasyon" });
 const listRadio = (page: Page, name: string) =>
   page.getByRole("group", { name: "Mail listesi" }).getByRole("radio", { name: new RegExp(name) });
+/** A fact about the request, by its term: its definition. */
+const fact = (page: Page, term: string) => page.locator("dt", { hasText: new RegExp(`^${term}$`) }).locator("xpath=following-sibling::dd[1]");
+/** The request's people, one to a line. */
+const people = (page: Page) => page.getByRole("region", { name: /^Kişiler/ });
 
 /** A request by the member, for free.basic to a list of three. */
 function submitted(skymail: MockSkymail, overrides: Partial<Parameters<MockSkymail["addApproval"]>[0]> = {}) {
@@ -133,7 +139,7 @@ test("a member who sends nothing submits from the send form, held to the Require
   expect(errors).toEqual([]);
 });
 
-test("a sender who may send can still choose to submit for approval, one person at a time", async ({ page, skymail, signIn }) => {
+test("a sender who may send can still submit several people as one request, the rows checked as a send's and the API's refusal put on its row", async ({ page, skymail, signIn }) => {
   await signIn("individual");
   const { id } = reminder(skymail);
 
@@ -144,25 +150,237 @@ test("a sender who may send can still choose to submit for approval, one person 
   await page.getByLabel("1. kişinin adı soyadı").fill("Ali Can");
   await page.getByLabel("1. kişinin e-posta adresi").fill("ali@ornek.com");
   await page.getByRole("button", { name: "Kişi ekle" }).click();
-  await page.getByLabel("2. kişinin e-posta adresi").fill("zeynep@ornek.com");
+  await page.getByLabel("2. kişinin e-posta adresi").fill("ALI@ornek.com");
+  await page.getByRole("button", { name: "Kişi ekle" }).click();
+  await page.getByLabel("3. kişinin adı soyadı").fill("Zeynep Kaya");
+  await page.getByLabel("3. kişinin e-posta adresi").fill("zeynep@ornek.com");
 
+  // The same address in another case is caught as a send would catch it.
   await page.getByRole("button", { name: "Onaya sun…" }).click();
-  await expect(page.getByText("Onaya tek bir kişi ya da bir mail listesi sunulur: 2 kişiye göndermek için bir liste seç ya da her kişiyi ayrı sun.")).toBeVisible();
+  await expect(page.getByText("Bu adres 1. satırda da var; herkese bir kez gönderilir.")).toBeVisible();
   await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByLabel("2. kişinin adı soyadı").fill("Mert Demir");
+  await page.getByLabel("2. kişinin e-posta adresi").fill("mert@ornek.com");
 
-  await page.getByRole("button", { name: "2. kişiyi çıkar" }).click();
+  // An address the API refuses is marked on its row.
+  skymail.refuseApproval("submit", {
+    status: 400,
+    body: { code: "validation.error", message: "x", params: { errors: [{ field: "recipients[2].email", code: "invalid_email" }] } },
+  });
   await page.getByRole("button", { name: "Onaya sun…" }).click();
   const confirm = dialog(page, "Onaya sun");
-  await expect(confirm).toContainText("Ali Can <ali@ornek.com>");
+  await expect(confirm).toContainText("3 kişi, her biri ayrı bir gönderim");
+  await expect(confirm).toContainText("Ali Can, Mert Demir, Zeynep Kaya");
   await confirm.getByRole("button", { name: "Onaya sun", exact: true }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "onaya sunulamadı" })).toContainText("SkyMail bazı adresleri kabul etmedi: işaretli kişileri düzelt.");
+  await expect(page.getByLabel("3. kişinin e-posta adresi")).toHaveAttribute("aria-invalid", "true");
+  await expect(page.getByText("SkyMail bu adresi geçerli bir e-posta adresi saymadı.")).toBeVisible();
+  // The mark stays on the refused address while other rows and fields change, the form's own problems beside it.
+  await page.getByLabel("1. kişinin adı soyadı").fill("Ali Can Yıldız");
+  await page.getByLabel("EventName").fill("");
+  await page.getByRole("button", { name: "Onaya sun…" }).click();
+  await expect(page.getByText("EventName boş bırakılamaz: bir Required variable.")).toBeVisible();
+  await expect(page.getByLabel("3. kişinin e-posta adresi")).toHaveAttribute("aria-invalid", "true");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByLabel("EventName").fill("GECEKODU");
+  await page.getByLabel("1. kişinin adı soyadı").fill("Ali Can");
+  await page.getByLabel("3. kişinin e-posta adresi").fill("zeynep.kaya@ornek.com");
+  await expect(page.getByText("SkyMail bu adresi geçerli bir e-posta adresi saymadı.")).toHaveCount(0);
+  await expect(page.getByRole("alert").filter({ hasText: "onaya sunulamadı" })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Onaya sun…" }).click();
+  await dialog(page, "Onaya sun").getByRole("button", { name: "Onaya sun", exact: true }).click();
   await expect(page).toHaveURL(/\/mail-approvals\/show\//);
-  expect(skymail.approvalRequests()[0].body).toEqual({
+  await expect(notice(page, "Onaya sunuldu")).toHaveText("Onaya sunuldu: “Etkinlik hatırlatması”, 3 kişiye. Bir onaycı onaylayınca gönderilir.");
+  expect(skymail.approvalRequests().at(-1)!.body).toEqual({
     template_id: id,
-    recipient_email: "ali@ornek.com",
-    recipient_full_name: "Ali Can",
+    recipients: [
+      { email: "ali@ornek.com", full_name: "Ali Can" },
+      { email: "mert@ornek.com", full_name: "Mert Demir" },
+      { email: "zeynep.kaya@ornek.com", full_name: "Zeynep Kaya" },
+    ],
     body_variables: { EventName: "GECEKODU", DetailsUrl: "" },
   });
   expect(skymail.sendRequests()).toEqual([]);
+
+  await expect(fact(page, "Kitle")).toHaveText("Ali Can, Mert Demir, Zeynep Kaya");
+  await expect(fact(page, "Alıcılar")).toHaveText("3 alıcı");
+  await expect(people(page).getByRole("listitem")).toHaveText([/Ali Can\s*ali@ornek.com/, /Mert Demir\s*mert@ornek.com/, /Zeynep Kaya\s*zeynep.kaya@ornek.com/]);
+  await expect(page.getByText("Her kişi kendi adıyla alır; önizleme ilk kişi, Ali Can <ali@ornek.com> için, sunucunun göndereceği hâliyle.")).toBeVisible();
+  await expect(preview(page, "İsteğin önizlemesi")).toContainText("Merhaba Ali Can");
+});
+
+test("one person goes for approval among the recipients too, and a missing role is named", async ({ page, skymail, signIn }) => {
+  await signIn("individual");
+  const { id } = reminder(skymail);
+  skymail.refuseApproval("submit", {
+    status: 403,
+    body: { code: "server.forbidden", message: "forbidden", params: { missing_roles: ["skymail:templates:read"] } },
+  });
+
+  await page.goto("/mail-tasks/create");
+  await page.getByRole("group", { name: "Mail template" }).getByRole("radio", { name: /Etkinlik hatırlatması/ }).check();
+  await page.getByLabel("EventName").fill("GECEKODU");
+  await page.getByLabel("1. kişinin adı soyadı").fill("Ali Can");
+  await page.getByLabel("1. kişinin e-posta adresi").fill("ali@ornek.com");
+  await page.getByRole("button", { name: "Onaya sun…" }).click();
+  await expect(dialog(page, "Onaya sun")).toContainText("Ali Can <ali@ornek.com>");
+  await dialog(page, "Onaya sun").getByRole("button", { name: "Onaya sun", exact: true }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "onaya sunulamadı" })).toContainText("Onaya sunmak için skymail:templates:read rolü gerekiyor.");
+
+  await page.getByRole("button", { name: "Onaya sun…" }).click();
+  await dialog(page, "Onaya sun").getByRole("button", { name: "Onaya sun", exact: true }).click();
+  await expect(notice(page, "Onaya sunuldu")).toHaveText("Onaya sunuldu: “Etkinlik hatırlatması”, ali@ornek.com adresine. Bir onaycı onaylayınca gönderilir.");
+  expect(skymail.approvalRequests().at(-1)!.body).toEqual({
+    template_id: id,
+    recipients: [{ email: "ali@ornek.com", full_name: "Ali Can" }],
+    body_variables: { EventName: "GECEKODU", DetailsUrl: "" },
+  });
+  await expect(fact(page, "Kitle")).toHaveText(/^Ali Can\s*ali@ornek.com$/);
+  await expect(people(page)).toHaveCount(0);
+  await expect(page.getByText("Ali Can <ali@ornek.com> için, sunucunun göndereceği hâliyle.")).toBeVisible();
+});
+
+test("more than 100 people are pointed to a mailing list", async ({ page, skymail, signIn }) => {
+  await signIn("member");
+  freeBasic(skymail);
+
+  await page.goto("/mail-tasks/create");
+  await page.getByRole("button", { name: "Kişiler", exact: true }).click();
+  await expect(page.getByText("Onaya en çok 100 kişi sunulur.")).toBeVisible();
+  await page.getByLabel("Konu").fill("Duyuru");
+  await body(page).click();
+  await page.keyboard.type("Merhaba.");
+  await page.getByRole("button", { name: "Toplu ekle" }).click();
+  await page.getByLabel("Kişileri yapıştır").fill(Array.from({ length: 101 }, (_, index) => `kisi${index + 1}@ornek.com`).join("\n"));
+  await page.getByRole("button", { name: "Listeye ekle" }).click();
+  await expect(page.getByText("101 kişi")).toBeVisible();
+
+  await page.getByRole("button", { name: "Onaya sun…" }).click();
+  await expect(page.getByText("Onaya en çok 100 kişi sunulur; burada 101 kişi var. Daha kalabalık bir gönderim için bir mail listesi seç.")).toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  expect(skymail.approvalRequests()).toEqual([]);
+});
+
+test("an approver reads every person of a request, approves it once, and finds each person's send", async ({ page, skymail, signIn }) => {
+  await signIn("approver");
+  const free = freeBasic(skymail);
+  const everyone = [...PARTICIPANTS, { full_name: "", email: "ece@ornek.com" }];
+  const id = skymail.addApproval({ templateId: free.id, recipients: everyone, variables: SUBMITTED, submitter: MEMBER });
+
+  await page.goto("/mail-approvals");
+  const row = page.getByRole("row").filter({ hasText: "Serbest Gönderim" });
+  await expect(row).toContainText("Ali Can, Zeynep Kaya");
+  await expect(row).toContainText("+2 kişi");
+  await row.getByRole("link", { name: "Serbest Gönderim" }).click();
+
+  await expect(fact(page, "Kitle")).toHaveText(/^Ali Can, Zeynep Kaya, Mert Demir\s*\+1 kişi$/);
+  await expect(fact(page, "Alıcılar")).toHaveText("4 alıcı");
+  await expect(people(page).getByRole("listitem")).toHaveCount(4);
+  await expect(people(page).getByRole("listitem").last()).toHaveText(/ece@ornek.com/);
+  await expect(page.getByText("Her kişi kendi adıyla alır; önizleme ilk kişi, Ali Can <ali@ornek.com> için")).toBeVisible();
+  await expect(preview(page, "İsteğin önizlemesi")).toContainText("Merhaba Ali Can");
+  await expect(people(page).getByRole("link")).toHaveCount(0);
+
+  await decision(page).getByRole("button", { name: "Onayla ve gönder…" }).click();
+  const confirm = dialog(page, "Onayla ve gönder");
+  await expect(confirm).toContainText("4 kişi, her biri ayrı bir gönderim");
+  await expect(confirm).toContainText("Ali Can, Zeynep Kaya, Mert Demir, ece@ornek.com");
+  await confirm.getByRole("button", { name: "Onayla ve gönder" }).click();
+
+  await expect(notice(page, "Onaylandı")).toBeVisible();
+  await expect(decision(page)).toContainText("Onaylandı ve gönderildi");
+  await expect(decision(page)).toContainText("Her kişiye ayrı bir gönderim açıldı: 4 gönderim.");
+  await expect(decision(page).getByRole("link", { name: "Gönderimleri gör" })).toHaveAttribute("href", "#recipients");
+  const sends = skymail.approval(id).task_ids;
+  expect(sends).toHaveLength(4);
+  expect(skymail.approvalRequests().map((request) => request.path)).toEqual([`/mail_approvals/${id}/approve`]);
+  const links = people(page).getByRole("link");
+  await expect(links).toHaveCount(4);
+  for (const [index, send] of sends.entries()) {
+    await expect(links.nth(index)).toHaveAttribute("href", `/mail-tasks/show/${send}`);
+  }
+  await expect(people(page).getByRole("link", { name: "ece@ornek.com: gönderimi gör" })).toHaveAttribute("href", `/mail-tasks/show/${sends[3]}`);
+  await expect(page.getByRole("list").filter({ hasText: "onayladı; gönderildi" }).getByRole("link", { name: "Gönderimleri gör" })).toHaveAttribute(
+    "href",
+    "#recipients",
+  );
+
+  // Each person's send is a send to them alone.
+  await links.nth(1).click();
+  await expect(page).toHaveURL(`/mail-tasks/show/${sends[1]}`);
+  await expect(page.getByText("zeynep@ornek.com").first()).toBeVisible();
+});
+
+test("resubmitting a request to several people, and starting a new one from it, carries every person", async ({ page, skymail, signIn }) => {
+  await signIn("member");
+  const free = freeBasic(skymail);
+  const rejected = skymail.addApproval({
+    templateId: free.id,
+    recipients: PARTICIPANTS,
+    variables: SUBMITTED,
+    submitter: MEMBER,
+    state: "rejected",
+    decided: { kind: "rejected", actor: APPROVER, note: "Tarih yanlış." },
+  });
+  const expired = skymail.addApproval({
+    templateId: free.id,
+    recipients: PARTICIPANTS,
+    variables: SUBMITTED,
+    submitter: MEMBER,
+    submittedAgo: 8 * 24 * 3600_000,
+    deadlineIn: -24 * 3600_000,
+  });
+  const asSubmitted = PARTICIPANTS.map(({ full_name, email }) => ({ email, full_name }));
+
+  await page.goto(`/mail-approvals/show/${rejected}`);
+  await decision(page).getByRole("button", { name: "Düzenleyip yeniden sun" }).click();
+  await expect(page.getByRole("button", { name: "Kişiler", exact: true })).toHaveAttribute("aria-pressed", "true");
+  for (const [index, person] of PARTICIPANTS.entries()) {
+    await expect(page.getByLabel(`${index + 1}. kişinin adı soyadı`)).toHaveValue(person.full_name);
+    await expect(page.getByLabel(`${index + 1}. kişinin e-posta adresi`)).toHaveValue(person.email);
+  }
+  await page.getByRole("button", { name: "Yeniden onaya sun…" }).click();
+  await expect(dialog(page, "Yeniden onaya sun")).toContainText("3 kişi, her biri ayrı bir gönderim");
+  await dialog(page, "Yeniden onaya sun").getByRole("button", { name: "Yeniden onaya sun" }).click();
+  await expect(page).toHaveURL(`/mail-approvals/show/${rejected}`);
+  await expect(notice(page, "Yeniden onaya sunuldu")).toContainText("3 kişiye");
+  const resubmit = skymail.approvalRequests().at(-1)!;
+  expect([resubmit.path, resubmit.body]).toEqual([
+    `/mail_approvals/${rejected}/resubmit`,
+    { template_id: free.id, recipients: asSubmitted, body_variables: SUBMITTED },
+  ]);
+
+  await page.goto(`/mail-approvals/show/${expired}`);
+  await decision(page).getByRole("button", { name: "Bu istekten yeni gönderim başlat" }).click();
+  await expect(page.getByLabel("3. kişinin e-posta adresi")).toHaveValue("mert@ornek.com");
+  await page.getByRole("button", { name: "Onaya sun…" }).click();
+  await dialog(page, "Onaya sun").getByRole("button", { name: "Onaya sun", exact: true }).click();
+  await expect(page).toHaveURL(/\/mail-approvals\/show\//);
+  const copy = skymail.approvalRequests().at(-1)!;
+  expect([copy.path, copy.body]).toEqual(["/mail_approvals", { template_id: free.id, recipients: asSubmitted, body_variables: SUBMITTED }]);
+});
+
+test("a request as the API answered before several people still reads: one person, one send", async ({ page, skymail, signIn }) => {
+  await signIn("approver");
+  skymail.serveApprovalsWithoutRecipients();
+  const { id: templateId } = reminder(skymail);
+  const id = skymail.addApproval({
+    templateId,
+    recipients: [{ full_name: "Ali Can", email: "ali@ornek.com" }],
+    variables: { EventName: "GECEKODU", DetailsUrl: "" },
+    submitter: MEMBER,
+  });
+
+  await page.goto("/mail-approvals");
+  await expect(page.getByRole("row").filter({ hasText: "Etkinlik hatırlatması" })).toContainText("Ali Can");
+  await page.goto(`/mail-approvals/show/${id}`);
+  await expect(fact(page, "Kitle")).toHaveText(/^Ali Can\s*ali@ornek.com$/);
+  await expect(page.getByText("Ali Can <ali@ornek.com> için, sunucunun göndereceği hâliyle.")).toBeVisible();
+  await decision(page).getByRole("button", { name: "Onayla ve gönder…" }).click();
+  await expect(dialog(page, "Onayla ve gönder")).toContainText("Ali Can <ali@ornek.com>");
+  await dialog(page, "Onayla ve gönder").getByRole("button", { name: "Onayla ve gönder" }).click();
+  await expect(decision(page).getByRole("link", { name: "Gönderimi gör" })).toHaveAttribute("href", /\/mail-tasks\/show\/b1c2d3e4-/);
 });
 
 test("an approver finds a pending request in the menu and the list, and approves it as it is", async ({ page, skymail, signIn }) => {
@@ -202,7 +420,7 @@ test("an approver finds a pending request in the menu and the list, and approves
   const request = skymail.approvalRequests().at(-1)!;
   expect([request.path, request.body]).toEqual([`/mail_approvals/${id}/approve`, null]);
   expect(skymail.approval(id).body_variables).toEqual(SUBMITTED);
-  expect(skymail.approval(id).task_id).toMatch(/^b1c2d3e4-/);
+  expect(skymail.approval(id).task_ids).toEqual([expect.stringMatching(/^b1c2d3e4-/)]);
 });
 
 test("an approver edits a request and returns it; the submitter sees the edit beside their own and accepts it", async ({ page, skymail, signIn, context }) => {

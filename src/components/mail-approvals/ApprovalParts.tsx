@@ -1,9 +1,14 @@
 'use client';
 
+import Link from 'next/link';
 import { ToneBadge, type Tone } from '@/components/chrome/ToneBadge';
+import { useCan } from '@/components/layout/ConsoleContext';
+import { ROLE } from '@/lib/access';
 import { formatClubTime } from '@/lib/format';
 import {
   APPROVAL_STATE_LABEL,
+  RECIPIENTS_ANCHOR,
+  approvalSends,
   deadlineHint,
   effectiveState,
   isWaiting,
@@ -12,6 +17,7 @@ import {
   type ApprovalState,
   type ApprovalSubmitter,
 } from '@/lib/mail-approvals/approvals';
+import { sendHref } from '@/lib/sends';
 
 const STATE_TONE: Readonly<Record<ApprovalState, Tone>> = {
   pending: 'busy',
@@ -41,6 +47,26 @@ export function Deadline({ item, now = new Date(), inline = false }: { item: Pic
       <span className="text-neutral-300 tabular-nums">{formatClubTime(item.deadline_at)}</span>
       {hint ? <span className={`text-2xs ${hint.urgent ? 'text-amber-300' : 'text-neutral-500'}`}>{hint.text}</span> : null}
     </span>
+  );
+}
+
+/**
+ * Where an approved request's sends are, for someone who reads sends: its
+ * one send, or — one per person — the people on the page, each beside theirs.
+ */
+export function SendsLink({ item, className = 'text-sm' }: { item: Pick<ApprovalItem, 'task_id' | 'task_ids'>; className?: string }) {
+  const canSeeSends = useCan(ROLE.mailsRead);
+  const sends = approvalSends(item);
+  if (!canSeeSends || sends.length === 0) return null;
+  const style = `text-skylab-300 hover:underline ${className}`;
+  return sends.length === 1 ? (
+    <Link href={sendHref(sends[0])} className={style}>
+      Gönderimi gör
+    </Link>
+  ) : (
+    <a href={`#${RECIPIENTS_ANCHOR}`} className={style}>
+      Gönderimleri gör
+    </a>
   );
 }
 

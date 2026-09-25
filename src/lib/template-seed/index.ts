@@ -85,10 +85,15 @@ export interface SeedRun {
   fetch: typeof globalThis.fetch;
   /** Prints one line of the run's report. */
   print: (line: string) => void;
+  /**
+   * Says "bir operatör" instead of the operator's name: the report of a run in
+   * this public repo's Actions logs is public, one in a person's terminal is not.
+   */
+  hideNames?: boolean;
 }
 
 export type SeedArgs =
-  | { ok: true; dryRun: boolean; allowStale: boolean; force: ForceOption }
+  | { ok: true; dryRun: boolean; allowStale: boolean; hideNames: boolean; force: ForceOption }
   | { ok: false; message: string };
 
 /**
@@ -100,6 +105,7 @@ export type SeedArgs =
 export function parseSeedArgs(argv: string[], keys: string[]): SeedArgs {
   let dryRun = false;
   let allowStale = false;
+  let hideNames = false;
   let all = false;
   const forced: string[] = [];
   for (const arg of argv) {
@@ -110,6 +116,8 @@ export function parseSeedArgs(argv: string[], keys: string[]): SeedArgs {
       dryRun = true;
     } else if (arg === "--allow-stale") {
       allowStale = true;
+    } else if (arg === "--hide-names") {
+      hideNames = true;
     } else if (arg === "--force-all") {
       all = true;
     } else if (arg === "--force" || arg.startsWith("--force=")) {
@@ -131,11 +139,11 @@ export function parseSeedArgs(argv: string[], keys: string[]): SeedArgs {
     } else {
       return {
         ok: false,
-        message: `Bilinmeyen seçenek: ${arg}. Seçenekler: --dry-run, --force=<anahtar>[,<anahtar>], --force-all, --allow-stale.`,
+        message: `Bilinmeyen seçenek: ${arg}. Seçenekler: --dry-run, --force=<anahtar>[,<anahtar>], --force-all, --allow-stale, --hide-names.`,
       };
     }
   }
-  return { ok: true, dryRun, allowStale, force: { all, keys: all ? [] : forced } };
+  return { ok: true, dryRun, allowStale, hideNames, force: { all, keys: all ? [] : forced } };
 }
 
 /** A version a refusal or a force names: its summary, as skymail-backend's version routes serve it. */
@@ -237,7 +245,7 @@ export async function runSeed(run: SeedRun): Promise<number> {
     const outcome = await upsert(run, meta.key, payload, forced);
     if (outcome.kind === "written") {
       written += 1;
-      run.print(`✓ ${meta.key.padEnd(34)} ${outcome.id}${forced ? `  (${forceNote(outcome.overrode)})` : ""}`);
+      run.print(`✓ ${meta.key.padEnd(34)} ${outcome.id}${forced ? `  (${forceNote(outcome.overrode, run.hideNames ?? false)})` : ""}`);
     } else if (outcome.kind === "refused") {
       refusals.push({ key: meta.key, conflict: outcome.conflict });
       run.print(`✗ ${meta.key.padEnd(34)} reddedildi: son seed'den sonra bir operatör değiştirmiş`);
@@ -255,7 +263,7 @@ export async function runSeed(run: SeedRun): Promise<number> {
   }
 
   run.print(`\n${written} şablon ${run.baseUrl} üzerine yazıldı.`);
-  reportRefusals(run.print, refusals);
+  reportRefusals(run.print, refusals, run.hideNames ?? false);
   run.print(
     "\nRepoda olmayan anahtarlar silinmedi — canlı bir servisin çağırdığı şablonu arşivlemek postayı sessizce durdurur.",
   );
@@ -301,7 +309,7 @@ async function upsert(run: SeedRun, key: string, payload: SeedPayload, forced: b
   return { kind: "failed", reason: `HTTP ${response.status} ${error.code} — ${error.message}` };
 }
 
-function reportRefusals(print: (line: string) => void, refusals: Refusal[]): void {
+function reportRefusals(print: (line: string) => void, refusals: Refusal[], hideNames: boolean): void {
   if (refusals.length === 0) {
     return;
   }
@@ -310,7 +318,7 @@ function reportRefusals(print: (line: string) => void, refusals: Refusal[]): voi
   );
   for (const { key, conflict } of refusals) {
     print(`\n  ${key}`);
-    for (const reason of reasons(conflict)) {
+    for (const reason of reasons(conflict, hideNames)) {
       print(`    ${reason}`);
     }
     print(`    Zorlamak için: ${SEED_COMMAND} --force=${key}`);
@@ -324,7 +332,8 @@ function reportRefusals(print: (line: string) => void, refusals: Refusal[]): voi
   print("Repo, operatörün yayımladığı içeriği aynen tutarsa seed o şablonda çakışmadan geçer.");
 }
 
-const who = (version: ConflictVersion) => version.author.name ?? "adı bilinmiyor";
+const who = (version: ConflictVersion, hideNames: boolean) =>
+  hideNames ? "bir operatör" : (version.author.name ?? "adı bilinmiyor");
 
 const DAY = new Intl.DateTimeFormat("tr-TR", { day: "numeric", month: "short", timeZone: "Europe/Istanbul" });
 
@@ -341,7 +350,7 @@ function dayOf(value: string | null | undefined): string {
  * state, author and day, and an operator's subject — or that it overrode
  * nothing, when the template was the last seed's all along.
  */
-function forceNote(overrode: Override | null): string {
+function forceNote(overrode: Override | null, hideNames: boolean): string {
   if (!overrode) {
     return "zorlandı, ezilen yok";
   }
@@ -358,7 +367,7 @@ function forceNote(overrode: Override | null): string {
     .map((version) => {
       const state = version.published_at === null ? "taslak" : "yayımlanmış sürüm";
       const day = dayOf(version.published_at ?? version.created_at);
-      return `#${version.seq} ${state}, ${who(version)}, ${day}`;
+      return `#${version.seq} ${state}, ${who(version, hideNames)}, ${day}`;
     });
   if (overrode.rules.includes("operator_subject") && published) {
     replaced.push(`operatörün konusu "${published.subject}"`);
@@ -369,11 +378,11 @@ function forceNote(overrode: Override | null): string {
   return `zorlandı: ${replaced.join("; ")} — geçmişte duruyor, geri getirilebilir`;
 }
 
-const numbered = (version: ConflictVersion) =>
-  `#${version.seq} ${version.published_at === null ? "taslak" : "yayımlı"} (${who(version)})`;
+const numbered = (version: ConflictVersion, hideNames: boolean) =>
+  `#${version.seq} ${version.published_at === null ? "taslak" : "yayımlı"} (${who(version, hideNames)})`;
 
 /** Each rule that held, in words, with the versions involved. */
-function reasons(conflict: SeedConflict): string[] {
+function reasons(conflict: SeedConflict, hideNames: boolean): string[] {
   const lastSeed = conflict.last_seed_version;
   return conflict.rules.map((rule) => {
     switch (rule) {
@@ -381,11 +390,11 @@ function reasons(conflict: SeedConflict): string[] {
         const since = lastSeed ? `son seed #${lastSeed.seq}` : "bu şablonu hiçbir seed yazmamış";
         const published = conflict.published_version;
         return published
-          ? `Gönderilen sürüm #${published.seq} bir operatörün (${who(published)}); ${since}.`
+          ? `Gönderilen sürüm #${published.seq} bir operatörün (${who(published, hideNames)}); ${since}.`
           : `Gönderilen sürüm son seed'in değil; ${since}.`;
       }
       case "newer_operator_version":
-        return `Son seed'den sonra operatör sürümleri var: ${conflict.operator_versions.map(numbered).join(", ")}.`;
+        return `Son seed'den sonra operatör sürümleri var: ${conflict.operator_versions.map((version) => numbered(version, hideNames)).join(", ")}.`;
       case "operator_subject":
         return `Konu operatörün: şu an "${conflict.subject}", repo "${conflict.requested_subject}" istiyor.`;
       default:

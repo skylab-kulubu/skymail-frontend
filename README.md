@@ -97,6 +97,30 @@ bağlı olduğu için kalıcı önbelleklenir.
 İmaj: `docker build -t skymail-frontend .` — build argümanı yok; konteyner
 `node server.js` ile başlar ve ayarlarını ortamdan okur.
 
+## Şablonları SkyMail'e yüklemek (Template seed)
+
+`emails/`'teki şablonlar sandbox'a ya da production'a GitHub'dan bir düğmeyle
+yüklenir: Actions → **Seed templates** → Run workflow
+(`.github/workflows/seed-templates.yml`). Merge'le kendiliğinden koşmaz.
+
+```sh
+gh workflow run seed-templates.yml --ref main -f environment=sandbox -f dry_run=true
+```
+
+* `environment`: `sandbox` ya da `production`. Production her çalışmada onay bekler.
+* `dry_run` (varsayılan açık): hiçbir şablon yazılmaz, ama servis hesabı yine denenir
+  (token + SkyMail'den 200).
+* `force`: operatörün değiştirdiği şablonun üstüne yazmak için: boş, `all`, ya da
+  `anahtar[,anahtar]`.
+
+Yalnız `main`'den koşar. Çıktı çalışmanın Summary sayfasındadır. Seed, Keycloak'taki
+`skymail-seed` servis hesabıyla yazar. Secret'ı yalnız `seed-sandbox` / `seed-production`
+GitHub ortamlarında durur ve kimse görmez. Kurulumu ve secret'ın yenilenmesi SKY LAB
+ops'taki `skymail-seed-github-wizard.sh` ile yapılır.
+
+Elle koşmak için yerelde `corepack yarn emails:seed`: seçenekler ve ortam değişkenleri
+`scripts/seed-templates.ts`'in başında.
+
 ## Katkıda Bulunanlar 🧙‍♂️
 
 <a href="https://github.com/skylab-kulubu/skymail-frontend/graphs/contributors">

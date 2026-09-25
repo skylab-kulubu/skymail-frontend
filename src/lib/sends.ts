@@ -28,7 +28,8 @@ export type RecipientCounts = Readonly<Record<RecipientStatus, number>>;
 
 /** Who a send went to. Fields that do not apply to the kind are null. */
 export type SendAudience = Readonly<{
-  kind: "mailing_list" | "single";
+  /** `people` only on a Mail onayı request to several (mail-approvals/approvals.ts): a send goes to one person or a list. */
+  kind: "mailing_list" | "single" | "people";
   mail_list_id: string | null;
   /** A list's name; a Keycloak group's as Keycloak gave it, or null when it could not. */
   name: string | null;
@@ -309,22 +310,30 @@ export function dayTitle(date: string): string {
 // Audience, Mail template, recipients, time
 
 export type AudienceLabel = Readonly<{
-  /** An internal mailing list, a Keycloak group (shown as Harici), or the one recipient of a single send. */
-  kind: "list" | "group" | "person";
+  /**
+   * An internal mailing list, a Keycloak group (shown as Harici), the one
+   * recipient of a single send, or the people of a Mail onayı request.
+   */
+  kind: "list" | "group" | "person" | "people";
   name: string;
   detail: string | null;
   /** The mailing list to link to, for a list or a group. */
   listId: string | null;
+  /** People beyond the ones `name` names. */
+  more?: number;
 }>;
 
 const UNNAMED: Readonly<Record<AudienceLabel["kind"], string>> = {
   list: "Mail listesi",
   group: "Keycloak grubu",
   person: "Tek kişi",
+  people: "Kişiler",
 };
 
 /** Who a send went to. A Keycloak group Keycloak could not name gets a label instead of its name. */
 export function audienceLabel(audience: SendAudience): AudienceLabel {
+  // A request's people are its own to name (approvalAudience).
+  if (audience.kind === "people") return { kind: "people", name: UNNAMED.people, detail: null, listId: null };
   if (audience.kind === "single") {
     const name = audience.recipient_full_name?.trim() || null;
     const email = audience.recipient_email?.trim() || null;

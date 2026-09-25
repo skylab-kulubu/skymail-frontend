@@ -2,10 +2,11 @@
  * The bodies the approval screens send (ticket 20), from the send form's
  * variable fields (ticket 16, send-form/fields.ts).
  *
- *  - A submission, and a resubmission, is the send form's own request
- *    (ticket 19): `{template_id, mail_list_id, body_variables}` to a list,
- *    `{template_id, recipient_email, recipient_full_name, body_variables}` to
- *    one person. A request goes to one audience, so to one person at most.
+ *  - A submission, and a resubmission, is the send form's request (ticket
+ *    19, 21): `{template_id, mail_list_id, body_variables}` to a list,
+ *    `{template_id, recipients: [{email, full_name}], body_variables}` to
+ *    1..100 people — one person too, not the deprecated fields for one.
+ *    Approvers decide it once; each person gets a send of their own.
  *  - An approver edits only the variables (ticket 18); an edit is the
  *    request's variables whole — a variable left out would read as removed —
  *    with each field they changed in its new value. A field they did not
@@ -35,7 +36,16 @@ import { FREE_BODY_VARIABLE, FREE_TEMPLATE_KEY, type SendPlan } from "../send-fo
 import { audienceLabel } from "../sends";
 import type { ApiClient } from "../api/client";
 import { fetchTemplate, fetchVersion, type MailTemplate } from "../templates";
-import type { ApprovalChange, ApprovalEvent, ApprovalPerson, ApprovalTemplate, MailApproval } from "./approvals";
+import {
+  APPROVAL_PEOPLE_LIMIT,
+  approvalPeople,
+  type ApprovalChange,
+  type ApprovalEvent,
+  type ApprovalPerson,
+  type ApprovalRecipient,
+  type ApprovalTemplate,
+  type MailApproval,
+} from "./approvals";
 
 type Variables = Readonly<Record<string, unknown>>;
 
@@ -249,20 +259,34 @@ export function resubmission<T extends Pick<MailApproval, "state" | "body_variab
 // ---------------------------------------------------------------------------
 // A submission from the send form
 
-/** `POST /mail_approvals` and `…/resubmit`: the send form's request, to a list or to one person. */
+/** `POST /mail_approvals` and `…/resubmit`: the send form's request, to a list or to people. */
 export type ApprovalRequest =
   | { template_id: string; mail_list_id: string; body_variables: Record<string, string> }
-  | { template_id: string; recipient_email: string; recipient_full_name: string; body_variables: Record<string, string> };
+  | { template_id: string; recipients: ApprovalRecipient[]; body_variables: Record<string, string> };
 
-export function approvalRequest(plan: SendPlan): { ok: true; request: ApprovalRequest } | { ok: false; problem: string } {
+/**
+ * A send plan as one request for approval: its people — each of the form's
+ * filled rows, in order — or its list. More people than a request takes
+ * are pointed to a list; `lists` says whether the viewer can pick one.
+ */
+export function approvalRequest(plan: SendPlan, { lists }: { lists: boolean }): { ok: true; request: ApprovalRequest } | { ok: false; problem: string } {
   if (plan.kind === "list") return { ok: true, request: plan.request };
-  if (plan.requests.length !== 1) {
-    return {
-      ok: false,
-      problem: `Onaya tek bir kişi ya da bir mail listesi sunulur: ${plan.requests.length} kişiye göndermek için bir liste seç ya da her kişiyi ayrı sun.`,
-    };
+  const count = plan.requests.length;
+  if (count > APPROVAL_PEOPLE_LIMIT) {
+    const crowd = lists
+      ? "Daha kalabalık bir gönderim için bir mail listesi seç."
+      : `Daha kalabalık bir gönderim bir mail listesine gider: listeleri görmek için ${ROLE.listsRead} rolü gerekiyor.`;
+    return { ok: false, problem: `Onaya en çok ${APPROVAL_PEOPLE_LIMIT} kişi sunulur; burada ${count} kişi var. ${crowd}` };
   }
-  return { ok: true, request: plan.requests[0] };
+  const [first] = plan.requests;
+  return {
+    ok: true,
+    request: {
+      template_id: first.template_id,
+      recipients: plan.requests.map((request) => ({ email: request.recipient_email, full_name: request.recipient_full_name })),
+      body_variables: first.body_variables,
+    },
+  };
 }
 
 /** The send form as a request fills it: to resubmit it, or to start a new one from it. */
@@ -279,7 +303,7 @@ export type ComposePrefill = Readonly<{
 }>;
 
 export function composePrefill(
-  approval: Pick<MailApproval, "template" | "audience" | "body_variables">,
+  approval: Pick<MailApproval, "template" | "audience" | "recipients" | "body_variables">,
   { templates, lists, access }: { templates: readonly MailTemplate[]; lists: readonly ListRow[]; access: SendAccess },
 ): ComposePrefill {
   const notes: string[] = [];
@@ -289,8 +313,8 @@ export function composePrefill(
   let audience: ComposePrefill["audience"] = "people";
   let listId: string | null = null;
   let people: PersonRow[] = [];
-  if (approval.audience.kind === "single") {
-    people = [{ name: approval.audience.recipient_full_name ?? "", email: approval.audience.recipient_email ?? "" }];
+  if (approval.audience.kind !== "mailing_list") {
+    people = approvalPeople(approval).map((person) => ({ name: person.full_name, email: person.email }));
   } else {
     const name = audienceLabel(approval.audience).name;
     if (!access.list) {

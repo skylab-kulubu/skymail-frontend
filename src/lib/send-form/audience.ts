@@ -5,9 +5,11 @@
  * same address twice stop the send; a missing name where the mail greets by
  * it is pointed out and goes if the sender wants (the API needs no name). The
  * API checks addresses properly and a refusal is reported per person
- * (send.ts).
+ * (send.ts), or — for a request for approval, which carries them all — on
+ * the row it names (mail-approvals/refusals.ts).
  */
 import { isPlausibleEmail } from "../mailing-lists";
+import { formatCount } from "../sends";
 
 export type PersonRow = Readonly<{ name: string; email: string }>;
 
@@ -27,6 +29,20 @@ export type PeopleCheck = Readonly<{
 
 export const NAME_EXPECTED = "Bu mail alıcıyı adıyla anıyor ({{.FullName}}); adı boş giderse selamlama eksik kalır.";
 
+export const EMAIL_MISSING = "E-posta adresini yaz.";
+
+/** What a row says when its address is `firstRow`'s (counted from 0) again. */
+export const repeatedAddress = (firstRow: number) => `Bu adres ${firstRow + 1}. satırda da var; herkese bir kez gönderilir.`;
+
+/** A row the send goes to: one that names someone. An empty row is left out. */
+const namesSomeone = (row: PersonRow) => row.name.trim() !== "" || row.email.trim() !== "";
+
+/** The rows a send goes to, by their place among the rows as given: `[i]` is the row of its `i`th person. */
+export const sentRowIndexes = (rows: readonly PersonRow[]): number[] => rows.flatMap((row, index) => (namesSomeone(row) ? [index] : []));
+
+/** "3 kişi, her biri ayrı bir gönderim": people as a confirmation counts them. */
+export const peopleSentApart = (count: number) => `${formatCount(count)} kişi, her biri ayrı bir gönderim`;
+
 /** `nameExpected`: the mail uses the recipient's name. */
 export function peopleProblems(rows: readonly PersonRow[], { nameExpected = false }: { nameExpected?: boolean } = {}): PeopleCheck {
   const seen = new Map<string, number>();
@@ -35,13 +51,13 @@ export function peopleProblems(rows: readonly PersonRow[], { nameExpected = fals
     nameExpected && row.name.trim() === "" && row.email.trim() !== "" ? NAME_EXPECTED : null,
   );
   const problems = rows.map((row, index): RowProblems => {
+    if (!namesSomeone(row)) return {};
     const name = row.name.trim();
     const email = row.email.trim();
-    if (name === "" && email === "") return {};
     people.push({ name, email });
     const found: { email?: string } = {};
     if (email === "") {
-      found.email = "E-posta adresini yaz.";
+      found.email = EMAIL_MISSING;
     } else if (!isPlausibleEmail(email)) {
       found.email = "Geçerli bir e-posta adresi gir.";
     } else {
@@ -49,7 +65,7 @@ export function peopleProblems(rows: readonly PersonRow[], { nameExpected = fals
       const key = email.toLowerCase();
       const first = seen.get(key);
       if (first === undefined) seen.set(key, index);
-      else found.email = `Bu adres ${first + 1}. satırda da var; herkese bir kez gönderilir.`;
+      else found.email = repeatedAddress(first);
     }
     return found;
   });
