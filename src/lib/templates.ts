@@ -18,6 +18,7 @@ import { ROLE, hasRole } from "./access";
 import type { ApiClient } from "./api/client";
 import { asApiError } from "./api/errors";
 import { listViewQuery, type ListView } from "./list-view";
+import { personLabel, samePerson } from "./people";
 
 export type AuthoringMode = "jsx" | "visual" | "html";
 
@@ -153,18 +154,18 @@ export const SYSTEM_TEMPLATE_NOTE = "Bir servis bunu Template key ile gönderir;
 /** What an author with no name on record is called. */
 export const UNKNOWN_AUTHOR = "Adı bilinmeyen operatör";
 
-/** An operator author's name as shown, whatever the version recorded. */
+/** An operator author's name as shown, whatever the version recorded; an erased one as Silinmiş kullanıcı (people.ts). */
 export function authorName(author: VersionAuthor): string {
-  return author.name?.trim() || UNKNOWN_AUTHOR;
+  return personLabel(author, UNKNOWN_AUTHOR);
 }
 
 /**
  * Whether the viewer wrote a version, told apart by their Keycloak subject:
  * that is what the API records as a version's author, where a name may be
- * shared or change.
+ * shared or change. Silinmiş kullanıcı's version is nobody's.
  */
 export function writtenBy(author: VersionAuthor, viewerSub: string | null): boolean {
-  return viewerSub !== null && author.sub === viewerSub;
+  return samePerson(author.sub, viewerSub);
 }
 
 /** One operator's draft in progress, as the indicator lists it. */

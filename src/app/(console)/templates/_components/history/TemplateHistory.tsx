@@ -330,7 +330,10 @@ function VersionItem({
           <MainSource mode={version.main_mode} />
         </div>
         <p className="text-xs text-neutral-400">
-          <span className={author.kind === 'unknown' ? 'text-neutral-500 italic' : 'text-neutral-300'}>{author.label}</span>
+          {/* A name nobody recorded, or Silinmiş kullanıcı, is a stand-in rather than a name. */}
+          <span className={author.kind === 'unknown' || author.kind === 'erased' ? 'text-neutral-500 italic' : 'text-neutral-300'}>
+            {author.label}
+          </span>
           {' · '}
           {versionWhen(version)}
         </p>

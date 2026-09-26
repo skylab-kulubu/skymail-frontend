@@ -7,7 +7,8 @@
 // happened to it; and what the viewer can do with it now — decide it, as an
 // approver, or answer it, as its submitter (mail-approvals/actions.ts). A
 // request to several people lists them, and once approved links each to
-// their own send (ticket 22).
+// their own send (ticket 22). An erased person is Silinmiş kullanıcı, in
+// their place and with their send (ticket 27).
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
@@ -41,7 +42,6 @@ import {
   previewNote,
   previewRecipient,
   RECIPIENTS_ANCHOR,
-  recipientName,
   resubmitHref,
   submitterName,
   type MailApproval,
@@ -59,6 +59,7 @@ import {
 } from '@/lib/mail-approvals/edit';
 import { approvalRefusal } from '@/lib/mail-approvals/refusals';
 import { useFlashNotice, type NoticeData } from '@/lib/notice';
+import { recipientLabel } from '@/lib/people';
 import { fieldWarnings, type FieldInput, type VariableField } from '@/lib/send-form/fields';
 import { formatCount, sendHref } from '@/lib/sends';
 import { ApprovalStateBadge, Deadline, SendsLink, Submitter } from './ApprovalParts';
@@ -587,19 +588,20 @@ function Recipients({ approval }: { approval: MailApproval }) {
       <ol className="max-h-80 divide-y divide-white/5 overflow-y-auto rounded-lg border border-white/5">
         {people.map((person, index) => {
           const send = sends[index];
+          const { name, address } = recipientLabel(person.full_name, person.email);
           return (
             <li key={`${index}:${person.email}`} className="flex items-center gap-3 px-3.5 py-2 text-sm">
               <span className="text-2xs w-6 shrink-0 text-right text-neutral-600 tabular-nums" aria-hidden>
                 {index + 1}.
               </span>
               <span className="flex min-w-0 flex-1 flex-col sm:flex-row sm:items-baseline sm:gap-3">
-                <span className="truncate text-neutral-200">{recipientName(person)}</span>
-                {person.full_name.trim() ? <span className="text-2xs truncate text-neutral-500">{person.email}</span> : null}
+                <span className="truncate text-neutral-200">{name}</span>
+                {address ? <span className="text-2xs truncate text-neutral-500">{address}</span> : null}
               </span>
               {send && canSeeSends ? (
                 <Link
                   href={sendHref(send)}
-                  aria-label={`${recipientName(person)}: gönderimi gör`}
+                  aria-label={`${name}: gönderimi gör`}
                   className="text-skylab-300 shrink-0 text-xs hover:underline"
                 >
                   Gönderimi gör

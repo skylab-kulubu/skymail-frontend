@@ -316,6 +316,18 @@ describe("the audience of a send", () => {
     );
   });
 
+  it("says Tek kişi for a single send whose recipient is not queued yet", () => {
+    assert.deepEqual(audienceLabel(audience({ kind: "single" })), { kind: "person", name: "Tek kişi", detail: null, listId: null });
+  });
+
+  // Account erasure (ADR-0051, ticket 27): a single send's person is its queue row's, whose address erasure empties.
+  it("names an erased single recipient Silinmiş kullanıcı, with no address", () => {
+    const erased = { kind: "person", name: "Silinmiş kullanıcı", detail: null, listId: null };
+    assert.deepEqual(audienceLabel(audience({ kind: "single", recipient_full_name: "Silinmiş kullanıcı", recipient_email: "" })), erased);
+    assert.deepEqual(audienceLabel(audience({ kind: "single", recipient_full_name: "", recipient_email: " " })), erased);
+    assert.deepEqual(audienceLabel(audience({ kind: "single", recipient_full_name: "Silinmiş kullanıcı", recipient_email: "silinmis-kullanici@invalid" })), erased);
+  });
+
   // Only a Mail onayı request goes to several people; it names them itself (approvalAudience).
   it("is people, not a list, for an audience of several", () => {
     assert.deepEqual(audienceLabel(audience({ kind: "people" })), { kind: "people", name: "Kişiler", detail: null, listId: null });

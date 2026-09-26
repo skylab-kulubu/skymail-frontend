@@ -39,6 +39,7 @@ import {
 } from '@/lib/sends';
 import { knownPageCount } from '@/lib/list-view';
 import { useFlashNotice, type NoticeData } from '@/lib/notice';
+import { mailRecipientLabel } from '@/lib/people';
 import { useLastPage } from '@/lib/ui/use-last-page';
 import { Audience } from './Audience';
 import { SectionTitle } from './SectionTitle';
@@ -234,12 +235,13 @@ function Fact({ term, children, className = '' }: { term: string; children: Reac
   );
 }
 
+/** A recipient by name, the address underneath; one whose address erasure emptied is Silinmiş kullanıcı. */
 function Recipient({ row }: { row: RecipientRow }) {
-  const name = row.recipient_full_name.trim();
+  const { name, address } = mailRecipientLabel(row.recipient_full_name, row.recipient_email);
   return (
     <span className="flex max-w-[18rem] flex-col">
-      <span className="truncate text-neutral-200">{name || row.recipient_email}</span>
-      {name ? <span className="text-2xs truncate text-neutral-500">{row.recipient_email}</span> : null}
+      <span className="truncate text-neutral-200">{name}</span>
+      {address ? <span className="text-2xs truncate text-neutral-500">{address}</span> : null}
     </span>
   );
 }
