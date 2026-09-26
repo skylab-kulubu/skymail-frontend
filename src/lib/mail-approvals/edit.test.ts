@@ -416,6 +416,29 @@ describe("the send form filled from a request", () => {
     assert.deepEqual(prefill.notes, []);
   });
 
+  // Account erasure (ticket 27): the erased person's place holds an address that never delivers, and the form would show it.
+  it("leaves Silinmiş kullanıcı out of the people, and says so", () => {
+    const erased = { full_name: "Silinmiş kullanıcı", email: "silinmis-kullanici@invalid" };
+    const toPeople = { kind: "people" as const, mail_list_id: null, name: null, source: null, recipient_full_name: null, recipient_email: null };
+    const several = composePrefill(
+      approval({ audience: toPeople, recipients: [{ full_name: "Ali Can", email: "ali@ornek.com" }, erased, { full_name: "Mert Demir", email: "mert@ornek.com" }] }),
+      { templates: [FREE], lists, access: member },
+    );
+    assert.deepEqual(several.people, [
+      { name: "Ali Can", email: "ali@ornek.com" },
+      { name: "Mert Demir", email: "mert@ornek.com" },
+    ]);
+    assert.deepEqual(several.notes, ["İsteğin kişilerinden biri Silinmiş kullanıcı: hesabı silindiği için forma alınmadı."]);
+
+    const alone = composePrefill(
+      approval({ audience: { ...toPeople, kind: "single", recipient_full_name: erased.full_name, recipient_email: erased.email }, recipients: [erased] }),
+      { templates: [FREE], lists, access: member },
+    );
+    assert.equal(alone.audience, "people");
+    assert.deepEqual(alone.people, []);
+    assert.deepEqual(alone.notes, ["İsteğin tek kişisi Silinmiş kullanıcı: hesabı silindiği için forma alınmadı. Bir kişi seç."]);
+  });
+
   it("says what it could not fill: a template or a list gone, a list the viewer cannot see, a body not read back exactly", () => {
     const gone = composePrefill(
       approval({

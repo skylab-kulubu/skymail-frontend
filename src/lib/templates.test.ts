@@ -29,6 +29,7 @@ import {
   type MailTemplate,
   type TemplateVersionSummary,
 } from "./templates";
+import { ERASED_SUBJECT } from "./people";
 
 function answer(status: number, body: unknown, total?: number): Response {
   return json(status, body, total === undefined ? {} : { "X-Total-Count": String(total) });
@@ -223,6 +224,32 @@ describe("the unpublished-draft indicator", () => {
     );
 
     assert.equal(row.drafts?.mine, false);
+  });
+
+  // Account erasure (ADR-0051, ticket 27): the API keeps the stand-in's subject on an erased author's versions.
+  it("names an erased author's draft Silinmiş kullanıcı, and never the viewer's", () => {
+    const row = toTemplateRow(
+      template({
+        drafts: [
+          draft(ID.draftB, { sub: ERASED_SUBJECT, name: "Silinmiş kullanıcı" }, "2026-09-22T15:40:00Z"),
+          draft(ID.draftA, { sub: ERASED_SUBJECT, name: null }, "2026-09-21T09:00:00Z"),
+        ],
+      }),
+      VIEWER,
+    );
+
+    assert.equal(row.drafts?.mine, false);
+    assert.deepEqual(
+      row.drafts?.authors.map((author) => [author.name, author.mine]),
+      [
+        ["Silinmiş kullanıcı", false],
+        ["Silinmiş kullanıcı", false],
+      ],
+    );
+    const one = toTemplateRow(template({ drafts: [draft(ID.draftA, { sub: ERASED_SUBJECT, name: null }, "2026-09-22T11:05:00Z")] }), ERASED_SUBJECT);
+    assert.equal(one.drafts?.summary, "Silinmiş kullanıcı");
+    assert.equal(one.drafts?.mine, false);
+    assert.equal(writtenBy({ kind: "operator", sub: ERASED_SUBJECT, name: "Silinmiş kullanıcı" }, ERASED_SUBJECT), false);
   });
 
   it("still shows a draft whose author's name is not known", () => {
