@@ -22,9 +22,15 @@ export const meta: TemplateMeta = {
   brand: "skylab",
   trigger:
     "SkyMail, bir onay isteği sonuçlandığında. approved/rejected/returned/expired talebi açana, declined onaycılara gider (ADR-0031, ticket 19).",
+  // AudienceKind is the request's audience.kind: mailing_list, single or
+  // people. RecipientCount is in digits: once approved, how many it was sent
+  // to; before that, how many it would reach ("?" when Keycloak did not name a
+  // group's members in time).
   variables: [
     "TemplateName",
     "AudienceName",
+    "AudienceKind",
+    "RecipientCount",
     "Decision",
     "DecidedBy",
     "DecisionNote",
@@ -34,6 +40,8 @@ export const meta: TemplateMeta = {
   sample: {
     TemplateName: "GECEKODU Duyurusu",
     AudienceName: "GECEKODU katılımcıları",
+    AudienceKind: "mailing_list",
+    RecipientCount: "312",
     Decision: "returned",
     DecidedBy: "Fatih Naz",
     DecisionNote: "Tarih satırını düzelttim, bir de başlığı kısalttım. Sana uyuyorsa onayla.",
@@ -56,6 +64,10 @@ export const meta: TemplateMeta = {
  * the edit; an approver may also approve their own request, in which case the
  * reader is the person who declined, and "your edit was not accepted" would be
  * exactly backwards.
+ *
+ * An approval says where the mail went: a list by name ("… listesine"),
+ * people by how many ("3 kişiye"). A sender that does not give AudienceKind
+ * (a SkyMail before it did) gets "alıcılara", as before.
  */
 export default function MailApprovalResolved() {
   const approved = ifEq("Decision", "approved");
@@ -93,7 +105,11 @@ export default function MailApprovalResolved() {
       <Paragraph style={{ marginTop: "18px" }}>
         {approved}
         <Strong>{v("TemplateName")}</Strong> gönderimin {v("DecidedBy")} tarafından onaylandı ve
-        alıcılara iletildi.
+        {ifEq("AudienceKind", "mailing_list")} <Strong>{v("AudienceName")}</Strong> listesine
+        {elseIfEq("AudienceKind", "people")} <Strong>{v("RecipientCount")} kişiye</Strong>
+        {elseIfEq("AudienceKind", "single")} <Strong>{v("RecipientCount")} kişiye</Strong>
+        {elseBranch} alıcılara
+        {end} iletildi.
         {rejected}
         <Strong>{v("TemplateName")}</Strong> gönderimin {v("DecidedBy")} tarafından reddedildi ve
         gönderilmedi. Düzeltip yeniden sunabilirsin.
@@ -120,7 +136,18 @@ export default function MailApprovalResolved() {
 
       <div style={{ marginTop: "24px" }}>
         <DetailRow label="Şablon" value={v("TemplateName")} />
-        <DetailRow label="Alıcı listesi" value={v("AudienceName")} />
+        <DetailRow
+          label={
+            <>
+              {ifEq("AudienceKind", "people")}Alıcılar{elseIfEq("AudienceKind", "single")}Alıcı{elseBranch}Alıcı listesi
+              {end}
+            </>
+          }
+          value={v("AudienceName")}
+        />
+        {ifSet("RecipientCount")}
+        <DetailRow label="Alıcı sayısı" value={v("RecipientCount")} />
+        {end}
         {ifSet("DeadlineAt")}
         <DetailRow label="Son tarih" value={v("DeadlineAt")} />
         {end}
