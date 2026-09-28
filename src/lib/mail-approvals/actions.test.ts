@@ -10,6 +10,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { approvalViewer, viewerActions } from "./actions";
 import type { ApprovalItem, ApprovalState } from "./approvals";
+import { ERASED_SUBJECT } from "../people";
 
 const NOW = new Date("2026-09-23T09:00:00Z");
 const SUBMITTER = "11111111-0000-4000-8000-000000000001";
@@ -120,5 +121,18 @@ describe("the viewer of a request", () => {
     assert.deepEqual(approvalViewer(["skymail:access", "skymail:mails:approve"], { sub: APPROVER }), { sub: APPROVER, approver: true });
     assert.deepEqual(approvalViewer(["skymail:mails:approve"], { sub: SUBMITTER }), { sub: SUBMITTER, approver: false });
     assert.deepEqual(approvalViewer(["skymail:access"], {}), { sub: null, approver: false });
+  });
+});
+
+// Account erasure (ADR-0051, ticket 27): no viewer is ever Silinmiş kullanıcı, and the page says so explicitly.
+describe("Silinmiş kullanıcı's request", () => {
+  it("is never the viewer's", () => {
+    const erased = viewerActions(request("rejected", { submitter: ERASED_SUBJECT }), { sub: ERASED_SUBJECT, approver: false }, NOW);
+    assert.equal(erased.mine, false);
+    assert.deepEqual(erased.actions, []);
+  });
+
+  it("is still decided by an approver", () => {
+    assert.deepEqual(viewerActions(request("pending", { submitter: ERASED_SUBJECT }), approver, NOW).actions, ["approve", "edit", "reject"]);
   });
 });

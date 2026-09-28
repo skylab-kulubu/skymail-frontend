@@ -33,6 +33,7 @@ import {
   versionName,
   versionWhen,
 } from "./history";
+import { ERASED_SUBJECT } from "../people";
 
 const TEMPLATE = "7e3a1c00-0000-4000-8000-000000000001";
 const VIEWER = "f3b1c7aa-0000-4000-8000-000000000001";
@@ -197,6 +198,16 @@ describe("who wrote a version", () => {
   it("is not older than the history for a later version with no subject on record", () => {
     const later = summary(3, { author: { kind: "template_seed", sub: null, name: null } });
     assert.equal(versionAuthor(later, VIEWER).beforeHistory, false);
+  });
+
+  // Account erasure (ADR-0051, ticket 27): the API keeps the stand-in's subject, with its name or none.
+  it("is Silinmiş kullanıcı for an erased operator, never “sen” and never unknown", () => {
+    const erased = summary(4, { author: { kind: "operator", sub: ERASED_SUBJECT, name: "Silinmiş kullanıcı" } });
+    assert.deepEqual(versionAuthor(erased, VIEWER), { label: "Silinmiş kullanıcı", kind: "erased", beforeHistory: false });
+    assert.equal(authorLabel(erased.author, ERASED_SUBJECT), "Silinmiş kullanıcı");
+    assert.equal(versionLine(erased, VIEWER), "#4 · Silinmiş kullanıcı · yayımlandı 22 Eyl 2026 10:12");
+    const nameless = summary(4, { author: { kind: "operator", sub: ERASED_SUBJECT, name: null } });
+    assert.deepEqual(versionAuthor(nameless, ERASED_SUBJECT), { label: "Silinmiş kullanıcı", kind: "erased", beforeHistory: false });
   });
 
   it("is never the viewer's when the viewer has no subject", () => {

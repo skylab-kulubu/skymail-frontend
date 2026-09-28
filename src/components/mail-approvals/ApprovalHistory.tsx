@@ -1,13 +1,10 @@
 'use client';
 
 import { formatClubTime } from '@/lib/format';
-import { eventActorName, eventLabel, type ApprovalChange, type ApprovalEvent, type MailApproval } from '@/lib/mail-approvals/approvals';
+import { decidedOwnRequest, eventActorName, eventLabel, type ApprovalChange, type MailApproval } from '@/lib/mail-approvals/approvals';
 import { valueText } from '@/lib/mail-approvals/edit';
 import type { VariableField } from '@/lib/send-form/fields';
 import { SendsLink } from './ApprovalParts';
-
-/** An approver's events: the ones a submitter deciding their own request is marked on. */
-const DECISIONS: readonly ApprovalEvent['kind'][] = ['edited', 'returned', 'approved', 'rejected'];
 
 function short(text: string | null): string {
   if (text === null || text === '') return 'boş';
@@ -30,7 +27,8 @@ function ChangeLine({ change, fields }: { change: ApprovalChange; fields: readon
 /**
  * Everything that happened to a request, oldest first: who did what and
  * when, a reason or a note, and each edit's changes before and after. An
- * approver who decided their own request is marked so. The event that sent
+ * approver who decided their own request is marked so; Silinmiş kullanıcı
+ * never is, as everyone erased has the one subject. The event that sent
  * it names only the first send; each person's is beside them on the page.
  */
 export function ApprovalHistory({ approval, fields }: { approval: MailApproval; fields: readonly VariableField[] }) {
@@ -39,7 +37,7 @@ export function ApprovalHistory({ approval, fields }: { approval: MailApproval; 
   return (
     <ol className="space-y-3 border-l border-white/10 pl-4">
       {events.map((event) => {
-        const own = DECISIONS.includes(event.kind) && event.actor?.sub === approval.submitter.sub;
+        const own = decidedOwnRequest(event, approval.submitter);
         return (
           <li key={event.seq} className="relative space-y-1 text-sm">
             <span className="absolute top-1.5 -left-[1.3rem] size-2 rounded-full bg-neutral-600" aria-hidden />

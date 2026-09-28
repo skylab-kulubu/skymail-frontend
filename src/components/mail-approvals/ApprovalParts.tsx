@@ -12,6 +12,7 @@ import {
   deadlineHint,
   effectiveState,
   isWaiting,
+  submitterAddress,
   submitterName,
   type ApprovalItem,
   type ApprovalState,
@@ -70,10 +71,10 @@ export function SendsLink({ item, className = 'text-sm' }: { item: Pick<Approval
   );
 }
 
-/** Who submitted it: a name and, under it, when (`at`) or else the address. */
+/** Who submitted it: a name and, under it, when (`at`) or else the address; Silinmiş kullanıcı has none. */
 export function Submitter({ submitter, at }: { submitter: ApprovalSubmitter; at?: string }) {
   const name = submitterName(submitter);
-  const email = submitter.email?.trim() || null;
+  const email = submitterAddress(submitter);
   const under = at ? formatClubTime(at) : email && email !== name ? email : null;
   return (
     <span className="flex max-w-[14rem] min-w-0 flex-col" title={email ?? undefined}>
