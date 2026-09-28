@@ -51,7 +51,11 @@
  *    what a test set for that address (`refuseSingle`) or for the next list
  *    send (`refuseListSend`). Both answer 201
  *    `{id}`, and the send can be read back — alone, with its recipients'
- *    queue, or in `GET /mail_tasks`, newest first.
+ *    queue, or in `GET /mail_tasks`, newest first;
+ *  - `GET /mail_tasks/summary` (mails:read; `days` 1..90, `recent` 1..20)
+ *    counts the queue and the sends, zero-fills the days up to the mock's
+ *    today and gives the latest sends; `sender_paused` is what a test set
+ *    with `pauseSender` (MAIL_SENDER=paused, skymail-backend ticket 28).
  *
  * Mail onayı's routes (ticket 20), as skymail-backend answers them (ticket
  * 19, and ticket 21 for people: internal/handlers/mail_approval*.go):
@@ -315,6 +319,7 @@ export class MockSkymail {
   private readonly approvals = new Map<string, ApprovalRecord>();
   private readonly approvalRefusals = new Map<string, Answer>();
   private notificationProblem: string | null = null;
+  private senderPaused = false;
   private approvalsWithoutRecipients = false;
   private clock = Date.parse("2026-09-23T06:00:00Z");
   private ids = 0;
@@ -435,6 +440,11 @@ export class MockSkymail {
   /** The next send to a list gets this answer instead of opening. */
   refuseListSend(answer: Answer) {
     this.listRefusal = answer;
+  }
+
+  /** SkyMail runs with MAIL_SENDER=paused, or no longer does: what the summary's `sender_paused` says. */
+  pauseSender(paused = true) {
+    this.senderPaused = paused;
   }
 
   /** Archives a template behind the page's back. */
@@ -742,6 +752,9 @@ export class MockSkymail {
       const sends = [...this.sends.keys()].reverse().map((id) => this.readSend(id, false).body);
       return this.page(sends, query);
     }
+    if (method === "GET" && path === "/mail_tasks/summary") {
+      return can("skymail:mails:read") ? this.sendSummary(query) : refuse(403, "server.forbidden");
+    }
     const sendMatch = /^\/mail_tasks\/([^/]+)(\/queue)?$/.exec(path);
     if (method === "GET" && sendMatch) return this.readSend(sendMatch[1], Boolean(sendMatch[2]));
 
@@ -860,6 +873,46 @@ export class MockSkymail {
     if (!template) return refuse(404, "server.not_found");
     const name = typeof body.recipient_full_name === "string" ? body.recipient_full_name : "";
     return this.open(template, null, [{ full_name: name, email }], body);
+  }
+
+  /** `GET /mail_tasks/summary`, as internal/handlers/send_summary.go answers it. */
+  private sendSummary(query: URLSearchParams): Answer {
+    const bounded = (name: string, fallback: number, upper: number) => {
+      const raw = query.get(name)?.trim() ?? "";
+      if (raw === "") return fallback;
+      const value = Number(raw);
+      return Number.isInteger(value) && value >= 1 && value <= upper ? value : null;
+    };
+    const days = bounded("days", 30, 90);
+    const recent = bounded("recent", 5, 20);
+    if (days === null) return refuse(400, "validation.error", { days: "must be a whole number from 1 to 90" });
+    if (recent === null) return refuse(400, "validation.error", { recent: "must be a whole number from 1 to 20" });
+
+    const sends = [...this.sends.values()];
+    const rows = sends.flatMap((send) => send.recipients);
+    const rowsIn = (status: QueueStatus) => rows.filter((row) => row.status === status).length;
+    const views = sends.map((send) => this.readSend(send.id, false).body as { status: "failed" | "sending" | "sent" });
+    const sendsIn = (status: "failed" | "sending" | "sent") => views.filter((view) => view.status === status).length;
+    const dayOf = (at: number) => new Date(at).toLocaleDateString("en-CA", { timeZone: "Europe/Istanbul" });
+    const today = Date.parse(`${dayOf(this.clock)}T00:00:00Z`);
+    const daily = Array.from({ length: days }, (_, index) => {
+      const date = new Date(today - (days - 1 - index) * 24 * 3600_000).toISOString().slice(0, 10);
+      const sent = sends
+        .filter((send) => dayOf(Date.parse(send.created_at)) === date)
+        .reduce((sum, send) => sum + send.recipients.filter((row) => row.status === "sent").length, 0);
+      return { date, sent };
+    });
+    return {
+      status: 200,
+      body: {
+        time_zone: "Europe/Istanbul",
+        queue_counts: { pending: rowsIn("pending"), processing: 0, sent: rowsIn("sent"), failed: rowsIn("failed") },
+        sender_paused: this.senderPaused,
+        send_counts: { failed: sendsIn("failed"), sending: sendsIn("sending"), sent: sendsIn("sent") },
+        daily_sent: daily,
+        recent_sends: [...this.sends.keys()].reverse().slice(0, recent).map((id) => this.readSend(id, false).body),
+      },
+    };
   }
 
   /** A send as the list, the detail and the summary give it (`Send`), or its recipients' queue. */

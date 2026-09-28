@@ -59,6 +59,12 @@ export type SendSummary = Readonly<{
   /** The zone `daily_sent`'s days are in. */
   time_zone: string;
   queue_counts: RecipientCounts;
+  /**
+   * True while `MAIL_SENDER=paused` holds the sender back, as during a restore
+   * from backup (skymail-backend ticket 28): sends are queued, none goes out.
+   * skymail-backend always gives it; senderPaused reads it missing as false.
+   */
+  sender_paused?: boolean;
   send_counts: Readonly<Record<SendStatus, number>>;
   /** Oldest first, ending today; `date` is a calendar day in `time_zone` (`YYYY-MM-DD`). */
   daily_sent: ReadonlyArray<Readonly<{ date: string; sent: number }>>;
@@ -217,6 +223,27 @@ export function fetchRecipientPage(
   const range = pageRange(view.page, RECIPIENT_PAGE_SIZE);
   const query = view.status === "all" ? range : { status: view.status, ...range };
   return api.getPage<RecipientRow>(`/mail_tasks/${id}/queue`, { query, signal });
+}
+
+// ---------------------------------------------------------------------------
+// A paused sender (skymail-backend ticket 28)
+
+/**
+ * What the home screen and the send list say while the sender is paused. It
+ * cannot be dismissed: it goes away when SkyMail sends again.
+ */
+export const SENDER_PAUSED_TEXT =
+  "Gönderim duraklatıldı: yeni gönderimler kuyruğa alınıyor ama hiçbiri gönderilmiyor (geri yükleme sürüyor).";
+
+/** Whether the summary says the sender is paused: only a `true` does; a missing field does not. */
+export function senderPaused(summary: SendSummary): boolean {
+  return summary.sender_paused === true;
+}
+
+/** Whether the sender is paused, for a screen that shows no summary: it asks for the smallest one (a day, a send). */
+export async function fetchSenderPaused(api: ApiClient, signal?: AbortSignal): Promise<boolean> {
+  const summary = await api.get<SendSummary>("/mail_tasks/summary", { query: { days: 1, recent: 1 }, signal });
+  return senderPaused(summary);
 }
 
 // ---------------------------------------------------------------------------
