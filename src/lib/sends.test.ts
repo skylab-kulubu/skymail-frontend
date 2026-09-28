@@ -17,6 +17,7 @@ import {
   fetchRecipientPage,
   fetchSend,
   fetchSendPage,
+  fetchSenderPaused,
   formatSendTime,
   homeTiles,
   noRecipientsNote,
@@ -28,6 +29,8 @@ import {
   recipientStatus,
   recipientSummary,
   SEND_PAGE_SIZE,
+  SENDER_PAUSED_TEXT,
+  senderPaused,
   sendHref,
   sendListHref,
   STATUS_FILTERS,
@@ -42,6 +45,7 @@ function summary(overrides: Partial<SendSummary> = {}): SendSummary {
   return {
     time_zone: "Europe/Istanbul",
     queue_counts: { pending: 2, processing: 1, sent: 1532, failed: 7 },
+    sender_paused: false,
     send_counts: { failed: 3, sending: 1, sent: 140 },
     daily_sent: [
       { date: "2026-09-21", sent: 40 },
@@ -97,6 +101,58 @@ describe("the home screen's tiles", () => {
   // The API says which zone its days are in; "today" is that zone's today.
   it("say which zone's today they count in, as the API names it", () => {
     assert.equal(byKey(summary({ time_zone: "UTC" })).sentToday.note, "UTC saatiyle bugün alıcılara giden mail");
+  });
+});
+
+// MAIL_SENDER=paused (skymail-backend ticket 28): sends are queued and none goes out.
+describe("a paused sender", () => {
+  /** A summary as it comes over the wire with no `sender_paused` at all. */
+  const withoutPausedField = (): SendSummary => {
+    const wire = JSON.parse(JSON.stringify(summary({ sender_paused: undefined })));
+    assert.equal("sender_paused" in wire, false);
+    return wire;
+  };
+
+  it("is paused only when the summary says true", () => {
+    assert.equal(senderPaused(summary({ sender_paused: true })), true);
+    assert.equal(senderPaused(summary({ sender_paused: false })), false);
+  });
+
+  it("reads a summary without the field, or with anything but true, as not paused", () => {
+    assert.equal(senderPaused(withoutPausedField()), false);
+    assert.equal(senderPaused(JSON.parse('{"sender_paused": null}')), false);
+    assert.equal(senderPaused(JSON.parse('{"sender_paused": "true"}')), false);
+  });
+
+  it("is said in one calm sentence", () => {
+    assert.equal(
+      SENDER_PAUSED_TEXT,
+      "Gönderim duraklatıldı: yeni gönderimler kuyruğa alınıyor ama hiçbiri gönderilmiyor (geri yükleme sürüyor).",
+    );
+  });
+
+  it("is asked of the smallest summary by a screen that shows none", async () => {
+    const { api, calls } = scriptedClient(json(200, summary({ sender_paused: true })), json(200, summary()));
+
+    assert.equal(await fetchSenderPaused(api), true);
+    assert.equal(await fetchSenderPaused(api), false);
+    assert.equal(calls[0].url, `${TEST_BASE_URL}/mail_tasks/summary?days=1&recent=1`);
+  });
+
+  it("is not paused when the fetched summary has no field", async () => {
+    const { api } = scriptedClient(json(200, withoutPausedField()));
+
+    assert.equal(await fetchSenderPaused(api), false);
+  });
+
+  // The screen shows nothing then; its own request reports the problem.
+  it("passes a refused summary on as the API's error", async () => {
+    const { api } = scriptedClient(json(403, { code: "server.forbidden", message: "Forbidden" }));
+
+    const error = await fetchSenderPaused(api).catch((reason: unknown) => reason);
+
+    assert.ok(error instanceof ApiError);
+    assert.equal(error.status, 403);
   });
 });
 
