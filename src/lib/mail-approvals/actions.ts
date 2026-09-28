@@ -8,6 +8,7 @@
  * spared.
  */
 import { isApprover } from "../access";
+import { samePerson } from "../people";
 import { effectiveState, type ApprovalItem, type ApprovalState } from "./approvals";
 
 export type ApprovalAction =
@@ -49,7 +50,7 @@ export function viewerActions(
   now: Date = new Date(),
 ): ViewerActions {
   const state = effectiveState(request, now);
-  const mine = viewer.sub !== null && viewer.sub === request.submitter.sub;
+  const mine = samePerson(viewer.sub, request.submitter.sub);
   const republished = request.template.republished;
   const actions: ApprovalAction[] = [];
   if (viewer.approver && state === "pending") actions.push(...(republished ? (["reject"] as const) : (["approve", "edit", "reject"] as const)));

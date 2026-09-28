@@ -16,6 +16,7 @@ import type { ApiClient } from "../api/client";
 import { formatClubTime } from "../format";
 import { pageRange, readOption, readPage, viewHref } from "../list-view";
 import { referencedVariables } from "../mail-render/go-template";
+import { isErasedSubject } from "../people";
 import type { VersionProblem } from "../template-editor/refusals";
 import {
   AUTHORING_MODE_LABEL,
@@ -67,8 +68,8 @@ export function authorLabel(author: VersionAuthor, viewerSub: string | null): st
 /** Who wrote a version, as the history names them. */
 export type VersionAuthorShown = Readonly<{
   label: string;
-  /** `unknown`: an operator whose name was not recorded. */
-  kind: "seed" | "operator" | "unknown";
+  /** `unknown`: an operator whose name was not recorded; `erased`: Silinmiş kullanıcı, whose account was erased. */
+  kind: "seed" | "operator" | "unknown" | "erased";
   /**
    * The migration's first version: its content predates the history, so its
    * author was never recorded and its time is the template's last change
@@ -80,7 +81,8 @@ export type VersionAuthorShown = Readonly<{
 export function versionAuthor(version: Pick<TemplateVersionSummary, "seq" | "author">, viewerSub: string | null): VersionAuthorShown {
   const { author } = version;
   const beforeHistory = version.seq === 1 && author.sub === null;
-  const kind = author.kind === "template_seed" ? "seed" : author.name?.trim() || writtenBy(author, viewerSub) ? "operator" : "unknown";
+  const named = Boolean(author.name?.trim()) || writtenBy(author, viewerSub);
+  const kind = author.kind === "template_seed" ? "seed" : isErasedSubject(author.sub) ? "erased" : named ? "operator" : "unknown";
   return { label: authorLabel(author, viewerSub), kind, beforeHistory };
 }
 

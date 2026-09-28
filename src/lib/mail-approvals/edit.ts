@@ -35,6 +35,7 @@ import {
 import { FREE_BODY_VARIABLE, FREE_TEMPLATE_KEY, type SendPlan } from "../send-form/send";
 import { audienceLabel } from "../sends";
 import type { ApiClient } from "../api/client";
+import { isErasedAddress } from "../people";
 import { fetchTemplate, fetchVersion, type MailTemplate } from "../templates";
 import {
   APPROVAL_PEOPLE_LIMIT,
@@ -314,7 +315,16 @@ export function composePrefill(
   let listId: string | null = null;
   let people: PersonRow[] = [];
   if (approval.audience.kind !== "mailing_list") {
-    people = approvalPeople(approval).map((person) => ({ name: person.full_name, email: person.email }));
+    // Silinmiş kullanıcı's place holds an address that never delivers: it is left out, not shown in the form.
+    const everyone = approvalPeople(approval);
+    people = everyone.filter((person) => !isErasedAddress(person.email)).map((person) => ({ name: person.full_name, email: person.email }));
+    if (people.length < everyone.length) {
+      notes.push(
+        people.length === 0
+          ? "İsteğin tek kişisi Silinmiş kullanıcı: hesabı silindiği için forma alınmadı. Bir kişi seç."
+          : "İsteğin kişilerinden biri Silinmiş kullanıcı: hesabı silindiği için forma alınmadı.",
+      );
+    }
   } else {
     const name = audienceLabel(approval.audience).name;
     if (!access.list) {

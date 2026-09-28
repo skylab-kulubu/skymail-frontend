@@ -16,6 +16,7 @@ import type { ApiClient, ApiPage } from "./api/client";
 import { ApiError } from "./api/errors";
 import { CLUB_TIME_ZONE, formatClubTime } from "./format";
 import { pageRange } from "./list-view";
+import { mailRecipientLabel, recipientLabel } from "./people";
 
 export const SEND_PAGE_SIZE = 25;
 export const RECIPIENT_PAGE_SIZE = 25;
@@ -335,9 +336,10 @@ export function audienceLabel(audience: SendAudience): AudienceLabel {
   // A request's people are its own to name (approvalAudience).
   if (audience.kind === "people") return { kind: "people", name: UNNAMED.people, detail: null, listId: null };
   if (audience.kind === "single") {
-    const name = audience.recipient_full_name?.trim() || null;
-    const email = audience.recipient_email?.trim() || null;
-    return { kind: "person", name: name ?? email ?? UNNAMED.person, detail: name ? email : null, listId: null };
+    // A send's one person is its first queue row's: none before it is queued, an emptied address once erased.
+    const { recipient_full_name: name, recipient_email: email } = audience;
+    const person = email === null ? recipientLabel(name, null) : mailRecipientLabel(name, email);
+    return { kind: "person", name: person.name || UNNAMED.person, detail: person.address, listId: null };
   }
   const kind = audience.source === "keycloak" ? "group" : "list";
   return { kind, name: audience.name?.trim() || UNNAMED[kind], detail: null, listId: audience.mail_list_id };

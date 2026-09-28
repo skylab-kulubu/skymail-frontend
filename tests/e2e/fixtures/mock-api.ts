@@ -92,6 +92,15 @@
  *  - what a test set with `refuseApproval` answers the next such action, and
  *    `failApprovalNotifications` names a notification problem.
  *
+ * Account erasure (skymail-backend #34, ticket 27): `erase` does to the
+ * mock's records what the Erasure command does to what the screens read.
+ * Whoever sent, submitted, decided or wrote something becomes Silinmiş
+ * kullanıcı's subject and name; a submitter loses their address, and every
+ * note they left goes (a rejection's reason reads `[silindi]`). A request's
+ * person keeps their place with the placeholder address. A queued mail to them
+ * is deleted, and a sent or failed one keeps its row with the address
+ * emptied. They leave every list.
+ *
  * A test can hold a request (`hold`) to put two in the order it needs.
  *
  * Every request is recorded, with whether it carried the minted session's
@@ -188,15 +197,27 @@ export type ListFixture = {
   recipients: { id: string; full_name: string; email: string; created_at: string; updated_at: string }[];
 };
 
+/** A queue row's status: what the mailer has done with one recipient's mail. */
+type QueueStatus = "pending" | "sent" | "failed";
+
 /** A send the mock opened, as the send routes read it back. */
 type SendRecord = {
   id: string;
   created_at: string;
+  /** The subject it is recorded as sent by. */
+  sent_by: string;
   template: Row;
   list: ListFixture | null;
-  recipients: { full_name: string; email: string }[];
+  /** Its queue: one row per recipient. */
+  recipients: { full_name: string; email: string; status: QueueStatus }[];
   body_variables: Record<string, unknown>;
 };
+
+/** Silinmiş kullanıcı as skymail-backend writes it (#34, internal/database/account_erasure.go). */
+export const ERASED_SUBJECT = "00000000-0000-4000-8000-000000000000";
+export const ERASED_EMAIL = "silinmis-kullanici@invalid";
+const ERASED_NAME = "Silinmiş kullanıcı";
+const ERASED_NOTE = "[silindi]";
 
 const PLAUSIBLE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -221,7 +242,8 @@ export type ApprovalRecipient = { full_name: string; email: string };
 export type ApprovalRecord = {
   id: string;
   state: ApprovalState;
-  submitter: Person;
+  /** Silinmiş kullanıcı has no address. */
+  submitter: Omit<Person, "email"> & { email: string | null };
   templateId: string;
   /** The version published when it was last submitted. */
   versionId: string;
@@ -424,7 +446,8 @@ export class MockSkymail {
    * A request for approval, submitted `submittedAgo` ago (23 hours by default)
    * with the version its template publishes now, then left in `state` by
    * `decided` — the approver's rejection, say. Its times are the real
-   * clock's: the page counts its deadline from the browser's.
+   * clock's: the page counts its deadline from the browser's. An approval or
+   * acceptance among `decided` opens its sends, sent by now.
    */
   addApproval(input: {
     templateId: string;
@@ -460,13 +483,16 @@ export class MockSkymail {
     };
     this.record(record, "submitted", input.submitter, { at });
     const decided = input.decided === undefined ? [] : Array.isArray(input.decided) ? input.decided : [input.decided];
-    decided.forEach((event, index) =>
+    decided.forEach((event, index) => {
+      const sent = event.kind === "approved" || event.kind === "accepted";
+      if (sent) record.task_ids = this.sendsOf(record, "sent");
       this.record(record, event.kind, event.actor, {
         note: event.note ?? null,
         changes: event.changes ?? [],
+        task_id: sent ? record.task_ids[0] : null,
         at: new Date(submitted + (index + 1) * 3600_000).toISOString(),
-      }),
-    );
+      });
+    });
     this.approvals.set(id, record);
     return id;
   }
@@ -494,6 +520,35 @@ export class MockSkymail {
   /** Every notification an approval action sends reports this problem. */
   failApprovalNotifications(problem: string | null) {
     this.notificationProblem = problem;
+  }
+
+  /**
+   * An Erasure command for `sub` and `emails` (compared whole, whatever their
+   * case), as skymail-backend carries it out on what the screens read.
+   */
+  erase({ sub, emails = [] }: { sub: string; emails?: string[] }) {
+    const theirs = (email: string) => emails.some((address) => address.toLowerCase() === email.toLowerCase());
+    const erased = { sub: ERASED_SUBJECT, name: ERASED_NAME };
+    for (const record of this.approvals.values()) {
+      if (record.submitter.sub === sub) record.submitter = { ...erased, email: null };
+      for (const event of record.history) {
+        if (event.actor?.sub !== sub) continue;
+        event.actor = erased;
+        event.note = event.kind === "rejected" ? ERASED_NOTE : null;
+      }
+      // Their place stays, so task_ids[i] is still the send to recipients[i].
+      record.recipients = record.recipients.map((person) => (theirs(person.email) ? { full_name: ERASED_NAME, email: ERASED_EMAIL } : person));
+    }
+    for (const version of this.versions.values()) {
+      if (version.author.sub === sub) version.author = { kind: "operator", ...erased };
+    }
+    for (const send of this.sends.values()) {
+      if (send.sent_by === sub) send.sent_by = ERASED_SUBJECT;
+      send.recipients = send.recipients
+        .filter((row) => !(theirs(row.email) && row.status === "pending"))
+        .map((row) => (theirs(row.email) ? { ...row, full_name: ERASED_NAME, email: "" } : row));
+    }
+    for (const list of this.lists.values()) list.recipients = list.recipients.filter((recipient) => !theirs(recipient.email));
   }
 
   /** What the page asked of Mail onayı that writes, in order. */
@@ -764,10 +819,17 @@ export class MockSkymail {
     return row && row.archived_at === null ? row : null;
   }
 
-  private open(template: Row, list: ListFixture | null, recipients: SendRecord["recipients"], body: Record<string, unknown>): Answer {
+  private open(
+    template: Row,
+    list: ListFixture | null,
+    recipients: readonly { full_name: string; email: string }[],
+    body: Record<string, unknown>,
+    { sentBy = VIEWER.sub, status = "pending" }: { sentBy?: string; status?: QueueStatus } = {},
+  ): Answer {
     const id = this.nextId("b1c2d3e4");
     const variables = asFields(body.body_variables);
-    this.sends.set(id, { id, created_at: this.now(), template, list, recipients, body_variables: variables });
+    const queue = recipients.map(({ full_name, email }) => ({ full_name, email, status }));
+    this.sends.set(id, { id, created_at: this.now(), sent_by: sentBy, template, list, recipients: queue, body_variables: variables });
     return { status: 201, body: { id } };
   }
 
@@ -809,7 +871,7 @@ export class MockSkymail {
         id: `${send.id}-${index}`,
         recipient_full_name: recipient.full_name,
         recipient_email: recipient.email,
-        status: { mail_queue_status: "pending", valid: true },
+        status: { mail_queue_status: recipient.status, valid: true },
         error: null,
         attempts: 0,
         next_attempt_at: null,
@@ -818,12 +880,14 @@ export class MockSkymail {
       return { status: 200, body: rows, headers: { "X-Total-Count": String(rows.length) } };
     }
     const single = send.list === null ? send.recipients[0] : null;
+    const count = (status: QueueStatus) => send.recipients.filter((recipient) => recipient.status === status).length;
+    const counts = { pending: count("pending"), processing: 0, sent: count("sent"), failed: count("failed") };
     return {
       status: 200,
       body: {
         id: send.id,
         created_at: send.created_at,
-        sent_by: VIEWER.sub,
+        sent_by: send.sent_by,
         template_id: send.template.id,
         template_name: send.template.name,
         template_key: send.template.key,
@@ -837,8 +901,8 @@ export class MockSkymail {
           recipient_full_name: single?.full_name ?? null,
           recipient_email: single?.email ?? null,
         },
-        status: "sending",
-        recipient_counts: { pending: send.recipients.length, processing: 0, sent: 0, failed: 0 },
+        status: counts.failed > 0 ? "failed" : counts.pending > 0 || counts.sent === 0 ? "sending" : "sent",
+        recipient_counts: counts,
       },
     };
   }
@@ -911,7 +975,7 @@ export class MockSkymail {
   /** What only a whole request carries: how many it reaches, its preview and whom it is for, its history. */
   private approvalDetail(record: ApprovalRecord, list: ListFixture | null) {
     const version = this.version(record.versionId);
-    const renderedFor = record.recipients[0] ?? { full_name: record.submitter.name, email: record.submitter.email };
+    const renderedFor = record.recipients[0] ?? { full_name: record.submitter.name, email: record.submitter.email ?? "" };
     const values = { ...record.body_variables, FullName: renderedFor.full_name, Email: renderedFor.email };
     return {
       recipient_count: list ? list.recipients.length : record.recipients.length,
@@ -1000,11 +1064,16 @@ export class MockSkymail {
       .map((name) => ({ field: "variable" as const, name, before: before[name] ?? null, after: after[name] ?? null }));
   }
 
-  /** Opens the sends an approval or an acceptance queues: a list's one, or one per person, in their order. */
-  private sendsOf(record: ApprovalRecord): string[] {
+  /**
+   * Opens the sends an approval or an acceptance queues: a list's one, or one
+   * per person, in their order, each recorded as sent by the submitter.
+   */
+  private sendsOf(record: ApprovalRecord, status: QueueStatus = "pending"): string[] {
     const list = record.listId ? this.lists.get(record.listId)! : null;
-    const open = (recipients: ApprovalRecipient[]) =>
-      (this.open(this.row(record.templateId), list, recipients, { body_variables: record.body_variables }).body as { id: string }).id;
+    const open = (recipients: readonly { full_name: string; email: string }[]) => {
+      const answer = this.open(this.row(record.templateId), list, recipients, { body_variables: record.body_variables }, { sentBy: record.submitter.sub, status });
+      return (answer.body as { id: string }).id;
+    };
     return list ? [open(list.recipients)] : record.recipients.map((person) => open([person]));
   }
 

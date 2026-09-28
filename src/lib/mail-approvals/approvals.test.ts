@@ -5,6 +5,8 @@
  * Times are the club's, Europe/Istanbul, on every screen. A request goes to
  * a list or to people, each with a send of their own once approved (ticket
  * 22); an API from before that (ticket 19) named one person in the audience.
+ * An erased person reads as Silinmiş kullanıcı wherever the request names
+ * them (ticket 27).
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
@@ -21,6 +23,7 @@ import {
   approvalSends,
   copyApprovalHref,
   deadlineHint,
+  decidedOwnRequest,
   effectiveState,
   eventActorName,
   eventLabel,
@@ -31,13 +34,16 @@ import {
   previewNote,
   previewRecipient,
   readApprovalListView,
+  recipientName,
   resubmitHref,
+  submitterAddress,
   submitterName,
   type ApprovalEvent,
   type ApprovalItem,
   type ApprovalState,
   type MailApproval,
 } from "./approvals";
+import { ERASED_SUBJECT } from "../people";
 
 const ID = "5d1e7c2a-0000-4000-8000-000000000001";
 const NOW = new Date("2026-09-23T09:00:00Z");
@@ -187,6 +193,39 @@ describe("the words for a request", () => {
     assert.equal(submitterName({ sub: "s", name: null, email: "ali@ornek.com" }), "ali@ornek.com");
     assert.equal(submitterName({ sub: "s", name: "", email: null }), "Adı bilinmeyen üye");
   });
+
+  it("shows the submitter's address, which the decision is mailed to", () => {
+    assert.equal(submitterAddress({ sub: "s", name: "Ali Can", email: " ali@ornek.com " }), "ali@ornek.com");
+    assert.equal(submitterAddress({ sub: "s", name: "Ali Can", email: null }), null);
+  });
+
+  // Account erasure (ADR-0051): the API keeps the stand-in's subject, with its name or none, and no address.
+  it("names an erased submitter or actor Silinmiş kullanıcı, never someone unknown, and shows no address", () => {
+    assert.equal(submitterName({ sub: ERASED_SUBJECT, name: "Silinmiş kullanıcı", email: null }), "Silinmiş kullanıcı");
+    assert.equal(submitterName({ sub: ERASED_SUBJECT, name: null, email: null }), "Silinmiş kullanıcı");
+    assert.equal(submitterAddress({ sub: ERASED_SUBJECT, name: null, email: "ayse@ornek.com" }), null);
+    assert.equal(eventActorName(event("approved", { sub: ERASED_SUBJECT, name: "Silinmiş kullanıcı" })), "Silinmiş kullanıcı");
+    assert.equal(eventActorName(event("edited", { sub: ERASED_SUBJECT, name: null })), "Silinmiş kullanıcı");
+    assert.equal(eventActorName(event("rejected", { sub: ERASED_SUBJECT, name: " " })), "Silinmiş kullanıcı");
+  });
+
+  it("marks an approver's decision on their own request", () => {
+    const submitter = { sub: "s", name: "Ayşe Yılmaz", email: "ayse@ornek.com" };
+    const own = { sub: "s", name: "Ayşe Yılmaz" };
+    assert.equal(decidedOwnRequest(event("approved", own), submitter), true);
+    assert.equal(decidedOwnRequest(event("edited", own), submitter), true);
+    assert.equal(decidedOwnRequest(event("submitted", own), submitter), false);
+    assert.equal(decidedOwnRequest(event("rejected", { sub: "a", name: "Zeynep Arslan" }), submitter), false);
+    assert.equal(decidedOwnRequest(event("expired", null), submitter), false);
+  });
+
+  // Everyone erased is the one subject: an erased approver did not decide an erased submitter's own request.
+  it("never marks Silinmiş kullanıcı's decision as on their own request", () => {
+    const erased = { sub: ERASED_SUBJECT, name: "Silinmiş kullanıcı" };
+    const submitter = { ...erased, email: null };
+    assert.equal(decidedOwnRequest(event("approved", erased), submitter), false);
+    assert.equal(decidedOwnRequest(event("rejected", erased), submitter), false);
+  });
 });
 
 describe("what an action's notification says", () => {
@@ -311,6 +350,47 @@ describe("who a request goes to", () => {
       previewNote(whole({ audience: toMany, recipients: PEOPLE.slice(1), preview_recipient: PEOPLE[1] })),
       "Her kişi kendi adıyla alır; önizleme ilk kişi, zeynep@ornek.com için, sunucunun göndereceği hâliyle.",
     );
+  });
+
+  // Account erasure keeps the person's place, so task_ids[i] is still their send: only the name changes.
+  it("names an erased person Silinmiş kullanıcı in their place, never by the placeholder address", () => {
+    const erased = { full_name: "Silinmiş kullanıcı", email: "silinmis-kullanici@invalid" };
+    const people = [PEOPLE[0], erased, PEOPLE[2]];
+    assert.deepEqual(approvalPeople({ audience: toMany, recipients: people }), people);
+    assert.equal(recipientName(erased), "Silinmiş kullanıcı");
+    assert.equal(recipientName({ full_name: "", email: "silinmis-kullanici@invalid" }), "Silinmiş kullanıcı");
+    assert.deepEqual(approvalAudience({ audience: toMany, recipients: people }), {
+      kind: "people",
+      name: "Ali Can, Silinmiş kullanıcı",
+      detail: null,
+      listId: null,
+      more: 1,
+    });
+    const toErased = { ...toOne, recipient_full_name: erased.full_name, recipient_email: erased.email };
+    assert.deepEqual(approvalAudience({ audience: toErased, recipients: [erased] }), { kind: "person", name: "Silinmiş kullanıcı", detail: null, listId: null });
+    assert.deepEqual(approvalAudience({ audience: toErased }), { kind: "person", name: "Silinmiş kullanıcı", detail: null, listId: null });
+    assert.deepEqual(approvalSends({ task_ids: ["t1", "t2", "t3"], task_id: "t1" }), ["t1", "t2", "t3"]);
+  });
+
+  it("says the preview reads as Silinmiş kullanıcı, with no address", () => {
+    const erased = { full_name: "Silinmiş kullanıcı", email: "silinmis-kullanici@invalid" };
+    const toPeople = { audience: toMany, recipients: [erased, PEOPLE[0]], submitter, preview: preview(erased.full_name, erased.email), preview_recipient: erased };
+    assert.equal(
+      previewNote(toPeople),
+      "Her kişi kendi adıyla alır; önizleme ilk kişi, Silinmiş kullanıcı için, sunucunun göndereceği hâliyle.",
+    );
+    assert.equal(
+      previewFailureNote({ ...toPeople, preview: null, preview_error: null }),
+      "Önizleme Silinmiş kullanıcı için hazırlanamadı. Mail template bu değerlerle işlenemiyor olabilir.",
+    );
+    // A list's preview is the submitter's, and an erased submitter has no address left.
+    const erasedSubmitter = { sub: ERASED_SUBJECT, name: "Silinmiş kullanıcı", email: null };
+    const listRequest = { audience: toList, recipients: [], submitter: erasedSubmitter, preview: null };
+    assert.equal(
+      previewNote({ ...listRequest, preview_recipient: { full_name: "Silinmiş kullanıcı", email: "" } }),
+      "Listedeki her alıcı kendi adıyla alır; önizleme Silinmiş kullanıcı için, sunucunun göndereceği hâliyle.",
+    );
+    assert.deepEqual(previewRecipient(listRequest), { full_name: "Silinmiş kullanıcı", email: "" });
   });
 
   // The API names who the preview was for even when it did not render.

@@ -17,6 +17,9 @@
  *    approved, a list gets one send and each person a send of their own.
  *    An API from before that (ticket 19) named one person in the audience
  *    and had one send: the screens read that too.
+ *  - An erased person stays in the request as Silinmiş kullanıcı (ticket 27,
+ *    people.ts): as its submitter, whoever decided it, and in their place
+ *    among its people, next to their send.
  *
  * The approval mails link here: `/mail-approvals/show/:id`, `#preview` for the
  * preview.
@@ -24,6 +27,7 @@
 import { ROLE } from "../access";
 import type { ApiClient, ApiPage } from "../api/client";
 import { pageRange, readPage, viewHref } from "../list-view";
+import { isErasedSubject, personLabel, recipientLabel, samePerson } from "../people";
 import { SEND_LIST_PATH, audienceLabel, type AudienceLabel, type SendAudience } from "../sends";
 
 export const APPROVAL_PAGE_SIZE = 25;
@@ -250,8 +254,8 @@ export function approvalPeople(item: Pick<ApprovalItem, "audience" | "recipients
   return [];
 }
 
-/** Someone by name, or by address when the submitter knew only that. */
-export const recipientName = (person: ApprovalRecipient) => person.full_name.trim() || person.email.trim();
+/** Someone by name, or by address when the submitter knew only that; an erased person as Silinmiş kullanıcı. */
+export const recipientName = (person: ApprovalRecipient) => recipientLabel(person.full_name, person.email).name;
 
 /**
  * Who a request goes to, as the list and the request's page say it: a list
@@ -291,11 +295,11 @@ export function previewRecipient(
 
 type Previewed = Pick<MailApproval, "audience" | "recipients" | "submitter" | "preview" | "preview_recipient">;
 
-/** Whom the preview is for: "Ali Can <ali@…>", or the address alone. */
+/** Whom the preview is for: "Ali Can <ali@…>", the address alone, or a name with no address. */
 function previewedFor(approval: Previewed): string {
   const person = previewRecipient(approval);
-  const name = person.full_name.trim();
-  return name ? `${name} <${person.email}>` : person.email;
+  const { name, address } = recipientLabel(person.full_name, person.email);
+  return address ? `${name} <${address}>` : name;
 }
 
 /** What the preview says of whose name it reads with: everyone on a list or among several people gets their own. */
@@ -359,7 +363,12 @@ export const APPROVAL_STATE_LABEL: Readonly<Record<ApprovalState, string>> = {
 const UNKNOWN_PERSON = "Adı bilinmeyen üye";
 
 export function submitterName(submitter: ApprovalSubmitter): string {
-  return submitter.name?.trim() || submitter.email?.trim() || UNKNOWN_PERSON;
+  return personLabel(submitter, UNKNOWN_PERSON);
+}
+
+/** The address the decision is mailed to, as the page shows it: none for Silinmiş kullanıcı. */
+export function submitterAddress(submitter: ApprovalSubmitter): string | null {
+  return isErasedSubject(submitter.sub) ? null : submitter.email?.trim() || null;
 }
 
 const EVENT_LABEL: Readonly<Record<ApprovalEventKind, string>> = {
@@ -380,7 +389,18 @@ export function eventLabel(event: Pick<ApprovalEvent, "kind">): string {
 
 /** Who did it: SkyMail expires a request. */
 export function eventActorName(event: Pick<ApprovalEvent, "actor">): string {
-  return event.actor ? event.actor.name?.trim() || UNKNOWN_PERSON : "SkyMail";
+  return event.actor ? personLabel(event.actor, UNKNOWN_PERSON) : "SkyMail";
+}
+
+/** An approver's events: the ones a submitter deciding their own request is marked on. */
+const APPROVER_EVENTS: readonly ApprovalEventKind[] = ["edited", "returned", "approved", "rejected"];
+
+/**
+ * Whether the submitter decided their own request, as the history marks it.
+ * Never for Silinmiş kullanıcı: everyone erased has the one subject.
+ */
+export function decidedOwnRequest(event: Pick<ApprovalEvent, "kind" | "actor">, submitter: Pick<ApprovalSubmitter, "sub">): boolean {
+  return APPROVER_EVENTS.includes(event.kind) && samePerson(event.actor?.sub, submitter.sub);
 }
 
 // A Map, not an object literal: a problem comes from the API, and a newer one
