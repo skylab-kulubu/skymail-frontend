@@ -31,8 +31,6 @@ import {
   APPROVAL_LIST_PATH,
   approvalAudience,
   approvalHref,
-  approvalPeople,
-  approvalSends,
   copyApprovalHref,
   deadlineHint,
   eventActorName,
@@ -40,7 +38,6 @@ import {
   notificationNote,
   previewFailureNote,
   previewNote,
-  previewRecipient,
   RECIPIENTS_ANCHOR,
   resubmitHref,
   submitterName,
@@ -136,7 +133,7 @@ function ApprovalView({
   const [decision, setDecision] = useState<Decision | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const recipient = previewRecipient(approval);
+  const recipient = approval.preview_recipient;
   const edit = editing ? editedVariables(fields, approval.body_variables, editing.initial, editing.current) : null;
 
   // The approval mails link to #preview; the page draws it once the request has
@@ -465,7 +462,7 @@ function DecisionPanel({
         </Lead>
       );
     case 'approved': {
-      const sends = approvalSends(approval);
+      const sends = approval.task_ids;
       return (
         <>
           <Lead title="Onaylandı ve gönderildi">
@@ -579,9 +576,9 @@ function EditPanel({
  */
 function Recipients({ approval }: { approval: MailApproval }) {
   const canSeeSends = useCan(ROLE.mailsRead);
-  const people = approvalPeople(approval);
+  const people = approval.recipients;
   if (people.length < 2) return null;
-  const sends = approvalSends(approval);
+  const sends = approval.task_ids;
   return (
     <section id={RECIPIENTS_ANCHOR} aria-labelledby="recipients-title" className="scroll-mt-20 md:scroll-mt-4">
       <SectionTitle id="recipients-title">Kişiler ({formatCount(people.length)})</SectionTitle>
