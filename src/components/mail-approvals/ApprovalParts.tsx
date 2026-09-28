@@ -8,7 +8,6 @@ import { formatClubTime } from '@/lib/format';
 import {
   APPROVAL_STATE_LABEL,
   RECIPIENTS_ANCHOR,
-  approvalSends,
   deadlineHint,
   effectiveState,
   isWaiting,
@@ -55,9 +54,9 @@ export function Deadline({ item, now = new Date(), inline = false }: { item: Pic
  * Where an approved request's sends are, for someone who reads sends: its
  * one send, or — one per person — the people on the page, each beside theirs.
  */
-export function SendsLink({ item, className = 'text-sm' }: { item: Pick<ApprovalItem, 'task_id' | 'task_ids'>; className?: string }) {
+export function SendsLink({ item, className = 'text-sm' }: { item: Pick<ApprovalItem, 'task_ids'>; className?: string }) {
   const canSeeSends = useCan(ROLE.mailsRead);
-  const sends = approvalSends(item);
+  const sends = item.task_ids;
   if (!canSeeSends || sends.length === 0) return null;
   const style = `text-skylab-300 hover:underline ${className}`;
   return sends.length === 1 ? (
