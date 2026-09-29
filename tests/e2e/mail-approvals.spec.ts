@@ -361,9 +361,8 @@ test("resubmitting a request to several people, and starting a new one from it, 
   expect([copy.path, copy.body]).toEqual(["/mail_approvals", { template_id: free.id, recipients: asSubmitted, body_variables: SUBMITTED }]);
 });
 
-test("a request as the API answered before several people still reads: one person, one send", async ({ page, skymail, signIn }) => {
+test("a request to one person reads as one, and approving it opens one send", async ({ page, skymail, signIn }) => {
   await signIn("approver");
-  skymail.serveApprovalsWithoutRecipients();
   const { id: templateId } = reminder(skymail);
   const id = skymail.addApproval({
     templateId,

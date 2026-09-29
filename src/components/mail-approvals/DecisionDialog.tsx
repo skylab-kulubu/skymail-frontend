@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { FormTextArea } from '@/components/chrome/FormField';
 import { Modal } from '@/components/ui/Modal';
 import { ModalDangerActions, ModalPrimaryActions } from '@/components/ui/modal-actions';
-import { approvalAudience, approvalPeople, recipientName, type MailApproval } from '@/lib/mail-approvals/approvals';
+import { approvalAudience, recipientName, type MailApproval } from '@/lib/mail-approvals/approvals';
 import { DECISIONS, type Decision } from '@/lib/mail-approvals/decisions';
 import type { PinnedSource } from '@/lib/mail-approvals/edit';
 import { peopleSentApart } from '@/lib/send-form/audience';
@@ -14,7 +14,7 @@ import { EditComparison } from './EditComparison';
 
 /** Who it goes to, and how many, in words: several people as the send form's confirmation says them. */
 function audienceText(approval: MailApproval): string {
-  const people = approvalPeople(approval);
+  const people = approval.recipients;
   if (people.length > 1) return peopleSentApart(people.length);
   const audience = approvalAudience(approval);
   if (audience.kind === 'person') return audience.detail ? `${audience.name} <${audience.detail}>` : audience.name;
@@ -56,7 +56,7 @@ export function DecisionDialog({
   if (decision === null) return null;
 
   const words = DECISIONS[decision];
-  const people = approvalPeople(approval);
+  const people = approval.recipients;
   const missingReason = words.text?.required === true && text.trim() === '';
   const close = busy ? () => {} : onCancel;
 

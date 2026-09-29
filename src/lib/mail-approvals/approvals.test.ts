@@ -4,7 +4,7 @@
  * preview), which requests the list asks for, and how long one has left.
  * Times are the club's, Europe/Istanbul, on every screen. A request goes to
  * a list or to people, each with a send of their own once approved (ticket
- * 22); an API from before that (ticket 19) named one person in the audience.
+ * 22).
  * An erased person reads as Silinmiş kullanıcı wherever the request names
  * them (ticket 27).
  */
@@ -18,9 +18,7 @@ import {
   approvalAudience,
   approvalHref,
   approvalListHref,
-  approvalPeople,
   approvalPreviewHref,
-  approvalSends,
   copyApprovalHref,
   deadlineHint,
   decidedOwnRequest,
@@ -32,7 +30,6 @@ import {
   pendingCount,
   previewFailureNote,
   previewNote,
-  previewRecipient,
   readApprovalListView,
   recipientName,
   resubmitHref,
@@ -41,7 +38,6 @@ import {
   type ApprovalEvent,
   type ApprovalItem,
   type ApprovalState,
-  type MailApproval,
 } from "./approvals";
 import { ERASED_SUBJECT } from "../people";
 
@@ -267,26 +263,6 @@ describe("who a request goes to", () => {
   const toList: ApprovalItem["audience"] = { ...nobody, kind: "mailing_list", mail_list_id: LIST_ID, name: "GECEKODU katılımcıları", source: "internal" };
   const toOne: ApprovalItem["audience"] = { ...nobody, kind: "single", recipient_full_name: "Ali Can", recipient_email: "ali@ornek.com" };
   const toMany: ApprovalItem["audience"] = { ...nobody, kind: "people" };
-  const submitter = { sub: "s", name: "Ayşe Yılmaz", email: "ayse@ornek.com" };
-  const preview = (full_name: string, email: string): MailApproval["preview"] => ({
-    subject: "Duyuru",
-    html: "<p>…</p>",
-    plain_text: "…",
-    rendered_for: { full_name, email },
-  });
-
-  it("is its people in the order submitted, and nobody for a list", () => {
-    assert.deepEqual(approvalPeople({ audience: toMany, recipients: PEOPLE }), PEOPLE);
-    assert.deepEqual(approvalPeople({ audience: toOne, recipients: [PEOPLE[0]] }), [PEOPLE[0]]);
-    assert.deepEqual(approvalPeople({ audience: toList, recipients: [] }), []);
-  });
-
-  // Ticket 19's API had no recipients: one person was named in the audience.
-  it("is the one person an older API named in the audience", () => {
-    assert.deepEqual(approvalPeople({ audience: toOne }), [{ full_name: "Ali Can", email: "ali@ornek.com" }]);
-    assert.deepEqual(approvalPeople({ audience: { ...toOne, recipient_full_name: null } }), [{ full_name: "", email: "ali@ornek.com" }]);
-    assert.deepEqual(approvalPeople({ audience: toList }), []);
-  });
 
   it("is said as a send's list or group is, one person by name and address, and several by the first few and how many more", () => {
     assert.deepEqual(approvalAudience({ audience: toList, recipients: [] }), {
@@ -295,7 +271,12 @@ describe("who a request goes to", () => {
       detail: null,
       listId: LIST_ID,
     });
-    assert.deepEqual(approvalAudience({ audience: toOne }), { kind: "person", name: "Ali Can", detail: "ali@ornek.com", listId: null });
+    assert.deepEqual(approvalAudience({ audience: toOne, recipients: [PEOPLE[0]] }), {
+      kind: "person",
+      name: "Ali Can",
+      detail: "ali@ornek.com",
+      listId: null,
+    });
     assert.deepEqual(approvalAudience({ audience: toMany, recipients: PEOPLE }), {
       kind: "people",
       name: "Ali Can, zeynep@ornek.com",
@@ -308,46 +289,23 @@ describe("who a request goes to", () => {
     assert.equal(approvalAudience({ audience: toMany, recipients: PEOPLE.slice(0, 2) }).more, 0);
   });
 
-  it("has a send for each person at their place once approved, and an older API's one send", () => {
-    assert.deepEqual(approvalSends({ task_ids: ["t1", "t2"], task_id: "t1" }), ["t1", "t2"]);
-    assert.deepEqual(approvalSends({ task_ids: [], task_id: null }), []);
-    assert.deepEqual(approvalSends({ task_id: "t1" }), ["t1"]);
-    assert.deepEqual(approvalSends({ task_id: null }), []);
-  });
-
-  it("is previewed for the person the API names, even when the preview did not render", () => {
-    const request = { audience: toMany, recipients: PEOPLE, submitter, preview: null };
-    assert.deepEqual(previewRecipient({ ...request, preview_recipient: PEOPLE[2] }), PEOPLE[2]);
-    // An older API: as the preview was rendered, else the one person, else the submitter as if on the list.
-    assert.deepEqual(previewRecipient({ ...request, preview: preview("Ali Can", "ali@ornek.com") }), { full_name: "Ali Can", email: "ali@ornek.com" });
-    assert.deepEqual(previewRecipient({ audience: toOne, submitter, preview: null }), { full_name: "Ali Can", email: "ali@ornek.com" });
-    assert.deepEqual(previewRecipient({ audience: toList, submitter, preview: null }), { full_name: "Ayşe Yılmaz", email: "ayse@ornek.com" });
-    assert.deepEqual(previewRecipient({ audience: toList, submitter: { sub: "s", name: null, email: null }, preview: null }), {
-      full_name: "Adı bilinmeyen üye",
-      email: "",
-    });
-  });
-
   it("says whose name the preview reads with, and that everyone gets their own", () => {
-    const whole = (overrides: Partial<Pick<MailApproval, "audience" | "recipients" | "preview_recipient">>) => ({
-      audience: toList,
-      recipients: [],
-      submitter,
-      preview: preview("Ayşe Yılmaz", "ayse@ornek.com"),
-      preview_recipient: { full_name: "Ayşe Yılmaz", email: "ayse@ornek.com" },
-      ...overrides,
-    });
-    assert.equal(previewNote(whole({})), "Listedeki her alıcı kendi adıyla alır; önizleme Ayşe Yılmaz <ayse@ornek.com> için, sunucunun göndereceği hâliyle.");
+    // A list's preview is the submitter's, as if they were on it: the API names them.
+    const submitter = { full_name: "Ayşe Yılmaz", email: "ayse@ornek.com" };
     assert.equal(
-      previewNote(whole({ audience: toOne, recipients: [PEOPLE[0]], preview_recipient: PEOPLE[0] })),
+      previewNote({ recipients: [], preview_recipient: submitter }),
+      "Listedeki her alıcı kendi adıyla alır; önizleme Ayşe Yılmaz <ayse@ornek.com> için, sunucunun göndereceği hâliyle.",
+    );
+    assert.equal(
+      previewNote({ recipients: [PEOPLE[0]], preview_recipient: PEOPLE[0] }),
       "Ali Can <ali@ornek.com> için, sunucunun göndereceği hâliyle.",
     );
     assert.equal(
-      previewNote(whole({ audience: toMany, recipients: PEOPLE, preview_recipient: PEOPLE[0] })),
+      previewNote({ recipients: PEOPLE, preview_recipient: PEOPLE[0] }),
       "Her kişi kendi adıyla alır; önizleme ilk kişi, Ali Can <ali@ornek.com> için, sunucunun göndereceği hâliyle.",
     );
     assert.equal(
-      previewNote(whole({ audience: toMany, recipients: PEOPLE.slice(1), preview_recipient: PEOPLE[1] })),
+      previewNote({ recipients: PEOPLE.slice(1), preview_recipient: PEOPLE[1] }),
       "Her kişi kendi adıyla alır; önizleme ilk kişi, zeynep@ornek.com için, sunucunun göndereceği hâliyle.",
     );
   });
@@ -356,7 +314,6 @@ describe("who a request goes to", () => {
   it("names an erased person Silinmiş kullanıcı in their place, never by the placeholder address", () => {
     const erased = { full_name: "Silinmiş kullanıcı", email: "silinmis-kullanici@invalid" };
     const people = [PEOPLE[0], erased, PEOPLE[2]];
-    assert.deepEqual(approvalPeople({ audience: toMany, recipients: people }), people);
     assert.equal(recipientName(erased), "Silinmiş kullanıcı");
     assert.equal(recipientName({ full_name: "", email: "silinmis-kullanici@invalid" }), "Silinmiş kullanıcı");
     assert.deepEqual(approvalAudience({ audience: toMany, recipients: people }), {
@@ -368,34 +325,29 @@ describe("who a request goes to", () => {
     });
     const toErased = { ...toOne, recipient_full_name: erased.full_name, recipient_email: erased.email };
     assert.deepEqual(approvalAudience({ audience: toErased, recipients: [erased] }), { kind: "person", name: "Silinmiş kullanıcı", detail: null, listId: null });
-    assert.deepEqual(approvalAudience({ audience: toErased }), { kind: "person", name: "Silinmiş kullanıcı", detail: null, listId: null });
-    assert.deepEqual(approvalSends({ task_ids: ["t1", "t2", "t3"], task_id: "t1" }), ["t1", "t2", "t3"]);
   });
 
   it("says the preview reads as Silinmiş kullanıcı, with no address", () => {
     const erased = { full_name: "Silinmiş kullanıcı", email: "silinmis-kullanici@invalid" };
-    const toPeople = { audience: toMany, recipients: [erased, PEOPLE[0]], submitter, preview: preview(erased.full_name, erased.email), preview_recipient: erased };
+    const toPeople = { recipients: [erased, PEOPLE[0]], preview_recipient: erased };
     assert.equal(
       previewNote(toPeople),
       "Her kişi kendi adıyla alır; önizleme ilk kişi, Silinmiş kullanıcı için, sunucunun göndereceği hâliyle.",
     );
     assert.equal(
-      previewFailureNote({ ...toPeople, preview: null, preview_error: null }),
+      previewFailureNote({ ...toPeople, preview_error: null }),
       "Önizleme Silinmiş kullanıcı için hazırlanamadı. Mail template bu değerlerle işlenemiyor olabilir.",
     );
     // A list's preview is the submitter's, and an erased submitter has no address left.
-    const erasedSubmitter = { sub: ERASED_SUBJECT, name: "Silinmiş kullanıcı", email: null };
-    const listRequest = { audience: toList, recipients: [], submitter: erasedSubmitter, preview: null };
     assert.equal(
-      previewNote({ ...listRequest, preview_recipient: { full_name: "Silinmiş kullanıcı", email: "" } }),
+      previewNote({ recipients: [], preview_recipient: { full_name: "Silinmiş kullanıcı", email: "" } }),
       "Listedeki her alıcı kendi adıyla alır; önizleme Silinmiş kullanıcı için, sunucunun göndereceği hâliyle.",
     );
-    assert.deepEqual(previewRecipient(listRequest), { full_name: "Silinmiş kullanıcı", email: "" });
   });
 
   // The API names who the preview was for even when it did not render.
   it("says whose preview did not render, and why", () => {
-    const failed = { audience: toMany, recipients: PEOPLE, submitter, preview: null, preview_recipient: PEOPLE[0] };
+    const failed = { recipients: PEOPLE, preview_recipient: PEOPLE[0] };
     assert.equal(
       previewFailureNote({ ...failed, preview_error: "template: x:1: unexpected EOF" }),
       "Önizleme Ali Can <ali@ornek.com> için hazırlanamadı: template: x:1: unexpected EOF. Mail template bu değerlerle işlenemiyor olabilir.",

@@ -42,6 +42,7 @@ import {
 import { useLastPage } from '@/lib/ui/use-last-page';
 import { Audience } from './Audience';
 import { SendItem } from './SendItem';
+import { SenderPausedCheck } from './SenderPaused';
 import { SendStatusBadge } from './StatusBadge';
 
 const EMPTY_TEXT: Readonly<Record<SendFilter, string>> = {
@@ -76,6 +77,8 @@ export function SendList() {
         description="Her gönderimin durumu alıcılarının kuyruktaki durumundan çıkar: bir alıcısı bile başarısızsa gönderim başarısızdır."
         actions={canCompose ? <CreatePageButton href={composeHref()}>Yeni gönderim</CreatePageButton> : undefined}
       />
+
+      <SenderPausedCheck />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <FilterPills

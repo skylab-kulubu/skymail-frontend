@@ -146,7 +146,7 @@ describe("a refused submission", () => {
     );
     assert.equal(
       approvalRefusal(
-        invalid({ field: "mail_list_id", code: "exactly_one_of", params: { fields: ["mail_list_id", "recipients", "recipient_email"] } }),
+        invalid({ field: "mail_list_id", code: "exactly_one_of", params: { fields: ["mail_list_id", "recipients"] } }),
         "submit",
       ).text,
       "Onaya ya bir mail listesi ya da kişiler sunulur: birini seç.",

@@ -19,6 +19,7 @@ import {
   formatCount,
   homeTiles,
   SEND_LIST_PATH,
+  senderPaused,
   type DailyPoint,
   type HomeTile,
   type Send as SendRecord,
@@ -27,6 +28,7 @@ import {
 import { DailySentChart } from './DailySentChart';
 import { SectionTitle } from './SectionTitle';
 import { SendItem } from './SendItem';
+import { SenderPausedNotice } from './SenderPaused';
 import { TONE, type Tone } from '@/components/chrome/ToneBadge';
 
 const DAYS = 30;
@@ -63,6 +65,8 @@ function Summary() {
 
   return (
     <div className="space-y-6">
+      {summary && senderPaused(summary) ? <SenderPausedNotice /> : null}
+
       <section aria-label="Sayılar" className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         {summary
           ? homeTiles(summary).map((tile) => <StatTile key={tile.key} tile={tile} />)
