@@ -5,7 +5,7 @@
  *  - A submission, and a resubmission, is the send form's request (ticket
  *    19, 21): `{template_id, mail_list_id, body_variables}` to a list,
  *    `{template_id, recipients: [{email, full_name}], body_variables}` to
- *    1..100 people — one person too, not the deprecated fields for one.
+ *    1..100 people, one person too (the API has no fields for one).
  *    Approvers decide it once; each person gets a send of their own.
  *  - An approver edits only the variables (ticket 18); an edit is the
  *    request's variables whole — a variable left out would read as removed —
@@ -39,7 +39,6 @@ import { isErasedAddress } from "../people";
 import { fetchTemplate, fetchVersion, type MailTemplate } from "../templates";
 import {
   APPROVAL_PEOPLE_LIMIT,
-  approvalPeople,
   type ApprovalChange,
   type ApprovalEvent,
   type ApprovalPerson,
@@ -316,7 +315,7 @@ export function composePrefill(
   let people: PersonRow[] = [];
   if (approval.audience.kind !== "mailing_list") {
     // Silinmiş kullanıcı's place holds an address that never delivers: it is left out, not shown in the form.
-    const everyone = approvalPeople(approval);
+    const everyone = approval.recipients;
     people = everyone.filter((person) => !isErasedAddress(person.email)).map((person) => ({ name: person.full_name, email: person.email }));
     if (people.length < everyone.length) {
       notes.push(

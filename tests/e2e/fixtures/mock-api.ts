@@ -51,15 +51,18 @@
  *    what a test set for that address (`refuseSingle`) or for the next list
  *    send (`refuseListSend`). Both answer 201
  *    `{id}`, and the send can be read back — alone, with its recipients'
- *    queue, or in `GET /mail_tasks`, newest first.
+ *    queue, or in `GET /mail_tasks`, newest first;
+ *  - `GET /mail_tasks/summary` (mails:read; `days` 1..90, `recent` 1..20)
+ *    counts the queue and the sends, zero-fills the days up to the mock's
+ *    today and gives the latest sends; `sender_paused` is what a test set
+ *    with `pauseSender` (MAIL_SENDER=paused, skymail-backend ticket 28).
  *
  * Mail onayı's routes (ticket 20), as skymail-backend answers them (ticket
  * 19, and ticket 21 for people: internal/handlers/mail_approval*.go):
  *
  *  - `POST /mail_approvals` takes a template and a list (`mail_list_id`) or
- *    1..100 people (`recipients: [{email, full_name}]`; the deprecated
- *    `recipient_email`/`recipient_full_name` as one person, never with
- *    `recipients`). It asks for templates:read, before the body, and
+ *    1..100 people (`recipients: [{email, full_name}]`; since #35 there are
+ *    no fields for one person). It asks for templates:read, before the body, and
  *    lists:read for a list (403 server.forbidden, `params.missing_roles`);
  *    refuses in a 400 validation.error not exactly one audience
  *    (mail_list_id exactly_one_of), more than 100 people (recipients
@@ -70,11 +73,11 @@
  *    audience_unavailable) and an empty Required variable (422
  *    required_variables_missing); pins the request to the version published
  *    now and gives it seven days;
- *  - a request reads with its `recipients` (none for a list), `task_ids`
- *    (`[i]` the send to `recipients[i]`, a list's one send; `task_id` the
- *    first) and, whole, `preview_recipient`; `audience.kind` is single for
- *    one person, with the fields for one filled, people for several;
- *    `serveApprovalsWithoutRecipients` answers as before ticket 21 instead;
+ *  - a request always reads with its `recipients` (empty for a list),
+ *    `task_ids` (`[i]` the send to `recipients[i]`, a list's one send; empty
+ *    until approved) and, whole, `preview_recipient`; `audience.kind` is
+ *    single for one person, with the fields for one filled, people for
+ *    several;
  *  - an approver (`mails:approve`) lists and reads everyone's requests,
  *    anyone else only their own (404 for another's); a request past its
  *    deadline reads as expired; an action on it records the expiry and
@@ -315,7 +318,7 @@ export class MockSkymail {
   private readonly approvals = new Map<string, ApprovalRecord>();
   private readonly approvalRefusals = new Map<string, Answer>();
   private notificationProblem: string | null = null;
-  private approvalsWithoutRecipients = false;
+  private senderPaused = false;
   private clock = Date.parse("2026-09-23T06:00:00Z");
   private ids = 0;
 
@@ -437,6 +440,11 @@ export class MockSkymail {
     this.listRefusal = answer;
   }
 
+  /** SkyMail runs with MAIL_SENDER=paused, or no longer does: what the summary's `sender_paused` says. */
+  pauseSender(paused = true) {
+    this.senderPaused = paused;
+  }
+
   /** Archives a template behind the page's back. */
   archiveTemplate(id: string) {
     this.row(id).archived_at = this.now();
@@ -506,15 +514,6 @@ export class MockSkymail {
   /** The next `action` (submit, resubmit, approve, return, reject, accept, decline) gets this answer instead. */
   refuseApproval(action: string, answer: Answer) {
     this.approvalRefusals.set(action, answer);
-  }
-
-  /**
-   * Mail onayı answers as skymail-backend did before ticket 21: no
-   * `recipients`, `task_ids` or `preview_recipient`, the one person in the
-   * audience.
-   */
-  serveApprovalsWithoutRecipients() {
-    this.approvalsWithoutRecipients = true;
   }
 
   /** Every notification an approval action sends reports this problem. */
@@ -742,6 +741,9 @@ export class MockSkymail {
       const sends = [...this.sends.keys()].reverse().map((id) => this.readSend(id, false).body);
       return this.page(sends, query);
     }
+    if (method === "GET" && path === "/mail_tasks/summary") {
+      return can("skymail:mails:read") ? this.sendSummary(query) : refuse(403, "server.forbidden");
+    }
     const sendMatch = /^\/mail_tasks\/([^/]+)(\/queue)?$/.exec(path);
     if (method === "GET" && sendMatch) return this.readSend(sendMatch[1], Boolean(sendMatch[2]));
 
@@ -862,6 +864,46 @@ export class MockSkymail {
     return this.open(template, null, [{ full_name: name, email }], body);
   }
 
+  /** `GET /mail_tasks/summary`, as internal/handlers/send_summary.go answers it. */
+  private sendSummary(query: URLSearchParams): Answer {
+    const bounded = (name: string, fallback: number, upper: number) => {
+      const raw = query.get(name)?.trim() ?? "";
+      if (raw === "") return fallback;
+      const value = Number(raw);
+      return Number.isInteger(value) && value >= 1 && value <= upper ? value : null;
+    };
+    const days = bounded("days", 30, 90);
+    const recent = bounded("recent", 5, 20);
+    if (days === null) return refuse(400, "validation.error", { days: "must be a whole number from 1 to 90" });
+    if (recent === null) return refuse(400, "validation.error", { recent: "must be a whole number from 1 to 20" });
+
+    const sends = [...this.sends.values()];
+    const rows = sends.flatMap((send) => send.recipients);
+    const rowsIn = (status: QueueStatus) => rows.filter((row) => row.status === status).length;
+    const views = sends.map((send) => this.readSend(send.id, false).body as { status: "failed" | "sending" | "sent" });
+    const sendsIn = (status: "failed" | "sending" | "sent") => views.filter((view) => view.status === status).length;
+    const dayOf = (at: number) => new Date(at).toLocaleDateString("en-CA", { timeZone: "Europe/Istanbul" });
+    const today = Date.parse(`${dayOf(this.clock)}T00:00:00Z`);
+    const daily = Array.from({ length: days }, (_, index) => {
+      const date = new Date(today - (days - 1 - index) * 24 * 3600_000).toISOString().slice(0, 10);
+      const sent = sends
+        .filter((send) => dayOf(Date.parse(send.created_at)) === date)
+        .reduce((sum, send) => sum + send.recipients.filter((row) => row.status === "sent").length, 0);
+      return { date, sent };
+    });
+    return {
+      status: 200,
+      body: {
+        time_zone: "Europe/Istanbul",
+        queue_counts: { pending: rowsIn("pending"), processing: 0, sent: rowsIn("sent"), failed: rowsIn("failed") },
+        sender_paused: this.senderPaused,
+        send_counts: { failed: sendsIn("failed"), sending: sendsIn("sending"), sent: sendsIn("sent") },
+        daily_sent: daily,
+        recent_sends: [...this.sends.keys()].reverse().slice(0, recent).map((id) => this.readSend(id, false).body),
+      },
+    };
+  }
+
   /** A send as the list, the detail and the summary give it (`Send`), or its recipients' queue. */
   private readSend(id: string, queue: boolean): Answer {
     const send = this.sends.get(id);
@@ -961,15 +1003,10 @@ export class MockSkymail {
       submitted_at: record.submitted_at,
       deadline_at: record.deadline_at,
       updated_at: record.updated_at,
-      task_id: record.task_ids[0] ?? null,
       task_ids: record.task_ids,
       last_event: record.history.at(-1) ?? null,
     };
-    const view = whole ? { ...item, ...this.approvalDetail(record, list) } : item;
-    if (!this.approvalsWithoutRecipients) return view;
-    const before: Record<string, unknown> = { ...view };
-    for (const added of ["recipients", "task_ids", "preview_recipient"]) delete before[added];
-    return before;
+    return whole ? { ...item, ...this.approvalDetail(record, list) } : item;
   }
 
   /** What only a whole request carries: how many it reaches, its preview and whom it is for, its history. */
@@ -1025,12 +1062,7 @@ export class MockSkymail {
       return PLAUSIBLE_EMAIL.test(email) ? [] : [{ field: `recipients[${index}].email`, code: "invalid_email" }];
     });
     if (malformed.length > 0) return invalid(...malformed);
-    const oneEmail = text(body.recipient_email);
-    const oneName = text(body.recipient_full_name);
-    const exactlyOne = invalid({ field: "mail_list_id", code: "exactly_one_of", params: { fields: ["mail_list_id", "recipients", "recipient_email"] } });
-    if (given.length > 0 && (oneEmail !== "" || oneName !== "")) return exactlyOne;
-    if (oneEmail !== "" && !PLAUSIBLE_EMAIL.test(oneEmail)) return invalid({ field: "recipient_email", code: "invalid_email" });
-    const recipients = oneEmail !== "" ? [{ full_name: oneName, email: oneEmail }] : given.map((person) => ({ full_name: text(person.full_name), email: text(person.email) }));
+    const recipients = given.map((person) => ({ full_name: text(person.full_name), email: text(person.email) }));
     const first = new Map<string, number>();
     const twice = recipients.flatMap((person, index) => {
       const address = person.email.toLowerCase();
@@ -1039,7 +1071,9 @@ export class MockSkymail {
       return seen === undefined ? [] : [{ field: `recipients[${index}].email`, code: "duplicate", params: { first: `recipients[${seen}].email` } }];
     });
     if (twice.length > 0) return invalid(...twice);
-    if ((listId === null) === (recipients.length === 0)) return exactlyOne;
+    if ((listId === null) === (recipients.length === 0)) {
+      return invalid({ field: "mail_list_id", code: "exactly_one_of", params: { fields: ["mail_list_id", "recipients"] } });
+    }
 
     const row = this.sendableTemplate(body.template_id);
     if (!row || !row.published_version_id) return { ok: false, answer: refuse(422, "mail_approval.template_unavailable") };

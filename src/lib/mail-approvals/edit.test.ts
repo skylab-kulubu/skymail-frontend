@@ -288,7 +288,6 @@ describe("a submission from the send form", () => {
     });
   });
 
-  // The API still takes recipient_email for one person, until ticket 21's follow-up drops it.
   it("to one person names them among the recipients, not in the fields for one", () => {
     const plan = planOf(draft({ audience: "people", list: null, people: [{ name: "Ayşe Yılmaz", email: " ayse@ornek.com " }] }));
     assert.deepEqual(approvalRequest(plan, { lists: true }), {
@@ -348,14 +347,16 @@ describe("the send form filled from a request", () => {
     submitter: { sub: "s", name: "Ayşe Yılmaz", email: "ayse@ornek.com" },
     template: { id: FREE_ID, version_id: "v", name: "Serbest Gönderim", key: FREE_TEMPLATE_KEY, republished: false },
     audience: { kind: "mailing_list", mail_list_id: LIST_ID, name: "GECEKODU katılımcıları", source: "internal", recipient_full_name: null, recipient_email: null },
+    recipients: [],
     body_variables: SUBMITTED,
     created_at: "2026-09-20T09:00:00Z",
     submitted_at: "2026-09-20T09:00:00Z",
     deadline_at: "2026-09-27T09:00:00Z",
     updated_at: "2026-09-21T09:00:00Z",
-    task_id: null,
+    task_ids: [],
     last_event: null,
     recipient_count: 3,
+    preview_recipient: { full_name: "Ayşe Yılmaz", email: "ayse@ornek.com" },
     preview: null,
     preview_error: null,
     history: [],
@@ -382,6 +383,7 @@ describe("the send form filled from a request", () => {
       approval({
         template: { id: REMINDER_ID, version_id: "v", name: "Etkinlik hatırlatması", key: "event.reminder", republished: true },
         audience: { kind: "single", mail_list_id: null, name: null, source: null, recipient_full_name: "Ali Can", recipient_email: "ali@ornek.com" },
+        recipients: [{ full_name: "Ali Can", email: "ali@ornek.com" }],
         body_variables: { EventName: "GECEKODU", DetailsUrl: "https://skyl.app/g" },
       }),
       { templates: [FREE, template()], lists, access: member },
