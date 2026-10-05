@@ -45,25 +45,25 @@ Ortam değişkenleri çalışma zamanında okunur; imaj sandbox ve production i�
 | `AUTH_URL` | Sitenin dış adresi; yerelde boş | `https://mail.yildizskylab.com` |
 | `KEYCLOAK_ISSUER` | Realm adresi | `https://e.yildizskylab.com/realms/e-skylab` |
 | `KEYCLOAK_CLIENT_ID` | Public istemci (varsayılan `skymail`) | `skymail` |
-| `API_URL` | SkyMail API'si | `https://api.yildizskylab.com/api/skymail/v1` |
+| `API_URL` | SkyMail API'si (yerelde dev proxy'si, aşağıda) | `https://api.yildizskylab.com/api/skymail/v1` |
 | `ADMIN_URL`, `FORMS_ADMIN_URL` | Kulüp değiştiricideki diğer konsollar (boşsa production) | `https://admin.yildizskylab.com` |
 
 `AUTH_SECRET`, `KEYCLOAK_ISSUER` ya da `API_URL` eksikse production sunucusu
 eksikleri yazıp kapanır.
 
-**Keycloak:** yerelde giriş için `skymail` istemcisinde şu adresler kayıtlı olmalı
-(elle eklenir):
+**Yerel geliştirme sandbox'a karşıdır.** Tarayıcı SkyMail API'sine
+`API_URL=http://localhost:3000/sandbox-api/api/skymail/v1` üzerinden gider:
+`yarn dev`, `/sandbox-api/*` isteklerini `https://sandbox-api.yildizskylab.com/*`
+adresine iletir (`next.config.ts`; yalnız `next dev`, imaj bu yönlendirmeyi
+içermez). Kulübün kenarı `http://localhost:3000`'in kulüp adlarına çapraz kökenli
+istek atmasına izin vermez; `API_URL` doğrudan bir `yildizskylab.com` adresi
+olursa `yarn dev` açılışta uyarır. Port 3000 değilse adresteki portu da değiştir.
 
-* Valid redirect URI: `http://localhost:3000/api/auth/callback/keycloak`
-* Valid post logout redirect URI: `http://localhost:3000`
-* Web origin: `http://localhost:3000`
-
-> **Bugün (2026-09-23) sandbox realm'ında (`e-skylab-sandbox`) `skymail` istemcisi
-> yok** — Keycloak "Client not found" diyor; yani sandbox'a karşı yerel giriş şu an
-> çalışmaz. Production realm'ındaki `skymail` istemcisinde de yerel adresler kayıtlı
-> değil. İnsan adımı, ikisinden biri: sandbox realm'ında `skymail` public istemcisini
-> yukarıdaki adreslerle açmak, ya da bu adresleri production `skymail` istemcisine
-> eklemek.
+**Keycloak:** yerel giriş sandbox realm'ının (`e-skylab-sandbox`) `skymail`
+istemcisiyle yapılır. İstemci `http://localhost:3000/api/auth/callback/keycloak`
+dönüş adresini ve `http://localhost:3000` çıkış dönüşünü kabul ediyor
+(2026-10-05'te denendi). Production realm'ının `skymail` istemcisine yerel adres
+eklenmez; yerel geliştirme production'a karşı yapılmaz.
 
 Canlıda geri dönüş adresi `<AUTH_URL>/api/auth/callback/keycloak`, çıkış dönüşü
 sitenin kök adresidir (Refine uygulamasının kullandığı adres).
