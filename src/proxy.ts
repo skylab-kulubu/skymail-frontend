@@ -12,5 +12,6 @@ export const config = {
   // The Mail template editor's static assets (scripts/build-editor-assets.ts)
   // hold nothing of anyone's, and the render sandbox requests its script from
   // an opaque origin, without the session cookie, so they pass unchecked.
-  matcher: ["/((?!api/auth|_next/static|_next/image|favicon.ico|skylab.svg|render-sandbox/|monaco/).*)"],
+  // The container health check (/api/health) has no session either.
+  matcher: ["/((?!api/auth|api/health$|_next/static|_next/image|favicon.ico|skylab.svg|render-sandbox/|monaco/).*)"],
 };
