@@ -6,6 +6,12 @@ const nextConfig: NextConfig = {
   // that differs between sandbox and production is read from the process
   // environment at request time, so one image serves both.
   output: "standalone",
+  // Names the build (release.yml passes the commit SHA as a Docker build
+  // argument). A start-first deploy runs the old and the new task side by side
+  // for a few seconds; a page from one that navigates or calls a Server Action
+  // on the other then reloads in full instead of mixing two builds' chunks and
+  // action IDs. Unset (local builds) Next.js behaves as before.
+  deploymentId: process.env.SKYMAIL_BUILD_ID || undefined,
   poweredByHeader: false,
   // The workspace above this repo holds other lockfiles; pin the root so the
   // traced output has the same shape locally as in the image.

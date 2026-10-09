@@ -258,6 +258,62 @@ describe("reads that need a refresh at the same moment", () => {
   });
 });
 
+// Two server processes — a start-first deploy's overlap, or more than one
+// replica — keep separate refresh stores, so both go to Keycloak with the same
+// refresh token. If the realm revokes a used refresh token, the second gets
+// invalid_grant.
+describe("reads of one session on two server processes", () => {
+  function revokingTokenEndpoint() {
+    // The first refresh wins; Keycloak refuses refresh-1 to everyone after it.
+    let issued = 0;
+    return tokenEndpoint(async () => {
+      issued += 1;
+      if (issued > 1) {
+        return Response.json({ error: "invalid_grant", error_description: "Stale token" }, { status: 400 });
+      }
+      return Response.json({
+        access_token: tokenWithRoles(["skymail:access"]),
+        refresh_token: "refresh-2",
+        expires_in: 300,
+      });
+    });
+  }
+
+  it("keep the session when the loser's access token still works", async () => {
+    const { fetch, calls } = revokingTokenEndpoint();
+    const expiring = signedIn({ expiresAt: NOW + 30_000 });
+
+    const [first, second] = await Promise.all([
+      refreshIfExpiring(expiring, options(fetch)),
+      refreshIfExpiring(expiring, options(fetch)),
+    ]);
+
+    assert.equal(calls.length, 2);
+    assert.equal(first.refreshToken, "refresh-2");
+    assert.equal(first.error, undefined);
+    // The loser comes back as it was: still valid, not flagged.
+    assert.equal(second.error, undefined);
+    assert.equal(second.refreshToken, "refresh-1");
+    assert.equal(second.accessToken, expiring.accessToken);
+  });
+
+  it("flag the loser once its access token has expired, and recover with the winner's cookie", async () => {
+    const { fetch } = revokingTokenEndpoint();
+    const expired = signedIn({ expiresAt: NOW - 1 });
+
+    const [first, second] = await Promise.all([
+      refreshIfExpiring(expired, options(fetch)),
+      refreshIfExpiring(expired, options(fetch)),
+    ]);
+
+    assert.equal(first.error, undefined);
+    assert.equal(second.error, "RefreshAccessTokenError");
+    // The next read carries the winner's cookie, which needs no refresh.
+    const next = await refreshIfExpiring(first, options(fetch));
+    assert.equal(next, first);
+  });
+});
+
 describe("a refused refresh", () => {
   // The refresh runs a minute before expiry. If Keycloak refuses it then —
   // a spent refresh token, a blip — the access token still works, and flagging
