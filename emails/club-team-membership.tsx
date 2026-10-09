@@ -14,8 +14,9 @@ export const meta: TemplateMeta = {
   // Action: `added` ise eklendi, değilse çıkarıldı. Role: `member` (takımın
   // kendisi), `leader` (LIDERLER) ya da `coordinator` (KOORDINATORLER); yönetim
   // yetkisi yalnız lider ve koordinatörlerde, metin buna göre değişir.
-  // TeamName: "KOD · Türkçe ad" (WEBLAB · Web Geliştirme), alt rolde
-  // "KOD · Liderler" / "KOD · Koordinatörler". LeaderName boş gelebilir.
+  // TeamName: takımın "KOD · Türkçe ad"ı (WEBLAB · Web Geliştirme), lider ve
+  // koordinatör değişikliklerinde de; rol Role ile gelir. Role eksikse metin
+  // üye metnine düşer. LeaderName boş gelebilir.
   variables: ["TeamName", "Action", "Role", "EffectiveAt", "LeaderName"],
   sample: {
     TeamName: "WEBLAB · Web Geliştirme",
@@ -50,20 +51,25 @@ export default function ClubTeamMembership() {
 
       <Paragraph style={{ marginTop: "18px" }}>
         {added}
-        {ifEq("Role", "member")}
-        <Strong>{v("TeamName")}</Strong> takımına üye olarak eklendin. Aramıza hoş geldin!
+        {leader}
+        <Strong>{v("TeamName")}</Strong> takımına lider olarak eklendin. Takımın etkinliklerini ve içeriklerini
+        yönetme yetkilerin hesabına tanımlandı.
+        {coordinator}
+        <Strong>{v("TeamName")}</Strong> takımına koordinatör olarak eklendin. Takımın etkinliklerini ve içeriklerini
+        yönetme yetkilerin hesabına tanımlandı.
         {elseBranch}
-        <Strong>{v("TeamName")}</Strong> grubuna eklendin. Takımın etkinliklerini ve içeriklerini yönetme yetkilerin
-        hesabına tanımlandı.
+        <Strong>{v("TeamName")}</Strong> takımına üye olarak eklendin. Aramıza hoş geldin!
         {end}
         {elseBranch}
-        {ifEq("Role", "member")}
+        {leader}
+        <Strong>{v("TeamName")}</Strong> takımındaki liderlik görevin ve ona bağlı yönetim yetkilerin sona erdi.
+        Değişiklik yalnız bu görevi kapsar: takıma ayrıca üyeysen o üyeliğin sürüyor, SKY LAB üyeliğin de devam ediyor.
+        {coordinator}
+        <Strong>{v("TeamName")}</Strong> takımındaki koordinatörlük görevin ve ona bağlı yönetim yetkilerin sona erdi.
+        Değişiklik yalnız bu görevi kapsar: takıma ayrıca üyeysen o üyeliğin sürüyor, SKY LAB üyeliğin de devam ediyor.
+        {elseBranch}
         <Strong>{v("TeamName")}</Strong> takımındaki üyeliğin sona erdi. Takıma özel izinlerin hesabından kaldırıldı;
         SKY LAB üyeliğin devam ediyor.
-        {elseBranch}
-        <Strong>{v("TeamName")}</Strong> grubundan çıkarıldın; takımdaki bu görevin ve ona bağlı yönetim yetkilerin
-        sona erdi. Değişiklik yalnız bu görevi kapsar: takıma ayrıca üyeysen o üyeliğin sürüyor, SKY LAB üyeliğin de
-        devam ediyor.
         {end}
         {end}
       </Paragraph>
