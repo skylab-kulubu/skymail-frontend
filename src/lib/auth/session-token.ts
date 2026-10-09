@@ -136,8 +136,20 @@ const SHARED_RESULT_MS = 30_000;
  * e-skylab-keycloak's reconcile scripts do not set revokeRefreshToken, so
  * the realm should be on Keycloak's default (off, a used refresh token keeps
  * working until the SSO session ends) — but the realm is partly managed by
- * hand, so this does not rely on it. The store lives in one server process;
- * the image runs one.
+ * hand, so this does not rely on it.
+ *
+ * The store lives in one server process. A start-first deploy runs two for a
+ * few seconds, and the service may run several replicas; each has its own
+ * store, so reads of one session that land on different processes each go to
+ * Keycloak. With the realm's default (Revoke Refresh Token off) that is only
+ * extra traffic: both refreshes succeed. With it on, the second process gets
+ * `invalid_grant`. Refreshes start EXPIRY_MARGIN_MS before expiry, so the
+ * access token usually still works then and the session is kept unflagged
+ * (refreshIfExpiring); the next read carries the winner's cookie. Only a read
+ * after the access token has expired is flagged — and if its response sets the
+ * cookie last, the person has to sign in again. A retry here would not help:
+ * the losing request only has the spent refresh token. Keep the realm setting
+ * off while SkyMail runs more than one process.
  */
 export type RefreshStore = {
   run(refreshToken: string, attempt: () => Promise<Issued | null>, now: () => number): Promise<Issued | null>;
