@@ -35,7 +35,7 @@ zaman verdiği değişkenler kullanılır.
 | Mail Onayı · Onayını Bekliyor | `mail.approval-requested` | Onayını bekleyen bir gönderim var | `RequesterName`, `TemplateName`, `AudienceName`, `AudienceKind`, `RecipientCount`, `PreviewUrl`, `ApproveUrl` |
 | Mail Onayı · Sonuçlandı | `mail.approval-resolved` | {{if eq .Decision `approved`}}Gönderimin onaylandı ve gitti{{else if eq .Decision `rejected`}}Gönderimin reddedildi{{else if eq .Decision `returned`}}Gönderimin sana geri döndü{{else if eq .Decision `expired`}}Gönderimin süresi doldu{{else if eq .Decision `declined`}}Gönderimdeki düzenleme kabul edilmedi{{else}}Gönderim isteğin sonuçlandı{{end}} | `TemplateName`, `AudienceName`, `AudienceKind`, `RecipientCount`, `Decision`, `DecidedBy`, `DecisionNote`, `RequestUrl`, `DeadlineAt` |
 | Operasyon · Gönderim Hatası | `ops.send-failed` | SkyMail gönderiminde hata | `TaskId`, `TemplateName`, `FailedCount`, `TotalCount`, `FirstError`, `TaskUrl` |
-| Kulüp · Takım Üyeliği Değişti | `club.team-membership` | SKY LAB takım üyeliğinde değişiklik | `TeamName`, `Action`, `EffectiveAt`, `LeaderName` |
+| Kulüp · Takım Üyeliği Değişti | `club.team-membership` | SKY LAB takım üyeliğinde değişiklik | `TeamName`, `Action`, `Role`, `EffectiveAt`, `LeaderName` |
 
 🔒 = sistem şablonu: arşivlenemez, anahtarı değiştirilemez.
 
@@ -61,4 +61,4 @@ zaman verdiği değişkenler kullanılır.
 - **Mail Onayı · Onayını Bekliyor** (`mail.approval-requested`) — SkyMail, gönderme yetkisi olmayan biri taslak gönderdiğinde onaycılara (ADR-0031, CONTEXT.md "Mail onayı", ticket 19).
 - **Mail Onayı · Sonuçlandı** (`mail.approval-resolved`) — SkyMail, bir onay isteği sonuçlandığında. approved/rejected/returned/expired talebi açana, declined onaycılara gider (ADR-0031, ticket 19).
 - **Operasyon · Gönderim Hatası** (`ops.send-failed`) — SkyMail, bir görevdeki mailler yeniden denemeler bittikten sonra da gönderilemediğinde, gönderimi başlatan kişiye. NOT: bu uyarıyı gönderen kod henüz yazılmadı.
-- **Kulüp · Takım Üyeliği Değişti** (`club.team-membership`) — Superadmin'de bir kişi takıma eklendiğinde veya çıkarıldığında. NOT: gönderim kodu henüz yazılmadı.
+- **Kulüp · Takım Üyeliği Değişti** (`club.team-membership`) — core-backend, admin panelinde bir kişi bir takıma ya da takımın LIDERLER/KOORDINATORLER alt grubuna eklendiğinde veya oradan çıkarıldığında; değişikliği kuyruğa yazar ve SkyMail'e anahtarla gönderir (core-backend#215, docs/team-membership-mail.md).
