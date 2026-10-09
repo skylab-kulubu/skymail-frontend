@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Chip, Cta, DetailRow, Heading, Paragraph, Shell, Strong } from "./theme";
-import { elseBranch, end, ifEq, ifSet, v } from "./go";
+import { elseBranch, elseIfEq, end, ifEq, ifSet, v } from "./go";
 import type { TemplateMeta } from "./types";
 
 export const meta: TemplateMeta = {
@@ -10,12 +10,17 @@ export const meta: TemplateMeta = {
   system: false,
   brand: "account",
   trigger:
-    "Superadmin'de bir kişi takıma eklendiğinde veya çıkarıldığında. NOT: gönderim kodu henüz yazılmadı.",
-  // Action `added` ise eklendi, değilse çıkarıldı olarak render edilir.
-  variables: ["TeamName", "Action", "EffectiveAt", "LeaderName"],
+    "core-backend, admin panelinde bir kişi bir takıma ya da takımın LIDERLER/KOORDINATORLER alt grubuna eklendiğinde veya oradan çıkarıldığında; değişikliği kuyruğa yazar ve SkyMail'e anahtarla gönderir (core-backend#215, docs/team-membership-mail.md).",
+  // Action: `added` ise eklendi, değilse çıkarıldı. Role: `member` (takımın
+  // kendisi), `leader` (LIDERLER) ya da `coordinator` (KOORDINATORLER); yönetim
+  // yetkisi yalnız lider ve koordinatörlerde, metin buna göre değişir.
+  // TeamName: "KOD · Türkçe ad" (WEBLAB · Web Geliştirme), alt rolde
+  // "KOD · Liderler" / "KOD · Koordinatörler". LeaderName boş gelebilir.
+  variables: ["TeamName", "Action", "Role", "EffectiveAt", "LeaderName"],
   sample: {
-    TeamName: "WEBLAB",
+    TeamName: "WEBLAB · Web Geliştirme",
     Action: "added",
+    Role: "member",
     EffectiveAt: "22.09.2026",
     LeaderName: "Fatih Naz",
   },
@@ -23,11 +28,18 @@ export const meta: TemplateMeta = {
 
 export default function ClubTeamMembership() {
   const added = ifEq("Action", "added");
+  const leader = ifEq("Role", "leader");
+  const coordinator = elseIfEq("Role", "coordinator");
 
   return (
     <Shell preview="SKY LAB takım üyeliğinde bir değişiklik oldu." brand="account">
       <Heading>
-        {added}Takıma Eklendin{elseBranch}Takım Üyeliğin Sona Erdi{end}
+        {added}
+        {leader}Takım Liderliğine Eklendin{coordinator}Takım Koordinatörlüğüne Eklendin{elseBranch}Takıma Eklendin{end}
+        {elseBranch}
+        {leader}Takım Liderliğin Sona Erdi{coordinator}Takım Koordinatörlüğün Sona Erdi{elseBranch}Takım Üyeliğin Sona Erdi
+        {end}
+        {end}
       </Heading>
 
       {added}
@@ -38,21 +50,31 @@ export default function ClubTeamMembership() {
 
       <Paragraph style={{ marginTop: "18px" }}>
         {added}
-        <Strong>{v("TeamName")}</Strong> takımına eklendin. Takımın etkinliklerini ve içeriklerini yönetme yetkilerin
-        hesabına tanımlandı.
+        {ifEq("Role", "member")}
+        <Strong>{v("TeamName")}</Strong> takımına üye olarak eklendin. Aramıza hoş geldin!
         {elseBranch}
-        <Strong>{v("TeamName")}</Strong> takımındaki üyeliğin sona erdi. Takıma özel yetkilerin hesabından kaldırıldı;
+        <Strong>{v("TeamName")}</Strong> grubuna eklendin. Takımın etkinliklerini ve içeriklerini yönetme yetkilerin
+        hesabına tanımlandı.
+        {end}
+        {elseBranch}
+        {ifEq("Role", "member")}
+        <Strong>{v("TeamName")}</Strong> takımındaki üyeliğin sona erdi. Takıma özel izinlerin hesabından kaldırıldı;
         SKY LAB üyeliğin devam ediyor.
+        {elseBranch}
+        <Strong>{v("TeamName")}</Strong> grubundan çıkarıldın; takımdaki bu görevin ve ona bağlı yönetim yetkilerin
+        sona erdi. Değişiklik yalnız bu görevi kapsar: takıma ayrıca üyeysen o üyeliğin sürüyor, SKY LAB üyeliğin de
+        devam ediyor.
+        {end}
         {end}
       </Paragraph>
 
       <div style={{ marginTop: "24px" }}>
         <DetailRow label="Takım" value={v("TeamName")} />
-        {ifSet("EffectiveAt")}
-        <DetailRow label="Geçerlilik" value={v("EffectiveAt")} />
-        {end}
         {ifSet("LeaderName")}
+        <DetailRow label="Geçerlilik" value={v("EffectiveAt")} />
         <DetailRow label="İşlemi yapan" value={v("LeaderName")} last />
+        {elseBranch}
+        <DetailRow label="Geçerlilik" value={v("EffectiveAt")} last />
         {end}
       </div>
 
