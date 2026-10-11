@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Text } from "@react-email/components";
-import { Cta, DetailRow, Heading, Label, Paragraph, Shell, Strong, colors, fontStack } from "./theme";
+import { Cta, DetailRow, Heading, Label, Paragraph, Shell, Strong, TextLink, colors, fontStack } from "./theme";
 import { v } from "./go";
 import type { TemplateMeta } from "./types";
 
@@ -68,6 +68,11 @@ export default function CoreWelcome() {
         Etkinliklerimizi, projelerimizi ve başvuruları <Strong>yildizskylab.com</Strong> üzerinden takip edebilirsin.
         Hesabınla ilgili her şeyi (parola, geçiş anahtarı, e-posta adreslerin) <Strong>my.yildizskylab.com</Strong>
         {" "}adresinden kendin yönetirsin.
+      </Paragraph>
+
+      <Paragraph>
+        Okul e-postanla katıldıysan: mezun olunca okul adresin kapanabilir. Kişisel e-postanı eklemek için:{" "}
+        <TextLink href="https://my.yildizskylab.com/email?intent=add-personal">my.yildizskylab.com/email</TextLink>
       </Paragraph>
 
       <Cta href="https://yildizskylab.com">Ekosisteme Göz At</Cta>
