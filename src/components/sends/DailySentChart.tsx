@@ -2,13 +2,13 @@
 
 // SkyForms' dashboard trend chart (forms-frontend `src/app/admin/page.js`,
 // WeeklyTrend): the same area, gradient, dots and tooltip in the house accent.
-// The accent is the theme's (--sl-accent: #e0c8e5 dark, a darker lilac light)
+// The accent is the theme's (skylcn's --primary: #e0c8e5 dark, a darker lilac light)
 // so the line still reads on the light surface.
 
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { dayTitle, formatCount, type DailyPoint } from '@/lib/sends';
 
-const ACCENT = 'var(--sl-accent)';
+const ACCENT = 'var(--primary)';
 
 function DailyTooltip({
   active,

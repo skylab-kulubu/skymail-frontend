@@ -61,7 +61,7 @@ const body = (page: Page) => page.getByRole("textbox", { name: "Gövde" });
 const dialog = (page: Page, name: string) => page.getByRole("dialog", { name });
 const decision = (page: Page) => page.getByRole("region", { name: "Karar" });
 const notice = (page: Page, text: string) => page.getByRole("status").filter({ hasText: text });
-const menu = (page: Page) => page.getByRole("navigation", { name: "Ana navigasyon" });
+const menu = (page: Page) => page.getByRole("complementary", { name: "Gezinme" });
 const listRadio = (page: Page, name: string) =>
   page.getByRole("group", { name: "Mail listesi" }).getByRole("radio", { name: new RegExp(name) });
 /** A fact about the request, by its term: its definition. */

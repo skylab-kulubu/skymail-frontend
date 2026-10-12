@@ -1,65 +1,58 @@
-@import 'tailwindcss';
-
+@import 'tailwindcss' source(none);
 /*
- * The house token set, copied from superadmin's globals.css (ADR-0017: a copy,
- * not a shared package — the two may drift).
- *
- * superadmin is dark only. SkyMail also has a light theme, and gets it without
- * rewriting the copied components: they paint with Tailwind's neutral scale,
- * white-with-opacity borders and the skylab accents, so the light theme
- * redefines those variables under [data-theme='light'] — the neutral scale runs
- * the other way, "white" becomes the ink colour, and the accents darken until
- * they read on a light surface. Markup stays identical to superadmin's, which
- * keeps later re-copies easy.
+ * Tailwind reads class names from `src` only. Left to detect sources itself,
+ * it scans the whole skylcn-ui package as soon as one of the component
+ * stylesheets below names a file in it (Tailwind 4.3).
  */
+@source '../';
+/*
+ * skylcn-ui's theme (ADR 0055) without its components, plus one stylesheet per
+ * skylcn component the panel renders, so Tailwind generates only the classes
+ * those use. A newly rendered component adds its `sources/<file>.css` here
+ * (the file is named after the component's module: Notice lives in feedback,
+ * MenuItem in menu); src/app/theme-sources.test.ts checks the list.
+ */
+@import '@skylab-kulubu/skylcn-ui/theme-base.css';
+@import '@skylab-kulubu/skylcn-ui/sources/app-shell.css';
+@import '@skylab-kulubu/skylcn-ui/sources/breadcrumbs.css';
+@import '@skylab-kulubu/skylcn-ui/sources/button.css';
+@import '@skylab-kulubu/skylcn-ui/sources/feedback.css';
+@import '@skylab-kulubu/skylcn-ui/sources/menu.css';
+@import '@skylab-kulubu/skylcn-ui/sources/page-header.css';
+@import '@skylab-kulubu/skylcn-ui/sources/task-page.css';
+@import '@skylab-kulubu/skylcn-ui/sources/tooltip.css';
 
-:root {
-  color-scheme: dark;
-  --background: #08070b;
-  --foreground: #f5f1ec;
-  --dark: #08070b;
-  --light: #f5f1ec;
-  --brand: #e0c8e5;
-  --purple: #ae7eb6;
-  --danger: #f87171;
-  --sl-bg: #08070b;
-  --sl-ink: #f5f1ec;
-  --sl-accent: #e0c8e5;
-  --logo: #e0c8e5;
+@theme inline {
+  /* Below skylcn's 3xs; a few dense chips still use it. */
+  --text-4xs: 0.5rem;
+  --text-4xs--line-height: 0.75rem;
 }
 
-:root[data-theme='light'] {
-  color-scheme: light;
-  --background: #fdfcfa;
-  --foreground: #1c1a18;
-  --brand: #8f5e98;
-  --purple: #8f5e98;
-  --danger: #c81e1e;
-  --sl-bg: #fdfcfa;
-  --sl-ink: #1c1a18;
-  --sl-accent: #8f5e98;
-  --logo: #8f5e98;
-
-  /* Neutral scale reversed: 950 is the chrome, 900 the page, 100 the ink. */
-  --color-neutral-50: #121014;
-  --color-neutral-100: #1c1a18;
-  --color-neutral-200: #2b2825;
+/*
+ * Until the pages move to skylcn's semantic classes (bg-background,
+ * text-muted-foreground, border-border), they paint with Tailwind's neutral
+ * scale, white-with-opacity lines and the status colours, which only read on a
+ * dark surface. The light theme turns those around here, onto skylcn's light
+ * tokens where one matches. The skylab accents need nothing: skylcn darkens
+ * them itself. Remove this block with the last page that uses the scale.
+ */
+[data-theme='light'] {
+  --color-neutral-50: var(--foreground-strong);
+  --color-neutral-100: var(--foreground);
+  --color-neutral-200: var(--secondary-foreground);
   --color-neutral-300: #45413c;
-  --color-neutral-400: #57524c;
-  --color-neutral-500: #6b665f;
-  --color-neutral-600: #8a847d;
+  --color-neutral-400: var(--muted-foreground);
+  --color-neutral-500: var(--subtle-foreground);
+  --color-neutral-600: var(--faint-foreground);
   --color-neutral-700: #c9c3bc;
   --color-neutral-800: #e3ded8;
-  --color-neutral-900: #fdfcfa;
-  --color-neutral-950: #ece8e3;
+  --color-neutral-900: var(--background);
+  --color-neutral-950: var(--sidebar);
 
   /* Hairlines and hover washes are "white at n%" in the dark theme. */
   --color-white: #000000;
 
-  /* Accents dark enough to read as text on a light surface. */
-  --color-skylab-300: #75447f;
-  --color-skylab-400: #8f5e98;
-  --color-skylab-500: #ae7eb6;
+  /* Status colours dark enough to read as text on a light surface. */
   --color-red-300: #b91c1c;
   --color-red-400: #c81e1e;
   --color-amber-300: #92400e;
@@ -68,144 +61,31 @@
   --color-emerald-400: #047857;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    scroll-behavior: auto !important;
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-
-/* Not `inline`: utilities must read these through variables so the light theme can swap them. */
-@theme {
-  --color-skylab-300: #f3e8f5;
-  --color-skylab-400: #ebd5ee;
-  --color-skylab-500: #e0c8e5;
-  --color-skylab-600: #c8a4ce;
-  --color-skylab-700: #ae7eb6;
-  --color-skylab-800: #8f5e98;
-  --color-skylab-900: #6e4576;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-dark: var(--dark);
-  --color-light: var(--light);
-  --color-brand: var(--brand);
-  --color-purple: var(--purple);
-  --color-danger: var(--danger);
-  --font-sans: var(--font-sans-loaded), 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono);
-  --text-4xs: 0.5rem;
-  --text-4xs--line-height: 0.75rem;
-  --text-3xs: 0.625rem;
-  --text-3xs--line-height: 0.875rem;
-  --text-2xs: 0.6875rem;
-  --text-2xs--line-height: 1rem;
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans);
-}
-
 @layer base {
-  h1 {
-    color: var(--sl-ink);
-  }
-  h2 {
-    color: var(--sl-ink);
-  }
-  select,
-  option {
-    color: var(--foreground);
-  }
-  input,
-  textarea,
-  select {
-    color: var(--foreground);
-  }
-  ::placeholder {
-    color: #a3a3a3;
-    opacity: 0.7;
-  }
-  input[type='date'],
-  input[type='time'],
-  input[type='datetime-local'] {
-    color-scheme: light;
-    color: #1a1a1a;
-    background-color: var(--light);
-  }
-}
-
-@layer base {
-  :root {
-    --scrollbar-thumb-on-light: color-mix(in srgb, var(--color-dark) 30%, transparent);
-    --scrollbar-thumb-on-dark: color-mix(in srgb, var(--color-light) 30%, transparent);
-    --scrollbar-thumb: var(--scrollbar-thumb-on-dark);
-  }
-
-  :root[data-theme='light'] {
-    --scrollbar-thumb: var(--scrollbar-thumb-on-light);
-  }
-
   body {
     scrollbar-width: thin;
     scrollbar-color: var(--scrollbar-thumb) transparent;
   }
 
-  * {
-    scrollbar-color: inherit;
+  ::placeholder {
+    color: var(--subtle-foreground);
   }
 
-  *::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+  input[type='date'],
+  input[type='time'],
+  input[type='datetime-local'] {
+    color-scheme: light;
+    color: #1a1a1a;
+    background-color: #f5f1ec;
   }
 
-  *::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  *::-webkit-scrollbar-thumb {
-    background-color: var(--scrollbar-thumb);
-    border-radius: 9999px;
-    border: 2px solid transparent;
-    background-clip: content-box;
-  }
-
-  *::-webkit-scrollbar-button {
-    display: none;
-    width: 0;
-    height: 0;
-  }
-
-  button:not(:disabled):not([disabled]),
-  input[type='button']:not(:disabled):not([disabled]),
-  input[type='submit']:not(:disabled):not([disabled]),
-  input[type='reset']:not(:disabled):not([disabled]),
-  input[type='file']:not(:disabled) {
-    cursor: pointer;
-  }
-  button:disabled,
-  button[disabled] {
-    cursor: not-allowed;
-  }
-  a[href] {
-    cursor: pointer;
-  }
-
+  /* A loading placeholder the pages still draw themselves; skylcn's is shimmer-block. */
   .shimmer {
     background: linear-gradient(
       90deg,
-      color-mix(in srgb, var(--color-white) 4%, transparent) 0%,
-      color-mix(in srgb, var(--color-white) 10%, transparent) 50%,
-      color-mix(in srgb, var(--color-white) 4%, transparent) 100%
+      color-mix(in srgb, var(--foreground) 4%, transparent) 0%,
+      color-mix(in srgb, var(--foreground) 10%, transparent) 50%,
+      color-mix(in srgb, var(--foreground) 4%, transparent) 100%
     );
     background-size: 200% 100%;
     animation: shimmer 1.4s ease-in-out infinite;
@@ -220,10 +100,9 @@ body {
     }
   }
 
-  summary {
-    cursor: pointer;
-  }
-  select:not(:disabled) {
-    cursor: pointer;
+  @media (prefers-reduced-motion: reduce) {
+    .shimmer {
+      animation: none;
+    }
   }
 }

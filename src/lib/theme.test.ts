@@ -1,50 +1,64 @@
 /**
- * The theme is chosen twice: by the inline script before the first paint, and
- * by preferredTheme() after React has rendered. If the two disagreed, the page
- * would flash from one theme to the other on every load.
+ * The move to skylcn-ui's theme keeps everyone's theme: an old "colorMode"
+ * choice carries over, nobody who never chose is switched to dark, and a
+ * choice made in skylcn's menu is never overwritten.
  */
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
-import { THEME_STORAGE_KEY, preferredTheme, themeInitScript } from "./theme";
+import { LEGACY_THEME_STORAGE_KEY, SKYLCN_THEME_STORAGE_KEY, themeMigrationScript } from "./theme";
 
-type Stored = string | null | "blocked";
-
-function browser(stored: Stored, system: "light" | "dark") {
-  const root = { dataset: {} as Record<string, string> };
+function browser(initial: Record<string, string> | "blocked") {
+  const store = new Map(initial === "blocked" ? [] : Object.entries(initial));
   const storage = {
     getItem(key: string) {
-      if (stored === "blocked") throw new Error("SecurityError");
-      return key === THEME_STORAGE_KEY ? stored : null;
+      if (initial === "blocked") throw new Error("SecurityError");
+      return store.get(key) ?? null;
+    },
+    setItem(key: string, value: string) {
+      if (initial === "blocked") throw new Error("SecurityError");
+      store.set(key, value);
     },
   };
-  const matchMedia = (query: string) => ({ matches: query === `(prefers-color-scheme: ${system})` });
-  Object.assign(globalThis, {
-    window: { localStorage: storage, matchMedia },
-    localStorage: storage,
-    matchMedia,
-    document: { documentElement: root },
-  });
-  return root;
+  Object.assign(globalThis, { window: { localStorage: storage }, localStorage: storage });
+  return store;
 }
 
 afterEach(() => {
-  for (const name of ["window", "localStorage", "matchMedia", "document"]) {
-    delete (globalThis as Record<string, unknown>)[name];
-  }
+  for (const name of ["window", "localStorage"]) delete (globalThis as Record<string, unknown>)[name];
 });
 
-describe("the theme before and after the first paint", () => {
-  for (const stored of [null, "light", "dark", "sepia", "blocked"] as const) {
-    for (const system of ["light", "dark"] as const) {
-      it(`agree with stored=${String(stored)} and a ${system} system`, () => {
-        const root = browser(stored, system);
+describe("the theme choice moving to skylcn-ui", () => {
+  for (const [legacy, expected] of [
+    ["light", "light"],
+    ["dark", "dark"],
+    [undefined, "system"],
+    ["sepia", "system"],
+  ] as const) {
+    it(`turns colorMode=${String(legacy)} into ${expected}`, () => {
+      const store = browser(legacy === undefined ? {} : { [LEGACY_THEME_STORAGE_KEY]: legacy });
 
-        new Function(themeInitScript)();
+      new Function(themeMigrationScript)();
 
-        assert.equal(root.dataset.theme, preferredTheme());
-        const expected = stored === "light" || stored === "dark" ? stored : system;
-        assert.equal(root.dataset.theme, expected);
-      });
-    }
+      assert.equal(store.get(SKYLCN_THEME_STORAGE_KEY), expected);
+    });
   }
+
+  it("leaves a choice made in skylcn alone", () => {
+    const store = browser({ [LEGACY_THEME_STORAGE_KEY]: "light", [SKYLCN_THEME_STORAGE_KEY]: "dark" });
+
+    new Function(themeMigrationScript)();
+
+    assert.equal(store.get(SKYLCN_THEME_STORAGE_KEY), "dark");
+  });
+
+  it("does not throw when storage is blocked", () => {
+    browser("blocked");
+
+    assert.doesNotThrow(() => new Function(themeMigrationScript)());
+  });
+
+  it("uses skylcn-ui's own key", async () => {
+    const { THEME_STORAGE_KEY } = await import("@skylab-kulubu/skylcn-ui");
+    assert.equal(SKYLCN_THEME_STORAGE_KEY, THEME_STORAGE_KEY);
+  });
 });

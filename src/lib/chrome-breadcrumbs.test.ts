@@ -6,7 +6,7 @@
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { backCrumb, chromeCrumbs } from "./chrome-breadcrumbs";
+import { chromeCrumbs, shellCrumbs } from "./chrome-breadcrumbs";
 
 const ID = "1a2b3c4d-0000-4000-8000-000000000001";
 const crumbs = (path: string) => chromeCrumbs(path).map((c) => [c.label, c.href, c.isPage]);
@@ -56,14 +56,38 @@ describe("the breadcrumb", () => {
   });
 });
 
-describe("the way back on a phone", () => {
-  it("is the nearest page above the current one", () => {
-    assert.equal(backCrumb(chromeCrumbs(`/mailing-lists/show/${ID}`))?.href, "/mailing-lists");
-    assert.equal(backCrumb(chromeCrumbs("/mailing-lists/create"))?.href, "/mailing-lists");
+describe("the trail in the shell header", () => {
+  const trail = (path: string) => shellCrumbs(path).map((c) => [c.label, c.href]);
+
+  it("links only pages, and names a record's page after what it shows", () => {
+    assert.deepEqual(trail(`/mailing-lists/show/${ID}`), [
+      ["Mail listeleri", "/mailing-lists"],
+      ["Detay", `/mailing-lists/show/${ID}`],
+    ]);
+    assert.deepEqual(trail(`/templates/edit/${ID}`), [
+      ["Mail template'ler", "/templates"],
+      ["Düzenle", `/templates/edit/${ID}`],
+    ]);
+    assert.deepEqual(trail(`/templates/history/${ID}`), [
+      ["Mail template'ler", "/templates"],
+      ["Sürüm geçmişi", `/templates/history/${ID}`],
+    ]);
   });
 
-  it("is none on a section's own page", () => {
-    assert.equal(backCrumb(chromeCrumbs("/mailing-lists")), null);
-    assert.equal(backCrumb(chromeCrumbs("/nope/missing")), null);
+  it("keeps a section, its create page and the home screen as they are", () => {
+    assert.deepEqual(trail("/"), [["Ana sayfa", "/"]]);
+    assert.deepEqual(trail("/mailing-lists"), [["Mail listeleri", "/mailing-lists"]]);
+    assert.deepEqual(trail("/mailing-lists/create"), [
+      ["Mail listeleri", "/mailing-lists"],
+      ["Yeni", "/mailing-lists/create"],
+    ]);
+  });
+
+  it("links nothing outside the address contract", () => {
+    assert.deepEqual(trail("/nope/missing"), [["Missing", "/nope/missing"]]);
+    assert.deepEqual(trail(`/mailing-lists/${ID}`), [
+      ["Mail listeleri", "/mailing-lists"],
+      ["Kayıt", `/mailing-lists/${ID}`],
+    ]);
   });
 });
