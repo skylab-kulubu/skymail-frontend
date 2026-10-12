@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { UserRound, Users } from 'lucide-react';
-import { Tag } from '@/components/chrome/Tag';
+import { Badge } from '@skylab-kulubu/skylcn-ui';
 import { useCan } from '@/components/layout/ConsoleContext';
 import { ROLE } from '@/lib/access';
 import { listHref } from '@/lib/mailing-lists';
@@ -31,15 +31,15 @@ export function Audience({ audience, className = '' }: { audience: AudienceLabel
 
   return (
     <span className={`flex min-w-0 items-start gap-1.5 ${className}`}>
-      <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-neutral-500" strokeWidth={1.75} aria-hidden />
+      <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-subtle-foreground" strokeWidth={1.75} aria-hidden />
       <span className="flex min-w-0 flex-col">
-        <span className="flex min-w-0 items-center gap-1.5 text-neutral-200">
+        <span className="flex min-w-0 items-center gap-1.5 text-secondary-foreground">
           {name}
-          {audience.kind === 'group' ? <Tag tone="external">Harici</Tag> : null}
-          {audience.more ? <span className="shrink-0 text-neutral-400">+{formatCount(audience.more)} kişi</span> : null}
+          {audience.kind === 'group' ? <Badge tone="warning" size="xs">Harici</Badge> : null}
+          {audience.more ? <span className="shrink-0 text-muted-foreground">+{formatCount(audience.more)} kişi</span> : null}
         </span>
         {audience.detail ? (
-          <span className="text-2xs truncate text-neutral-500">{audience.detail}</span>
+          <span className="text-2xs truncate text-subtle-foreground">{audience.detail}</span>
         ) : null}
       </span>
     </span>

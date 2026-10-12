@@ -35,11 +35,11 @@ function VersionColumn({
     <section aria-label={label} className="grid min-w-0 content-start gap-2 md:row-span-3 md:grid-rows-subgrid">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-sm font-medium text-neutral-100">{label}</h3>
+          <h3 className="text-sm font-medium text-foreground">{label}</h3>
           {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
         </div>
         {version ? (
-          <p className="text-xs text-neutral-500">
+          <p className="text-xs text-subtle-foreground">
             {versionLine(version, viewerSub)} · Main source {AUTHORING_MODE_LABEL[version.main_mode]}
           </p>
         ) : null}
@@ -50,7 +50,7 @@ function VersionColumn({
           <MailFrame title={label} html={version.html_content} sample={sample} scheme={scheme} className="h-[50vh] min-h-[320px]" />
         </>
       ) : (
-        <p className="text-xs text-neutral-500">Yayımlanmış bir sürüm yok.</p>
+        <p className="text-xs text-subtle-foreground">Yayımlanmış bir sürüm yok.</p>
       )}
     </section>
   );

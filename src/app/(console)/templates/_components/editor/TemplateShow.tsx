@@ -9,8 +9,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { FileWarning } from 'lucide-react';
-import { StateCard } from '@/components/chrome/StateCard';
-import { Tag } from '@/components/chrome/Tag';
+import { Badge, StateCard } from '@skylab-kulubu/skylcn-ui';
 import { useCan, useConsole } from '@/components/layout/ConsoleContext';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { ROLE } from '@/lib/access';
@@ -39,7 +38,7 @@ export function TemplateShow({ id }: { id: string }) {
   useEffect(() => {
     if (canWrite) router.replace(templateHref.edit(id));
   }, [canWrite, id, router]);
-  if (canWrite) return <StateCard isLoading title="Editör açılıyor" />;
+  if (canWrite) return <StateCard loading title="Editör açılıyor" />;
   return <ShowLoader id={id} />;
 }
 
@@ -50,10 +49,10 @@ function ShowLoader({ id }: { id: string }) {
     return { template, version };
   }, id);
 
-  if (state.status === 'loading') return <StateCard isLoading title="Mail template yükleniyor" />;
+  if (state.status === 'loading') return <StateCard loading title="Mail template yükleniyor" />;
   if (state.status === 'error') return <TemplateLoadFailure error={state.error} onRetry={() => void state.reload()} />;
   if (!state.data.version) {
-    return <StateCard Icon={FileWarning} tone="warning" title="Bu template'in yayımlanmış bir sürümü yok" />;
+    return <StateCard icon={FileWarning} tone="warning" title="Bu template'in yayımlanmış bir sürümü yok" />;
   }
   return <Show template={state.data.template} version={state.data.version} />;
 }
@@ -73,15 +72,15 @@ function Show({ template, version }: { template: MailTemplate; version: Template
         description={`Gönderilen sürüm ${versionLine(version, user.sub ?? null)}. Main source: ${AUTHORING_MODE_LABEL[stored.mainMode]}.`}
         meta={
           <>
-            {template.system ? <Tag tone="system">System</Tag> : null}
+            {template.system ? <Badge tone="brand" size="xs">System</Badge> : null}
             <HistoryLinks template={template} />
           </>
         }
       />
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-1.5">
-          <p className="text-xs font-medium text-neutral-300">Konu</p>
-          <p className="rounded-md border border-white/5 bg-white/[0.02] px-3 py-1.5 font-mono text-xs break-words text-neutral-200">
+          <p className="text-xs font-medium text-secondary-foreground">Konu</p>
+          <p className="rounded-md border border-border-subtle bg-card px-3 py-1.5 font-mono text-xs break-words text-secondary-foreground">
             {stored.subject}
           </p>
         </div>
@@ -99,7 +98,7 @@ function Show({ template, version }: { template: MailTemplate; version: Template
           />
           <div role="tabpanel" id="show-panel" aria-labelledby={`show-tab-${active}`} className="pt-3">
             {source === undefined ? (
-              <p className="rounded-lg border border-dashed border-white/15 px-4 py-8 text-center text-sm text-neutral-400">
+              <p className="rounded-lg border border-dashed border-border-strong px-4 py-8 text-center text-sm text-muted-foreground">
                 Bu template&apos;in {AUTHORING_MODE_LABEL[active]} kaynağı yok.
               </p>
             ) : active === 'visual' ? (
@@ -116,7 +115,7 @@ function Show({ template, version }: { template: MailTemplate; version: Template
               <pre
                 tabIndex={0}
                 aria-label={`${AUTHORING_MODE_LABEL[active]} kaynağı`}
-                className="h-[55vh] min-h-[360px] overflow-auto rounded-lg border border-white/10 bg-white/[0.02] p-4 font-mono text-xs leading-relaxed break-words whitespace-pre-wrap text-neutral-200"
+                className="h-[55vh] min-h-[360px] overflow-auto rounded-lg border border-border bg-card p-4 font-mono text-xs leading-relaxed break-words whitespace-pre-wrap text-secondary-foreground"
               >
                 {source}
               </pre>

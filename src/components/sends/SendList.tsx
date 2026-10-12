@@ -7,15 +7,12 @@
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { AlertTriangle } from 'lucide-react';
-import { FilterPills } from '@/components/chrome/FilterPills';
-import { Pagination } from '@/components/chrome/Pagination';
-import { StateCard } from '@/components/chrome/StateCard';
+import { AlertTriangle, Plus } from 'lucide-react';
+import { Button, FilterPills, Pagination, StateCard } from '@skylab-kulubu/skylcn-ui';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { ResponsiveTable } from '@/components/tables/ResponsiveTable';
 import { useConsole } from '@/components/layout/ConsoleContext';
-import { Button } from '@/components/ui/Button';
-import { CreatePageButton } from '@/components/ui/CreatePageButton';
+import { NavButton } from '@/components/common/NavButton';
 import { sectionLabel } from '@/lib/access';
 import { useApiLoad } from '@/lib/api/react';
 import { knownPageCount } from '@/lib/list-view';
@@ -75,29 +72,29 @@ export function SendList() {
       <PageHeader
         title={sectionLabel('/mail-tasks')}
         description="Her gönderimin durumu alıcılarının kuyruktaki durumundan çıkar: bir alıcısı bile başarısızsa gönderim başarısızdır."
-        actions={canCompose ? <CreatePageButton href={composeHref()}>Yeni gönderim</CreatePageButton> : undefined}
+        actions={canCompose ? <NavButton variant="primary" href={composeHref()}><Plus aria-hidden />Yeni gönderim</NavButton> : undefined}
       />
 
       <SenderPausedCheck />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <FilterPills
-          ariaLabel="Gösterilen gönderimler"
+          aria-label="Gösterilen gönderimler"
           value={view.status}
           options={STATUS_FILTERS}
-          onChange={(next) => show({ status: next, page: 1 })}
+          onValueChange={(next) => show({ status: next, page: 1 })}
         />
         {/* Present from the start, so a screen reader hears the count change with the filter. */}
-        <p className="text-xs text-neutral-500 tabular-nums" aria-live="polite">
+        <p className="text-xs text-subtle-foreground tabular-nums" aria-live="polite">
           {state.status === 'success' && state.data.total !== null ? `${formatCount(state.data.total)} gönderim` : ''}
         </p>
       </div>
 
       {state.status === 'loading' ? (
-        <StateCard isLoading title="Gönderimler yükleniyor" />
+        <StateCard loading title="Gönderimler yükleniyor" />
       ) : state.status === 'error' ? (
-        <StateCard Icon={AlertTriangle} tone="danger" title="Gönderimler yüklenemedi" description={state.error.message}>
-          <Button variant="secondary" onClick={() => void state.reload()}>
+        <StateCard icon={AlertTriangle} tone="danger" title="Gönderimler yüklenemedi" description={state.error.message}>
+          <Button variant="outline" onClick={() => void state.reload()}>
             Tekrar dene
           </Button>
         </StateCard>
@@ -114,7 +111,7 @@ export function SendList() {
                 render: (_, send) => (
                   <Link
                     href={sendHref(send.id)}
-                    className="hover:text-skylab-300 block max-w-[16rem] truncate font-medium text-neutral-100 transition-colors"
+                    className="hover:text-skylab-300 block max-w-[16rem] truncate font-medium text-foreground transition-colors"
                   >
                     {templateLabel(send)}
                   </Link>
@@ -138,12 +135,12 @@ export function SendList() {
               {
                 key: 'created_at',
                 header: 'Tarih',
-                render: (value: string) => <span className="text-neutral-400 tabular-nums">{formatSendTime(value)}</span>,
+                render: (value: string) => <span className="text-muted-foreground tabular-nums">{formatSendTime(value)}</span>,
               },
             ]}
           />
           <Pagination
-            ariaLabel="Gönderim sayfaları"
+            aria-label="Gönderim sayfaları"
             current={view.page}
             totalPages={lastPage ?? 1}
             onPageChange={(next) => show({ ...view, page: next })}
@@ -158,8 +155,8 @@ function RecipientCounts({ send }: { send: Send }) {
   const { total, parts } = recipientSummary(send.recipient_counts);
   return (
     <span className="flex flex-col">
-      <span className="text-neutral-200 tabular-nums">{recipientsLabel(total)}</span>
-      {parts.length > 0 ? <span className="text-2xs text-neutral-500 tabular-nums">{parts.join(' · ')}</span> : null}
+      <span className="text-secondary-foreground tabular-nums">{recipientsLabel(total)}</span>
+      {parts.length > 0 ? <span className="text-2xs text-subtle-foreground tabular-nums">{parts.join(' · ')}</span> : null}
     </span>
   );
 }

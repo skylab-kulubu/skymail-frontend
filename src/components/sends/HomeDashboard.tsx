@@ -7,10 +7,9 @@
 
 import Link from 'next/link';
 import { AlertTriangle, ArrowRight, Send } from 'lucide-react';
-import { StateCard } from '@/components/chrome/StateCard';
+import { Button, StateCard, StatusDot } from '@skylab-kulubu/skylcn-ui';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { RoleGate } from '@/components/layout/RoleGate';
-import { Button } from '@/components/ui/Button';
 import { ROLE, sectionLabel } from '@/lib/access';
 import { useApiQuery } from '@/lib/api/react';
 import {
@@ -29,7 +28,7 @@ import { DailySentChart } from './DailySentChart';
 import { SectionTitle } from './SectionTitle';
 import { SendItem } from './SendItem';
 import { SenderPausedNotice } from './SenderPaused';
-import { TONE, type Tone } from '@/components/chrome/ToneBadge';
+import { SKYLCN_TONE, TONE_TEXT, type Tone } from '@/components/common/ToneBadge';
 
 const DAYS = 30;
 const RECENT = 5;
@@ -51,8 +50,8 @@ function Summary() {
 
   if (state.status === 'error') {
     return (
-      <StateCard Icon={AlertTriangle} tone="danger" title="Gönderim özeti yüklenemedi" description={state.error.message}>
-        <Button variant="secondary" onClick={() => void state.reload()}>
+      <StateCard icon={AlertTriangle} tone="danger" title="Gönderim özeti yüklenemedi" description={state.error.message}>
+        <Button variant="outline" onClick={() => void state.reload()}>
           Tekrar dene
         </Button>
       </StateCard>
@@ -70,7 +69,7 @@ function Summary() {
       <section aria-label="Sayılar" className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         {summary
           ? homeTiles(summary).map((tile) => <StatTile key={tile.key} tile={tile} />)
-          : Array.from({ length: 3 }, (_, i) => <div key={i} className="shimmer h-[5.25rem] rounded-md" />)}
+          : Array.from({ length: 3 }, (_, i) => <div key={i} className="shimmer-block h-[5.25rem] rounded-md" />)}
       </section>
 
       {/* relative: the visually hidden table is positioned inside the section, not against the page. */}
@@ -86,7 +85,7 @@ function Summary() {
             <DailyTable points={points} />
           </>
         ) : (
-          <div className="shimmer h-44 w-full rounded-md sm:h-52" />
+          <div className="shimmer-block h-44 w-full rounded-md sm:h-52" />
         )}
       </section>
 
@@ -96,7 +95,7 @@ function Summary() {
           aside={
             <Link
               href={SEND_LIST_PATH}
-              className="text-2xs inline-flex items-center gap-1 font-medium text-neutral-400 transition-colors hover:text-neutral-200"
+              className="text-2xs inline-flex items-center gap-1 font-medium text-muted-foreground transition-colors hover:text-secondary-foreground"
             >
               Tümünü gör
               <ArrowRight className="h-3 w-3" aria-hidden />
@@ -153,35 +152,35 @@ const TILE_TONE: Readonly<Record<HomeTile['key'], Tone>> = {
 function StatTile({ tile }: { tile: HomeTile }) {
   // A zero is good news for pending and failed; only a number that asks for
   // attention keeps its colour.
-  const tone = TONE[tile.value === 0 && tile.key !== 'sentToday' ? 'idle' : TILE_TONE[tile.key]];
+  const tone = tile.value === 0 && tile.key !== 'sentToday' ? 'idle' : TILE_TONE[tile.key];
   const body = (
     <>
-      <span className={`size-1.5 shrink-0 rounded-full ${tone.dot}`} aria-hidden />
+      <StatusDot tone={SKYLCN_TONE[tone]} />
       <span className="min-w-0 flex-1">
-        <span className="text-2xs block truncate text-neutral-500">{tile.label}</span>
+        <span className="text-2xs block truncate text-subtle-foreground">{tile.label}</span>
         <span className="flex items-baseline gap-1.5">
-          <span className={`text-2xl leading-tight font-semibold tabular-nums ${tone.text}`}>
+          <span className={`text-2xl leading-tight font-semibold tabular-nums ${TONE_TEXT[tone]}`}>
             {formatCount(tile.value)}
           </span>
-          <span className="text-xs text-neutral-400">{tile.unit}</span>
+          <span className="text-xs text-muted-foreground">{tile.unit}</span>
         </span>
-        <span className="text-3xs block text-neutral-500">{tile.note}</span>
+        <span className="text-3xs block text-subtle-foreground">{tile.note}</span>
       </span>
       {tile.href ? (
         <ArrowRight
-          className="h-3.5 w-3.5 shrink-0 text-neutral-600 transition-all group-hover/tile:translate-x-0.5 group-hover/tile:text-neutral-400"
+          className="h-3.5 w-3.5 shrink-0 text-faint-foreground transition-all group-hover/tile:translate-x-0.5 group-hover/tile:text-muted-foreground"
           aria-hidden
         />
       ) : null}
     </>
   );
   const className =
-    'flex items-center gap-3 rounded-md border border-white/5 bg-white/[0.03] px-3.5 py-3 transition-colors';
+    'flex items-center gap-3 rounded-md border border-border-subtle bg-card px-3.5 py-3 transition-colors';
 
   return tile.href ? (
     <Link
       href={tile.href}
-      className={`group/tile ${className} focus-visible:ring-skylab-400/40 hover:border-white/10 hover:bg-white/5 focus-visible:ring-2 focus-visible:outline-none`}
+      className={`group/tile ${className} focus-visible:ring-ring hover:border-border hover:bg-accent focus-visible:ring-2 outline-hidden`}
     >
       {body}
     </Link>
@@ -193,14 +192,14 @@ function StatTile({ tile }: { tile: HomeTile }) {
 function RecentSends({ sends, timeZone }: { sends: readonly SendRecord[]; timeZone: string }) {
   if (sends.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center gap-1 rounded-md border border-white/5 py-10 text-center">
-        <Send className="mb-1 h-6 w-6 text-neutral-600" strokeWidth={1.5} aria-hidden />
-        <p className="text-xs text-neutral-400">Henüz gönderim yok.</p>
+      <div className="flex flex-col items-center justify-center gap-1 rounded-md border border-border-subtle py-10 text-center">
+        <Send className="mb-1 h-6 w-6 text-faint-foreground" strokeWidth={1.5} aria-hidden />
+        <p className="text-xs text-muted-foreground">Henüz gönderim yok.</p>
       </div>
     );
   }
   return (
-    <ul className="divide-y divide-white/5 rounded-md border border-white/5">
+    <ul className="divide-y divide-border-subtle rounded-md border border-border-subtle">
       {sends.map((send) => (
         <SendItem key={send.id} send={send} timeZone={timeZone} />
       ))}
@@ -210,14 +209,14 @@ function RecentSends({ sends, timeZone }: { sends: readonly SendRecord[]; timeZo
 
 function RecentSendsSkeleton() {
   return (
-    <div className="divide-y divide-white/5 rounded-md border border-white/5">
+    <div className="divide-y divide-border-subtle rounded-md border border-border-subtle">
       {Array.from({ length: RECENT }, (_, i) => (
         <div key={i} className="flex items-center gap-3 px-3 py-3">
           <div className="min-w-0 flex-1 space-y-1.5">
-            <div className="shimmer h-3.5 w-40 rounded-md" />
-            <div className="shimmer h-2.5 w-24 rounded-md" />
+            <div className="shimmer-block h-3.5 w-40 rounded-md" />
+            <div className="shimmer-block h-2.5 w-24 rounded-md" />
           </div>
-          <div className="shimmer hidden h-2.5 w-20 rounded-md sm:block" />
+          <div className="shimmer-block hidden h-2.5 w-20 rounded-md sm:block" />
         </div>
       ))}
     </div>

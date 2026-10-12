@@ -1,5 +1,9 @@
-import { useId, type InputHTMLAttributes, type ReactNode, type TextareaHTMLAttributes } from 'react';
-import { Field, TextArea } from '@/components/chrome/Field';
+import { Input, Label, Textarea, type InputProps } from '@skylab-kulubu/skylcn-ui';
+import { useId, type ReactNode, type TextareaHTMLAttributes } from 'react';
+
+// skylcn-ui's Input, Textarea and Label, wired here rather than with skylcn's
+// Field: the page's own ids tie the label, the hint and the error to the
+// control, the same for an input and a textarea.
 
 type Labelling = {
   label: ReactNode;
@@ -34,9 +38,9 @@ function Labelled({
   const describedBy = [hint ? hintId : null, error ? errorId : null].filter(Boolean).join(' ') || undefined;
   return (
     <div className={labelHidden ? 'min-w-0 space-y-1' : 'min-w-0 space-y-1.5'}>
-      <label htmlFor={id} className={labelHidden ? 'sr-only' : 'block text-xs font-medium text-neutral-300'}>
+      <Label htmlFor={id} className={labelHidden ? 'sr-only' : 'block'}>
         {label}
-      </label>
+      </Label>
       {children({
         id,
         'aria-invalid': error ? true : undefined,
@@ -44,12 +48,12 @@ function Labelled({
         'aria-required': required ? true : undefined,
       })}
       {hint ? (
-        <div id={hintId} className="space-y-0.5 text-xs text-neutral-500">
+        <div id={hintId} className="text-2xs text-subtle-foreground space-y-0.5 leading-relaxed">
           {hint}
         </div>
       ) : null}
       {error ? (
-        <p id={errorId} className="text-xs text-red-300">
+        <p id={errorId} className="text-2xs text-destructive">
           {error}
         </p>
       ) : null}
@@ -57,24 +61,24 @@ function Labelled({
   );
 }
 
-type FormFieldProps = InputHTMLAttributes<HTMLInputElement> & Labelling;
+type FormFieldProps = InputProps & Labelling;
 
-/** A labelled Field with what it needs said under it, and its error. */
+/** A labelled Input with what it needs said under it, and its error. */
 export function FormField({ label, labelHidden, hint, error, ...input }: FormFieldProps) {
   return (
     <Labelled label={label} labelHidden={labelHidden} hint={hint} error={error} required={input.required}>
-      {(wiring) => <Field {...wiring} {...input} />}
+      {(wiring) => <Input {...wiring} {...input} />}
     </Labelled>
   );
 }
 
 type FormTextAreaProps = TextareaHTMLAttributes<HTMLTextAreaElement> & Labelling;
 
-/** A labelled TextArea, wired as FormField wires a Field. */
+/** A labelled Textarea, wired as FormField wires an Input. */
 export function FormTextArea({ label, labelHidden, hint, error, ...textarea }: FormTextAreaProps) {
   return (
     <Labelled label={label} labelHidden={labelHidden} hint={hint} error={error} required={textarea.required}>
-      {(wiring) => <TextArea {...wiring} {...textarea} />}
+      {(wiring) => <Textarea {...wiring} {...textarea} />}
     </Labelled>
   );
 }

@@ -385,7 +385,7 @@ test("who may send what: people only with mails:send, who is told to ask about a
   await expect(page.getByRole("button", { name: "Onaya sun…" })).toBeVisible();
   await expect(send(page)).toHaveCount(0);
   await page.goto("/mail-tasks");
-  await expect(page.getByRole("heading", { name: "Gönderimler" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Gönderimler", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Yeni gönderim" })).toBeVisible();
 });
 

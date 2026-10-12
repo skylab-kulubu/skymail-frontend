@@ -16,14 +16,14 @@ export function SendPreview({ template, sample }: { template: MailTemplate | nul
   return (
     <section aria-labelledby="send-preview-heading" className="min-w-0 space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id="send-preview-heading" className="text-sm font-medium text-neutral-100">
+        <h2 id="send-preview-heading" className="text-sm font-medium text-foreground">
           Önizleme
         </h2>
         <SchemeToggle value={scheme} onChange={setScheme} />
       </div>
       {template ? (
         <>
-          <p className="text-xs text-neutral-500">
+          <p className="text-xs text-subtle-foreground">
             Yayımlanmış sürüm, bu gönderimin değerleriyle: boş bir alan mailde de boş. Alıcının adı ve adresi her alıcı için doldurulur.
           </p>
           <SubjectPreview subject={template.subject} sample={sample} />

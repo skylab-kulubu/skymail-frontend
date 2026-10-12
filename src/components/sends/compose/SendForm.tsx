@@ -19,10 +19,9 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { AlertTriangle, SearchX } from 'lucide-react';
 import { PrefillIntro } from '@/components/mail-approvals/PrefillIntro';
-import { StateCard } from '@/components/chrome/StateCard';
+import { Button, StateCard } from '@skylab-kulubu/skylcn-ui';
 import { useConsole } from '@/components/layout/ConsoleContext';
 import { RoleGate } from '@/components/layout/RoleGate';
-import { Button } from '@/components/ui/Button';
 import { ROLE } from '@/lib/access';
 import { useApiLoad } from '@/lib/api/react';
 import { approvalViewer, viewerActions } from '@/lib/mail-approvals/actions';
@@ -68,11 +67,11 @@ function ComposeCatalog({ from }: { from: From | null }) {
     },
     `${access.list ? 'templates+lists' : 'templates'}:${from?.kind ?? ''}:${from?.id ?? ''}`,
   );
-  if (catalog.status === 'loading') return <StateCard isLoading title="Template'ler ve listeler yükleniyor" />;
+  if (catalog.status === 'loading') return <StateCard loading title="Template'ler ve listeler yükleniyor" />;
   if (catalog.status === 'error') {
     if (from && catalog.error.status === 404) {
       return (
-        <StateCard Icon={SearchX} title="İstek bulunamadı" description="Bu adreste bir onay isteği yok ya da görme yetkin yok.">
+        <StateCard icon={SearchX} title="İstek bulunamadı" description="Bu adreste bir onay isteği yok ya da görme yetkin yok.">
           <Link href={APPROVAL_LIST_PATH} className="text-skylab-300 text-sm hover:underline">
             Mail onaylarına dön
           </Link>
@@ -80,8 +79,8 @@ function ComposeCatalog({ from }: { from: From | null }) {
       );
     }
     return (
-      <StateCard Icon={AlertTriangle} tone="danger" title="Gönderim formu açılamadı" description={catalog.error.message}>
-        <Button variant="secondary" onClick={() => void catalog.reload()}>
+      <StateCard icon={AlertTriangle} tone="danger" title="Gönderim formu açılamadı" description={catalog.error.message}>
+        <Button variant="outline" onClick={() => void catalog.reload()}>
           Tekrar dene
         </Button>
       </StateCard>
@@ -96,7 +95,7 @@ function ComposeCatalog({ from }: { from: From | null }) {
     if (!actions.includes('resubmit')) {
       return (
         <StateCard
-          Icon={AlertTriangle}
+          icon={AlertTriangle}
           tone="warning"
           title="Bu istek yeniden sunulamaz"
           description={`Yalnız isteği sunan, reddedilen ya da düzenlemesi kabul edilmeyen bir isteği yeniden sunabilir. Bu istek: ${APPROVAL_STATE_LABEL[state]}.`}

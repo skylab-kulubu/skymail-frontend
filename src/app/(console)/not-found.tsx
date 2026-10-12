@@ -1,10 +1,12 @@
+'use client';
+
 import Link from 'next/link';
 import { SearchX } from 'lucide-react';
-import { StateCard } from '@/components/chrome/StateCard';
+import { StateCard } from '@skylab-kulubu/skylcn-ui';
 
 export default function NotFound() {
   return (
-    <StateCard Icon={SearchX} title="Sayfa bulunamadı" description="Bu adreste bir sayfa yok.">
+    <StateCard icon={SearchX} title="Sayfa bulunamadı" description="Bu adreste bir sayfa yok.">
       <Link href="/" className="text-skylab-300 text-sm hover:underline">
         Ana sayfaya dön
       </Link>

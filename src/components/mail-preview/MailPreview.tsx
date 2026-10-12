@@ -2,9 +2,9 @@
 
 import { useMemo } from 'react';
 import { Loader2 } from 'lucide-react';
-import { FilterPills } from '@/components/chrome/FilterPills';
 import { fillSampleValues, type SampleValues } from '@/lib/mail-render/preview';
 import { previewDocument, type MailScheme } from './preview-document';
+import { FilterPills } from '@skylab-kulubu/skylcn-ui';
 
 const SCHEMES: ReadonlyArray<{ value: MailScheme; label: string }> = [
   { value: 'light', label: 'Açık tema' },
@@ -13,7 +13,7 @@ const SCHEMES: ReadonlyArray<{ value: MailScheme; label: string }> = [
 
 /** Which theme the mail previews are shown in. */
 export function SchemeToggle({ value, onChange }: { value: MailScheme; onChange: (scheme: MailScheme) => void }) {
-  return <FilterPills value={value} onChange={onChange} options={SCHEMES} ariaLabel="Önizleme teması" />;
+  return <FilterPills value={value} onValueChange={onChange} options={SCHEMES} aria-label="Önizleme teması" />;
 }
 
 /**
@@ -44,7 +44,7 @@ export function MailFrame({
     return (
       <div
         role="status"
-        className={`flex items-center justify-center gap-2 rounded-lg border border-white/10 text-xs text-neutral-500 ${className}`}
+        className={`flex items-center justify-center gap-2 rounded-lg border border-border text-xs text-subtle-foreground ${className}`}
       >
         {emptyText ?? (
           <>
@@ -63,7 +63,7 @@ export function MailFrame({
       srcDoc={srcDoc}
       style={{ colorScheme: scheme }}
       // Literal colours: the light theme redefines "white" as its ink.
-      className={`block w-full rounded-lg border border-white/10 ${scheme === 'dark' ? 'bg-[#08070b]' : 'bg-[#ffffff]'} ${className}`}
+      className={`block w-full rounded-lg border border-border ${scheme === 'dark' ? 'bg-[#08070b]' : 'bg-[#ffffff]'} ${className}`}
     />
   );
 }
@@ -72,9 +72,9 @@ export function MailFrame({
 export function SubjectPreview({ subject, sample }: { subject: string; sample: SampleValues }) {
   const filled = fillSampleValues(subject, sample, { as: 'text' });
   return (
-    <p className="text-sm break-words text-neutral-200">
-      <span className="text-2xs mr-2 font-medium tracking-[0.14em] text-neutral-500 uppercase">Konu</span>
-      {filled.trim() === '' ? <span className="text-neutral-500">—</span> : filled}
+    <p className="text-sm break-words text-secondary-foreground">
+      <span className="text-2xs mr-2 font-medium tracking-[0.14em] text-subtle-foreground uppercase">Konu</span>
+      {filled.trim() === '' ? <span className="text-subtle-foreground">—</span> : filled}
     </p>
   );
 }

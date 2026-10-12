@@ -1,8 +1,6 @@
 'use client';
 
-import { FilterPills } from '@/components/chrome/FilterPills';
-import { NoticeBox } from '@/components/chrome/Notice';
-import { Tag } from '@/components/chrome/Tag';
+import { Badge, FilterPills, Notice } from '@skylab-kulubu/skylcn-ui';
 import type { ListRow } from '@/lib/mailing-lists';
 import { formatCount } from '@/lib/sends';
 import type { SendAccess } from '@/lib/send-form/access';
@@ -21,7 +19,7 @@ const AUDIENCE_OPTIONS: ReadonlyArray<{ value: Audience; label: string }> = [
 function listChoice(list: ListRow): Choice {
   return {
     name: list.name,
-    tag: list.external ? <Tag tone="external">Harici</Tag> : undefined,
+    tag: list.external ? <Badge tone="warning" size="xs">Harici</Badge> : undefined,
     detail: list.external ? (list.groupPath ?? 'Keycloak grubu') : 'Internal liste',
   };
 }
@@ -69,9 +67,9 @@ export function AudiencePart({
   return (
     <>
       {access.list ? (
-        <FilterPills ariaLabel="Kime" value={audience} onChange={onAudience} options={AUDIENCE_OPTIONS} />
+        <FilterPills aria-label="Kime" value={audience} onValueChange={onAudience} options={AUDIENCE_OPTIONS} />
       ) : (
-        <NoticeBox tone="info">{access.listNote}</NoticeBox>
+        <Notice tone="info">{access.listNote}</Notice>
       )}
       {audience === 'list' ? (
         <>
@@ -87,7 +85,7 @@ export function AudiencePart({
             error={listProblem}
           />
           {list ? (
-            <p className="text-xs text-neutral-400" aria-live="polite">
+            <p className="text-xs text-muted-foreground" aria-live="polite">
               {sizeText(list, size)}
             </p>
           ) : null}

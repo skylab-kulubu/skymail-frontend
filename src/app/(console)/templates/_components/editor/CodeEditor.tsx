@@ -96,7 +96,7 @@ export default function CodeEditor({
       theme={theme === 'light' ? 'vs' : 'vs-dark'}
       beforeMount={configure}
       onMount={keepLf}
-      loading={<p className="p-4 text-xs text-neutral-500">Kod editörü yükleniyor…</p>}
+      loading={<p className="p-4 text-xs text-subtle-foreground">Kod editörü yükleniyor…</p>}
       height="100%"
       options={{
         ariaLabel: label,

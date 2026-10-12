@@ -14,95 +14,22 @@
  */
 @import '@skylab-kulubu/skylcn-ui/theme-base.css';
 @import '@skylab-kulubu/skylcn-ui/sources/app-shell.css';
+@import '@skylab-kulubu/skylcn-ui/sources/badge.css';
 @import '@skylab-kulubu/skylcn-ui/sources/breadcrumbs.css';
 @import '@skylab-kulubu/skylcn-ui/sources/button.css';
+@import '@skylab-kulubu/skylcn-ui/sources/dialog.css';
 @import '@skylab-kulubu/skylcn-ui/sources/feedback.css';
+@import '@skylab-kulubu/skylcn-ui/sources/field.css';
 @import '@skylab-kulubu/skylcn-ui/sources/menu.css';
 @import '@skylab-kulubu/skylcn-ui/sources/page-header.css';
+@import '@skylab-kulubu/skylcn-ui/sources/pagination.css';
+@import '@skylab-kulubu/skylcn-ui/sources/state-card.css';
 @import '@skylab-kulubu/skylcn-ui/sources/task-page.css';
 @import '@skylab-kulubu/skylcn-ui/sources/tooltip.css';
-
-@theme inline {
-  /* Below skylcn's 3xs; a few dense chips still use it. */
-  --text-4xs: 0.5rem;
-  --text-4xs--line-height: 0.75rem;
-}
-
-/*
- * Until the pages move to skylcn's semantic classes (bg-background,
- * text-muted-foreground, border-border), they paint with Tailwind's neutral
- * scale, white-with-opacity lines and the status colours, which only read on a
- * dark surface. The light theme turns those around here, onto skylcn's light
- * tokens where one matches. The skylab accents need nothing: skylcn darkens
- * them itself. Remove this block with the last page that uses the scale.
- */
-[data-theme='light'] {
-  --color-neutral-50: var(--foreground-strong);
-  --color-neutral-100: var(--foreground);
-  --color-neutral-200: var(--secondary-foreground);
-  --color-neutral-300: #45413c;
-  --color-neutral-400: var(--muted-foreground);
-  --color-neutral-500: var(--subtle-foreground);
-  --color-neutral-600: var(--faint-foreground);
-  --color-neutral-700: #c9c3bc;
-  --color-neutral-800: #e3ded8;
-  --color-neutral-900: var(--background);
-  --color-neutral-950: var(--sidebar);
-
-  /* Hairlines and hover washes are "white at n%" in the dark theme. */
-  --color-white: #000000;
-
-  /* Status colours dark enough to read as text on a light surface. */
-  --color-red-300: #b91c1c;
-  --color-red-400: #c81e1e;
-  --color-amber-300: #92400e;
-  --color-amber-400: #b45309;
-  --color-emerald-300: #047857;
-  --color-emerald-400: #047857;
-}
 
 @layer base {
   body {
     scrollbar-width: thin;
     scrollbar-color: var(--scrollbar-thumb) transparent;
-  }
-
-  ::placeholder {
-    color: var(--subtle-foreground);
-  }
-
-  input[type='date'],
-  input[type='time'],
-  input[type='datetime-local'] {
-    color-scheme: light;
-    color: #1a1a1a;
-    background-color: #f5f1ec;
-  }
-
-  /* A loading placeholder the pages still draw themselves; skylcn's is shimmer-block. */
-  .shimmer {
-    background: linear-gradient(
-      90deg,
-      color-mix(in srgb, var(--foreground) 4%, transparent) 0%,
-      color-mix(in srgb, var(--foreground) 10%, transparent) 50%,
-      color-mix(in srgb, var(--foreground) 4%, transparent) 100%
-    );
-    background-size: 200% 100%;
-    animation: shimmer 1.4s ease-in-out infinite;
-  }
-
-  @keyframes shimmer {
-    0% {
-      background-position: 100% 0;
-    }
-    100% {
-      background-position: -100% 0;
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .shimmer {
-      animation: none;
-    }
   }
 }
