@@ -96,3 +96,12 @@ export function requiredRolesFor(pathname: string): readonly Role[] {
   );
   return section?.requires ? [section.requires] : [];
 }
+
+/**
+ * A section's name in the menu. On the icon rail skylcn draws no badge, only
+ * a dot, and names the link (and its tooltip) by the label alone, so there
+ * the label itself says how many wait.
+ */
+export function navLabel(label: string, waiting: number, collapsed: boolean): string {
+  return collapsed && waiting > 0 ? `${label} (${waiting} bekleyen)` : label;
+}

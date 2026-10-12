@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { LogIn } from 'lucide-react';
 import { auth } from '@/auth';
+import { Button, Notice } from '@skylab-kulubu/skylcn-ui';
 import { AuthScreen } from '@/components/auth/AuthScreen';
-import { Button } from '@/components/ui/Button';
 import { signInWithKeycloak } from '@/lib/auth/actions';
 import { safeCallbackPath } from '@/lib/auth/redirect';
 
@@ -34,19 +34,24 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const errorText = error ? (ERROR_TEXT[error] ?? 'Giriş tamamlanamadı. Tekrar dene.') : null;
 
   return (
-    <AuthScreen Icon={LogIn} title="Giriş">
-      <p>SkyMail&apos;e SKY LAB hesabınla giriş yaparsın; diğer kulüp konsollarıyla aynı hesap.</p>
+    <AuthScreen
+      Icon={LogIn}
+      title="Giriş"
+      description="SkyMail'e SKY LAB hesabınla giriş yaparsın; diğer kulüp konsollarıyla aynı hesap."
+      actions={
+        <form action={signInWithKeycloak} className="w-full">
+          <input type="hidden" name="callbackUrl" value={callbackUrl} />
+          <Button type="submit" variant="solid" size="lg" className="w-full">
+            SKY LAB ile giriş yap
+          </Button>
+        </form>
+      }
+    >
       {errorText ? (
-        <p role="alert" className="rounded-md border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-amber-300">
+        <Notice tone="warning" role="alert">
           {errorText}
-        </p>
+        </Notice>
       ) : null}
-      <form action={signInWithKeycloak}>
-        <input type="hidden" name="callbackUrl" value={callbackUrl} />
-        <Button type="submit" className="w-full">
-          SKY LAB ile giriş yap
-        </Button>
-      </form>
     </AuthScreen>
   );
 }

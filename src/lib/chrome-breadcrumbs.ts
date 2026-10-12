@@ -1,4 +1,4 @@
-// Copied from superadmin (ADR-0017); the labels are SkyMail's sections, from
+// First copied from superadmin (ADR-0017); the labels are SkyMail's sections, from
 // the one list the menu uses. Unlike the copy, a crumb says whether its
 // address is a page, so a segment without one is shown as text, not a link
 // to a 404.
@@ -56,7 +56,20 @@ export function chromeCrumbs(pathname: string): ChromeCrumb[] {
   });
 }
 
-/** Where the phone's back link goes: the nearest page above the current one, if any. */
-export function backCrumb(crumbs: readonly ChromeCrumb[]): ChromeCrumb | null {
-  return crumbs.slice(0, -1).findLast((crumb) => crumb.isPage) ?? null;
+/**
+ * The trail skylcn's Breadcrumbs draws, where every crumb but the last is a
+ * link (and on a phone the one before the last is the way back). A segment
+ * without a page of its own is left out; the action segment of a record's
+ * address (Detay, Düzenle, Sürüm geçmişi) names the record's page instead of
+ * the id's "Kayıt".
+ */
+export function shellCrumbs(pathname: string): { href: string; label: string }[] {
+  const crumbs = chromeCrumbs(pathname);
+  const last = crumbs[crumbs.length - 1];
+  const beforeLast = crumbs[crumbs.length - 2];
+  const label = beforeLast && !beforeLast.isPage && last.label === 'Kayıt' ? beforeLast.label : last.label;
+  return [
+    ...crumbs.slice(0, -1).filter((crumb) => crumb.isPage),
+    { href: last.href, label },
+  ].map(({ href, label: name }) => ({ href, label: name }));
 }

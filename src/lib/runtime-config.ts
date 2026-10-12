@@ -15,6 +15,8 @@ export type PublicConfig = Readonly<{
   apiUrl: string;
   /** The other club consoles, for the club switcher. */
   consoles: readonly ConsoleLink[];
+  /** The account center, where a person edits their own profile and sign-in (the user menu links it). */
+  accountUrl: string;
 }>;
 
 /** Variables the server cannot start a sign-in or call the API without. */
@@ -59,5 +61,6 @@ export function publicConfig(): PublicConfig {
         href: read("FORMS_ADMIN_URL") ?? "https://forms.yildizskylab.com/admin",
       },
     ],
+    accountUrl: read("ACCOUNT_URL") ?? "https://my.yildizskylab.com",
   };
 }
