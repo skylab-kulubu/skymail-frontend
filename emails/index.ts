@@ -35,6 +35,8 @@ import MailApprovalRequested, { meta as mailApprovalRequested } from "./mail-app
 import MailApprovalResolved, { meta as mailApprovalResolved } from "./mail-approval-resolved";
 import OpsSendFailed, { meta as opsSendFailed } from "./ops-send-failed";
 import ClubTeamMembership, { meta as clubTeamMembership } from "./club-team-membership";
+import ClubRoleMembership, { meta as clubRoleMembership } from "./club-role-membership";
+import ClubGroupMembership, { meta as clubGroupMembership } from "./club-group-membership";
 
 export interface EmailTemplate {
   meta: TemplateMeta;
@@ -68,6 +70,8 @@ export const templates: EmailTemplate[] = [
   { meta: mailApprovalResolved, Component: MailApprovalResolved },
   { meta: opsSendFailed, Component: OpsSendFailed },
   { meta: clubTeamMembership, Component: ClubTeamMembership },
+  { meta: clubRoleMembership, Component: ClubRoleMembership },
+  { meta: clubGroupMembership, Component: ClubGroupMembership },
 ];
 
 export function findTemplate(key: string): EmailTemplate | undefined {
