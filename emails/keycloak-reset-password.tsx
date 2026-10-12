@@ -7,6 +7,7 @@ export const meta: TemplateMeta = {
   name: "Keycloak · Parola Sıfırlama",
   subject: "SKY LAB parola sıfırlama isteği",
   system: true,
+  contentSensitive: true,
   brand: "account",
   trigger: "Keycloak, giriş ekranında \"parolamı unuttum\" akışında.",
   variables: ["link", "linkExpirationMinutes", "firstName", "username", "realmDisplayName", "subjectKey"],

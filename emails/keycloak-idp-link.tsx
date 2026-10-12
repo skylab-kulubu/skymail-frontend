@@ -7,6 +7,7 @@ export const meta: TemplateMeta = {
   name: "Keycloak · YTÜ Hesabı Bağlama",
   subject: "YTÜ hesabını SKY LAB hesabına bağla",
   system: true,
+  contentSensitive: true,
   brand: "account",
   trigger: "Keycloak, YTÜ Microsoft kimliği mevcut bir SKY LAB hesabına bağlanırken (IdP link).",
   variables: ["link", "linkExpirationMinutes", "firstName", "username", "realmDisplayName", "subjectKey"],

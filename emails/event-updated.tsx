@@ -8,6 +8,7 @@ export const meta: TemplateMeta = {
   name: "Etkinlik · Güncellendi",
   subject: `${v("EventName")} etkinliğinde değişiklik var`,
   system: false,
+  contentSensitive: false,
   brand: "skylab",
   trigger:
     "Etkinliğin saati veya yeri değiştiğinde, bileti olan herkese. NOT: gönderim kodu henüz yazılmadı.",

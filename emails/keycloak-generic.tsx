@@ -9,6 +9,7 @@ export const meta: TemplateMeta = {
   name: "Keycloak · Genel Sistem Postası",
   subject: "SKY LAB hesap bildirimi",
   system: true,
+  contentSensitive: true,
   brand: "account",
   trigger:
     "Keycloak gönderici SPI'ın yedeği: eşlenmemiş bir sistem postası (ileride eklenecek bir required action gibi) bu anahtara düşer. subjectKey hangi posta olduğunu söyler.",

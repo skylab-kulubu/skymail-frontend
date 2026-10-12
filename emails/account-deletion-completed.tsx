@@ -9,6 +9,7 @@ export const meta: TemplateMeta = {
   name: "Hesap Silindi",
   subject: "SKY LAB hesabın silindi",
   system: true,
+  contentSensitive: true,
   brand: "account",
   trigger: "Account center, anonimleştirme tamamlandığında. Bu, bu adrese gönderdiğimiz son postadır.",
   variables: ["CompletedAt", "RetainedDataNote"],

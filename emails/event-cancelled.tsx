@@ -9,6 +9,7 @@ export const meta: TemplateMeta = {
   name: "Etkinlik · İptal Edildi",
   subject: `${v("EventName")} iptal edildi`,
   system: false,
+  contentSensitive: false,
   brand: "skylab",
   trigger: "Etkinlik iptal edildiğinde, bileti olan herkese. NOT: gönderim kodu henüz yazılmadı.",
   variables: ["EventName", "CancelReason", "ContactEmail"],

@@ -8,6 +8,7 @@ export const meta: TemplateMeta = {
   name: "Mail Onayı · Onayını Bekliyor",
   subject: "Onayını bekleyen bir gönderim var",
   system: false,
+  contentSensitive: false,
   brand: "skylab",
   trigger:
     "SkyMail, gönderme yetkisi olmayan biri taslak gönderdiğinde onaycılara (ADR-0031, CONTEXT.md \"Mail onayı\", ticket 19).",

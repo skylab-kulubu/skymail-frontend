@@ -9,6 +9,7 @@ export const meta: TemplateMeta = {
   name: "Etkinlik · Bilet Oluşturuldu",
   subject: `${v("EventName")} biletin hazır`,
   system: false,
+  contentSensitive: true,
   brand: "skylab",
   trigger:
     "core-backend, Member apply / Guest apply / Apply-for-other bir Ticket yazdığında. NOT: bu gönderimi yapan kod henüz yazılmadı.",

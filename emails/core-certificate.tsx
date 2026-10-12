@@ -9,6 +9,7 @@ export const meta: TemplateMeta = {
   name: "Katılım Sertifikası",
   subject: "Katılım sertifikan hazır",
   system: true,
+  contentSensitive: false,
   brand: "skylab",
   trigger:
     "core-backend, yoklama kesinleştikten sonra sertifika üretildiğinde (SKYMAIL_CERTIFICATE_TEMPLATE_ID, certificate/service.go).",

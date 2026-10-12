@@ -196,6 +196,7 @@ interface SeedPayload {
   plain_text_content: string;
   react_email_content: string;
   system: boolean;
+  content_sensitive: boolean;
   contract_required_variables: NonNullable<TemplateMeta["requiredVariables"]>;
 }
 
@@ -220,6 +221,7 @@ export async function runSeed(run: SeedRun): Promise<number> {
         plain_text_content: rendered.plainText,
         react_email_content: source,
         system: meta.system,
+        content_sensitive: meta.contentSensitive,
         // The repo is where the sending service's contract is known, so the
         // seed always sends it: none declared is an empty set, not a set left
         // alone.

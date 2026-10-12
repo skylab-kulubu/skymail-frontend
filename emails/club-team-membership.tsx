@@ -8,6 +8,7 @@ export const meta: TemplateMeta = {
   name: "Kulüp · Takım Üyeliği Değişti",
   subject: "SKY LAB takım üyeliğinde değişiklik",
   system: false,
+  contentSensitive: false,
   brand: "account",
   trigger:
     "core-backend, admin panelinde bir kişi bir takıma ya da takımın LIDERLER/KOORDINATORLER alt grubuna eklendiğinde veya oradan çıkarıldığında; değişikliği kuyruğa yazar ve SkyMail'e anahtarla gönderir (core-backend#215, docs/team-membership-mail.md).",

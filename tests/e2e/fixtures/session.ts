@@ -43,6 +43,8 @@ export const ROLES = {
   watcher: ["skymail:access", "skymail:templates:read", "skymail:mails:read"],
   /** Reads templates and lists and sends nothing: submits for approval (ticket 20). */
   member: ["skymail:access", "skymail:templates:read", "skymail:lists:read"],
+  /** SkyMail's administrator: reads every send's content but a sensitive one's, single mail included (skymail:system-mails:read). */
+  admin: ["skymail:access", "skymail:templates:read", "skymail:lists:read", "skymail:mails:read", "skymail:system-mails:read"],
   /** Decides sends submitted for approval; reads templates and sends, sends nothing itself. */
   approver: ["skymail:access", "skymail:templates:read", "skymail:mails:read", "skymail:mails:approve"],
 } as const;

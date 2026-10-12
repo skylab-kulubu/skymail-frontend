@@ -19,6 +19,7 @@ export const meta: TemplateMeta = {
     elseIfEq("Decision", "declined") + "Gönderimdeki düzenleme kabul edilmedi" +
     elseBranch + "Gönderim isteğin sonuçlandı" + end,
   system: false,
+  contentSensitive: false,
   brand: "skylab",
   trigger:
     "SkyMail, bir onay isteği sonuçlandığında. approved/rejected/returned/expired talebi açana, declined onaycılara gider (ADR-0031, ticket 19).",

@@ -43,10 +43,58 @@ export function forceColorScheme(html: string, scheme: MailScheme): string {
 }
 
 /**
+ * Whether a sent mail may reach the network: blocked until the operator asks
+ * to see its images. A mail's images, fonts and stylesheets are requests to
+ * wherever the mail points, a tracking pixel among them, and the operator
+ * reading a sent mail must not be counted as its recipient opening it.
+ */
+export type RemoteContent = "blocked" | "allowed";
+
+/**
+ * The Content-Security-Policy a sent mail is shown under. Nothing is fetched
+ * while blocked: images and fonts only from data: URLs, styles only inline.
+ * Allowed, images, fonts and stylesheets may come over https. Never a script,
+ * a frame, a form's submission or a base URL; the frame's empty sandbox stops
+ * scripts too, the policy keeps that true whatever the frame becomes.
+ */
+export function contentPolicy(remote: RemoteContent): string {
+  const https = remote === "allowed" ? " https:" : "";
+  return [
+    "default-src 'none'",
+    `img-src data:${https}`,
+    `font-src data:${https}`,
+    `style-src 'unsafe-inline'${https}`,
+    "form-action 'none'",
+    "base-uri 'none'",
+  ].join("; ");
+}
+
+const LEADING_DOCTYPE = /^\s*<!doctype[^>]*>/i;
+
+/**
+ * `html` with the policy as its first element. A <meta> policy governs only
+ * what the parser meets after it, so it goes before anything of the mail's:
+ * right after a leading doctype (which keeps the document in standards
+ * mode), at the very start otherwise. Searching for the mail's own <head>
+ * would not do: the first one in the text can sit in a comment.
+ */
+export function withRemoteContentPolicy(html: string, { remote }: { remote: RemoteContent }): string {
+  const meta = `<meta http-equiv="Content-Security-Policy" content="${contentPolicy(remote)}">`;
+  const doctype = LEADING_DOCTYPE.exec(html);
+  if (!doctype) return meta + html;
+  return doctype[0] + meta + html.slice(doctype[0].length);
+}
+
+/**
  * The document a preview frame shows for `body`: filled with `sample`, or,
  * without one, a mail the server already rendered (a request for approval's
- * preview), shown as it is.
+ * preview, a sent mail), shown as it is. `remote` puts a sent mail under the
+ * content policy above.
  */
-export function previewDocument(body: string, { scheme, sample }: { scheme: MailScheme; sample?: SampleValues }): string {
-  return forceColorScheme(sample ? fillSampleValues(body, sample) : body, scheme);
+export function previewDocument(
+  body: string,
+  { scheme, sample, remote }: { scheme: MailScheme; sample?: SampleValues; remote?: RemoteContent },
+): string {
+  const themed = forceColorScheme(sample ? fillSampleValues(body, sample) : body, scheme);
+  return remote ? withRemoteContentPolicy(themed, { remote }) : themed;
 }

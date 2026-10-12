@@ -162,6 +162,8 @@ type Row = {
   contract_required_variables: { name: string; reason: string | null }[];
   operator_required_variables: string[];
   seed_refusal: SeedRefusal | null;
+  /** Whether its sends' content is never shown; null leaves it to the kind of send. */
+  content_sensitive: boolean | null;
 };
 
 /**
@@ -214,7 +216,17 @@ type SendRecord = {
   /** Its queue: one row per recipient. */
   recipients: { full_name: string; email: string; status: QueueStatus }[];
   body_variables: Record<string, unknown>;
+  /** Queued by an approved Mail onayı request: a send to many, as a list's is. */
+  approved: boolean;
+  /** The content sweep emptied it (past retention). */
+  cleared: boolean;
 };
+
+/** Who asks a send route: what decides whether they see its content. */
+type Viewer = { sub: string; can: (...roles: string[]) => boolean };
+
+/** How many days a send's content is kept, as skymail-backend's default. */
+const CONTENT_RETENTION_DAYS = 90;
 
 /** Silinmiş kullanıcı as skymail-backend writes it (#34, internal/database/account_erasure.go). */
 export const ERASED_SUBJECT = "00000000-0000-4000-8000-000000000000";
@@ -348,6 +360,8 @@ export class MockSkymail {
     requiredVariables?: { name: string; reason: string | null }[];
     /** The Required variables operators marked. */
     operatorRequired?: string[];
+    /** Whether its sends' content is never shown; left to the kind of send when not given. */
+    contentSensitive?: boolean | null;
   }): { id: string; versionId: string } {
     const id = this.nextId("7e3a1c00");
     const at = this.now();
@@ -368,6 +382,7 @@ export class MockSkymail {
       contract_required_variables: input.requiredVariables ?? [],
       operator_required_variables: input.operatorRequired ?? [],
       seed_refusal: null,
+      content_sensitive: input.contentSensitive ?? null,
     });
     const version = this.write(id, input.author ?? TEMPLATE_SEED, null, {
       name: input.name,
@@ -427,6 +442,31 @@ export class MockSkymail {
       archived_at: null,
       recipients: (input.recipients ?? []).map((recipient) => ({ id: this.nextId("5e1d7c00"), created_at: at, updated_at: at, ...recipient })),
     });
+    return id;
+  }
+
+  /**
+   * A send already made: to a list, or to the people given (one each, as
+   * `/mail_tasks/single` does), by `sentBy`, its rows in `status`. `cleared`
+   * is one the content sweep emptied.
+   */
+  addSend(input: {
+    templateId: string;
+    listId?: string;
+    recipients?: { full_name: string; email: string }[];
+    variables?: Record<string, unknown>;
+    sentBy?: string;
+    status?: QueueStatus;
+    cleared?: boolean;
+  }): string {
+    const list = input.listId ? this.lists.get(input.listId) ?? null : null;
+    const recipients = list ? list.recipients : input.recipients ?? [];
+    const answer = this.open(this.row(input.templateId), list, recipients, { body_variables: input.variables ?? {} }, {
+      sentBy: input.sentBy,
+      status: input.status ?? "sent",
+    });
+    const id = (answer.body as { id: string }).id;
+    this.sends.get(id)!.cleared = input.cleared ?? false;
     return id;
   }
 
@@ -737,15 +777,20 @@ export class MockSkymail {
     if (method === "POST" && path === "/mail_tasks/single") {
       return can("skymail:mails:send", "skymail:mails:write") ? this.openSingleSend(asFields(body)) : refuse(403, "server.forbidden");
     }
+    const viewer: Viewer = { sub: personOf(profile).sub, can };
     if (method === "GET" && path === "/mail_tasks") {
-      const sends = [...this.sends.keys()].reverse().map((id) => this.readSend(id, false).body);
+      const sends = [...this.sends.keys()].reverse().map((id) => this.readSend(id, false, viewer).body);
       return this.page(sends, query);
     }
     if (method === "GET" && path === "/mail_tasks/summary") {
-      return can("skymail:mails:read") ? this.sendSummary(query) : refuse(403, "server.forbidden");
+      return can("skymail:mails:read") ? this.sendSummary(query, viewer) : refuse(403, "server.forbidden");
+    }
+    const contentMatch = /^\/mail_tasks\/([^/]+)\/queue\/([^/]+)\/content$/.exec(path);
+    if (method === "GET" && contentMatch) {
+      return can("skymail:mails:read") ? this.sentContent(contentMatch[1], contentMatch[2], viewer) : refuse(403, "server.forbidden");
     }
     const sendMatch = /^\/mail_tasks\/([^/]+)(\/queue)?$/.exec(path);
-    if (method === "GET" && sendMatch) return this.readSend(sendMatch[1], Boolean(sendMatch[2]));
+    if (method === "GET" && sendMatch) return this.readSend(sendMatch[1], Boolean(sendMatch[2]), viewer);
 
     if (method === "GET" && templateMatch) {
       // Every read of an archived template answers 404.
@@ -826,12 +871,26 @@ export class MockSkymail {
     list: ListFixture | null,
     recipients: readonly { full_name: string; email: string }[],
     body: Record<string, unknown>,
-    { sentBy = VIEWER.sub, status = "pending" }: { sentBy?: string; status?: QueueStatus } = {},
+    {
+      sentBy = VIEWER.sub,
+      status = "pending",
+      approved = false,
+    }: { sentBy?: string; status?: QueueStatus; approved?: boolean } = {},
   ): Answer {
     const id = this.nextId("b1c2d3e4");
     const variables = asFields(body.body_variables);
     const queue = recipients.map(({ full_name, email }) => ({ full_name, email, status }));
-    this.sends.set(id, { id, created_at: this.now(), sent_by: sentBy, template, list, recipients: queue, body_variables: variables });
+    this.sends.set(id, {
+      id,
+      created_at: this.now(),
+      sent_by: sentBy,
+      template,
+      list,
+      recipients: queue,
+      body_variables: variables,
+      approved,
+      cleared: false,
+    });
     return { status: 201, body: { id } };
   }
 
@@ -865,7 +924,7 @@ export class MockSkymail {
   }
 
   /** `GET /mail_tasks/summary`, as internal/handlers/send_summary.go answers it. */
-  private sendSummary(query: URLSearchParams): Answer {
+  private sendSummary(query: URLSearchParams, viewer: Viewer): Answer {
     const bounded = (name: string, fallback: number, upper: number) => {
       const raw = query.get(name)?.trim() ?? "";
       if (raw === "") return fallback;
@@ -880,7 +939,7 @@ export class MockSkymail {
     const sends = [...this.sends.values()];
     const rows = sends.flatMap((send) => send.recipients);
     const rowsIn = (status: QueueStatus) => rows.filter((row) => row.status === status).length;
-    const views = sends.map((send) => this.readSend(send.id, false).body as { status: "failed" | "sending" | "sent" });
+    const views = sends.map((send) => this.readSend(send.id, false, viewer).body as { status: "failed" | "sending" | "sent" });
     const sendsIn = (status: "failed" | "sending" | "sent") => views.filter((view) => view.status === status).length;
     const dayOf = (at: number) => new Date(at).toLocaleDateString("en-CA", { timeZone: "Europe/Istanbul" });
     const today = Date.parse(`${dayOf(this.clock)}T00:00:00Z`);
@@ -899,13 +958,53 @@ export class MockSkymail {
         sender_paused: this.senderPaused,
         send_counts: { failed: sendsIn("failed"), sending: sendsIn("sending"), sent: sendsIn("sent") },
         daily_sent: daily,
-        recent_sends: [...this.sends.keys()].reverse().slice(0, recent).map((id) => this.readSend(id, false).body),
+        recent_sends: [...this.sends.keys()].reverse().slice(0, recent).map((id) => this.readSend(id, false, viewer).body),
+      },
+    };
+  }
+
+  /**
+   * Whether `viewer` may open the send's content, as skymail-backend decides
+   * it (internal/handlers/sent_content.go): sensitive to no one, then the
+   * send's sender, whoever reads system mail, and for a send to many whoever
+   * sends to lists; then whether it is still kept.
+   */
+  private contentAccess(send: SendRecord, viewer: Viewer): { access: string; expires_at: string | null } {
+    const bulk = send.list !== null || send.approved;
+    const sensitive = send.template.content_sensitive ?? !bulk;
+    if (sensitive) return { access: "sensitive", expires_at: null };
+    const mayRead =
+      viewer.sub === send.sent_by || viewer.can("skymail:system-mails:read") || (bulk && viewer.can("skymail:mails:write"));
+    if (!mayRead) return { access: "restricted", expires_at: null };
+    if (send.cleared) return { access: "expired", expires_at: null };
+    return { access: "available", expires_at: new Date(Date.parse(send.created_at) + CONTENT_RETENTION_DAYS * 86_400_000).toISOString() };
+  }
+
+  /** `GET /mail_tasks/:id/queue/:rowId/content`: the template filled in for the recipient, as the mailer renders it. */
+  private sentContent(sendId: string, rowId: string, viewer: Viewer): Answer {
+    const send = this.sends.get(sendId);
+    const index = rowId.startsWith(`${sendId}-`) ? Number(rowId.slice(sendId.length + 1)) : Number.NaN;
+    const recipient = send?.recipients[index];
+    if (!send || !recipient) return refuse(404, "server.not_found");
+    const { access, expires_at } = this.contentAccess(send, viewer);
+    const answer = { id: rowId, task_id: sendId, access, subject: null, plain_text: null, html: null, expires_at: null };
+    if (access !== "available") return { status: 200, body: answer };
+    const values: Record<string, unknown> = { ...send.body_variables, Email: recipient.email, FullName: recipient.full_name };
+    const fill = (text: string) => text.replace(/\{\{\s*\.(\w+)\s*\}\}/g, (_, name: string) => String(values[name] ?? ""));
+    return {
+      status: 200,
+      body: {
+        ...answer,
+        subject: fill(send.template.subject),
+        plain_text: fill(send.template.plain_text_content),
+        html: fill(send.template.html_content),
+        expires_at,
       },
     };
   }
 
   /** A send as the list, the detail and the summary give it (`Send`), or its recipients' queue. */
-  private readSend(id: string, queue: boolean): Answer {
+  private readSend(id: string, queue: boolean, viewer: Viewer): Answer {
     const send = this.sends.get(id);
     if (!send) return refuse(404, "server.not_found");
     if (queue) {
@@ -921,6 +1020,7 @@ export class MockSkymail {
       }));
       return { status: 200, body: rows, headers: { "X-Total-Count": String(rows.length) } };
     }
+    const content = this.contentAccess(send, viewer);
     const single = send.list === null ? send.recipients[0] : null;
     const count = (status: QueueStatus) => send.recipients.filter((recipient) => recipient.status === status).length;
     const counts = { pending: count("pending"), processing: 0, sent: count("sent"), failed: count("failed") };
@@ -945,6 +1045,9 @@ export class MockSkymail {
         },
         status: counts.failed > 0 ? "failed" : counts.pending > 0 || counts.sent === 0 ? "sending" : "sent",
         recipient_counts: counts,
+        body_variables: null,
+        content_access: content.access,
+        content_expires_at: content.expires_at,
       },
     };
   }
@@ -1105,7 +1208,7 @@ export class MockSkymail {
   private sendsOf(record: ApprovalRecord, status: QueueStatus = "pending"): string[] {
     const list = record.listId ? this.lists.get(record.listId)! : null;
     const open = (recipients: readonly { full_name: string; email: string }[]) => {
-      const answer = this.open(this.row(record.templateId), list, recipients, { body_variables: record.body_variables }, { sentBy: record.submitter.sub, status });
+      const answer = this.open(this.row(record.templateId), list, recipients, { body_variables: record.body_variables }, { sentBy: record.submitter.sub, status, approved: true });
       return (answer.body as { id: string }).id;
     };
     return list ? [open(list.recipients)] : record.recipients.map((person) => open([person]));

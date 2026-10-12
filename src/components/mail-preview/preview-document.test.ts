@@ -5,7 +5,7 @@
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { forceColorScheme, previewDocument } from "./preview-document";
+import { contentPolicy, forceColorScheme, previewDocument, withRemoteContentPolicy } from "./preview-document";
 
 const MAIL = `<!DOCTYPE html><html><head><style>
 body { background-color: #f4f1f7; }
@@ -66,5 +66,46 @@ describe("a mail already rendered", () => {
     const document = previewDocument(rendered, { scheme: "dark" });
     assert.match(document, /Merhaba Ayşe, \{\{\.Gizli\}\} yazdım/);
     assert.match(document, /@media all/);
+  });
+});
+
+describe("a sent mail shown with its remote content blocked", () => {
+  const SENT = `<!DOCTYPE html><html lang="tr"><head><!-- <head> --><style>p{}</style></head><body><img src="https://iz.example.test/p.gif"><p>Merhaba</p></body></html>`;
+
+  it("puts the policy first, right after the doctype, so nothing in the mail comes before it", () => {
+    const shown = withRemoteContentPolicy(SENT, { remote: "blocked" });
+    assert.match(shown, /^<!DOCTYPE html><meta http-equiv="Content-Security-Policy" content="[^"]+">\s*<html lang="tr">/);
+    assert.equal(shown.replace(/<meta http-equiv="Content-Security-Policy" content="[^"]+">\s*/, ""), SENT);
+  });
+
+  it("puts it at the very start of a mail without a doctype", () => {
+    assert.match(withRemoteContentPolicy("<!-- <head> --><p>x</p>", { remote: "blocked" }), /^<meta http-equiv="Content-Security-Policy"/);
+    assert.match(withRemoteContentPolicy("  <html><p>x</p>", { remote: "blocked" }), /^<meta http-equiv="Content-Security-Policy"/);
+  });
+
+  it("loads nothing from the network while blocked: images and fonts only from data:, no stylesheet, script, frame or form", () => {
+    const policy = contentPolicy("blocked");
+    assert.match(policy, /default-src 'none'/);
+    assert.match(policy, /img-src data:(;|$)/);
+    assert.match(policy, /style-src 'unsafe-inline'(;|$)/);
+    assert.match(policy, /font-src data:(;|$)/);
+    assert.match(policy, /form-action 'none'/);
+    assert.match(policy, /base-uri 'none'/);
+    assert.doesNotMatch(policy, /https:|script-src|'unsafe-eval'/);
+  });
+
+  it("lets images, fonts and stylesheets come over https once the operator asks, and still no script", () => {
+    const policy = contentPolicy("allowed");
+    assert.match(policy, /img-src data: https:(;|$)/);
+    assert.match(policy, /font-src data: https:(;|$)/);
+    assert.match(policy, /style-src 'unsafe-inline' https:(;|$)/);
+    assert.match(policy, /default-src 'none'/);
+    assert.doesNotMatch(policy, /script-src|http:(?!s)/);
+  });
+
+  it("is what a sent mail's preview document carries", () => {
+    const shown = previewDocument(SENT, { scheme: "light", remote: "blocked" });
+    assert.match(shown, /^<!DOCTYPE html><meta http-equiv="Content-Security-Policy" content="default-src 'none'/);
+    assert.doesNotMatch(previewDocument(SENT, { scheme: "light" }), /Content-Security-Policy/);
   });
 });
