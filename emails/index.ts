@@ -37,6 +37,7 @@ import OpsSendFailed, { meta as opsSendFailed } from "./ops-send-failed";
 import ClubTeamMembership, { meta as clubTeamMembership } from "./club-team-membership";
 import ClubRoleMembership, { meta as clubRoleMembership } from "./club-role-membership";
 import ClubGroupMembership, { meta as clubGroupMembership } from "./club-group-membership";
+import ClubPrivilegeChange, { meta as clubPrivilegeChange } from "./club-privilege-change";
 
 export interface EmailTemplate {
   meta: TemplateMeta;
@@ -72,6 +73,7 @@ export const templates: EmailTemplate[] = [
   { meta: clubTeamMembership, Component: ClubTeamMembership },
   { meta: clubRoleMembership, Component: ClubRoleMembership },
   { meta: clubGroupMembership, Component: ClubGroupMembership },
+  { meta: clubPrivilegeChange, Component: ClubPrivilegeChange },
 ];
 
 export function findTemplate(key: string): EmailTemplate | undefined {
