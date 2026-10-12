@@ -42,30 +42,45 @@ describe("the membership mails", () => {
     });
   }
 
+  // The heading never names the board or says a membership ended: the Group
+  // may be a subgroup (/UYELER/YK/BASKAN), and the person may sit in another
+  // management Group still. The root travels in the text only.
   const roleCases: { sample: Record<string, string>; says: string[]; not: string[] }[] = [
     {
       sample: { GroupName: "YK · Yönetim Kurulu", Role: "board", Action: "added", EffectiveAt: "12.10.2026", ActorName: "Fatih Naz" },
-      says: ["Yönetim Kurulu'na Eklendin", "YK · Yönetim Kurulu grubuna eklendin", "Yönetim Kurulu'na bağlı", "Fatih Naz", "beklemiyorsan"],
-      not: ["çıkarıldın", "Denetim"],
+      says: ["Bir Yönetim Grubuna Eklendin", "YK · Yönetim Kurulu grubuna eklendin", "Yönetim Kurulu'na bağlı", "Bu grubun yönetim yetkileri", "İşlemi yapan", "Fatih Naz", "beklemiyorsan"],
+      not: ["çıkarıldın", "Denetim", "Kurulu'na Eklendin"],
+    },
+    {
+      sample: { GroupName: "BASKAN", Role: "board", Action: "removed", EffectiveAt: "12.10.2026", ActorName: "Fatih Naz" },
+      says: [
+        "Bir Yönetim Grubundan Çıkarıldın",
+        "BASKAN grubundan çıkarıldın",
+        "Yönetim Kurulu'na bağlı",
+        "Bu grup üzerinden gelen yetkiler hesabından kaldırıldı; başka gruplardan gelen yetkilerin varsa onlar sürüyor.",
+        "İşlemi yapan",
+        "beklemiyorsan",
+      ],
+      not: ["Sona Erdi", "üyeliğin devam ediyor", "yönetim yetkilerin hesabından kaldırıldı", "eklendin"],
     },
     {
       sample: { GroupName: "DK · Denetim Kurulu", Role: "audit", Action: "removed", EffectiveAt: "12.10.2026", ActorName: "" },
-      says: ["Denetim Kurulu Üyeliğin Sona Erdi", "grubundan çıkarıldın", "SKY LAB üyeliğin devam ediyor"],
-      not: ["İşlemi yapan", "eklendin"],
+      says: ["Bir Yönetim Grubundan Çıkarıldın", "Denetim Kurulu'na bağlı", "Bu grup üzerinden gelen yetkiler"],
+      not: ["İşlemi yapan", "eklendin", "Sona Erdi"],
     },
     {
       sample: { GroupName: "ADMIN", Role: "admin", Action: "added", EffectiveAt: "12.10.2026", ActorName: "" },
-      says: ["Yönetici Grubuna Eklendin", "yönetici grubu"],
+      says: ["Bir Yönetim Grubuna Eklendin", "yönetici grubuna bağlı"],
       not: ["Kurulu"],
     },
     {
       sample: { GroupName: "OPS", Role: "privileged", Action: "removed", EffectiveAt: "12.10.2026", ActorName: "" },
-      says: ["Yönetim Grubu Üyeliğin Sona Erdi"],
+      says: ["Bir Yönetim Grubundan Çıkarıldın", "yönetim gruplarından biri"],
       not: ["Kurulu"],
     },
   ];
   for (const { sample, says, not } of roleCases) {
-    it(`club.role-membership words a ${sample.Role} ${sample.Action}`, async () => {
+    it(`club.role-membership words a ${sample.Role} ${sample.Action} of ${sample.GroupName}`, async () => {
       const { html } = await rendered("club.role-membership");
       const shown = text(fillSampleValues(html, sample));
       for (const phrase of says) assert.ok(shown.includes(phrase), `missing "${phrase}" in ${shown}`);

@@ -18,6 +18,12 @@ export const meta: TemplateMeta = {
   // metne düşer. GroupName: değişen grubun kendisi, "KOD · Türkçe ad"
   // (YK · Yönetim Kurulu), alt grupta kendi adı (BASKAN). ActorName boş
   // gelebilir.
+  //
+  // Metin bilerek nötr: değişen grup kökün kendisi de olabilir bir alt grubu
+  // da (/UYELER/YK/BASKAN), kişi başka bir yönetim grubunda da olabilir. Core
+  // bunları göndermiyor; bu yüzden başlık "Kurul'a eklendin" ya da "üyeliğin
+  // sona erdi" demez, çıkarma yalnız bu grup üzerinden gelen yetkiler için
+  // konuşur.
   variables: ["GroupName", "Role", "Action", "EffectiveAt", "ActorName"],
   sample: {
     GroupName: "YK · Yönetim Kurulu",
@@ -37,13 +43,7 @@ export default function ClubRoleMembership() {
   return (
     <Shell preview="SKY LAB yönetim yetkilerinde bir değişiklik oldu." brand="account">
       <Heading>
-        {added}
-        {board}Yönetim Kurulu&apos;na Eklendin{audit}Denetim Kurulu&apos;na Eklendin{admin}Yönetici Grubuna Eklendin
-        {elseBranch}Bir Yönetim Grubuna Eklendin{end}
-        {elseBranch}
-        {board}Yönetim Kurulu Üyeliğin Sona Erdi{audit}Denetim Kurulu Üyeliğin Sona Erdi{admin}Yöneticiliğin Sona Erdi
-        {elseBranch}Yönetim Grubu Üyeliğin Sona Erdi{end}
-        {end}
+        {added}Bir Yönetim Grubuna Eklendin{elseBranch}Bir Yönetim Grubundan Çıkarıldın{end}
       </Heading>
 
       {added}
@@ -56,12 +56,16 @@ export default function ClubRoleMembership() {
         {added}
         <Strong>{v("GroupName")}</Strong> grubuna eklendin.{" "}
         {board}Bu grup SKY LAB Yönetim Kurulu&apos;na bağlı.{audit}Bu grup SKY LAB Denetim Kurulu&apos;na bağlı.
-        {admin}Bu grup SKY LAB&apos;in yönetici grubu.{elseBranch}Bu grup SKY LAB&apos;in yönetim gruplarından biri.{end}{" "}
-        Grubun yönetim yetkileri hesabına tanımlandı: yönetim panelinde kulübün üyeleri, grupları ve içerikleri
+        {admin}Bu grup SKY LAB&apos;in yönetici grubuna bağlı.{elseBranch}Bu grup SKY LAB&apos;in yönetim gruplarından biri.
+        {end}{" "}
+        Bu grubun yönetim yetkileri hesabına tanımlandı: yönetim panelinde kulübün üyeleri, grupları ve içerikleri
         üzerinde işlem yapabilirsin.
         {elseBranch}
-        <Strong>{v("GroupName")}</Strong> grubundan çıkarıldın. Bu gruba bağlı yönetim yetkilerin hesabından
-        kaldırıldı; SKY LAB üyeliğin devam ediyor.
+        <Strong>{v("GroupName")}</Strong> grubundan çıkarıldın.{" "}
+        {board}Bu grup SKY LAB Yönetim Kurulu&apos;na bağlı.{audit}Bu grup SKY LAB Denetim Kurulu&apos;na bağlı.
+        {admin}Bu grup SKY LAB&apos;in yönetici grubuna bağlı.{elseBranch}Bu grup SKY LAB&apos;in yönetim gruplarından biri.
+        {end}{" "}
+        Bu grup üzerinden gelen yetkiler hesabından kaldırıldı; başka gruplardan gelen yetkilerin varsa onlar sürüyor.
         {end}
       </Paragraph>
 
