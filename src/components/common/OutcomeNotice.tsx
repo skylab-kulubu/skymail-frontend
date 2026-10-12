@@ -29,6 +29,7 @@ export function OutcomeNotice({
     <Notice
       tone={noticeTone(notice.tone)}
       onDismiss={onDismiss}
+      dismissLabel="Bildirimi kapat"
       action={
         restore && onRestore ? (
           <Button variant="link" size="sm" pending={restoring} onClick={() => onRestore(restore)}>

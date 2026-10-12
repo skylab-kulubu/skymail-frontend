@@ -51,10 +51,10 @@ function FieldLabel({ field }: { field: VariableField }) {
 function Hint({ why, warning }: { why: string | null; warning: string | null }) {
   if (!why && !warning) return null;
   return (
-    <>
-      {why ? <p>{why}</p> : null}
-      {warning ? <p className="text-warning">{warning}</p> : null}
-    </>
+    <span className="flex flex-col gap-0.5">
+      {why ? <span>{why}</span> : null}
+      {warning ? <span className="text-warning">{warning}</span> : null}
+    </span>
   );
 }
 
