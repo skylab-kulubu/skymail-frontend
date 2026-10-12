@@ -20,8 +20,10 @@ export const meta: TemplateMeta = {
   // SubjectName: eklenen/çıkarılan kişinin adı, rol eşlemesinde ya da adı
   // gösterilemeyen kişide boş. ActorName boş gelebilir. OccurredAt:
   // "dd.MM.yyyy HH:mm" (İstanbul). RolesAdded / RolesRemoved: "client:rol"
-  // listesi, virgülle; boş gelebilir. AdminRole: değişen rollerden biri
-  // yönetici rolüyse `yes`, değilse `no` (bileşik rol `no` sayılır).
+  // listesi, virgülle (realm rolü "realm:ROL"); boş gelebilir. AdminRole:
+  // değişen rollerden biri core'un rol sınıflarına göre yönetici rolüyse
+  // (cms:access, content:write, client:admin, core izinleri, realm rolleri
+  // dahil) `yes`; uygulama rolü ya da sınıflandırılmamış rolse `no`.
   // MemberCount: rol eşlemesinde grubun alt ağacındaki kişi sayısı.
   // Core her anahtarı her zaman gönderir; uymayanlar boştur.
   variables: [
