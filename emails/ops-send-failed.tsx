@@ -9,6 +9,7 @@ export const meta: TemplateMeta = {
   name: "Operasyon · Gönderim Hatası",
   subject: "SkyMail gönderiminde hata",
   system: false,
+  contentSensitive: false,
   brand: "skylab",
   trigger:
     "SkyMail, bir görevdeki mailler yeniden denemeler bittikten sonra da gönderilemediğinde, gönderimi başlatan kişiye. NOT: bu uyarıyı gönderen kod henüz yazılmadı.",

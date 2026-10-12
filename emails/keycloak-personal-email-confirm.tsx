@@ -7,6 +7,7 @@ export const meta: TemplateMeta = {
   name: "Keycloak · Kişisel E-posta Onayı",
   subject: "Kişisel e-posta adresini doğrula",
   system: true,
+  contentSensitive: true,
   brand: "account",
   trigger:
     "Account center'da ya da ilk YTÜ girişinin sonundaki öneride kişisel e-posta eklendiğinde; 6 haneli kod, 10 dakika geçerli, yalnız isteyen kişinin açık oturumunda çalışır (K3c, ADR-0044 güncellemesi). Keycloak'tan K5 ile gelir.",

@@ -9,6 +9,7 @@ export const meta: TemplateMeta = {
   name: "Hesap Silme Talebi Alındı",
   subject: "Hesap silme talebini aldık",
   system: true,
+  contentSensitive: true,
   brand: "account",
   trigger:
     "Account center, kişi hesabını sildiğinde. Erişim anında kapanır, kişisel veriler sonra anonimleştirilir (ADR-0042). ACCOUNT_ERASURE_MODE açıldığında devreye girer.",

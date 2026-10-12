@@ -9,6 +9,7 @@ export const meta: TemplateMeta = {
   name: "Hoş Geldin",
   subject: "SKY LAB ekosistemine hoş geldin",
   system: true,
+  contentSensitive: false,
   brand: "skylab",
   trigger: "core-backend, yeni bir User ilk kez göründüğünde (SKYMAIL_WELCOME_TEMPLATE_ID).",
   // core-backend/internal/mail/mail.go gönderdiği set budur. Username YOK —

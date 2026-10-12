@@ -11,6 +11,7 @@ export const meta: TemplateMeta = {
   // it; no other variable belongs in the subject.
   subject: `SKY LAB hesabında: ${v("EventTitle")}`,
   system: true,
+  contentSensitive: true,
   brand: "account",
   trigger:
     "Account center / sky-account SPI, hesapta güvenlikle ilgili bir şey değiştiğinde: parola değişti, geçiş anahtarı eklendi/silindi, doğrulama uygulaması eklendi/kaldırıldı, yeni cihazdan giriş, tüm oturumlar kapatıldı, kullanıcı adı değişti, kişisel e-posta eklendi/kaldırıldı.",

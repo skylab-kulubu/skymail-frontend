@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { Loader2 } from 'lucide-react';
 import { fillSampleValues, type SampleValues } from '@/lib/mail-render/preview';
-import { previewDocument, type MailScheme } from './preview-document';
+import { previewDocument, type MailScheme, type RemoteContent } from './preview-document';
 import { FilterPills } from '@skylab-kulubu/skylcn-ui';
 
 const SCHEMES: ReadonlyArray<{ value: MailScheme; label: string }> = [
@@ -28,6 +28,7 @@ export function MailFrame({
   scheme,
   className = 'h-[65vh] min-h-[420px]',
   emptyText,
+  remote,
 }: {
   title: string;
   /** Null while there is nothing to show yet. */
@@ -38,8 +39,17 @@ export function MailFrame({
   className?: string;
   /** What to say instead of "preparing" when nothing is coming. */
   emptyText?: string;
+  /**
+   * A mail that went out: shown under a content policy that keeps it off the
+   * network (images, fonts, stylesheets) unless `allowed`, so opening it is
+   * never counted as its recipient opening it.
+   */
+  remote?: RemoteContent;
 }) {
-  const srcDoc = useMemo(() => (html === null ? null : previewDocument(html, { scheme, sample })), [html, scheme, sample]);
+  const srcDoc = useMemo(
+    () => (html === null ? null : previewDocument(html, { scheme, sample, remote })),
+    [html, scheme, sample, remote],
+  );
   if (srcDoc === null) {
     return (
       <div

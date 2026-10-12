@@ -9,6 +9,7 @@ export const meta: TemplateMeta = {
   name: "Birincil E-posta Değişti (eski adrese)",
   subject: "SKY LAB hesabının e-posta adresi değişti",
   system: true,
+  contentSensitive: true,
   brand: "account",
   trigger:
     "Account center, birincil e-posta değiştiğinde — ESKİ adrese gider. Yeni adres zaten doğrulama postası aldığı için bu, değişikliği kaçıran kişiye tek uyarıdır.",

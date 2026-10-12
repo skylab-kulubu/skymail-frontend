@@ -11,6 +11,7 @@ export const meta: TemplateMeta = {
   // always supplied by the compose form and can never be missing here.
   subject: v("Subject"),
   system: false,
+  contentSensitive: false,
   brand: "skylab",
   trigger: "SkyMail'de elle: alıcıları seç, konuyu ve gövdeyi yaz, gönder.",
   variables: ["Subject", "Heading", "BodyHtml", "CtaLabel", "CtaUrl"],

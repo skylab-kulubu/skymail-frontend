@@ -7,6 +7,7 @@ export const meta: TemplateMeta = {
   name: "Keycloak · E-posta Doğrulama",
   subject: "E-posta adresini doğrula",
   system: true,
+  contentSensitive: true,
   brand: "account",
   trigger: "Keycloak, hesap açılışında veya e-posta doğrulanmamışken (sky-account SPI üzerinden SkyMail'e düşer).",
   variables: ["link", "linkExpirationMinutes", "firstName", "username", "realmDisplayName", "subjectKey"],

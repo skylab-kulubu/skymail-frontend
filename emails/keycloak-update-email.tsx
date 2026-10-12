@@ -7,6 +7,7 @@ export const meta: TemplateMeta = {
   name: "Keycloak · E-posta Değişikliği Doğrulama",
   subject: "Yeni e-posta adresini doğrula",
   system: true,
+  contentSensitive: true,
   brand: "account",
   trigger: "Keycloak, kişi hesabının e-posta adresini değiştirdiğinde — doğrulama YENİ adrese gider.",
   variables: ["link", "linkExpirationMinutes", "firstName", "username", "realmDisplayName", "subjectKey"],

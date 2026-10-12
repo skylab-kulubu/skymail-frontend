@@ -9,6 +9,7 @@ export const meta: TemplateMeta = {
   name: "Etkinlik · Hatırlatma",
   subject: `Yarın: ${v("EventName")}`,
   system: false,
+  contentSensitive: true,
   brand: "skylab",
   trigger:
     "Etkinlikten bir gün önce, bileti olan herkese. NOT: zamanlayıcı ve gönderim kodu henüz yazılmadı; konu satırı T-1 varsayıyor.",

@@ -9,6 +9,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { TEST_BASE_URL, json, scriptedClient, type RecordedCall } from "./api/testing";
 import {
+  contentVisibility,
+  setContentSensitive,
   TEMPLATE_PAGE_SIZE,
   archiveTemplate,
   createTemplate,
@@ -515,5 +517,30 @@ describe("whose version it is", () => {
     assert.equal(writtenBy({ kind: "operator", sub: VIEWER, name: "Başka ad" }, VIEWER), true);
     assert.equal(writtenBy({ kind: "operator", sub: OTHER, name: "DENEME OPERATÖR" }, VIEWER), false);
     assert.equal(writtenBy({ kind: "operator", sub: null, name: null }, null), false, "no subject is nobody's");
+  });
+});
+
+describe("whether a template's sends show their content", () => {
+  it("puts the new value, hidden as true", async () => {
+    const { api, calls } = scriptedClient(json(200, { id: "t-1", content_sensitive: false }));
+    await setContentSensitive(api, "t-1", false);
+    assert.equal(calls[0].method, "PUT");
+    assert.equal(calls[0].url, `${TEST_BASE_URL}/templates/t-1/content-sensitive`);
+    assert.deepEqual(JSON.parse(calls[0].body ?? "null"), { content_sensitive: false });
+  });
+
+  it("reads as the switch shows it: on only when shown, off and locked for a credential", () => {
+    assert.equal(contentVisibility({}), null);
+    assert.deepEqual(
+      { ...contentVisibility({ content_sensitive: false, content_sensitive_locked: false }), text: "" },
+      { shown: true, locked: false, text: "" },
+    );
+    assert.equal(contentVisibility({ content_sensitive: true, content_sensitive_locked: false })?.shown, false);
+    assert.match(contentVisibility({ content_sensitive: null, content_sensitive_locked: false })?.text ?? "", /Ayarlanmadı/);
+    const locked = contentVisibility({ content_sensitive: true, content_sensitive_locked: true });
+    assert.equal(locked?.locked, true);
+    assert.equal(locked?.shown, false);
+    // Locked wins even over a row that says shown.
+    assert.equal(contentVisibility({ content_sensitive: false, content_sensitive_locked: true })?.shown, false);
   });
 });

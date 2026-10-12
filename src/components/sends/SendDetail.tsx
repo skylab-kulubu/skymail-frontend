@@ -7,14 +7,15 @@
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { ReactNode } from 'react';
-import { AlertTriangle, Inbox, SearchX } from 'lucide-react';
-import { Button, FilterPills, Pagination, StateCard } from '@skylab-kulubu/skylcn-ui';
+import { useState, type ReactNode } from 'react';
+import { AlertTriangle, Clock, Eye, Inbox, Lock, SearchX } from 'lucide-react';
+import { Button, FilterPills, Notice, Pagination, StateCard } from '@skylab-kulubu/skylcn-ui';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { DataTable } from '@/components/tables/DataTable';
 import { useApiLoad } from '@/lib/api/react';
 import {
   audienceLabel,
+  contentNote,
   fetchRecipientPage,
   fetchSend,
   formatSendTime,
@@ -41,6 +42,7 @@ import { Audience } from './Audience';
 import { SectionTitle } from './SectionTitle';
 import { RecipientStatusBadge, SendStatusBadge } from './StatusBadge';
 import { OutcomeNotice } from '@/components/common/OutcomeNotice';
+import { SentContentDialog } from './SentContentDialog';
 
 export function SendDetail({ id }: { id: string }) {
   const send = useApiLoad((api, signal) => fetchSend(api, id, signal), id);
@@ -101,6 +103,8 @@ function SendView({ send, notice, onDismiss }: { send: Send; notice: NoticeData 
         </Fact>
       </dl>
 
+      <ContentNotice send={send} />
+
       <section aria-labelledby="recipients-title">
         <SectionTitle id="recipients-title">Alıcılar</SectionTitle>
         {recipients.total === 0 ? (
@@ -121,8 +125,24 @@ const EMPTY_TEXT: Readonly<Record<RecipientFilter, string>> = {
   sent: 'Gönderilmiş alıcı yok.',
 };
 
+/** Whether the send's content can be opened, and if not why (skymail-backend, sent mail content). */
+function ContentNotice({ send }: { send: Send }) {
+  const note = contentNote(send);
+  if (!note) return null;
+  const icon = send.content_access === 'available' ? Eye : send.content_access === 'expired' ? Clock : Lock;
+  return (
+    <Notice tone="info" icon={icon} title="İçerik" aria-label="İçerik">
+      {note.text}
+    </Notice>
+  );
+}
+
 function Recipients({ send }: { send: Send }) {
   const router = useRouter();
+  const canOpen = send.content_access === 'available';
+  const [opened, setOpened] = useState<{ rowId: string; recipient: string } | null>(null);
+  const open = (row: RecipientRow) =>
+    setOpened({ rowId: row.id, recipient: mailRecipientLabel(row.recipient_full_name, row.recipient_email).name });
   const view = readRecipientView(useSearchParams());
   const state = useApiLoad(
     (api, signal) => fetchRecipientPage(api, send.id, view, signal),
@@ -180,6 +200,7 @@ function Recipients({ send }: { send: Send }) {
                   </div>
                   {row.error ? <p className="text-xs break-words text-destructive">{row.error}</p> : null}
                   <Attempts row={row} inline />
+                  {canOpen ? <OpenContent row={row} onOpen={open} /> : null}
                 </li>
               ))
             )}
@@ -208,6 +229,15 @@ function Recipients({ send }: { send: Send }) {
                     ),
                 },
                 { key: 'attempts', header: 'Deneme', render: (_, row) => <Attempts row={row} /> },
+                ...(canOpen
+                  ? [
+                      {
+                        key: 'id' as const,
+                        header: 'İçerik',
+                        render: (_: unknown, row: RecipientRow) => <OpenContent row={row} onOpen={open} />,
+                      },
+                    ]
+                  : []),
               ]}
             />
           </div>
@@ -219,7 +249,20 @@ function Recipients({ send }: { send: Send }) {
           />
         </div>
       )}
+      {opened ? (
+        <SentContentDialog sendId={send.id} rowId={opened.rowId} recipient={opened.recipient} onClose={() => setOpened(null)} />
+      ) : null}
     </div>
+  );
+}
+
+/** Opens one recipient's mail as it was sent. */
+function OpenContent({ row, onOpen }: { row: RecipientRow; onOpen: (row: RecipientRow) => void }) {
+  const { name } = mailRecipientLabel(row.recipient_full_name, row.recipient_email);
+  return (
+    <Button variant="outline" size="sm" aria-label={`${name}: içeriği gör`} onClick={() => onOpen(row)}>
+      İçeriği gör
+    </Button>
   );
 }
 

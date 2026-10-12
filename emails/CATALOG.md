@@ -16,20 +16,20 @@ zaman verdiği değişkenler kullanılır.
 | Şablon adı | key | Konu | Değişkenler |
 | --- | --- | --- | --- |
 | Serbest Gönderim | `free.basic` | {{.Subject}} | `Subject`, `Heading`, `BodyHtml`, `CtaLabel`, `CtaUrl` |
-| Keycloak · E-posta Doğrulama 🔒 | `keycloak.verify-email` | E-posta adresini doğrula | `link`, `linkExpirationMinutes`, `firstName`, `username`, `realmDisplayName`, `subjectKey` |
-| Keycloak · Parola Sıfırlama 🔒 | `keycloak.reset-password` | SKY LAB parola sıfırlama isteği | `link`, `linkExpirationMinutes`, `firstName`, `username`, `realmDisplayName`, `subjectKey` |
-| Keycloak · E-posta Değişikliği Doğrulama 🔒 | `keycloak.update-email` | Yeni e-posta adresini doğrula | `link`, `linkExpirationMinutes`, `firstName`, `username`, `realmDisplayName`, `subjectKey` |
-| Keycloak · YTÜ Hesabı Bağlama 🔒 | `keycloak.idp-link` | YTÜ hesabını SKY LAB hesabına bağla | `link`, `linkExpirationMinutes`, `firstName`, `username`, `realmDisplayName`, `subjectKey` |
-| Keycloak · Kişisel E-posta Onayı 🔒 | `keycloak.personal-email-confirm` | Kişisel e-posta adresini doğrula | `code`, `codeExpirationMinutes`, `firstName`, `username`, `realmDisplayName`, `subjectKey` |
-| Keycloak · Genel Sistem Postası 🔒 | `keycloak.generic` | SKY LAB hesap bildirimi | `link`, `linkExpirationMinutes`, `firstName`, `username`, `realmDisplayName`, `subjectKey` |
+| Keycloak · E-posta Doğrulama 🔒 🙈 | `keycloak.verify-email` | E-posta adresini doğrula | `link`, `linkExpirationMinutes`, `firstName`, `username`, `realmDisplayName`, `subjectKey` |
+| Keycloak · Parola Sıfırlama 🔒 🙈 | `keycloak.reset-password` | SKY LAB parola sıfırlama isteği | `link`, `linkExpirationMinutes`, `firstName`, `username`, `realmDisplayName`, `subjectKey` |
+| Keycloak · E-posta Değişikliği Doğrulama 🔒 🙈 | `keycloak.update-email` | Yeni e-posta adresini doğrula | `link`, `linkExpirationMinutes`, `firstName`, `username`, `realmDisplayName`, `subjectKey` |
+| Keycloak · YTÜ Hesabı Bağlama 🔒 🙈 | `keycloak.idp-link` | YTÜ hesabını SKY LAB hesabına bağla | `link`, `linkExpirationMinutes`, `firstName`, `username`, `realmDisplayName`, `subjectKey` |
+| Keycloak · Kişisel E-posta Onayı 🔒 🙈 | `keycloak.personal-email-confirm` | Kişisel e-posta adresini doğrula | `code`, `codeExpirationMinutes`, `firstName`, `username`, `realmDisplayName`, `subjectKey` |
+| Keycloak · Genel Sistem Postası 🔒 🙈 | `keycloak.generic` | SKY LAB hesap bildirimi | `link`, `linkExpirationMinutes`, `firstName`, `username`, `realmDisplayName`, `subjectKey` |
 | Hoş Geldin 🔒 | `core.welcome` | SKY LAB ekosistemine hoş geldin | `FirstName`, `LastName`, `Email`, `SkyNumber`, `CreatedAt` |
 | Katılım Sertifikası 🔒 | `core.certificate` | Katılım sertifikan hazır | `FirstName`, `EventName`, `VerifyURL`, `Serial`, `OwnerTeam` |
-| Hesap Güvenlik Bildirimi 🔒 | `account.security-alert` | SKY LAB hesabında: {{.EventTitle}} | `EventTitle`, `EventDetail`, `OccurredAt`, `DeviceLabel`, `IpAddress`, `Location`, `SecureAccountUrl` |
-| Birincil E-posta Değişti (eski adrese) 🔒 | `account.primary-email-changed` | SKY LAB hesabının e-posta adresi değişti | `OldEmail`, `NewEmail`, `OccurredAt`, `SecureAccountUrl` |
-| Hesap Silme Talebi Alındı 🔒 | `account.deletion-requested` | Hesap silme talebini aldık | `RequestedAt`, `CompletesAt`, `CancelUrl` |
-| Hesap Silindi 🔒 | `account.deletion-completed` | SKY LAB hesabın silindi | `CompletedAt`, `RetainedDataNote` |
-| Etkinlik · Bilet Oluşturuldu | `event.ticket-created` | {{.EventName}} biletin hazır | `EventName`, `EventDate`, `Venue`, `TicketQrUrl`, `TicketCode`, `OwnerTeam`, `EventUrl` |
-| Etkinlik · Hatırlatma | `event.reminder` | Yarın: {{.EventName}} | `EventName`, `StartsAt`, `Venue`, `TicketQrUrl`, `MapUrl` |
+| Hesap Güvenlik Bildirimi 🔒 🙈 | `account.security-alert` | SKY LAB hesabında: {{.EventTitle}} | `EventTitle`, `EventDetail`, `OccurredAt`, `DeviceLabel`, `IpAddress`, `Location`, `SecureAccountUrl` |
+| Birincil E-posta Değişti (eski adrese) 🔒 🙈 | `account.primary-email-changed` | SKY LAB hesabının e-posta adresi değişti | `OldEmail`, `NewEmail`, `OccurredAt`, `SecureAccountUrl` |
+| Hesap Silme Talebi Alındı 🔒 🙈 | `account.deletion-requested` | Hesap silme talebini aldık | `RequestedAt`, `CompletesAt`, `CancelUrl` |
+| Hesap Silindi 🔒 🙈 | `account.deletion-completed` | SKY LAB hesabın silindi | `CompletedAt`, `RetainedDataNote` |
+| Etkinlik · Bilet Oluşturuldu 🙈 | `event.ticket-created` | {{.EventName}} biletin hazır | `EventName`, `EventDate`, `Venue`, `TicketQrUrl`, `TicketCode`, `OwnerTeam`, `EventUrl` |
+| Etkinlik · Hatırlatma 🙈 | `event.reminder` | Yarın: {{.EventName}} | `EventName`, `StartsAt`, `Venue`, `TicketQrUrl`, `MapUrl` |
 | Etkinlik · Güncellendi | `event.updated` | {{.EventName}} etkinliğinde değişiklik var | `EventName`, `ChangeSummary`, `NewStartsAt`, `NewVenue`, `EventUrl` |
 | Etkinlik · İptal Edildi | `event.cancelled` | {{.EventName}} iptal edildi | `EventName`, `CancelReason`, `ContactEmail` |
 | Mail Onayı · Onayını Bekliyor | `mail.approval-requested` | Onayını bekleyen bir gönderim var | `RequesterName`, `TemplateName`, `AudienceName`, `AudienceKind`, `RecipientCount`, `PreviewUrl`, `ApproveUrl` |
@@ -38,6 +38,7 @@ zaman verdiği değişkenler kullanılır.
 | Kulüp · Takım Üyeliği Değişti | `club.team-membership` | SKY LAB takım üyeliğinde değişiklik | `TeamName`, `Action`, `Role`, `EffectiveAt`, `LeaderName` |
 
 🔒 = sistem şablonu: arşivlenemez, anahtarı değiştirilemez.
+🙈 = içeriği gizli: SkyMail bir gönderiminin yalnız gittiğini gösterir, ne yazdığını kimseye göstermez (kod, tek kullanımlık ya da hesap bağlantısı, bilet kodu taşır).
 
 ## Ne zaman gider
 
