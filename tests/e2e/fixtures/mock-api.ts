@@ -231,10 +231,12 @@ const CONTENT_RETENTION_DAYS = 90;
 /** Locked sensitive, as skymail-backend's list (internal/handlers/content_sensitivity.go). */
 function contentSensitiveLocked(key: string | null): boolean {
   if (key === null) return false;
+  const words = ["login", "signin", "code", "otp", "passcode", "password", "reset", "verify", "verification",
+    "confirm", "confirmation", "token", "magic", "invite", "activation", "activate", "2fa", "mfa"];
   return (
-    key.startsWith("keycloak.") ||
-    key.startsWith("account.") ||
-    ["core.contact-consent-confirm", "event.ticket-created", "event.reminder"].includes(key)
+    ["keycloak.", "account.", "auth.", "login.", "otp."].some((prefix) => key.startsWith(prefix)) ||
+    ["core.contact-consent-confirm", "event.ticket-created", "event.reminder"].includes(key) ||
+    key.split(/[.-]/).some((word) => words.includes(word))
   );
 }
 
