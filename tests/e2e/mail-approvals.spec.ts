@@ -61,7 +61,7 @@ const body = (page: Page) => page.getByRole("textbox", { name: "Gövde" });
 const dialog = (page: Page, name: string) => page.getByRole("dialog", { name });
 const decision = (page: Page) => page.getByRole("region", { name: "Karar" });
 const notice = (page: Page, text: string) => page.getByRole("status").filter({ hasText: text });
-const menu = (page: Page) => page.getByRole("navigation", { name: "Ana navigasyon" });
+const menu = (page: Page) => page.getByRole("complementary", { name: "Gezinme" });
 const listRadio = (page: Page, name: string) =>
   page.getByRole("group", { name: "Mail listesi" }).getByRole("radio", { name: new RegExp(name) });
 /** A fact about the request, by its term: its definition. */
@@ -380,6 +380,16 @@ test("a request to one person reads as one, and approving it opens one send", as
   await expect(dialog(page, "Onayla ve gönder")).toContainText("Ali Can <ali@ornek.com>");
   await dialog(page, "Onayla ve gönder").getByRole("button", { name: "Onayla ve gönder" }).click();
   await expect(decision(page).getByRole("link", { name: "Gönderimi gör" })).toHaveAttribute("href", /\/mail-tasks\/show\/b1c2d3e4-/);
+});
+
+test("on the icon rail Mail onayları still says how many requests wait", async ({ page, skymail, signIn }) => {
+  await signIn("approver");
+  submitted(skymail);
+
+  await page.goto("/");
+  await expect(menu(page).getByRole("link", { name: "Mail onayları (1 bekleyen)" })).toBeVisible();
+  await page.keyboard.press("Control+b");
+  await expect(menu(page).getByRole("link", { name: "Mail onayları (1 bekleyen)", exact: true })).toBeVisible();
 });
 
 test("an approver finds a pending request in the menu and the list, and approves it as it is", async ({ page, skymail, signIn }) => {

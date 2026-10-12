@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Modal } from '@/components/ui/Modal';
-import { ModalDangerActions, ModalPrimaryActions } from '@/components/ui/modal-actions';
+import { PanelDialog } from '@/components/common/PanelDialog';
+import { DangerActions, PrimaryActions } from '@/components/common/PanelDialog';
 import type { SampleValues } from '@/lib/mail-render/preview';
 import { renderOf } from '@/lib/mail-render/save';
 import type { SourceRender } from '@/lib/mail-render';
@@ -28,7 +28,7 @@ export function PublishDialog({
   onCancel: () => void;
 }) {
   return (
-    <Modal isOpen onClose={onCancel} title="Taslağı yayımla">
+    <PanelDialog isOpen onClose={onCancel} title="Taslağı yayımla">
       <p>
         Taslağın yayımlanınca “{name}” bundan sonra bu sürümle gönderilir. Şu an gönderilen sürüm geçmişte kalır ve geri
         getirilebilir.
@@ -38,32 +38,32 @@ export function PublishDialog({
           <RenderWarnings warnings={warnings} when="Yayımlamadan önce bak: bu taslakta düzeltilmesi iyi olacak şeyler var." />
         </div>
       ) : null}
-      <ModalPrimaryActions
+      <PrimaryActions
         onCancel={onCancel}
         onConfirm={onConfirm}
         confirmLabel="Yayımla"
         pendingLabel="Yayımlanıyor…"
         isPending={busy}
       />
-    </Modal>
+    </PanelDialog>
   );
 }
 
 export function DiscardDialog({ busy, onConfirm, onCancel }: { busy: boolean; onConfirm: () => void; onCancel: () => void }) {
   return (
-    <Modal isOpen onClose={onCancel} title="Taslağı at">
+    <PanelDialog isOpen onClose={onCancel} title="Taslağı at">
       <p>
         Taslağın kimsenin süren taslağı olmaktan çıkar ve yayımlanmaz; geçmişte kalır ve geri getirilebilir. Editör
         yayımlanmış sürümü açar. Gönderilen mail değişmez.
       </p>
-      <ModalDangerActions
+      <DangerActions
         onCancel={onCancel}
         onConfirm={onConfirm}
         confirmLabel="Taslağı at"
         pendingLabel="Atılıyor…"
         isPending={busy}
       />
-    </Modal>
+    </PanelDialog>
   );
 }
 
@@ -101,7 +101,7 @@ export function MainSourceDialog({
   const label = AUTHORING_MODE_LABEL[candidate];
   const current = renderOf(render, { mode: candidate, source });
   return (
-    <Modal isOpen onClose={onCancel} title={`${label} kaynağını Main source yap`} size="wide">
+    <PanelDialog isOpen onClose={onCancel} title={`${label} kaynağını Main source yap`} size="wide">
       <div className="space-y-4">
         <p>
           Gönderilen mail bundan sonra {label} kaynağından üretilir; aşağıdaki mail gönderilecek olan. Değişiklik bir
@@ -131,7 +131,7 @@ export function MainSourceDialog({
           scheme={scheme}
           className="h-[55vh] min-h-[360px]"
         />
-        <ModalPrimaryActions
+        <PrimaryActions
           onCancel={onCancel}
           onConfirm={onConfirm}
           confirmLabel="Main source yap"
@@ -140,7 +140,7 @@ export function MainSourceDialog({
           confirmDisabled={!current?.ok}
         />
       </div>
-    </Modal>
+    </PanelDialog>
   );
 }
 
@@ -171,7 +171,7 @@ export function StaleComparison({
   onCancel: () => void;
 }) {
   return (
-    <Modal isOpen onClose={onCancel} title="Bu taslak bayat" size="wide">
+    <PanelDialog isOpen onClose={onCancel} title="Bu taslak bayat" size="wide">
       <div className="space-y-4">
         <p>
           Bu taslağı başlattıktan sonra başka bir sürüm yayımlandı. Taslağını yayımlarsan şu an gönderilen sürümün
@@ -190,7 +190,7 @@ export function StaleComparison({
           viewerSub={viewerSub}
           sample={sample}
         />
-        <ModalDangerActions
+        <DangerActions
           onCancel={onCancel}
           onConfirm={onConfirm}
           cancelLabel="Vazgeç"
@@ -199,6 +199,6 @@ export function StaleComparison({
           isPending={busy}
         />
       </div>
-    </Modal>
+    </PanelDialog>
   );
 }

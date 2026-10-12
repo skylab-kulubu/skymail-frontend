@@ -1,7 +1,7 @@
 'use client';
 
 import { useId, useState, type ReactNode } from 'react';
-import { FormField } from '@/components/chrome/FormField';
+import { FormField } from '@/components/common/FormField';
 
 /**
  * How a choice reads. Its name is the radio's accessible name; its tag and
@@ -55,9 +55,9 @@ export function ChoiceList<T extends { id: string }>({
 
   return (
     <fieldset className="min-w-0 space-y-2" aria-describedby={error ? errorId : undefined}>
-      <legend className="mb-1.5 text-xs font-medium text-neutral-300">{legend}</legend>
+      <legend className="mb-1.5 text-xs font-medium text-secondary-foreground">{legend}</legend>
       {items.length === 0 ? (
-        <p className="rounded-lg border border-white/10 px-3 py-4 text-xs text-neutral-500">{empty}</p>
+        <p className="rounded-lg border border-border px-3 py-4 text-xs text-subtle-foreground">{empty}</p>
       ) : (
         <>
           {items.length > 6 ? (
@@ -71,7 +71,7 @@ export function ChoiceList<T extends { id: string }>({
               autoComplete="off"
             />
           ) : null}
-          <div className={`max-h-72 space-y-1 overflow-y-auto rounded-lg border p-1 ${error ? 'border-red-400/50' : 'border-white/10'}`}>
+          <div className={`max-h-72 space-y-1 overflow-y-auto rounded-lg border p-1 ${error ? 'border-destructive/50' : 'border-border'}`}>
             {shown.map((item) => (
               <ChoiceRow
                 key={item.id}
@@ -83,12 +83,12 @@ export function ChoiceList<T extends { id: string }>({
                 invalid={Boolean(error)}
               />
             ))}
-            {shown.length === 0 ? <p className="px-3 py-3 text-xs text-neutral-500">Aramaya uyan yok.</p> : null}
+            {shown.length === 0 ? <p className="px-3 py-3 text-xs text-subtle-foreground">Aramaya uyan yok.</p> : null}
           </div>
         </>
       )}
       {error ? (
-        <p id={errorId} className="text-xs text-red-300">
+        <p id={errorId} className="text-xs text-destructive">
           {error}
         </p>
       ) : null}
@@ -123,7 +123,7 @@ function ChoiceRow({
   const detailId = useId();
   const describedBy = [choice.tag ? tagId : null, choice.detail ? detailId : null].filter(Boolean).join(' ') || undefined;
   return (
-    <label className="has-[:checked]:border-skylab-400/50 has-[:checked]:bg-skylab-500/10 has-[:focus-visible]:ring-skylab-400/40 flex cursor-pointer items-start gap-3 rounded-md border border-transparent px-3 py-2 hover:bg-white/[0.03] has-[:focus-visible]:ring-2">
+    <label className="has-[:checked]:border-skylab-400/50 has-[:checked]:bg-skylab-500/10 has-[:focus-visible]:ring-skylab-400/40 flex cursor-pointer items-start gap-3 rounded-md border border-transparent px-3 py-2 hover:bg-accent has-[:focus-visible]:ring-2">
       <input
         type="radio"
         name={group}
@@ -133,15 +133,15 @@ function ChoiceRow({
         aria-label={choice.name}
         aria-describedby={describedBy}
         aria-invalid={invalid ? true : undefined}
-        className="accent-skylab-400 mt-0.5 shrink-0 focus:outline-none"
+        className="accent-skylab-400 mt-0.5 shrink-0 outline-hidden"
       />
       <span className="block min-w-0 flex-1">
         <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="text-sm break-words text-neutral-100">{choice.name}</span>
+          <span className="text-sm break-words text-foreground">{choice.name}</span>
           {choice.tag ? <span id={tagId}>{choice.tag}</span> : null}
         </span>
         {choice.detail ? (
-          <span id={detailId} className="text-2xs mt-0.5 block break-all text-neutral-500">
+          <span id={detailId} className="text-2xs mt-0.5 block break-all text-subtle-foreground">
             {choice.detail}
           </span>
         ) : null}

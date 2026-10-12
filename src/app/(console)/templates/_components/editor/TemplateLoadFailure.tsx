@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { AlertTriangle, SearchX } from 'lucide-react';
-import { StateCard } from '@/components/chrome/StateCard';
-import { Button } from '@/components/ui/Button';
+import { Button, StateCard } from '@skylab-kulubu/skylcn-ui';
 import type { ApiError } from '@/lib/api/errors';
 import { templateHref } from '@/lib/templates';
 
@@ -14,7 +13,7 @@ export function TemplateLoadFailure({ error, onRetry }: { error: ApiError; onRet
   if (error.status === 404) {
     return (
       <StateCard
-        Icon={SearchX}
+        icon={SearchX}
         title="Mail template bulunamadı"
         description="Bu adreste bir Mail template yok ya da arşivlenmiş. Arşivlenmiş bir template, Mail template listesindeki Arşivli filtresinde görünür ve oradan geri alınabilir."
       >
@@ -30,8 +29,8 @@ export function TemplateLoadFailure({ error, onRetry }: { error: ApiError; onRet
     );
   }
   return (
-    <StateCard Icon={AlertTriangle} tone="danger" title="Mail template yüklenemedi" description={error.message}>
-      <Button variant="secondary" onClick={onRetry}>
+    <StateCard icon={AlertTriangle} tone="danger" title="Mail template yüklenemedi" description={error.message}>
+      <Button variant="outline" onClick={onRetry}>
         Tekrar dene
       </Button>
     </StateCard>

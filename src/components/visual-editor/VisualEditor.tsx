@@ -42,9 +42,7 @@ import {
   Undo2,
   type LucideIcon,
 } from 'lucide-react';
-import { FormField } from '@/components/chrome/FormField';
-import { NoticeBox } from '@/components/chrome/Notice';
-import { Button } from '@/components/ui/Button';
+import { FormField } from '@/components/common/FormField';
 import {
   TEMPLATE_BODY_ALLOWANCE,
   isVariableName,
@@ -63,6 +61,7 @@ import {
   type VisualEditorShared,
   type VisualEditorWording,
 } from './VariableField';
+import { Button, Notice } from '@skylab-kulubu/skylcn-ui';
 
 export type { VisualEditorWording } from './VariableField';
 
@@ -120,8 +119,8 @@ function ToolButton({
       aria-pressed={role ? undefined : pressed}
       aria-checked={role ? Boolean(pressed) : undefined}
       aria-disabled={disabled || undefined}
-      className={`focus-visible:ring-skylab-400/40 inline-flex h-8 min-w-8 shrink-0 items-center justify-center gap-1.5 rounded-md px-2 text-xs transition-colors focus-visible:ring-2 focus-visible:outline-none aria-disabled:cursor-not-allowed aria-disabled:opacity-30 ${
-        pressed ? 'bg-white/15 text-neutral-100' : 'text-neutral-400 hover:bg-white/5 hover:text-neutral-200'
+      className={`focus-visible:ring-ring inline-flex h-8 min-w-8 shrink-0 items-center justify-center gap-1.5 rounded-md px-2 text-xs transition-colors focus-visible:ring-2 outline-hidden aria-disabled:cursor-not-allowed aria-disabled:opacity-30 ${
+        pressed ? 'bg-accent-strong text-foreground' : 'text-muted-foreground hover:bg-accent hover:text-secondary-foreground'
       }`}
     >
       <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden />
@@ -130,7 +129,7 @@ function ToolButton({
   );
 }
 
-const Separator = () => <span aria-hidden className="mx-0.5 h-5 w-px shrink-0 bg-white/10" />;
+const Separator = () => <span aria-hidden className="mx-0.5 h-5 w-px shrink-0 bg-accent-strong" />;
 
 function LinkPanel({ editor, onClose }: { editor: Editor; onClose: () => void }) {
   const current = (editor.getAttributes('link').href as string | undefined) ?? '';
@@ -167,14 +166,14 @@ function LinkPanel({ editor, onClose }: { editor: Editor; onClose: () => void })
         autoFocus
         error={problem ? `${problem}.` : null}
       />
-      {nothingSelected ? <p className="text-xs text-amber-300">Önce bağlantı yapılacak metni seç.</p> : null}
+      {nothingSelected ? <p className="text-xs text-warning">Önce bağlantı yapılacak metni seç.</p> : null}
       <div className="flex flex-wrap gap-2">
-        <Button type="submit" variant="outlineBrand" disabled={problem !== null || nothingSelected}>
+        <Button type="submit" variant="primary" disabled={problem !== null || nothingSelected}>
           Bağlantıyı uygula
         </Button>
         {current ? (
           <Button
-            variant="outlineDanger"
+            variant="destructive"
             onClick={() => {
               editor.chain().focus().extendMarkRange('link').unsetLink().run();
               onClose();
@@ -183,7 +182,7 @@ function LinkPanel({ editor, onClose }: { editor: Editor; onClose: () => void })
             Bağlantıyı kaldır
           </Button>
         ) : null}
-        <Button variant="secondary" onClick={onClose}>
+        <Button variant="outline" onClick={onClose}>
           Vazgeç
         </Button>
       </div>
@@ -366,7 +365,7 @@ function Toolbar({
         const at = buttons.current.findIndex((element) => element !== null && element === (event.target as Node));
         if (at !== -1) setTabStop(at);
       }}
-      className="flex flex-wrap items-center gap-0.5 rounded-t-lg border-b border-white/10 bg-white/[0.02] p-1"
+      className="flex flex-wrap items-center gap-0.5 rounded-t-lg border-b border-border bg-card p-1"
     >
       {groups.map((group, position) => (
         <div key={position} className="contents">
@@ -386,16 +385,16 @@ function Toolbar({
 
 /** The mail's look in the editor, readable in both panel themes; the mail's own look is the preview's. */
 const CONTENT_CLASS = [
-  'min-h-[320px] px-4 py-3 text-sm leading-relaxed text-neutral-200 focus:outline-none',
-  '[&_h2]:mt-4 [&_h2]:mb-2 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:text-neutral-100 [&_h2:first-child]:mt-1',
+  'min-h-[320px] px-4 py-3 text-sm leading-relaxed text-secondary-foreground outline-hidden',
+  '[&_h2]:mt-4 [&_h2]:mb-2 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:text-foreground [&_h2:first-child]:mt-1',
   '[&_p]:my-2',
   '[&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_li_p]:my-0.5',
-  '[&_h3]:mt-3 [&_h3]:mb-1.5 [&_h3]:text-base [&_h3]:font-semibold [&_h3]:text-neutral-100',
-  '[&_blockquote]:my-2 [&_blockquote]:border-l-2 [&_blockquote]:border-white/20 [&_blockquote]:pl-3 [&_blockquote]:text-neutral-300',
+  '[&_h3]:mt-3 [&_h3]:mb-1.5 [&_h3]:text-base [&_h3]:font-semibold [&_h3]:text-foreground',
+  '[&_blockquote]:my-2 [&_blockquote]:border-l-2 [&_blockquote]:border-border-strong [&_blockquote]:pl-3 [&_blockquote]:text-secondary-foreground',
   '[&_a]:text-skylab-300 [&_a]:underline [&_a]:underline-offset-2',
-  '[&_strong]:font-semibold [&_strong]:text-neutral-100',
-  '[&_hr]:my-4 [&_hr]:border-white/20 [&_hr.ProseMirror-selectednode]:border-skylab-400',
-  '[&_.is-editor-empty:first-child]:before:pointer-events-none [&_.is-editor-empty:first-child]:before:float-left [&_.is-editor-empty:first-child]:before:h-0 [&_.is-editor-empty:first-child]:before:text-neutral-500 [&_.is-editor-empty:first-child]:before:content-[attr(data-placeholder)]',
+  '[&_strong]:font-semibold [&_strong]:text-foreground',
+  '[&_hr]:my-4 [&_hr]:border-border-strong [&_hr.ProseMirror-selectednode]:border-skylab-400',
+  '[&_.is-editor-empty:first-child]:before:pointer-events-none [&_.is-editor-empty:first-child]:before:float-left [&_.is-editor-empty:first-child]:before:h-0 [&_.is-editor-empty:first-child]:before:text-subtle-foreground [&_.is-editor-empty:first-child]:before:content-[attr(data-placeholder)]',
 ].join(' ');
 
 export function VisualEditor({
@@ -501,23 +500,23 @@ export function VisualEditor({
 
   if (problems) {
     return (
-      <NoticeBox tone="error">
+      <Notice tone="danger">
         <p className="font-medium">Bu Visual belge açılmadı: burada kullanılamayan bir şey içeriyor ve açmak onu düşürürdü.</p>
         <ul className="mt-2 list-disc space-y-1 pl-4 font-mono text-xs">
           {problems.map((problem) => (
             <li key={problem}>{problem}</li>
           ))}
         </ul>
-      </NoticeBox>
+      </Notice>
     );
   }
 
   return (
     <VisualEditorContext.Provider value={shared}>
-      <div className="focus-within:border-skylab-400/40 rounded-lg border border-white/10">
+      <div className="focus-within:border-skylab-400/40 rounded-lg border border-border">
         {editor && editable ? <Toolbar editor={editor} allow={allow} panel={panel} setPanel={setPanel} /> : null}
         {editor && panel ? (
-          <div className="border-b border-white/10 bg-white/[0.02] p-3">
+          <div className="border-b border-border bg-card p-3">
             {panel === 'link' ? (
               <LinkPanel editor={editor} onClose={() => setPanel(null)} />
             ) : (
@@ -534,7 +533,7 @@ export function VisualEditor({
         {editor ? (
           <EditorContent editor={editor} />
         ) : (
-          <p className="px-4 py-3 text-xs text-neutral-500">Visual editör yükleniyor…</p>
+          <p className="px-4 py-3 text-xs text-subtle-foreground">Visual editör yükleniyor…</p>
         )}
         {footer}
       </div>

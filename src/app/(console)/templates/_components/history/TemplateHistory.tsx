@@ -14,15 +14,10 @@
 import { useId, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { AlertTriangle, ChevronDown } from 'lucide-react';
-import { FilterPills } from '@/components/chrome/FilterPills';
-import { Notice } from '@/components/chrome/Notice';
-import { Pagination } from '@/components/chrome/Pagination';
-import { StateCard } from '@/components/chrome/StateCard';
-import { Tag } from '@/components/chrome/Tag';
+import { Badge, Button, FilterPills, Pagination, StateCard } from '@skylab-kulubu/skylcn-ui';
 import { useConsole } from '@/components/layout/ConsoleContext';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { ROW_ACTION_CLASS } from '@/components/tables/RowActions';
-import { Button } from '@/components/ui/Button';
 import { ROLE, hasRole } from '@/lib/access';
 import { useApi, useApiLoad } from '@/lib/api/react';
 import { knownPageCount } from '@/lib/list-view';
@@ -56,10 +51,12 @@ import { TemplateLoadFailure } from '../editor/TemplateLoadFailure';
 import { MainSource } from '../TemplateRowParts';
 import { RestoreDialog, VersionComparison } from './HistoryDialogs';
 import { SeedRefusalNotice, VersionStateBadge } from './HistoryParts';
+import { OutcomeNotice } from '@/components/common/OutcomeNotice';
+import { NavButton } from '@/components/common/NavButton';
 
 export function TemplateHistory({ id }: { id: string }) {
   const state = useApiLoad((api, signal) => fetchTemplate(api, id, signal), id);
-  if (state.status === 'loading') return <StateCard isLoading title="Sürüm geçmişi yükleniyor" />;
+  if (state.status === 'loading') return <StateCard loading title="Sürüm geçmişi yükleniyor" />;
   if (state.status === 'error') return <TemplateLoadFailure error={state.error} onRetry={() => void state.reload()} />;
   return <History template={state.data} />;
 }
@@ -149,45 +146,45 @@ function History({ template }: { template: MailTemplate }) {
         description={`“${template.name}” Mail template'inin her sürümü, en yenisi önce. Her kaydetme, yayım ve Template seed bir sürüm yazar; gönderilen, yayımlanmış olanlardan biridir. Saatler İstanbul saati.`}
         meta={
           <>
-            {template.system ? <Tag tone="system">System</Tag> : null}
-            {template.key ? <span className="font-mono text-xs break-all text-neutral-400">{template.key}</span> : null}
+            {template.system ? <Badge tone="brand" size="xs">System</Badge> : null}
+            {template.key ? <span className="font-mono text-xs break-all text-muted-foreground">{template.key}</span> : null}
           </>
         }
         actions={
-          <Button variant="secondary" href={canWrite ? templateHref.edit(template.id) : templateHref.show(template.id)}>
+          <NavButton variant="outline" href={canWrite ? templateHref.edit(template.id) : templateHref.show(template.id)}>
             {canWrite ? 'Editöre dön' : "Template'e dön"}
-          </Button>
+          </NavButton>
         }
       />
 
-      {notice ? <Notice notice={notice} onDismiss={() => setNotice(null)} /> : null}
+      {notice ? <OutcomeNotice notice={notice} onDismiss={() => setNotice(null)} /> : null}
       <SeedRefusalNotice template={template} />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
           <FilterPills
-            ariaLabel="Gösterilen sürümler"
+            aria-label="Gösterilen sürümler"
             value={view.state}
             options={HISTORY_FILTERS}
-            onChange={(next) => show({ state: next, page: 1 })}
+            onValueChange={(next) => show({ state: next, page: 1 })}
           />
-          <p className="text-xs text-neutral-500 tabular-nums" aria-live="polite">
+          <p className="text-xs text-subtle-foreground tabular-nums" aria-live="polite">
             {page.status === 'success' && page.data.total !== null ? `${page.data.total} sürüm` : ''}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <p className="text-xs text-neutral-500" aria-live="polite">
+          <p className="text-xs text-subtle-foreground" aria-live="polite">
             {picked.length === 0
               ? 'Yan yana görmek için iki sürüm seç.'
               : `${picked.length} sürüm seçili: ${picked.map((pick) => `#${pick.seq}`).join(' ve ')}${picked.length === 1 ? '; bir tane daha seç.' : '.'}`}
           </p>
           {picked.length > 0 ? (
-            <button type="button" onClick={() => setPicked([])} className={`${ROW_ACTION_CLASS} text-xs text-neutral-400 hover:text-neutral-200`}>
+            <button type="button" onClick={() => setPicked([])} className={`${ROW_ACTION_CLASS} text-xs text-muted-foreground hover:text-secondary-foreground`}>
               Seçimi temizle
             </button>
           ) : null}
           <Button
-            variant="outlineBrand"
+            variant="primary"
             disabled={picked.length !== 2}
             onClick={() => setComparing({ versionId: picked[0].id, againstId: picked[1].id })}
           >
@@ -197,24 +194,24 @@ function History({ template }: { template: MailTemplate }) {
       </div>
 
       {page.status === 'loading' ? (
-        <StateCard isLoading title="Sürümler yükleniyor" />
+        <StateCard loading title="Sürümler yükleniyor" />
       ) : page.status === 'error' ? (
-        <StateCard Icon={AlertTriangle} tone="danger" title="Sürümler yüklenemedi" description={page.error.message}>
-          <Button variant="secondary" onClick={() => void page.reload()}>
+        <StateCard icon={AlertTriangle} tone="danger" title="Sürümler yüklenemedi" description={page.error.message}>
+          <Button variant="outline" onClick={() => void page.reload()}>
             Tekrar dene
           </Button>
         </StateCard>
       ) : (
         <div className="space-y-2">
-          <ul aria-label="Sürümler" className="divide-y divide-white/5 rounded-lg border border-white/5">
+          <ul aria-label="Sürümler" className="divide-y divide-border-subtle rounded-lg border border-border-subtle">
             {page.data.versions.length === 0 ? (
-              <li className="px-4 py-6 text-center text-sm text-neutral-500">{EMPTY_TEXT[view.state]}</li>
+              <li className="px-4 py-6 text-center text-sm text-subtle-foreground">{EMPTY_TEXT[view.state]}</li>
             ) : (
               historyRows(page.data.versions).map((row) => <RowItem key={row.version.id} row={row} item={item} />)
             )}
           </ul>
           <Pagination
-            ariaLabel="Sürüm sayfaları"
+            aria-label="Sürüm sayfaları"
             current={view.page}
             totalPages={lastPage ?? 1}
             onPageChange={(next) => show({ ...view, page: next })}
@@ -266,12 +263,12 @@ function RowItem({ row, item }: { row: HistoryRow; item: (version: TemplateVersi
             aria-expanded={open}
             aria-controls={listId}
             onClick={() => setOpen((current) => !current)}
-            className={`${ROW_ACTION_CLASS} inline-flex items-center gap-1 text-xs text-neutral-400 hover:text-neutral-200`}
+            className={`${ROW_ACTION_CLASS} inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-secondary-foreground`}
           >
             <ChevronDown className={`h-3 w-3 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden />
             Aynı taslağın {earlier.length} önceki kaydı ({earlier.length === 1 ? `#${earlier[0].seq}` : `#${earlier.at(-1)?.seq}–#${earlier[0].seq}`})
           </button>
-          <ul id={listId} hidden={!open} aria-label={`Sürüm #${version.seq} öncesi kayıtlar`} className="mt-2 space-y-3 border-l border-white/10 pl-3">
+          <ul id={listId} hidden={!open} aria-label={`Sürüm #${version.seq} öncesi kayıtlar`} className="mt-2 space-y-3 border-l border-border pl-3">
             {earlier.map((save) => (
               <li key={save.id} aria-label={`Sürüm #${save.seq}`}>
                 <VersionItem {...item(save)} />
@@ -325,35 +322,35 @@ function VersionItem({
       />
       <div className="min-w-0 flex-1 space-y-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="font-mono text-sm font-medium text-neutral-100">#{version.seq}</span>
+          <span className="font-mono text-sm font-medium text-foreground">#{version.seq}</span>
           <VersionStateBadge badge={badge} />
           <MainSource mode={version.main_mode} />
         </div>
-        <p className="text-xs text-neutral-400">
+        <p className="text-xs text-muted-foreground">
           {/* A name nobody recorded, or Silinmiş kullanıcı, is a stand-in rather than a name. */}
-          <span className={author.kind === 'unknown' || author.kind === 'erased' ? 'text-neutral-500 italic' : 'text-neutral-300'}>
+          <span className={author.kind === 'unknown' || author.kind === 'erased' ? 'text-subtle-foreground italic' : 'text-secondary-foreground'}>
             {author.label}
           </span>
           {' · '}
           {versionWhen(version)}
         </p>
         {author.beforeHistory ? (
-          <p className="text-2xs text-neutral-500">
+          <p className="text-2xs text-subtle-foreground">
             Sürüm geçmişi tutulmadan önceki içerik: yazanı kaydedilmedi, zamanı template&apos;in o güne kadarki son
             değişikliği.
           </p>
         ) : null}
-        <p className="text-sm break-words text-neutral-300">
-          <span className="text-neutral-500">Konu: </span>
+        <p className="text-sm break-words text-secondary-foreground">
+          <span className="text-subtle-foreground">Konu: </span>
           {version.subject}
         </p>
         {name !== null ? (
-          <p className="text-xs break-words text-neutral-400">
-            <span className="text-neutral-500">Bu sürümdeki ad: </span>“{name}”
+          <p className="text-xs break-words text-muted-foreground">
+            <span className="text-subtle-foreground">Bu sürümdeki ad: </span>“{name}”
           </p>
         ) : null}
         {asked !== null ? (
-          <p className="text-xs break-words text-neutral-500">Template seed bu konuyu istemişti: “{asked}”; yukarıdaki korundu.</p>
+          <p className="text-xs break-words text-subtle-foreground">Template seed bu konuyu istemişti: “{asked}”; yukarıdaki korundu.</p>
         ) : null}
         {comparison || onRestore ? (
           <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1 text-xs">

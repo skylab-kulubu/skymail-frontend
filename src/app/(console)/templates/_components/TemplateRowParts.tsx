@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { Lock } from 'lucide-react';
-import { Tag } from '@/components/chrome/Tag';
+import { Badge } from '@skylab-kulubu/skylcn-ui';
 import { formatClubTime } from '@/lib/format';
 import {
   SYSTEM_TEMPLATE_NOTE,
@@ -23,29 +23,29 @@ export function TemplateName({ row, actions }: { row: TemplateRow; actions: Temp
     <div className="min-w-0 whitespace-normal">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         {actions.href ? (
-          <Link href={actions.href} className="hover:text-skylab-300 font-medium break-words text-neutral-100 hover:underline">
+          <Link href={actions.href} className="hover:text-skylab-300 font-medium break-words text-foreground hover:underline">
             {row.name}
           </Link>
         ) : (
-          <span className="font-medium break-words text-neutral-300">{row.name}</span>
+          <span className="font-medium break-words text-secondary-foreground">{row.name}</span>
         )}
-        {row.system ? <Tag tone="system">System</Tag> : null}
-        {row.archivedAt ? <Tag tone="archived">Arşivli</Tag> : null}
+        {row.system ? <Badge tone="brand" size="xs">System</Badge> : null}
+        {row.archivedAt ? <Badge tone="neutral" size="xs">Arşivli</Badge> : null}
       </div>
       {row.key ? (
-        <p className="text-2xs mt-0.5 font-mono break-all text-neutral-400">
+        <p className="text-2xs mt-0.5 font-mono break-all text-muted-foreground">
           <span className="sr-only">Template key: </span>
           {row.key}
         </p>
       ) : null}
       {actions.systemNote ? (
-        <p className="mt-0.5 flex items-start gap-1.5 text-xs text-neutral-500">
+        <p className="mt-0.5 flex items-start gap-1.5 text-xs text-subtle-foreground">
           <Lock className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
           {SYSTEM_TEMPLATE_NOTE}
         </p>
       ) : null}
       {row.archivedAt ? (
-        <p className="mt-0.5 text-xs text-neutral-500">Arşivlendi: {formatClubTime(row.archivedAt)}</p>
+        <p className="mt-0.5 text-xs text-subtle-foreground">Arşivlendi: {formatClubTime(row.archivedAt)}</p>
       ) : null}
     </div>
   );
@@ -53,9 +53,9 @@ export function TemplateName({ row, actions }: { row: TemplateRow; actions: Temp
 
 /** The Authoring mode of the Main source: what the template sends is written in it. */
 export function MainSource({ mode }: { mode: AuthoringMode | null }) {
-  if (!mode) return <span className="text-neutral-500">{mainSourceLabel(null)}</span>;
+  if (!mode) return <span className="text-subtle-foreground">{mainSourceLabel(null)}</span>;
   return (
-    <span className="text-2xs inline-flex rounded border border-white/10 bg-white/[0.03] px-1.5 py-0.5 font-mono text-neutral-300">
+    <span className="text-2xs inline-flex rounded border border-border bg-card px-1.5 py-0.5 font-mono text-secondary-foreground">
       {mainSourceLabel(mode)}
     </span>
   );

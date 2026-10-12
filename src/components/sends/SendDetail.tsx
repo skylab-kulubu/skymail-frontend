@@ -9,13 +9,9 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { AlertTriangle, Inbox, SearchX } from 'lucide-react';
-import { FilterPills } from '@/components/chrome/FilterPills';
-import { Notice } from '@/components/chrome/Notice';
-import { Pagination } from '@/components/chrome/Pagination';
-import { StateCard } from '@/components/chrome/StateCard';
+import { Button, FilterPills, Pagination, StateCard } from '@skylab-kulubu/skylcn-ui';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { DataTable } from '@/components/tables/DataTable';
-import { Button } from '@/components/ui/Button';
 import { useApiLoad } from '@/lib/api/react';
 import {
   audienceLabel,
@@ -44,23 +40,24 @@ import { useLastPage } from '@/lib/ui/use-last-page';
 import { Audience } from './Audience';
 import { SectionTitle } from './SectionTitle';
 import { RecipientStatusBadge, SendStatusBadge } from './StatusBadge';
+import { OutcomeNotice } from '@/components/common/OutcomeNotice';
 
 export function SendDetail({ id }: { id: string }) {
   const send = useApiLoad((api, signal) => fetchSend(api, id, signal), id);
   // The send form leaves one here when it opens a send.
   const [notice, setNotice] = useFlashNotice(sendHref(id));
 
-  if (send.status === 'loading') return <StateCard isLoading title="Gönderim yükleniyor" />;
+  if (send.status === 'loading') return <StateCard loading title="Gönderim yükleniyor" />;
   if (send.status === 'error') {
     return send.error.status === 404 ? (
-      <StateCard Icon={SearchX} title="Gönderim bulunamadı" description="Bu adreste bir gönderim yok.">
+      <StateCard icon={SearchX} title="Gönderim bulunamadı" description="Bu adreste bir gönderim yok.">
         <Link href={SEND_LIST_PATH} className="text-skylab-300 text-sm hover:underline">
           Gönderimlere dön
         </Link>
       </StateCard>
     ) : (
-      <StateCard Icon={AlertTriangle} tone="danger" title="Gönderim yüklenemedi" description={send.error.message}>
-        <Button variant="secondary" onClick={() => void send.reload()}>
+      <StateCard icon={AlertTriangle} tone="danger" title="Gönderim yüklenemedi" description={send.error.message}>
+        <Button variant="outline" onClick={() => void send.reload()}>
           Tekrar dene
         </Button>
       </StateCard>
@@ -81,13 +78,13 @@ function SendView({ send, notice, onDismiss }: { send: Send; notice: NoticeData 
           <>
             <SendStatusBadge status={send.status} />
             {send.template_key ? (
-              <span className="text-2xs font-mono text-neutral-500">{send.template_key}</span>
+              <span className="text-2xs font-mono text-subtle-foreground">{send.template_key}</span>
             ) : null}
           </>
         }
       />
 
-      {notice ? <Notice notice={notice} onDismiss={onDismiss} /> : null}
+      {notice ? <OutcomeNotice notice={notice} onDismiss={onDismiss} /> : null}
 
       <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         <Fact term="Kitle" className="col-span-2 sm:col-span-1">
@@ -97,7 +94,7 @@ function SendView({ send, notice, onDismiss }: { send: Send; notice: NoticeData 
         <Fact term="Alıcılar">
           <span className="tabular-nums">{recipientsLabel(recipients.total)}</span>
           {recipients.parts.length > 0 ? (
-            <span className="text-2xs block whitespace-normal text-neutral-500 tabular-nums">
+            <span className="text-2xs block whitespace-normal text-subtle-foreground tabular-nums">
               {recipients.parts.join(' · ')}
             </span>
           ) : null}
@@ -107,7 +104,7 @@ function SendView({ send, notice, onDismiss }: { send: Send; notice: NoticeData 
       <section aria-labelledby="recipients-title">
         <SectionTitle id="recipients-title">Alıcılar</SectionTitle>
         {recipients.total === 0 ? (
-          <StateCard Icon={Inbox} title="Kuyrukta alıcı yok" description={noRecipientsNote(send.created_at)} />
+          <StateCard icon={Inbox} title="Kuyrukta alıcı yok" description={noRecipientsNote(send.created_at)} />
         ) : (
           <Recipients send={send} />
         )}
@@ -149,27 +146,27 @@ function Recipients({ send }: { send: Send }) {
     <div className="space-y-3">
       <div className="max-w-full overflow-x-auto">
         <FilterPills
-          ariaLabel="Gösterilen alıcılar"
+          aria-label="Gösterilen alıcılar"
           value={view.status}
           options={recipientFilters(send.recipient_counts, view.status)}
-          onChange={(next) => show({ status: next, page: 1 })}
+          onValueChange={(next) => show({ status: next, page: 1 })}
         />
       </div>
 
       {state.status === 'loading' ? (
-        <StateCard isLoading title="Alıcılar yükleniyor" />
+        <StateCard loading title="Alıcılar yükleniyor" />
       ) : state.status === 'error' ? (
-        <StateCard Icon={AlertTriangle} tone="danger" title="Alıcılar yüklenemedi" description={state.error.message}>
-          <Button variant="secondary" onClick={() => void state.reload()}>
+        <StateCard icon={AlertTriangle} tone="danger" title="Alıcılar yüklenemedi" description={state.error.message}>
+          <Button variant="outline" onClick={() => void state.reload()}>
             Tekrar dene
           </Button>
         </StateCard>
       ) : (
         <div className="space-y-2">
           {/* A phone gets each recipient as a block, with the error readable underneath. */}
-          <ul className="divide-y divide-white/5 rounded-lg border border-white/5 md:hidden">
+          <ul className="divide-y divide-border-subtle rounded-lg border border-border-subtle md:hidden">
             {state.data.items.length === 0 ? (
-              <li className="px-4 py-6 text-center text-sm text-neutral-500">{emptyText}</li>
+              <li className="px-4 py-6 text-center text-sm text-subtle-foreground">{emptyText}</li>
             ) : (
               state.data.items.map((row) => (
                 <li key={row.id} className="space-y-1.5 px-3.5 py-3">
@@ -181,7 +178,7 @@ function Recipients({ send }: { send: Send }) {
                       <RecipientStatusBadge status={recipientStatus(row.status)} />
                     </span>
                   </div>
-                  {row.error ? <p className="text-xs break-words text-red-300">{row.error}</p> : null}
+                  {row.error ? <p className="text-xs break-words text-destructive">{row.error}</p> : null}
                   <Attempts row={row} inline />
                 </li>
               ))
@@ -203,11 +200,11 @@ function Recipients({ send }: { send: Send }) {
                   header: 'Hata',
                   render: (value: string | null) =>
                     value ? (
-                      <span className="block max-w-md min-w-[14rem] text-xs break-words whitespace-normal text-red-300">
+                      <span className="block max-w-md min-w-[14rem] text-xs break-words whitespace-normal text-destructive">
                         {value}
                       </span>
                     ) : (
-                      <span className="text-neutral-600">—</span>
+                      <span className="text-faint-foreground">—</span>
                     ),
                 },
                 { key: 'attempts', header: 'Deneme', render: (_, row) => <Attempts row={row} /> },
@@ -215,7 +212,7 @@ function Recipients({ send }: { send: Send }) {
             />
           </div>
           <Pagination
-            ariaLabel="Alıcı sayfaları"
+            aria-label="Alıcı sayfaları"
             current={view.page}
             totalPages={lastPage ?? 1}
             onPageChange={(next) => show({ ...view, page: next })}
@@ -228,9 +225,9 @@ function Recipients({ send }: { send: Send }) {
 
 function Fact({ term, children, className = '' }: { term: string; children: ReactNode; className?: string }) {
   return (
-    <div className={`min-w-0 rounded-md border border-white/5 bg-white/[0.03] px-3.5 py-3 ${className}`}>
-      <dt className="text-2xs text-neutral-500">{term}</dt>
-      <dd className="mt-1 min-w-0 truncate text-sm text-neutral-200">{children}</dd>
+    <div className={`min-w-0 rounded-md border border-border-subtle bg-card px-3.5 py-3 ${className}`}>
+      <dt className="text-2xs text-subtle-foreground">{term}</dt>
+      <dd className="mt-1 min-w-0 truncate text-sm text-secondary-foreground">{children}</dd>
     </div>
   );
 }
@@ -240,8 +237,8 @@ function Recipient({ row }: { row: RecipientRow }) {
   const { name, address } = mailRecipientLabel(row.recipient_full_name, row.recipient_email);
   return (
     <span className="flex max-w-[18rem] flex-col">
-      <span className="truncate text-neutral-200">{name}</span>
-      {address ? <span className="text-2xs truncate text-neutral-500">{address}</span> : null}
+      <span className="truncate text-secondary-foreground">{name}</span>
+      {address ? <span className="text-2xs truncate text-subtle-foreground">{address}</span> : null}
     </span>
   );
 }
@@ -254,15 +251,15 @@ function Attempts({ row, inline = false }: { row: RecipientRow; inline?: boolean
     // One attempt is the ordinary case; say so only when the mailer had to try again.
     if (row.attempts <= 1 && !next) return null;
     return (
-      <p className="text-2xs text-neutral-500 tabular-nums">
+      <p className="text-2xs text-subtle-foreground tabular-nums">
         {row.attempts} deneme{next ? ` · ${next}` : ''}
       </p>
     );
   }
   return (
     <span className="flex flex-col">
-      <span className="text-neutral-300 tabular-nums">{row.attempts > 0 ? row.attempts : '—'}</span>
-      {next ? <span className="text-2xs text-neutral-500">{next}</span> : null}
+      <span className="text-secondary-foreground tabular-nums">{row.attempts > 0 ? row.attempts : '—'}</span>
+      {next ? <span className="text-2xs text-subtle-foreground">{next}</span> : null}
     </span>
   );
 }

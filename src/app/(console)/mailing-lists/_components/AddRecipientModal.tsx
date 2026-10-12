@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import { FormField } from '@/components/chrome/FormField';
-import { Button } from '@/components/ui/Button';
-import { Modal } from '@/components/ui/Modal';
+import { FormField } from '@/components/common/FormField';
+import { PanelDialog } from '@/components/common/PanelDialog';
 import { apiErrorMessage } from '@/lib/api/errors';
 import { useApi } from '@/lib/api/react';
 import {
@@ -12,6 +11,7 @@ import {
   type Recipient,
   type RecipientInput,
 } from '@/lib/mailing-lists';
+import { Button } from '@skylab-kulubu/skylcn-ui';
 
 const EMPTY: RecipientInput = { full_name: '', email: '' };
 
@@ -27,10 +27,10 @@ export function AddRecipientModal({
   onAdded: (recipient: Recipient) => Promise<void> | void;
 }) {
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Alıcı ekle">
+    <PanelDialog isOpen={isOpen} onClose={onClose} title="Alıcı ekle">
       {/* Mounted only while open, so every opening starts with an empty form. */}
       {isOpen ? <AddRecipientForm listId={listId} onCancel={onClose} onAdded={onAdded} /> : null}
-    </Modal>
+    </PanelDialog>
   );
 }
 
@@ -82,20 +82,20 @@ function AddRecipientForm({
         autoComplete="off"
         error={errors.email}
       />
-      <p className="text-xs leading-relaxed text-neutral-500">
+      <p className="text-xs leading-relaxed text-subtle-foreground">
         Bu adres SkyMail&apos;de başka bir listede de varsa aynı alıcı eklenir ve adı her listede burada
         yazdığınla güncellenir.
       </p>
       {apiError ? (
-        <p role="alert" className="text-sm text-red-300">
+        <p role="alert" className="text-sm text-destructive">
           {apiError}
         </p>
       ) : null}
       <div className="flex flex-wrap justify-end gap-2">
-        <Button variant="secondary" onClick={onCancel} disabled={saving}>
+        <Button variant="outline" onClick={onCancel} disabled={saving}>
           İptal
         </Button>
-        <Button type="submit" disabled={saving}>
+        <Button variant="primary" type="submit" disabled={saving}>
           {saving ? 'Ekleniyor…' : 'Ekle'}
         </Button>
       </div>

@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { useId } from 'react';
-import { FormField } from '@/components/chrome/FormField';
+import { FormField } from '@/components/common/FormField';
 import { FREE_BODY_ALLOWANCE } from '@/lib/mail-render/free-body';
 import { variableAction } from '@/lib/mail-render/go-template';
 import { EMPTY_VISUAL_SOURCE } from '@/lib/mail-render/visual-document';
@@ -11,7 +11,7 @@ import { enterSends } from './PeopleEditor';
 
 const VisualEditor = dynamic(() => import('@/components/visual-editor/VisualEditor'), {
   ssr: false,
-  loading: () => <p className="rounded-lg border border-white/10 p-4 text-xs text-neutral-500">Visual editör yükleniyor…</p>,
+  loading: () => <p className="rounded-lg border border-border p-4 text-xs text-subtle-foreground">Visual editör yükleniyor…</p>,
 });
 
 /** The Visual editor speaks of the announcement it writes. */
@@ -22,7 +22,7 @@ const BODY_WORDING = {
 /** What the body may hold, said under the editor: the server keeps nothing else. */
 function BodyNote() {
   return (
-    <p className="border-t border-white/10 px-4 py-2 text-xs leading-relaxed text-neutral-500">
+    <p className="border-t border-border px-4 py-2 text-xs leading-relaxed text-subtle-foreground">
       Gövdede başlık, alt başlık, paragraf, madde ve numaralı liste, alıntı, kalın, italik ve bağlantı kullanılır; satır içinde alt
       satıra geçmek için Shift+Enter. Sunucu gönderenin yazdığı gövdeden bunların dışındakini düşürür; buton için aşağıdaki buton
       alanlarını kullan.
@@ -36,13 +36,13 @@ function FieldLabel({ field }: { field: VariableField }) {
     <>
       {field.label}
       {field.required ? (
-        <span className="text-red-300" aria-hidden>
+        <span className="text-destructive" aria-hidden>
           {' '}
           *
         </span>
       ) : null}
       {field.required ? <span className="sr-only"> (Required variable)</span> : null}
-      {field.label !== field.name ? <code className="text-2xs ml-2 font-normal text-neutral-500">{variableAction(field.name)}</code> : null}
+      {field.label !== field.name ? <code className="text-2xs ml-2 font-normal text-subtle-foreground">{variableAction(field.name)}</code> : null}
     </>
   );
 }
@@ -53,7 +53,7 @@ function Hint({ why, warning }: { why: string | null; warning: string | null }) 
   return (
     <>
       {why ? <p>{why}</p> : null}
-      {warning ? <p className="text-amber-300">{warning}</p> : null}
+      {warning ? <p className="text-warning">{warning}</p> : null}
     </>
   );
 }
@@ -75,7 +75,7 @@ function RichField({
   const errorId = useId();
   return (
     <div className="min-w-0 space-y-1.5 md:col-span-2">
-      <p className="text-xs font-medium text-neutral-300">
+      <p className="text-xs font-medium text-secondary-foreground">
         <FieldLabel field={field} />
       </p>
       <VisualEditor
@@ -88,11 +88,11 @@ function RichField({
         describedBy={`${hintId} ${errorId}`}
         invalid={error !== null}
       />
-      <div id={hintId} className="space-y-0.5 text-xs text-neutral-500">
+      <div id={hintId} className="space-y-0.5 text-xs text-subtle-foreground">
         <Hint why={field.why} warning={warning} />
       </div>
       {error ? (
-        <p id={errorId} className="text-xs text-red-300">
+        <p id={errorId} className="text-xs text-destructive">
           {error}
         </p>
       ) : null}

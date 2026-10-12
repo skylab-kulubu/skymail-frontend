@@ -23,7 +23,7 @@ export function SendItem({ send, timeZone }: { send: Send; timeZone?: string }) 
   const recipients = recipientSummary(send.recipient_counts);
 
   return (
-    <li className="group/row relative transition-colors hover:bg-white/[0.03]">
+    <li className="group/row relative transition-colors hover:bg-accent">
       {/* The whole row opens the send; the links inside it sit above this one. */}
       <Link href={href} className="absolute inset-0 z-0" aria-hidden tabIndex={-1} />
       <div className="flex items-start gap-3 px-3.5 py-3 sm:items-center">
@@ -31,11 +31,11 @@ export function SendItem({ send, timeZone }: { send: Send; timeZone?: string }) 
           <div className="min-w-0">
             <Link
               href={href}
-              className="relative z-10 block truncate text-sm font-medium text-neutral-200 transition-colors group-hover/row:text-neutral-50"
+              className="relative z-10 block truncate text-sm font-medium text-secondary-foreground transition-colors group-hover/row:text-foreground-strong"
             >
               {templateLabel(send)}
             </Link>
-            <p className="text-2xs truncate text-neutral-500">
+            <p className="text-2xs truncate text-subtle-foreground">
               {send.template_key ? (
                 <>
                   <span className="font-mono">{send.template_key}</span> ·{' '}
@@ -48,19 +48,19 @@ export function SendItem({ send, timeZone }: { send: Send; timeZone?: string }) 
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 sm:flex-col sm:items-end">
             <span className="flex items-center gap-2">
               <SendStatusBadge status={send.status} />
-              <span className="text-2xs whitespace-nowrap text-neutral-400 tabular-nums">
+              <span className="text-2xs whitespace-nowrap text-muted-foreground tabular-nums">
                 {recipientsLabel(recipients.total)}
               </span>
             </span>
             {recipients.parts.length > 0 ? (
-              <span className="text-3xs whitespace-nowrap text-neutral-500 tabular-nums">
+              <span className="text-3xs whitespace-nowrap text-subtle-foreground tabular-nums">
                 {recipients.parts.join(' · ')}
               </span>
             ) : null}
           </div>
         </div>
         <ArrowRight
-          className="mt-1 h-3.5 w-3.5 shrink-0 text-neutral-700 transition-all group-hover/row:translate-x-0.5 group-hover/row:text-neutral-400 sm:mt-0"
+          className="mt-1 h-3.5 w-3.5 shrink-0 text-faint-foreground transition-all group-hover/row:translate-x-0.5 group-hover/row:text-muted-foreground sm:mt-0"
           aria-hidden
         />
       </div>

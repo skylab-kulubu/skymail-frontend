@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { FormTextArea } from '@/components/chrome/FormField';
-import { Modal } from '@/components/ui/Modal';
-import { ModalDangerActions, ModalPrimaryActions } from '@/components/ui/modal-actions';
+import { FormTextArea } from '@/components/common/FormField';
+import { PanelDialog } from '@/components/common/PanelDialog';
+import { DangerActions, PrimaryActions } from '@/components/common/PanelDialog';
 import { approvalAudience, recipientName, type MailApproval } from '@/lib/mail-approvals/approvals';
 import { DECISIONS, type Decision } from '@/lib/mail-approvals/decisions';
 import type { PinnedSource } from '@/lib/mail-approvals/edit';
@@ -68,18 +68,18 @@ export function DecisionDialog({
   }
 
   return (
-    <Modal isOpen onClose={close} title={words.title} size={words.withEdit ? 'wide' : 'md'}>
+    <PanelDialog isOpen onClose={close} title={words.title} size={words.withEdit ? 'wide' : 'md'}>
       <div className="space-y-3">
         <dl className="space-y-2">
           <div>
-            <dt className="text-xs text-neutral-500">Mail template</dt>
-            <dd className="break-words text-neutral-100">{approval.template.name}</dd>
+            <dt className="text-xs text-subtle-foreground">Mail template</dt>
+            <dd className="break-words text-foreground">{approval.template.name}</dd>
           </div>
           <div>
-            <dt className="text-xs text-neutral-500">Kime</dt>
-            <dd className="break-words text-neutral-100">{audienceText(approval)}</dd>
+            <dt className="text-xs text-subtle-foreground">Kime</dt>
+            <dd className="break-words text-foreground">{audienceText(approval)}</dd>
             {people.length > 1 ? (
-              <dd className="mt-1 max-h-32 overflow-y-auto text-xs text-neutral-400">
+              <dd className="mt-1 max-h-32 overflow-y-auto text-xs text-muted-foreground">
                 {people.map(recipientName).join(', ')}
               </dd>
             ) : null}
@@ -97,7 +97,7 @@ export function DecisionDialog({
           />
         ) : null}
 
-        <p className="text-xs text-neutral-400">{words.explains}</p>
+        <p className="text-xs text-muted-foreground">{words.explains}</p>
 
         {words.text ? (
           <FormTextArea
@@ -113,10 +113,10 @@ export function DecisionDialog({
         ) : null}
       </div>
       {words.refusal ? (
-        <ModalDangerActions onCancel={onCancel} onConfirm={confirm} confirmLabel={words.title} pendingLabel={words.pending} isPending={busy} />
+        <DangerActions onCancel={onCancel} onConfirm={confirm} confirmLabel={words.title} pendingLabel={words.pending} isPending={busy} />
       ) : (
-        <ModalPrimaryActions onCancel={onCancel} onConfirm={confirm} confirmLabel={words.title} pendingLabel={words.pending} isPending={busy} />
+        <PrimaryActions onCancel={onCancel} onConfirm={confirm} confirmLabel={words.title} pendingLabel={words.pending} isPending={busy} />
       )}
-    </Modal>
+    </PanelDialog>
   );
 }

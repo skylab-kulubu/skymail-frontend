@@ -1,7 +1,8 @@
 /**
  * Who built SkyMail. The Refine panel signed this on its sign-in screen
  * until the Next.js rewrite (#25) dropped it; Forms and the e-skylab sign-in
- * page carry the same "Developed by" line.
+ * page carry the same "Developed by" line. It sits under the sign-in task and
+ * at the foot of the sidebar.
  */
 export function DeveloperCredit() {
   return (
@@ -9,7 +10,7 @@ export function DeveloperCredit() {
       href="https://enesgenc.dev"
       target="_blank"
       rel="noopener noreferrer"
-      className="hover:text-skylab-300 focus-visible:ring-skylab-400/40 rounded text-xs text-neutral-500 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+      className="text-3xs text-subtle-foreground hover:text-foreground focus-visible:ring-ring rounded-sm transition-colors outline-hidden focus-visible:ring-2"
     >
       Developed by Enes Genç
     </a>

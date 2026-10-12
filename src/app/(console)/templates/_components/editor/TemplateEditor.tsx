@@ -12,14 +12,11 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { FileWarning } from 'lucide-react';
-import { FormField } from '@/components/chrome/FormField';
-import { Notice } from '@/components/chrome/Notice';
-import { StateCard } from '@/components/chrome/StateCard';
-import { Tag } from '@/components/chrome/Tag';
+import { FormField } from '@/components/common/FormField';
+import { Badge, Button, StateCard } from '@skylab-kulubu/skylcn-ui';
 import { useConsole } from '@/components/layout/ConsoleContext';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { RoleGate } from '@/components/layout/RoleGate';
-import { Button } from '@/components/ui/Button';
 import { ROLE } from '@/lib/access';
 import { useApi, useApiLoad } from '@/lib/api/react';
 import { formatClubTime } from '@/lib/format';
@@ -66,6 +63,7 @@ import { RequiredVariablesPanel } from './RequiredVariablesPanel';
 import { SourcePanel, SourceTabs } from './SourcePane';
 import { TemplateLoadFailure } from './TemplateLoadFailure';
 import { HistoryLinks } from '../history/HistoryParts';
+import { OutcomeNotice } from '@/components/common/OutcomeNotice';
 
 type Loaded = { template: MailTemplate; version: TemplateVersion | null; loadedAt: number };
 
@@ -92,12 +90,12 @@ function EditorLoader({ id, startVisual }: { id: string; startVisual: boolean })
     return { template, version, loadedAt: Date.now() };
   }, id);
 
-  if (state.status === 'loading') return <StateCard isLoading title="Mail template yükleniyor" />;
+  if (state.status === 'loading') return <StateCard loading title="Mail template yükleniyor" />;
   if (state.status === 'error') return <TemplateLoadFailure error={state.error} onRetry={() => void state.reload()} />;
   if (!state.data.version) {
     return (
       <StateCard
-        Icon={FileWarning}
+        icon={FileWarning}
         tone="warning"
         title="Bu template'in açılacak bir sürümü yok"
         description="Sürüm geçmişi tutulmadan önce yazılmış ve o günden beri hiç kaydedilmemiş olabilir. Yöneticine haber ver."
@@ -317,43 +315,43 @@ function Editor({
         description="Kaydet taslak yazar; gönderilen mail ancak yayımlayınca değişir."
         meta={
           <>
-            {template.system ? <Tag tone="system">System</Tag> : null}
-            {template.key ? <span className="font-mono text-xs break-all text-neutral-400">{template.key}</span> : null}
+            {template.system ? <Badge tone="brand" size="xs">System</Badge> : null}
+            {template.key ? <span className="font-mono text-xs break-all text-muted-foreground">{template.key}</span> : null}
             {/* A real navigation: beforeunload is the editor's only guard for unsaved changes. */}
             <HistoryLinks template={template} fullNavigation />
           </>
         }
       />
 
-      {notice ? <Notice notice={notice} onDismiss={() => setNotice(null)} /> : null}
+      {notice ? <OutcomeNotice notice={notice} onDismiss={() => setNotice(null)} /> : null}
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <p className="min-w-0 flex-1 text-sm text-neutral-400">
+        <p className="min-w-0 flex-1 text-sm text-muted-foreground">
           {stored.draftId
             ? `Taslağını düzenliyorsun: #${stored.seq}, ${formatClubTime(stored.savedAt)}.`
             : `Gönderilen sürümü görüyorsun: #${stored.seq}. Kaydettiğinde taslağın olur.`}
-          {dirty ? <span className="text-amber-300"> Kaydedilmemiş değişiklikler var.</span> : null}
+          {dirty ? <span className="text-warning"> Kaydedilmemiş değişiklikler var.</span> : null}
         </p>
         <div className="flex flex-wrap items-center gap-2 lg:shrink-0 lg:flex-nowrap">
           {dirty ? (
-            <Button variant="secondary" onClick={() => setEditing(contentOf(stored))} disabled={busy !== null}>
+            <Button variant="outline" onClick={() => setEditing(contentOf(stored))} disabled={busy !== null}>
               Değişiklikleri geri al
             </Button>
           ) : null}
           {stored.draftId ? (
-            <Button variant="outlineDanger" onClick={() => setDialog({ kind: 'discard' })} disabled={busy !== null}>
+            <Button variant="destructive" onClick={() => setDialog({ kind: 'discard' })} disabled={busy !== null}>
               Taslağı at
             </Button>
           ) : null}
           <Button
-            variant="outlineBrand"
+            variant="primary"
             onClick={() => setDialog({ kind: 'publish' })}
             disabled={!canPublish}
             title={dirty ? 'Yayımlamadan önce kaydet.' : stored.draftId ? undefined : 'Yayımlanacak bir taslak yok.'}
           >
             Yayımla
           </Button>
-          <Button onClick={() => void save()} disabled={!dirty || busy !== null}>
+          <Button variant="primary" onClick={() => void save()} disabled={!dirty || busy !== null}>
             {busy === 'save' ? 'Kaydediliyor…' : 'Taslağı kaydet'}
           </Button>
         </div>
@@ -410,20 +408,20 @@ function Editor({
             toolbar={
               active !== main || changed(active) ? (
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="min-w-0 flex-1 text-xs text-neutral-500">
+                  <p className="min-w-0 flex-1 text-xs text-subtle-foreground">
                     {active !== main
                       ? `Bu kaynak gönderilmiyor; gönderilen mail ${AUTHORING_MODE_LABEL[main]} kaynağından üretilir.`
                       : null}
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {changed(active) ? (
-                      <Button variant="secondary" onClick={() => revert(active)} disabled={busy !== null}>
+                      <Button variant="outline" onClick={() => revert(active)} disabled={busy !== null}>
                         Bu kaynaktaki değişiklikleri geri al
                       </Button>
                     ) : null}
                     {active !== main ? (
                       <Button
-                        variant="outlineBrand"
+                        variant="primary"
                         onClick={() => setDialog({ kind: 'main', mode: active, refusal: null })}
                         disabled={busy !== null}
                       >
@@ -435,9 +433,9 @@ function Editor({
               ) : null
             }
             empty={
-              <div className="rounded-lg border border-dashed border-white/15 px-4 py-8 text-center">
-                <p className="text-sm text-neutral-300">Bu template&apos;in {activeLabel} kaynağı yok.</p>
-                <p className="mx-auto mt-1 max-w-md text-xs text-neutral-500">
+              <div className="rounded-lg border border-dashed border-border-strong px-4 py-8 text-center">
+                <p className="text-sm text-secondary-foreground">Bu template&apos;in {activeLabel} kaynağı yok.</p>
+                <p className="mx-auto mt-1 max-w-md text-xs text-subtle-foreground">
                   {active === 'html'
                     ? 'Eklediğin HTML kaynağı, Main source’un render edilmiş HTML’inden başlar. Diğer kaynaklar olduğu gibi kalır; Main source değişmez.'
                     : active === 'visual'
@@ -445,12 +443,12 @@ function Editor({
                       : 'Eklediğin JSX kaynağı kulübün mail bileşenleriyle yazılmış bir başlangıçtan başlar. Diğer kaynaklar olduğu gibi kalır; Main source değişmez.'}
                 </p>
                 <div className="mt-4 flex justify-center">
-                  <Button variant="outlineBrand" onClick={() => added && setEditing(added)} disabled={!added || busy !== null}>
+                  <Button variant="primary" onClick={() => added && setEditing(added)} disabled={!added || busy !== null}>
                     {activeLabel} kaynağı ekle
                   </Button>
                 </div>
                 {!added ? (
-                  <p className="mt-2 text-xs text-amber-300">Main source render edilmeden HTML kaynağı eklenemez.</p>
+                  <p className="mt-2 text-xs text-warning">Main source render edilmeden HTML kaynağı eklenemez.</p>
                 ) : null}
               </div>
             }

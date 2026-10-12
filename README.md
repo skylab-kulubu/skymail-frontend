@@ -24,8 +24,8 @@
   ya da sunana geri gönderir, ya da gerekçesiyle reddeder. 7 gün içinde karar
   verilmeyen istek gönderilmez.
 
-Panel Next.js (App Router) + Tailwind 4 + TypeScript. Kabuk ve temel bileşenler
-superadmin'den kopyalandı (ADR-0017); giriş Auth.js v5 ile Keycloak'ın `skymail`
+Panel Next.js (App Router) + Tailwind 4 + TypeScript. Tema, kabuk (`AppShell`) ve
+bileşenler kulübün tasarım sistemi `@skylab-kulubu/skylcn-ui`'den gelir (ADR 0055); giriş Auth.js v5 ile Keycloak'ın `skymail`
 public istemcisi üzerinden (sır yok, PKCE + `state`). Sayfalar tarayıcıdan
 doğrudan SkyMail API'sine gider; tek HTTP istemcisi `src/lib/api/client.ts`.
 
@@ -47,6 +47,7 @@ Ortam değişkenleri çalışma zamanında okunur; imaj sandbox ve production i�
 | `KEYCLOAK_CLIENT_ID` | Public istemci (varsayılan `skymail`) | `skymail` |
 | `API_URL` | SkyMail API'si (yerelde dev proxy'si, aşağıda) | `https://api.yildizskylab.com/api/skymail/v1` |
 | `ADMIN_URL`, `FORMS_ADMIN_URL` | Kulüp değiştiricideki diğer konsollar (boşsa production) | `https://admin.yildizskylab.com` |
+| `ACCOUNT_URL` | Kullanıcı menüsündeki Hesap merkezi (boşsa production) | `https://my.yildizskylab.com` |
 
 `AUTH_SECRET`, `KEYCLOAK_ISSUER` ya da `API_URL` eksikse production sunucusu
 eksikleri yazıp kapanır.

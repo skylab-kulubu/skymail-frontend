@@ -13,6 +13,8 @@ const nextConfig: NextConfig = {
   // action IDs. Unset (local builds) Next.js behaves as before.
   deploymentId: process.env.SKYMAIL_BUILD_ID || undefined,
   poweredByHeader: false,
+  // skylcn-ui's entry re-exports every component; import only the ones a page uses.
+  experimental: { optimizePackageImports: ["@skylab-kulubu/skylcn-ui"] },
   // The workspace above this repo holds other lockfiles; pin the root so the
   // traced output has the same shape locally as in the image.
   outputFileTracingRoot: process.cwd(),

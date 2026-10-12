@@ -15,11 +15,9 @@
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { CheckCircle2, ClipboardCheck, Send as SendIcon } from 'lucide-react';
-import { NoticeBox } from '@/components/chrome/Notice';
-import { StateCard } from '@/components/chrome/StateCard';
+import { Button, Notice, StateCard } from '@skylab-kulubu/skylcn-ui';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { Button } from '@/components/ui/Button';
-import { FormActions } from '@/components/ui/FormActions';
+import { FormActions } from '@/components/common/FormActions';
 import { useApiLoad } from '@/lib/api/react';
 import { approvalHref, type MailApproval } from '@/lib/mail-approvals/approvals';
 import { approvalRequest, type ComposePrefill } from '@/lib/mail-approvals/edit';
@@ -48,6 +46,7 @@ import { useSending } from './use-sending';
 import { useSubmitting } from './use-submitting';
 import { VariableFields } from './VariableFields';
 import { WhatPart, type What } from './WhatPart';
+import { NavButton } from '@/components/common/NavButton';
 
 export const SEND_FORM_TITLE = 'Yeni gönderim';
 
@@ -67,7 +66,7 @@ const NEW: ComposeMode = { kind: 'new' };
 function Part({ id, title, children }: { id: string; title: string; children: ReactNode }) {
   return (
     <section aria-labelledby={id} className="space-y-3">
-      <h2 id={id} className="text-sm font-medium text-neutral-100">
+      <h2 id={id} className="text-sm font-medium text-foreground">
         {title}
       </h2>
       {children}
@@ -238,8 +237,8 @@ export function Compose({
     return (
       <div className="space-y-6">
         <PageHeader title={SEND_FORM_TITLE} />
-        <StateCard Icon={CheckCircle2} tone="brand" title="Gönderim kuyruğa alındı" description={sending.queued}>
-          <Button variant="secondary" onClick={startOver}>
+        <StateCard icon={CheckCircle2} tone="brand" title="Gönderim kuyruğa alındı" description={sending.queued}>
+          <Button variant="outline" onClick={startOver}>
             Yeni gönderim
           </Button>
         </StateCard>
@@ -265,11 +264,11 @@ export function Compose({
       {intro}
 
       {!prefill && presetListId && !preset ? (
-        <NoticeBox tone="warning">
+        <Notice tone="warning">
           {access.list
             ? 'Bağlantıdaki mail listesi bulunamadı: arşivlenmiş ya da artık yok. Aşağıdan bir liste seç.'
             : 'Bu bağlantı bir mail listesine gönderim için, ama bu hesap mail listelerini göremiyor (skymail:lists:read): kişileri aşağıda ekleyebilirsin.'}
-        </NoticeBox>
+        </Notice>
       ) : null}
 
       <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
@@ -305,13 +304,13 @@ export function Compose({
               peopleWarnings={check.warnings.people}
               onSend={submit}
             />
-            {audienceNote ? <NoticeBox tone="info">{audienceNote}</NoticeBox> : null}
+            {audienceNote ? <Notice tone="info">{audienceNote}</Notice> : null}
           </Part>
 
           {template ? (
             <Part id="send-fields" title={what === 'free' ? '3. Duyuru' : '3. Değişkenler'}>
               {fields.length === 0 ? (
-                <p className="text-xs text-neutral-500">Bu template doldurulacak bir değişken kullanmıyor.</p>
+                <p className="text-xs text-subtle-foreground">Bu template doldurulacak bir değişken kullanmıyor.</p>
               ) : (
                 <VariableFields
                   fields={fields}
@@ -327,23 +326,23 @@ export function Compose({
           ) : null}
 
           {problems ? (
-            <NoticeBox tone="error">
+            <Notice tone="danger">
               {intent === 'submit' ? 'Gönderim henüz onaya sunulamaz: işaretli yerleri düzelt.' : 'Gönderim henüz gönderilemez: işaretli yerleri düzelt.'}
-            </NoticeBox>
+            </Notice>
           ) : null}
-          {approvalProblem ? <NoticeBox tone="error">{approvalProblem}</NoticeBox> : null}
+          {approvalProblem ? <Notice tone="danger">{approvalProblem}</Notice> : null}
           {refusal ? (
-            <NoticeBox tone="error">
+            <Notice tone="danger">
               <p className="font-medium">{resubmit ? 'İstek yeniden onaya sunulamadı.' : 'Gönderim onaya sunulamadı.'}</p>
               <p className="mt-1">{refusal.text}</p>
-            </NoticeBox>
+            </Notice>
           ) : null}
           {failure && held ? (
-            <NoticeBox tone="warning">
+            <Notice tone="warning">
               <p className="font-medium">Bu listeye gönderim açılmış olabilir.</p>
               <p className="mt-1">{failure.reason}</p>
               <div className="mt-2 flex flex-wrap items-center gap-3">
-                <Button variant="secondary" onClick={resendList} disabled={busy}>
+                <Button variant="outline" onClick={resendList} disabled={busy}>
                   Yine de yeniden gönder…
                 </Button>
                 {access.detail ? (
@@ -352,32 +351,32 @@ export function Compose({
                   </a>
                 ) : null}
               </div>
-            </NoticeBox>
+            </Notice>
           ) : failure && failure.kind !== 'uncertain' ? (
-            <NoticeBox tone={failure.kind === 'final' ? 'error' : 'warning'}>
+            <Notice tone={failure.kind === 'final' ? 'danger' : 'warning'}>
               <p className="font-medium">Gönderim açılmadı.</p>
               <p className="mt-1">{failure.reason}</p>
-            </NoticeBox>
+            </Notice>
           ) : null}
 
           <FormActions
             cancel={
-              <Button
-                variant="secondary"
+              <NavButton
+                variant="outline"
                 href={mode.kind === 'new' ? (access.detail ? SEND_LIST_PATH : '/') : approvalHref(mode.approval.id)}
                 disabled={busy}
               >
                 İptal
-              </Button>
+              </NavButton>
             }
             submit={
               <div className="flex flex-wrap items-center gap-2">
-                <Button variant={direct ? 'secondary' : 'primary'} onClick={submitForApproval} disabled={busy}>
+                <Button variant={direct ? 'outline' : 'primary'} onClick={submitForApproval} disabled={busy}>
                   <ClipboardCheck className="h-4 w-4" aria-hidden />
                   {resubmit ? 'Yeniden onaya sun…' : 'Onaya sun…'}
                 </Button>
                 {direct ? (
-                  <Button onClick={send} disabled={busy || held} title={held ? 'Önce yeniden göndermeyi onayla' : undefined}>
+                  <Button variant="primary" onClick={send} disabled={busy || held} title={held ? 'Önce yeniden göndermeyi onayla' : undefined}>
                     <SendIcon className="h-4 w-4" aria-hidden />
                     Gönder…
                   </Button>

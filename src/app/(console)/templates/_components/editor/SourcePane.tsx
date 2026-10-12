@@ -7,7 +7,7 @@ import { EDITABLE_MODES, type EditableMode } from '@/lib/template-editor/editor-
 
 const CodeEditor = dynamic(() => import('./CodeEditor'), {
   ssr: false,
-  loading: () => <p className="p-4 text-xs text-neutral-500">Kod editörü yükleniyor…</p>,
+  loading: () => <p className="p-4 text-xs text-subtle-foreground">Kod editörü yükleniyor…</p>,
 });
 
 /** The Visual editor speaks of the template it is in. */
@@ -19,7 +19,7 @@ const TEMPLATE_WORDING = {
 
 const VisualEditor = dynamic(() => import('@/components/visual-editor/VisualEditor'), {
   ssr: false,
-  loading: () => <p className="p-4 text-xs text-neutral-500">Visual editör yükleniyor…</p>,
+  loading: () => <p className="p-4 text-xs text-subtle-foreground">Visual editör yükleniyor…</p>,
 });
 
 /** One tab per Authoring mode the editor writes, marking the Main source. */
@@ -41,7 +41,7 @@ export function SourceTabs({
   idPrefix: string;
 }) {
   return (
-    <div role="tablist" aria-label="Authoring mode" className="flex flex-wrap gap-1 border-b border-white/10">
+    <div role="tablist" aria-label="Authoring mode" className="flex flex-wrap gap-1 border-b border-border">
       {EDITABLE_MODES.map((mode) => {
         const selected = mode === active;
         return (
@@ -61,10 +61,10 @@ export function SourceTabs({
               onSelect(next);
               document.getElementById(`${idPrefix}-tab-${next}`)?.focus();
             }}
-            className={`focus-visible:ring-skylab-400/40 -mb-px inline-flex items-center gap-2 border-b-2 px-3 py-2 text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none ${
+            className={`focus-visible:ring-ring -mb-px inline-flex items-center gap-2 border-b-2 px-3 py-2 text-sm transition-colors focus-visible:ring-2 outline-hidden ${
               selected
-                ? 'border-skylab-400 text-neutral-100'
-                : 'border-transparent text-neutral-400 hover:text-neutral-200'
+                ? 'border-skylab-400 text-foreground'
+                : 'border-transparent text-muted-foreground hover:text-secondary-foreground'
             }`}
           >
             <span className="font-medium">{AUTHORING_MODE_LABEL[mode]}</span>
@@ -77,9 +77,9 @@ export function SourceTabs({
                 Main source
               </span>
             ) : null}
-            {!present(mode) ? <span className="text-2xs text-neutral-500">yok</span> : null}
+            {!present(mode) ? <span className="text-2xs text-subtle-foreground">yok</span> : null}
             {changed?.(mode) ? (
-              <span className="text-2xs text-amber-300" title="Kaydedilmemiş değişiklik">
+              <span className="text-2xs text-warning" title="Kaydedilmemiş değişiklik">
                 ● <span className="sr-only">kaydedilmemiş değişiklik</span>
               </span>
             ) : null}
@@ -142,7 +142,7 @@ export function SourcePanel({
               wording={TEMPLATE_WORDING}
             />
           ) : (
-            <div className="h-[55vh] min-h-[360px] overflow-hidden rounded-lg border border-white/10">
+            <div className="h-[55vh] min-h-[360px] overflow-hidden rounded-lg border border-border">
               <CodeEditor key={mode} mode={mode} value={source} onChange={onChange} label={`${AUTHORING_MODE_LABEL[mode]} kaynağı`} />
             </div>
           )}

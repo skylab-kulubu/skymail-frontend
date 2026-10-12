@@ -2,10 +2,10 @@
 
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/Button';
-import { Modal } from '@/components/ui/Modal';
+import { PanelDialog } from '@/components/common/PanelDialog';
 import { useApi } from '@/lib/api/react';
 import { signInWithKeycloak } from '@/lib/auth/actions';
+import { Button } from '@skylab-kulubu/skylcn-ui';
 
 /**
  * Listens for the HTTP client's "session ended" announcement (a 401, or a
@@ -24,18 +24,18 @@ export function SessionEndedDialog() {
   const callbackUrl = search ? `${pathname}?${search}` : pathname;
 
   return (
-    <Modal isOpen={open} onClose={() => setOpen(false)} title="Oturumun sona erdi">
+    <PanelDialog isOpen={open} onClose={() => setOpen(false)} title="Oturumun sona erdi">
       <p className="leading-relaxed">
         Oturumun kapandığı için son isteğin tamamlanamadı. Kaldığın yerden devam etmek için yeniden
         giriş yap; bu sayfaya geri dönersin.
       </p>
       <form action={signInWithKeycloak} className="mt-5 flex flex-wrap justify-end gap-2">
         <input type="hidden" name="callbackUrl" value={callbackUrl} />
-        <Button variant="secondary" onClick={() => setOpen(false)}>
+        <Button variant="outline" onClick={() => setOpen(false)}>
           Kapat
         </Button>
-        <Button type="submit">Yeniden giriş yap</Button>
+        <Button variant="primary" type="submit">Yeniden giriş yap</Button>
       </form>
-    </Modal>
+    </PanelDialog>
   );
 }

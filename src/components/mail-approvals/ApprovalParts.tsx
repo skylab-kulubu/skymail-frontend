@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ToneBadge, type Tone } from '@/components/chrome/ToneBadge';
+import { ToneBadge, type Tone } from '@/components/common/ToneBadge';
 import { useCan } from '@/components/layout/ConsoleContext';
 import { ROLE } from '@/lib/access';
 import { formatClubTime } from '@/lib/format';
@@ -39,13 +39,13 @@ export function ApprovalStateBadge({ state }: { state: ApprovalState }) {
  */
 export function Deadline({ item, now = new Date(), inline = false }: { item: Pick<ApprovalItem, 'state' | 'deadline_at'>; now?: Date; inline?: boolean }) {
   const state = effectiveState(item, now);
-  if (state === 'expired') return <span className="text-neutral-400">Süresi doldu</span>;
-  if (!isWaiting(state)) return <span className="text-neutral-600">—</span>;
+  if (state === 'expired') return <span className="text-muted-foreground">Süresi doldu</span>;
+  if (!isWaiting(state)) return <span className="text-faint-foreground">—</span>;
   const hint = deadlineHint(item.deadline_at, now);
   return (
     <span className={inline ? 'inline-flex flex-wrap items-baseline gap-x-1.5' : 'flex flex-col'}>
-      <span className="text-neutral-300 tabular-nums">{formatClubTime(item.deadline_at)}</span>
-      {hint ? <span className={`text-2xs ${hint.urgent ? 'text-amber-300' : 'text-neutral-500'}`}>{hint.text}</span> : null}
+      <span className="text-secondary-foreground tabular-nums">{formatClubTime(item.deadline_at)}</span>
+      {hint ? <span className={`text-2xs ${hint.urgent ? 'text-warning' : 'text-subtle-foreground'}`}>{hint.text}</span> : null}
     </span>
   );
 }
@@ -77,8 +77,8 @@ export function Submitter({ submitter, at }: { submitter: ApprovalSubmitter; at?
   const under = at ? formatClubTime(at) : email && email !== name ? email : null;
   return (
     <span className="flex max-w-[14rem] min-w-0 flex-col" title={email ?? undefined}>
-      <span className="truncate text-neutral-200">{name}</span>
-      {under ? <span className={`text-2xs truncate text-neutral-500 ${at ? 'tabular-nums' : ''}`}>{under}</span> : null}
+      <span className="truncate text-secondary-foreground">{name}</span>
+      {under ? <span className={`text-2xs truncate text-subtle-foreground ${at ? 'tabular-nums' : ''}`}>{under}</span> : null}
     </span>
   );
 }

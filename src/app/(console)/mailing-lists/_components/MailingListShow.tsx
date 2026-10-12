@@ -3,13 +3,11 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { AlertTriangle, Archive, Lock, Pencil, Send, UserPlus } from 'lucide-react';
-import { Pagination } from '@/components/chrome/Pagination';
-import { StateCard } from '@/components/chrome/StateCard';
+import { Badge, Button, Pagination, StateCard } from '@skylab-kulubu/skylcn-ui';
 import { useConsole } from '@/components/layout/ConsoleContext';
 import { DataTable } from '@/components/tables/DataTable';
-import { Button } from '@/components/ui/Button';
-import { Modal } from '@/components/ui/Modal';
-import { ModalDangerActions } from '@/components/ui/modal-actions';
+import { PanelDialog } from '@/components/common/PanelDialog';
+import { DangerActions } from '@/components/common/PanelDialog';
 import { apiErrorMessage } from '@/lib/api/errors';
 import { useApi, useApiLoad } from '@/lib/api/react';
 import { pageCount } from '@/lib/list-view';
@@ -32,14 +30,14 @@ import { flashNotice, useFlashNotice, type NoticeData } from '@/lib/notice';
 import { formatDateTime } from '@/lib/format';
 import { composeHref } from '@/lib/sends';
 import { ListLoadFailure } from './ListLoadFailure';
-import { Notice } from '@/components/chrome/Notice';
-import { Tag } from '@/components/chrome/Tag';
+import { OutcomeNotice } from '@/components/common/OutcomeNotice';
+import { NavButton } from '@/components/common/NavButton';
 
 /** One list: what it is, who is on it, and — for an internal list — changing both. */
 export function MailingListShow({ id }: { id: string }) {
   const state = useApiLoad((api, signal) => fetchList(api, id, signal), id);
 
-  if (state.status === 'loading') return <StateCard isLoading title="Liste yükleniyor" />;
+  if (state.status === 'loading') return <StateCard loading title="Liste yükleniyor" />;
   if (state.status === 'error') return <ListLoadFailure error={state.error} onRetry={() => void state.reload()} />;
   return <ListDetail list={state.data} />;
 }
@@ -55,33 +53,33 @@ function ListDetail({ list }: { list: MailingList }) {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-3 border-b border-white/5 pb-4">
+      <div className="space-y-3 border-b border-border-subtle pb-4">
         <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="min-w-0 text-lg font-medium break-words text-neutral-100">{list.name}</h1>
-            {row.external ? <Tag tone="external">Harici</Tag> : null}
+            <h1 className="min-w-0 text-lg font-medium break-words text-foreground">{list.name}</h1>
+            {row.external ? <Badge tone="warning" size="xs">Harici</Badge> : null}
           </div>
           {row.external ? (
-            <p className="text-sm break-all text-neutral-500">{row.groupPath ?? 'Keycloak grubu'}</p>
+            <p className="text-sm break-all text-subtle-foreground">{row.groupPath ?? 'Keycloak grubu'}</p>
           ) : (
-            <p className="text-sm text-neutral-500">Internal liste</p>
+            <p className="text-sm text-subtle-foreground">Internal liste</p>
           )}
         </div>
         {actions.compose || actions.change ? (
           <div className="flex flex-wrap gap-2">
             {actions.compose ? (
-              <Button href={composeHref(list.id)}>
+              <NavButton variant="primary" href={composeHref(list.id)}>
                 <Send className="h-4 w-4" aria-hidden />
                 Yeni gönderim
-              </Button>
+              </NavButton>
             ) : null}
             {actions.change ? (
               <>
-                <Button variant="secondary" href={listHref.edit(list.id)}>
+                <NavButton variant="outline" href={listHref.edit(list.id)}>
                   <Pencil className="h-4 w-4" aria-hidden />
                   Düzenle
-                </Button>
-                <Button variant="outlineDanger" onClick={() => setArchiveOpen(true)}>
+                </NavButton>
+                <Button variant="destructive" onClick={() => setArchiveOpen(true)}>
                   <Archive className="h-4 w-4" aria-hidden />
                   Arşivle
                 </Button>
@@ -91,10 +89,10 @@ function ListDetail({ list }: { list: MailingList }) {
         ) : null}
       </div>
 
-      {notice ? <Notice notice={notice} onDismiss={() => setNotice(null)} /> : null}
+      {notice ? <OutcomeNotice notice={notice} onDismiss={() => setNotice(null)} /> : null}
 
       {actions.readOnly ? (
-        <div className="flex items-start gap-3 rounded-lg border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-sm text-amber-300">
+        <div className="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
           <Lock className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
           <div className="space-y-1">
             <p className="font-medium">Salt okunur liste</p>
@@ -103,19 +101,19 @@ function ListDetail({ list }: { list: MailingList }) {
         </div>
       ) : null}
 
-      <dl className="grid gap-4 rounded-lg border border-white/5 bg-white/[0.02] p-4 sm:grid-cols-3">
+      <dl className="grid gap-4 rounded-lg border border-border-subtle bg-card p-4 sm:grid-cols-3">
         <div className="min-w-0 space-y-1">
-          <dt className="text-2xs tracking-wider text-neutral-500 uppercase">Liste ID</dt>
-          <dd className="font-mono text-xs break-all text-neutral-200">{list.id}</dd>
+          <dt className="text-2xs tracking-wider text-subtle-foreground uppercase">Liste ID</dt>
+          <dd className="font-mono text-xs break-all text-secondary-foreground">{list.id}</dd>
         </div>
         <div className="min-w-0 space-y-1">
-          <dt className="text-2xs tracking-wider text-neutral-500 uppercase">Kaynak</dt>
-          <dd className="text-sm text-neutral-200">{row.external ? 'Keycloak grubu' : 'SkyMail'}</dd>
+          <dt className="text-2xs tracking-wider text-subtle-foreground uppercase">Kaynak</dt>
+          <dd className="text-sm text-secondary-foreground">{row.external ? 'Keycloak grubu' : 'SkyMail'}</dd>
         </div>
         {row.createdAt ? (
           <div className="min-w-0 space-y-1">
-            <dt className="text-2xs tracking-wider text-neutral-500 uppercase">Oluşturulma</dt>
-            <dd className="text-sm text-neutral-200">{formatDateTime(row.createdAt)}</dd>
+            <dt className="text-2xs tracking-wider text-subtle-foreground uppercase">Oluşturulma</dt>
+            <dd className="text-sm text-secondary-foreground">{formatDateTime(row.createdAt)}</dd>
           </div>
         ) : null}
       </dl>
@@ -177,17 +175,18 @@ function Recipients({ list, external, editable }: { list: MailingList; external:
             key: 'actions',
             header: 'İşlemler',
             render: (_: unknown, recipient: Recipient) => (
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => {
                   setRemoveError(null);
                   setToRemove(recipient);
                 }}
                 aria-label={`${recipient.full_name} alıcısını listeden çıkar`}
-                className="focus-visible:ring-skylab-400/40 cursor-pointer rounded text-neutral-400 hover:text-red-300 focus-visible:ring-2 focus-visible:outline-none"
+                className="hover:text-destructive"
               >
                 Çıkar
-              </button>
+              </Button>
             ),
           },
         ]
@@ -197,27 +196,27 @@ function Recipients({ list, external, editable }: { list: MailingList; external:
   return (
     <section aria-labelledby="recipients-heading" className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 id="recipients-heading" className="text-base font-medium text-neutral-100">
+        <h2 id="recipients-heading" className="text-base font-medium text-foreground">
           Alıcılar
           {state.status === 'success' ? (
-            <span className="ml-2 text-sm font-normal text-neutral-500 tabular-nums">{state.data.total}</span>
+            <span className="ml-2 text-sm font-normal text-subtle-foreground tabular-nums">{state.data.total}</span>
           ) : null}
         </h2>
         {editable ? (
-          <Button onClick={() => setAdding(true)}>
+          <Button variant="primary" onClick={() => setAdding(true)}>
             <UserPlus className="h-4 w-4" aria-hidden />
             Alıcı ekle
           </Button>
         ) : null}
       </div>
 
-      {notice ? <Notice notice={notice} onDismiss={() => setNotice(null)} /> : null}
+      {notice ? <OutcomeNotice notice={notice} onDismiss={() => setNotice(null)} /> : null}
 
       {state.status === 'loading' ? (
-        <StateCard isLoading title="Alıcılar yükleniyor" />
+        <StateCard loading title="Alıcılar yükleniyor" />
       ) : state.status === 'error' ? (
-        <StateCard Icon={AlertTriangle} tone="danger" title="Alıcılar yüklenemedi" description={state.error.message}>
-          <Button variant="secondary" onClick={() => void state.reload()}>
+        <StateCard icon={AlertTriangle} tone="danger" title="Alıcılar yüklenemedi" description={state.error.message}>
+          <Button variant="outline" onClick={() => void state.reload()}>
             Tekrar dene
           </Button>
         </StateCard>
@@ -229,7 +228,7 @@ function Recipients({ list, external, editable }: { list: MailingList; external:
             emptyText={external ? 'Bu grupta e-posta adresi olan üye yok.' : 'Bu listede henüz alıcı yok.'}
           />
           <Pagination
-            ariaLabel="Alıcı sayfaları"
+            aria-label="Alıcı sayfaları"
             current={page}
             totalPages={lastPage ?? 1}
             onPageChange={setPage}
@@ -252,7 +251,7 @@ function Recipients({ list, external, editable }: { list: MailingList; external:
         }}
       />
 
-      <Modal
+      <PanelDialog
         isOpen={toRemove !== null}
         onClose={() => (removing ? undefined : setToRemove(null))}
         title="Alıcıyı listeden çıkar"
@@ -260,15 +259,15 @@ function Recipients({ list, external, editable }: { list: MailingList; external:
         {toRemove ? (
           <>
             <p className="leading-relaxed">
-              <strong className="font-medium text-neutral-100">{toRemove.full_name}</strong> ({toRemove.email}) bu
+              <strong className="font-medium text-foreground">{toRemove.full_name}</strong> ({toRemove.email}) bu
               listeden çıkarılacak. Başka listelerdeyse orada kalır; geçmiş gönderimler etkilenmez.
             </p>
             {removeError ? (
-              <p role="alert" className="mt-3 text-red-300">
+              <p role="alert" className="mt-3 text-destructive">
                 {removeError}
               </p>
             ) : null}
-            <ModalDangerActions
+            <DangerActions
               onCancel={() => setToRemove(null)}
               onConfirm={() => void remove(toRemove)}
               confirmLabel="Çıkar"
@@ -277,7 +276,7 @@ function Recipients({ list, external, editable }: { list: MailingList; external:
             />
           </>
         ) : null}
-      </Modal>
+      </PanelDialog>
     </section>
   );
 }
