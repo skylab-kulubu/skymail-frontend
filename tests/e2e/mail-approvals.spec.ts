@@ -382,6 +382,16 @@ test("a request to one person reads as one, and approving it opens one send", as
   await expect(decision(page).getByRole("link", { name: "Gönderimi gör" })).toHaveAttribute("href", /\/mail-tasks\/show\/b1c2d3e4-/);
 });
 
+test("on the icon rail Mail onayları still says how many requests wait", async ({ page, skymail, signIn }) => {
+  await signIn("approver");
+  submitted(skymail);
+
+  await page.goto("/");
+  await expect(menu(page).getByRole("link", { name: "Mail onayları (1 bekleyen)" })).toBeVisible();
+  await page.keyboard.press("Control+b");
+  await expect(menu(page).getByRole("link", { name: "Mail onayları (1 bekleyen)", exact: true })).toBeVisible();
+});
+
 test("an approver finds a pending request in the menu and the list, and approves it as it is", async ({ page, skymail, signIn }) => {
   await signIn("approver");
   const { id } = submitted(skymail);

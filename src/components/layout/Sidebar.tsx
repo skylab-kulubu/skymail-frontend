@@ -32,7 +32,7 @@ import {
 import { ChevronRight, ClipboardCheck, FileText, Home, List, LogOut, Palette, Send, UserRound } from 'lucide-react';
 import { DeveloperCredit } from '@/components/auth/DeveloperCredit';
 import { useConsole } from '@/components/layout/ConsoleContext';
-import { isApprover, visibleNavigation } from '@/lib/access';
+import { isApprover, navLabel, visibleNavigation } from '@/lib/access';
 import { useApiLoad } from '@/lib/api/react';
 import { signOutOfKeycloak } from '@/lib/auth/actions';
 import { displayPersonName } from '@/lib/chrome-role';
@@ -106,6 +106,7 @@ export function Sidebar() {
   const { roles, user, config } = useConsole();
   const items = visibleNavigation(roles);
   const pendingApprovals = usePendingApprovals(isApprover(roles));
+  const { collapsed } = useSidebar();
   const fullName = user.name ? displayPersonName(user.name) : 'Kullanıcı';
   const signOutForm = useRef<HTMLFormElement>(null);
 
@@ -120,7 +121,7 @@ export function Sidebar() {
               <SidebarItem
                 key={item.href}
                 href={item.href}
-                label={item.label}
+                label={navLabel(item.label, waiting, collapsed)}
                 icon={NAV_ICON[item.href as keyof typeof NAV_ICON] ?? ChevronRight}
                 active={isActive(pathname, item.href)}
                 badge={waiting > 0 ? <PendingBadge count={waiting} /> : undefined}
