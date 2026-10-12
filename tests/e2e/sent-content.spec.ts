@@ -146,3 +146,83 @@ test("the administrator opens a single mail whose template may be shown", async 
   await expect(dialog.getByText("SKY LAB ekosistemine hoş geldin", { exact: true })).toBeVisible();
   await expect(dialog.locator("iframe").contentFrame().getByText("Hoş geldin Ali Can")).toBeVisible();
 });
+
+test("a mail that starts with a byte-order mark is held back all the same", async ({ page, skymail, signIn }) => {
+  await signIn("sender");
+  const pixel = watchPixel(page);
+  const { id: templateId } = skymail.addTemplate({
+    name: "Bülten",
+    subject: "Duyuru",
+    mainMode: "html",
+    htmlContent: `\uFEFF<!DOCTYPE html><html><body><p>Merhaba {{.FullName}}</p><img alt="logo" src="https://${PIXEL_HOST}/bom.gif"></body></html>`,
+    plainText: "Merhaba {{.FullName}}",
+  });
+  const listId = skymail.addList({ name: "WebLab", recipients: [{ full_name: "Ali Can", email: "ali@ornek.com" }] });
+  const sendId = skymail.addSend({ templateId, listId, sentBy: SOMEONE_ELSE });
+
+  await page.goto(`/mail-tasks/show/${sendId}`);
+  await page.getByRole("button", { name: "Ali Can: içeriği gör" }).click();
+  const frame = page.getByRole("dialog", { name: "Gönderilen posta · Ali Can" }).locator("iframe");
+  await expect(frame).toHaveAttribute("srcdoc", /^<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:;[^"]*"><meta name="referrer" content="no-referrer">\uFEFF<!DOCTYPE html>/);
+  await expect(frame.contentFrame().getByText("Merhaba Ali Can")).toBeVisible();
+  await expect.poll(() => pixel.blocked).toBeGreaterThan(0);
+  expect(pixel.sent).toBe(0);
+});
+
+test("the template editor's switch shows or hides a template's content, after asking; a credential template's stays off", async ({ page, skymail, signIn }) => {
+  await signIn("writer");
+  const { id: welcomeId } = skymail.addTemplate({
+    name: "Hoş Geldin",
+    key: "core.welcome",
+    system: true,
+    contentSensitive: null,
+    subject: "Hoş geldin",
+    mainMode: "html",
+    html: "<p>Hoş geldin {{.FullName}}</p>",
+    htmlContent: "<p>Hoş geldin {{.FullName}}</p>",
+    plainText: "Hoş geldin {{.FullName}}",
+  });
+  const toggles = () => skymail.requests.filter((request) => request.method === "PUT" && request.path === `/templates/${welcomeId}/content-sensitive`);
+
+  await page.goto(`/templates/edit/${welcomeId}`);
+  const panel = page.getByRole("region", { name: "Gönderilen içerik" });
+  const toggle = panel.getByRole("switch", { name: /İçerik panelde görünsün/ });
+  await expect(panel).toContainText("Ayarlanmadı");
+  await expect(toggle).not.toBeChecked();
+
+  // Asked first; cancelling writes nothing.
+  await toggle.click();
+  const ask = page.getByRole("dialog", { name: "İçerik panelde görünsün mü?" });
+  await expect(ask).toContainText("kod ya da tek kullanımlık bağlantı varsa açma");
+  await ask.getByRole("button", { name: "İptal" }).click();
+  await expect(toggle).not.toBeChecked();
+  expect(toggles()).toHaveLength(0);
+
+  await toggle.click();
+  await page.getByRole("dialog", { name: "İçerik panelde görünsün mü?" }).getByRole("button", { name: "Göster" }).click();
+  await expect(toggle).toBeChecked();
+  expect(toggles().map((request) => request.body)).toEqual([{ content_sensitive: false }]);
+
+  await toggle.click();
+  const hide = page.getByRole("dialog", { name: "İçerik gizlensin mi?" });
+  await expect(hide).toContainText("kalıcı olarak silinir");
+  await hide.getByRole("button", { name: "Gizle" }).click();
+  await expect(toggle).not.toBeChecked();
+  expect(toggles().map((request) => request.body)).toEqual([{ content_sensitive: false }, { content_sensitive: true }]);
+
+  const { id: resetId } = skymail.addTemplate({
+    name: "Keycloak · Parola Sıfırlama",
+    key: "keycloak.reset-password",
+    system: true,
+    contentSensitive: true,
+    subject: "SKY LAB parola sıfırlama isteği",
+    mainMode: "html",
+    html: "<p>{{.link}}</p>",
+    htmlContent: "<p>{{.link}}</p>",
+    plainText: "{{.link}}",
+  });
+  await page.goto(`/templates/edit/${resetId}`);
+  const locked = page.getByRole("region", { name: "Gönderilen içerik" });
+  await expect(locked).toContainText("her zaman gizli kalır");
+  await expect(locked.getByRole("switch", { name: /İçerik panelde görünsün/ })).toBeDisabled();
+});

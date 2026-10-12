@@ -225,8 +225,18 @@ type SendRecord = {
 /** Who asks a send route: what decides whether they see its content. */
 type Viewer = { sub: string; can: (...roles: string[]) => boolean };
 
-/** How many days a send's content is kept, as skymail-backend's default. */
+/** How many days a send's content is kept. */
 const CONTENT_RETENTION_DAYS = 90;
+
+/** Locked sensitive, as skymail-backend's list (internal/handlers/content_sensitivity.go). */
+function contentSensitiveLocked(key: string | null): boolean {
+  if (key === null) return false;
+  return (
+    key.startsWith("keycloak.") ||
+    key.startsWith("account.") ||
+    ["core.contact-consent-confirm", "event.ticket-created", "event.reminder"].includes(key)
+  );
+}
 
 /** Silinmiş kullanıcı as skymail-backend writes it (#34, internal/database/account_erasure.go). */
 export const ERASED_SUBJECT = "00000000-0000-4000-8000-000000000000";
@@ -698,6 +708,7 @@ export class MockSkymail {
     const published = row.published_version_id ? this.versions.get(row.published_version_id) : undefined;
     return {
       ...row,
+      content_sensitive_locked: contentSensitiveLocked(row.key),
       main_mode: published?.main_mode ?? null,
       drafts: this.drafts(row.id).map((draft) => this.summary(draft)),
     };
@@ -813,6 +824,17 @@ export class MockSkymail {
       }
     }
     if (method === "POST" && draftsMatch) return this.saveDraft(draftsMatch[1], asFields(body));
+    const sensitiveMatch = /^\/templates\/([^/]+)\/content-sensitive$/.exec(path);
+    if (method === "PUT" && sensitiveMatch) {
+      if (!can("skymail:templates:write")) return refuse(403, "server.forbidden");
+      const row = this.rows.get(sensitiveMatch[1]);
+      if (!row || row.archived_at !== null) return refuse(404, "server.not_found");
+      const value = asFields(body).content_sensitive;
+      if (typeof value !== "boolean") return refuse(400, "validation.error");
+      if (!value && contentSensitiveLocked(row.key)) return refuse(409, "template.content_sensitive_locked", { key: row.key });
+      row.content_sensitive = value;
+      return { status: 200, body: this.served(row) };
+    }
     if (requiredMatch && ((method === "POST" && !requiredMatch[2]) || (method === "DELETE" && requiredMatch[2]))) {
       if (request.authorization !== `Bearer ${accessToken("writer")}`) return refuse(403, "server.forbidden");
       const [, templateId, name] = requiredMatch;

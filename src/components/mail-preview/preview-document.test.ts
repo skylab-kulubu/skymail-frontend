@@ -72,10 +72,25 @@ describe("a mail already rendered", () => {
 describe("a sent mail shown with its remote content blocked", () => {
   const SENT = `<!DOCTYPE html><html lang="tr"><head><!-- <head> --><style>p{}</style></head><body><img src="https://iz.example.test/p.gif"><p>Merhaba</p></body></html>`;
 
+  const POLICY = /<meta http-equiv="Content-Security-Policy" content="[^"]+"><meta name="referrer" content="no-referrer">/;
+
   it("puts the policy first, right after the doctype, so nothing in the mail comes before it", () => {
     const shown = withRemoteContentPolicy(SENT, { remote: "blocked" });
-    assert.match(shown, /^<!DOCTYPE html><meta http-equiv="Content-Security-Policy" content="[^"]+">\s*<html lang="tr">/);
-    assert.equal(shown.replace(/<meta http-equiv="Content-Security-Policy" content="[^"]+">\s*/, ""), SENT);
+    assert.match(shown, new RegExp(`^<!DOCTYPE html>${POLICY.source}<html lang="tr">`));
+    assert.equal(shown.replace(POLICY, ""), SENT);
+  });
+
+  it("sends no Referer: the document's own referrer policy is no-referrer, whatever the browser does with the frame's", () => {
+    assert.match(withRemoteContentPolicy(SENT, { remote: "allowed" }), /<meta name="referrer" content="no-referrer">/);
+  });
+
+  it("puts it before a doctype that a BOM, a no-break space or a vertical tab precedes: the parser reads those as text", () => {
+    for (const lead of ["\uFEFF", "\u00A0", "\u000B", "\u2028"]) {
+      const shown = withRemoteContentPolicy(lead + SENT, { remote: "blocked" });
+      assert.match(shown, new RegExp(`^${POLICY.source}`), JSON.stringify(lead));
+    }
+    // HTML's own whitespace is no text: the doctype still comes first.
+    assert.match(withRemoteContentPolicy("\n\t \r\f" + SENT, { remote: "blocked" }), new RegExp(`^\\n\\t \\r\\f<!DOCTYPE html>${POLICY.source}`));
   });
 
   it("puts it at the very start of a mail without a doctype", () => {

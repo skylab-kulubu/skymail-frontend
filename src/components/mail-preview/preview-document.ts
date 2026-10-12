@@ -69,17 +69,25 @@ export function contentPolicy(remote: RemoteContent): string {
   ].join("; ");
 }
 
-const LEADING_DOCTYPE = /^\s*<!doctype[^>]*>/i;
+/**
+ * A doctype the parser meets first: only HTML's own whitespace before it.
+ * JavaScript's \s also takes a BOM, a no-break space or a vertical tab, which
+ * the parser reads as text: it would close the head there, and a policy put
+ * after the doctype would land in the body, where it does not apply.
+ */
+const LEADING_DOCTYPE = /^[\t\n\f\r ]*<!doctype[^>]*>/i;
 
 /**
- * `html` with the policy as its first element. A <meta> policy governs only
+ * `html` with the policy and a no-referrer policy as its first elements. A <meta> policy governs only
  * what the parser meets after it, so it goes before anything of the mail's:
  * right after a leading doctype (which keeps the document in standards
  * mode), at the very start otherwise. Searching for the mail's own <head>
  * would not do: the first one in the text can sit in a comment.
  */
 export function withRemoteContentPolicy(html: string, { remote }: { remote: RemoteContent }): string {
-  const meta = `<meta http-equiv="Content-Security-Policy" content="${contentPolicy(remote)}">`;
+  // The frame's referrerPolicy covers only its own load; the document's
+  // images take the parent's policy, and Safari sends the panel as Referer.
+  const meta = `<meta http-equiv="Content-Security-Policy" content="${contentPolicy(remote)}"><meta name="referrer" content="no-referrer">`;
   const doctype = LEADING_DOCTYPE.exec(html);
   if (!doctype) return meta + html;
   return doctype[0] + meta + html.slice(doctype[0].length);
