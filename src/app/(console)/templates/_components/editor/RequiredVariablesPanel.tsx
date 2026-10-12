@@ -12,9 +12,7 @@
  */
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { AlertTriangle, Loader2, Lock, Plus } from 'lucide-react';
-import { NoticeBox } from '@/components/chrome/Notice';
-import { Tag } from '@/components/chrome/Tag';
-import { Button } from '@/components/ui/Button';
+import { Badge, Button, Notice } from '@skylab-kulubu/skylcn-ui';
 import { apiErrorMessage, asApiError } from '@/lib/api/errors';
 import { useApi } from '@/lib/api/react';
 import { variableAction } from '@/lib/mail-render/go-template';
@@ -30,6 +28,7 @@ import {
 } from '@/lib/template-editor/required-variables';
 import { fetchTemplate, markRequiredVariable, releaseRequiredVariable, type MailTemplate } from '@/lib/templates';
 import { MissingVariables, type Refusal } from './EditorParts';
+import { noticeTone } from '@/components/common/OutcomeNotice';
 
 /** What a Required variable's row says when the body in the editor does not reference it. */
 const DROPPED: Readonly<Record<BodyKind, string>> = {
@@ -140,7 +139,7 @@ export function RequiredVariablesPanel({
       onClick={() => change(name, 'mark')}
       disabled={!idle}
       aria-describedby={describedBy}
-      className="border-skylab-400/40 text-skylab-300 hover:bg-skylab-500/10 focus-visible:ring-skylab-400/40 inline-flex max-w-full cursor-pointer items-center gap-1 rounded-md border px-2 py-1 font-mono text-xs transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+      className="border-skylab-400/40 text-skylab-300 hover:bg-skylab-500/10 focus-visible:ring-ring inline-flex max-w-full cursor-pointer items-center gap-1 rounded-md border px-2 py-1 font-mono text-xs transition-colors focus-visible:ring-2 outline-hidden disabled:cursor-not-allowed disabled:opacity-50"
     >
       {workingOn(name, 'mark') ? (
         <Loader2 className="h-3 w-3 shrink-0 animate-spin" aria-hidden />
@@ -157,33 +156,33 @@ export function RequiredVariablesPanel({
   return (
     <section
       aria-labelledby="required-variables-heading"
-      className="space-y-3 rounded-lg border border-white/10 bg-white/[0.02] px-4 py-3"
+      className="space-y-3 rounded-lg border border-border bg-card px-4 py-3"
     >
       <div>
         <h2 id="required-variables-heading" className="text-sm font-medium">
           Required variable&apos;lar
         </h2>
-        <p className="mt-0.5 text-xs text-neutral-500">
+        <p className="mt-0.5 text-xs text-subtle-foreground">
           Gövde bunların her birine başvurmalı; başvurmayan bir kaydetme ya da yayım, eksik değişkenin adıyla reddedilir.
           Kilitli olanlar gönderen servisin sözleşmesinden gelir ve panelden çıkarılamaz.
         </p>
       </div>
 
       {unread !== null ? (
-        <NoticeBox tone="warning">
+        <Notice tone="warning">
           <p>Panel güncel olmayabilir: template yeniden okunamadı. {unread}</p>
           <div className="mt-2">
-            <Button variant="secondary" onClick={() => enqueue(reread)} disabled={pending > 0}>
+            <Button variant="outline" onClick={() => enqueue(reread)} disabled={pending > 0}>
               Yeniden dene
             </Button>
           </div>
-        </NoticeBox>
+        </Notice>
       ) : null}
 
       {panel.rows.length === 0 ? (
-        <p className="text-xs text-neutral-500">Bu template&apos;in Required variable&apos;ı yok.</p>
+        <p className="text-xs text-subtle-foreground">Bu template&apos;in Required variable&apos;ı yok.</p>
       ) : (
-        <ul aria-label="Required variable'lar" className="divide-y divide-white/5">
+        <ul aria-label="Required variable'lar" className="divide-y divide-border-subtle">
           {panel.rows.map((row) => (
             <Row
               key={row.name}
@@ -199,22 +198,22 @@ export function RequiredVariablesPanel({
       )}
 
       {outcome ? (
-        <NoticeBox tone={outcome.tone}>
+        <Notice tone={noticeTone(outcome.tone)}>
           <p>{outcome.text}</p>
           {outcome.tone === 'error' && outcome.blockers.length > 0 ? (
             <div className="mt-1.5">
               <MissingVariables missing={outcome.blockers} />
             </div>
           ) : null}
-        </NoticeBox>
+        </Notice>
       ) : null}
 
       {editing ? (
-        <div className="space-y-2 border-t border-white/5 pt-3">
-          <p className="text-xs font-medium text-neutral-300">Zorunlu işaretle</p>
+        <div className="space-y-2 border-t border-border-subtle pt-3">
+          <p className="text-xs font-medium text-secondary-foreground">Zorunlu işaretle</p>
           {panel.candidates.length > 0 ? (
             <>
-              <p className="text-xs text-neutral-500">
+              <p className="text-xs text-subtle-foreground">
                 Gönderilen maildeki değişkenler. İşaretlediğin değişkene bundan sonraki her kaydetme ve yayım başvurmak zorunda.
               </p>
               {referenced.length > 0 ? (
@@ -223,7 +222,7 @@ export function RequiredVariablesPanel({
               {dropped.map(({ name }) => (
                 <div key={name} className="flex flex-wrap items-center gap-x-2 gap-y-1">
                   {markButton(name, `${hintId}-${name}`)}
-                  <span id={`${hintId}-${name}`} className="flex items-start gap-1.5 text-xs text-amber-300">
+                  <span id={`${hintId}-${name}`} className="flex items-start gap-1.5 text-xs text-warning">
                     <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
                     {MARKING_DROPPED[body?.kind ?? 'edited']}
                   </span>
@@ -231,15 +230,15 @@ export function RequiredVariablesPanel({
               ))}
             </>
           ) : (
-            <p className="text-xs text-neutral-500">Gönderilen mailde, henüz zorunlu olmayan bir değişken yok.</p>
+            <p className="text-xs text-subtle-foreground">Gönderilen mailde, henüz zorunlu olmayan bir değişken yok.</p>
           )}
           {panel.draftOnly.length > 0 ? (
-            <p className="text-xs text-neutral-400">
+            <p className="text-xs text-muted-foreground">
               Yalnız taslağında geçiyor:{' '}
               {panel.draftOnly.map((name, index) => (
                 <span key={name}>
                   {index > 0 ? ', ' : null}
-                  <code className="font-mono break-all text-neutral-200">{variableAction(name)}</code>
+                  <code className="font-mono break-all text-secondary-foreground">{variableAction(name)}</code>
                 </span>
               ))}
               . Gönderilen mailde olmadığı için henüz zorunlu işaretlenemez: SkyMail yalnız yayımlanmış gövdenin başvurduğu
@@ -271,39 +270,39 @@ function Row({
 }) {
   const tint =
     row.state === 'refused'
-      ? '-mx-2 rounded-md border border-red-400/30 bg-red-500/10 px-2'
+      ? '-mx-2 rounded-md border border-destructive/30 bg-destructive/10 px-2'
       : row.state === 'dropped'
-        ? '-mx-2 rounded-md border border-amber-400/30 bg-amber-400/10 px-2'
+        ? '-mx-2 rounded-md border border-warning/30 bg-warning/10 px-2'
         : '';
   return (
     <li className={`flex items-start gap-3 py-2.5 ${tint}`}>
       <div className="min-w-0 flex-1 space-y-1">
         <p className="flex flex-wrap items-center gap-2">
-          {row.locked ? <Lock className="h-3.5 w-3.5 shrink-0 text-neutral-400" aria-hidden /> : null}
-          <code className="font-mono text-xs break-all text-neutral-100">{variableAction(row.name)}</code>
+          {row.locked ? <Lock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden /> : null}
+          <code className="font-mono text-xs break-all text-foreground">{variableAction(row.name)}</code>
           {row.locked ? (
             <>
-              <Tag tone="system">Sözleşme</Tag>
+              <Badge tone="brand" size="xs">Sözleşme</Badge>
               <span className="sr-only">kilitli, çıkarılamaz</span>
             </>
           ) : null}
         </p>
-        <p className="text-xs text-neutral-400">{row.why}</p>
+        <p className="text-xs text-muted-foreground">{row.why}</p>
         {row.state === 'dropped' ? (
-          <p className="flex items-start gap-1.5 text-xs text-amber-300">
+          <p className="flex items-start gap-1.5 text-xs text-warning">
             <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
             {DROPPED[bodyKind]}
           </p>
         ) : null}
         {row.state === 'refused' ? (
-          <p className="flex items-start gap-1.5 text-xs text-red-300">
+          <p className="flex items-start gap-1.5 text-xs text-destructive">
             <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
             {refusedBy ?? 'Reddedildi'}: gövde bu değişkene başvurmuyor.
           </p>
         ) : null}
       </div>
       {row.removable ? (
-        <Button variant="secondary" onClick={onRelease} disabled={disabled}>
+        <Button variant="outline" onClick={onRelease} disabled={disabled}>
           {releasing ? 'Çıkarılıyor…' : 'Çıkar'}
           <span className="sr-only"> {variableAction(row.name)}</span>
         </Button>

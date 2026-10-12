@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Lock } from 'lucide-react';
-import { StateCard } from '@/components/chrome/StateCard';
+import { StateCard } from '@skylab-kulubu/skylcn-ui';
 import { useConsole } from '@/components/layout/ConsoleContext';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { RoleGate } from '@/components/layout/RoleGate';
@@ -34,11 +34,11 @@ function EditLoader({ id }: { id: string }) {
   const { roles } = useConsole();
   const state = useApiLoad((api, signal) => fetchList(api, id, signal), id);
 
-  if (state.status === 'loading') return <StateCard isLoading title="Liste yükleniyor" />;
+  if (state.status === 'loading') return <StateCard loading title="Liste yükleniyor" />;
   if (state.status === 'error') return <ListLoadFailure error={state.error} onRetry={() => void state.reload()} />;
   if (!listActions(toListRow(state.data), roles).change) {
     return (
-      <StateCard Icon={Lock} tone="warning" title="Bu liste düzenlenemez" description={GROUP_READ_ONLY_REASON}>
+      <StateCard icon={Lock} tone="warning" title="Bu liste düzenlenemez" description={GROUP_READ_ONLY_REASON}>
         <Link href={listHref.show(state.data.id)} className="text-skylab-300 text-sm hover:underline">
           Listeye dön
         </Link>

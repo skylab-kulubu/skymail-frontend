@@ -10,9 +10,7 @@
 import { useId, type ReactNode } from 'react';
 import { NodeViewContent, NodeViewWrapper, type ReactNodeViewProps } from '@tiptap/react';
 import { GitBranch, Image as ImageIcon, MousePointerClick, Trash2 } from 'lucide-react';
-import { FilterPills } from '@/components/chrome/FilterPills';
-import { FormField } from '@/components/chrome/FormField';
-import { Button } from '@/components/ui/Button';
+import { FormField } from '@/components/common/FormField';
 import {
   CLUB_IMAGE_HOST,
   imageAddressProblem,
@@ -22,6 +20,7 @@ import {
 } from '@/lib/mail-render/visual-document';
 import { colors, darkColors } from '../../../emails/theme';
 import { VariableField, useVisualEditor } from './VariableField';
+import { Button, FilterPills } from '@skylab-kulubu/skylcn-ui';
 
 /** A block's frame in the editor: what it is, its settings, and a way to take it out. */
 function BlockFrame({
@@ -44,12 +43,12 @@ function BlockFrame({
       role="group"
       aria-label={label}
       contentEditable={false}
-      className={`my-3 space-y-3 rounded-lg border bg-white/[0.02] p-3 ${
-        selected ? 'border-skylab-400/60 ring-skylab-400/30 ring-2' : 'border-white/10'
+      className={`my-3 space-y-3 rounded-lg border bg-card p-3 ${
+        selected ? 'border-skylab-400/60 ring-skylab-400/30 ring-2' : 'border-border'
       }`}
     >
       <div className="flex items-center justify-between gap-2">
-        <p className="flex items-center gap-1.5 text-xs font-medium text-neutral-400">
+        <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
           {icon}
           {label}
         </p>
@@ -62,7 +61,7 @@ function BlockFrame({
 
 function RemoveButton({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
-    <Button variant="outlineDanger" onClick={onRemove} aria-label={label} title={label}>
+    <Button variant="destructive" onClick={onRemove} aria-label={label} title={label}>
       <Trash2 className="h-3.5 w-3.5" aria-hidden />
       Kaldır
     </Button>
@@ -103,16 +102,16 @@ export function ButtonView({ node, updateAttributes, deleteNode, editor, selecte
         />
         {allow.variables ? (
           <div className="min-w-0 space-y-1.5">
-            <p className="text-xs font-medium text-neutral-300">Bağlantı</p>
+            <p className="text-xs font-medium text-secondary-foreground">Bağlantı</p>
             {editable ? (
               <FilterPills
                 value={linkKind}
-                onChange={(kind) => updateAttributes({ linkKind: kind })}
+                onValueChange={(kind) => updateAttributes({ linkKind: kind })}
                 options={LINK_KINDS}
-                ariaLabel="Bağlantı"
+                aria-label="Bağlantı"
               />
             ) : (
-              <p className="text-xs text-neutral-400">{toVariable ? 'Değişken' : 'Adres'}</p>
+              <p className="text-xs text-muted-foreground">{toVariable ? 'Değişken' : 'Adres'}</p>
             )}
           </div>
         ) : null}
@@ -140,7 +139,7 @@ export function ButtonView({ node, updateAttributes, deleteNode, editor, selecte
         </div>
       </div>
       {toVariable && isVariableName(variable) ? (
-        <p className="text-xs text-neutral-500">
+        <p className="text-xs text-subtle-foreground">
           Gönderimde {variable} boş gelirse buton hiç görünmez; boş bir bağlantı gitmez.
         </p>
       ) : null}
@@ -199,7 +198,7 @@ export function ImageView({ node, updateAttributes, deleteNode, editor, selected
           error={editable && widthProblem ? `${widthProblem}.` : null}
         />
       </div>
-      <p className="text-xs text-neutral-500">
+      <p className="text-xs text-subtle-foreground">
         Kulübün CDN&apos;inden ({CLUB_IMAGE_HOST}) bir görsel ya da .png, .jpg, .gif ile biten bir https adresi kullan.
         Saydam zeminli bir PNG seç: beyaz zeminli bir görsel koyu temada beyaz bir dikdörtgen olarak kalır. SVG ve WebP
         kabul edilmez; Gmail ve Outlook göstermez.
@@ -208,11 +207,11 @@ export function ImageView({ node, updateAttributes, deleteNode, editor, selected
         <div className="grid grid-cols-2 gap-2" aria-label="Görsel iki temada" role="group">
           {IMAGE_SURFACES.map(({ name, background }) => (
             <figure key={name} className="min-w-0 space-y-1">
-              <div className="rounded-md border border-white/10 p-2" style={{ backgroundColor: background }}>
+              <div className="rounded-md border border-border p-2" style={{ backgroundColor: background }}>
                 {/* eslint-disable-next-line @next/next/no-img-element -- the operator's own image, shown as the mail will */}
                 <img src={src} alt={alt} referrerPolicy="no-referrer" className="mx-auto max-h-32 max-w-full object-contain" />
               </div>
-              <figcaption className="text-center text-[10px] text-neutral-500">{name}</figcaption>
+              <figcaption className="text-center text-[10px] text-subtle-foreground">{name}</figcaption>
             </figure>
           ))}
         </div>
@@ -232,9 +231,9 @@ export function ConditionalView({ node, updateAttributes, deleteNode, editor, se
       aria-label="Koşullu bölüm"
       className={`border-skylab-400/40 my-3 rounded-lg border border-dashed ${selected ? 'ring-skylab-400/30 ring-2' : ''}`}
     >
-      <div contentEditable={false} className="space-y-2 border-b border-dashed border-white/10 p-3">
+      <div contentEditable={false} className="space-y-2 border-b border-dashed border-border p-3">
         <div className="flex items-center justify-between gap-2">
-          <p className="flex items-center gap-1.5 text-xs font-medium text-neutral-400">
+          <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
             <GitBranch className="h-3.5 w-3.5" aria-hidden />
             Koşullu bölüm: {when === 'unset' ? `${named} boşsa görünür` : `${named} doluysa görünür`}
           </p>
@@ -248,7 +247,7 @@ export function ConditionalView({ node, updateAttributes, deleteNode, editor, se
             disabled={!editable}
           />
           <div className="space-y-1.5">
-            <label htmlFor={whenId} className="block text-xs font-medium text-neutral-300">
+            <label htmlFor={whenId} className="block text-xs font-medium text-secondary-foreground">
               Ne zaman görünsün
             </label>
             <select
@@ -256,7 +255,7 @@ export function ConditionalView({ node, updateAttributes, deleteNode, editor, se
               value={when}
               disabled={!editable}
               onChange={(event) => updateAttributes({ when: event.target.value })}
-              className="focus:border-skylab-400/50 h-8 w-full rounded-md border border-white/10 bg-white/3 px-2 text-xs text-neutral-100 focus:outline-none"
+              className="focus:border-skylab-400/50 h-8 w-full rounded-md border border-border bg-card px-2 text-xs text-foreground outline-hidden"
             >
               <option value="set">Değişken doluysa</option>
               <option value="unset">Değişken boşsa</option>

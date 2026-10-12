@@ -3,7 +3,7 @@
 import { TriangleAlert } from 'lucide-react';
 import { unstable_isUnrecognizedActionError } from 'next/navigation';
 import { useEffect } from 'react';
-import { StateCard } from '@/components/chrome/StateCard';
+import { Button, StateCard } from '@skylab-kulubu/skylcn-ui';
 import { recoverFromVersionSkew } from '@/lib/version-skew';
 import './globals.css';
 
@@ -22,17 +22,17 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
     <html lang="tr">
       <body className="antialiased">
         {unstable_isUnrecognizedActionError(error) ? (
-          <StateCard isLoading title="SkyMail güncellendi, sayfa yenileniyor" />
+          <StateCard loading title="SkyMail güncellendi, sayfa yenileniyor" />
         ) : (
           <StateCard
-            Icon={TriangleAlert}
+            icon={TriangleAlert}
             tone="danger"
             title="Bir şeyler ters gitti"
             description="Sayfa beklenmedik bir hatayla durdu."
           >
-            <button type="button" onClick={reset} className="text-skylab-300 text-sm hover:underline">
+            <Button variant="primary" onClick={reset}>
               Tekrar dene
-            </button>
+            </Button>
           </StateCard>
         )}
       </body>

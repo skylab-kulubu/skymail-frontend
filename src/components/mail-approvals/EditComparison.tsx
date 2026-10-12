@@ -11,8 +11,8 @@ type Variables = Readonly<Record<string, unknown>>;
 /** A value in a cell: its text, or a dash for none. */
 function Value({ value, kind }: { value: unknown; kind: VariableField['kind'] }) {
   const text = valueText(value, kind);
-  if (text === null || text === '') return <span className="text-neutral-600">boş</span>;
-  return <span className="block max-h-40 overflow-y-auto break-words whitespace-pre-line text-neutral-200">{text}</span>;
+  if (text === null || text === '') return <span className="text-faint-foreground">boş</span>;
+  return <span className="block max-h-40 overflow-y-auto break-words whitespace-pre-line text-secondary-foreground">{text}</span>;
 }
 
 /**
@@ -48,25 +48,25 @@ export function EditComparison({
   return (
     <div className="space-y-4">
       {/* A phone reads each change as a block, before above after; a wider screen as a table. */}
-      <ul className="divide-y divide-white/5 rounded-lg border border-white/10 text-xs sm:hidden" aria-label="Değişen değişkenler">
+      <ul className="divide-y divide-border-subtle rounded-lg border border-border text-xs sm:hidden" aria-label="Değişen değişkenler">
         {changes.length === 0 ? (
-          <li className="px-3 py-3 text-neutral-500">Hiçbir değişken değişmedi.</li>
+          <li className="px-3 py-3 text-subtle-foreground">Hiçbir değişken değişmedi.</li>
         ) : (
           changes.map((change) => {
             const field = fieldOf(change.name);
             const kind = field?.kind ?? 'text';
             return (
               <li key={change.name} className="space-y-1.5 px-3 py-2.5">
-                <p className="font-medium text-neutral-300">{field?.label ?? change.name}</p>
+                <p className="font-medium text-secondary-foreground">{field?.label ?? change.name}</p>
                 <dl className="space-y-1.5">
                   <div>
-                    <dt className="text-2xs text-neutral-500">{labels[0]}</dt>
+                    <dt className="text-2xs text-subtle-foreground">{labels[0]}</dt>
                     <dd>
                       <Value value={change.before} kind={kind} />
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-2xs text-neutral-500">{labels[1]}</dt>
+                    <dt className="text-2xs text-subtle-foreground">{labels[1]}</dt>
                     <dd>
                       <Value value={change.after} kind={kind} />
                     </dd>
@@ -77,11 +77,11 @@ export function EditComparison({
           })
         )}
       </ul>
-      <div className="hidden overflow-x-auto rounded-lg border border-white/10 sm:block">
+      <div className="hidden overflow-x-auto rounded-lg border border-border sm:block">
         <table className="w-full table-fixed text-left text-xs">
           <caption className="sr-only">Değişen değişkenler</caption>
-          <thead className="text-2xs text-neutral-500">
-            <tr className="border-b border-white/10">
+          <thead className="text-2xs text-subtle-foreground">
+            <tr className="border-b border-border">
               <th scope="col" className="w-1/4 px-3 py-2 font-medium">
                 Değişken
               </th>
@@ -93,10 +93,10 @@ export function EditComparison({
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-white/5">
+          <tbody className="divide-y divide-border-subtle">
             {changes.length === 0 ? (
               <tr>
-                <td colSpan={3} className="px-3 py-3 text-neutral-500">
+                <td colSpan={3} className="px-3 py-3 text-subtle-foreground">
                   Hiçbir değişken değişmedi.
                 </td>
               </tr>
@@ -106,9 +106,9 @@ export function EditComparison({
                 const kind = field?.kind ?? 'text';
                 return (
                   <tr key={change.name} className="align-top">
-                    <th scope="row" className="px-3 py-2 font-medium text-neutral-300">
+                    <th scope="row" className="px-3 py-2 font-medium text-secondary-foreground">
                       {field?.label ?? change.name}
-                      {field && field.label !== field.name ? <code className="text-2xs block font-normal text-neutral-500">{field.name}</code> : null}
+                      {field && field.label !== field.name ? <code className="text-2xs block font-normal text-subtle-foreground">{field.name}</code> : null}
                     </th>
                     <td className="px-3 py-2">
                       <Value value={change.before} kind={kind} />
@@ -135,7 +135,7 @@ export function EditComparison({
               [labels[1], after],
             ] as const).map(([label, values]) => (
               <section key={label} aria-label={label} className="min-w-0 space-y-2">
-                <h3 className="text-sm font-medium text-neutral-100">{label}</h3>
+                <h3 className="text-sm font-medium text-foreground">{label}</h3>
                 <SubjectPreview subject={pinned.source.subject} sample={sample(values)} />
                 <MailFrame title={label} html={pinned.source.html_content} sample={sample(values)} scheme={scheme} className="h-[50vh] min-h-[320px]" />
               </section>
@@ -143,7 +143,7 @@ export function EditComparison({
           </div>
         </>
       ) : (
-        <p className="text-xs text-neutral-500" role={pinned.status === 'loading' ? 'status' : undefined}>
+        <p className="text-xs text-subtle-foreground" role={pinned.status === 'loading' ? 'status' : undefined}>
           {pinnedSourceNote(pinned)}
         </p>
       )}

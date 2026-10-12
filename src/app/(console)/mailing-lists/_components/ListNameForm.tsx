@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import { FormField } from '@/components/chrome/FormField';
-import { Button } from '@/components/ui/Button';
-import { FormActions } from '@/components/ui/FormActions';
+import { FormField } from '@/components/common/FormField';
+import { FormActions } from '@/components/common/FormActions';
 import { apiErrorMessage } from '@/lib/api/errors';
 import { validateListName } from '@/lib/mailing-lists';
-import { Notice } from '@/components/chrome/Notice';
+import { OutcomeNotice } from '@/components/common/OutcomeNotice';
+import { Button } from '@skylab-kulubu/skylcn-ui';
+import { NavButton } from '@/components/common/NavButton';
 
 /** The one field an internal list has: its name. Used to create a list and to rename one. */
 export function ListNameForm({
@@ -54,15 +55,15 @@ export function ListNameForm({
         autoFocus
         error={error}
       />
-      {apiError ? <Notice notice={{ tone: 'error', text: apiError }} /> : null}
+      {apiError ? <OutcomeNotice notice={{ tone: 'error', text: apiError }} /> : null}
       <FormActions
         cancel={
-          <Button variant="secondary" href={cancelHref} disabled={saving}>
+          <NavButton variant="outline" href={cancelHref} disabled={saving}>
             İptal
-          </Button>
+          </NavButton>
         }
         submit={
-          <Button type="submit" disabled={saving}>
+          <Button variant="primary" type="submit" disabled={saving}>
             {saving ? pendingLabel : submitLabel}
           </Button>
         }

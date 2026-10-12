@@ -32,7 +32,7 @@ export function DraftIndicator({ drafts }: { drafts: DraftsInProgress }) {
     const [author] = drafts.authors;
     return (
       <div className="min-w-0 text-xs">
-        <span className="inline-flex max-w-full items-center gap-1.5 text-amber-300">
+        <span className="inline-flex max-w-full items-center gap-1.5 text-warning">
           <PenLine className="h-3 w-3 shrink-0" aria-hidden />
           <span className="truncate">
             {/* The table's column already says Taslak; a phone's stacked row does not. */}
@@ -41,7 +41,7 @@ export function DraftIndicator({ drafts }: { drafts: DraftsInProgress }) {
           </span>
           {author.mine ? <MineMark /> : null}
         </span>
-        <span className="text-2xs block pl-[1.125rem] text-neutral-500">{formatClubTime(author.writtenAt)}</span>
+        <span className="text-2xs block pl-[1.125rem] text-subtle-foreground">{formatClubTime(author.writtenAt)}</span>
       </div>
     );
   }
@@ -54,7 +54,7 @@ export function DraftIndicator({ drafts }: { drafts: DraftsInProgress }) {
         aria-controls={listId}
         onClick={() => setOpen((current) => !current)}
         title={`Yayımlanmamış taslaklar:\n${drafts.authors.map(describe).join('\n')}`}
-        className="focus-visible:ring-skylab-400/40 inline-flex cursor-pointer items-center gap-1.5 rounded text-xs text-amber-300 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+        className="focus-visible:ring-ring inline-flex cursor-pointer items-center gap-1.5 rounded text-xs text-warning hover:underline focus-visible:ring-2 outline-hidden"
       >
         <PenLine className="h-3 w-3 shrink-0" aria-hidden />
         <span>
@@ -67,13 +67,13 @@ export function DraftIndicator({ drafts }: { drafts: DraftsInProgress }) {
         id={listId}
         hidden={!open}
         aria-label="Taslağı olanlar"
-        className="mt-1.5 space-y-1 border-l border-amber-400/30 pl-2.5"
+        className="mt-1.5 space-y-1 border-l border-warning/30 pl-2.5"
       >
         {drafts.authors.map((author) => (
-          <li key={author.versionId} className="flex flex-wrap items-center gap-x-1.5 text-xs text-neutral-300">
+          <li key={author.versionId} className="flex flex-wrap items-center gap-x-1.5 text-xs text-secondary-foreground">
             <span>{author.name}</span>
             {author.mine ? <MineMark /> : null}
-            <span className="text-2xs text-neutral-500">{formatClubTime(author.writtenAt)}</span>
+            <span className="text-2xs text-subtle-foreground">{formatClubTime(author.writtenAt)}</span>
           </li>
         ))}
       </ul>

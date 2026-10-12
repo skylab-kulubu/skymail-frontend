@@ -2,11 +2,11 @@
 
 import Link from 'next/link';
 import { RotateCcw, Send as SendIcon } from 'lucide-react';
-import { NoticeBox } from '@/components/chrome/Notice';
-import { ToneBadge, type Tone } from '@/components/chrome/ToneBadge';
-import { Button } from '@/components/ui/Button';
+import { ToneBadge, type Tone } from '@/components/common/ToneBadge';
 import { SEND_LIST_PATH, formatCount, sendHref } from '@/lib/sends';
 import type { PersonOutcome } from '@/lib/send-form/send';
+import { Button, Notice } from '@skylab-kulubu/skylcn-ui';
+import { NavButton } from '@/components/common/NavButton';
 
 const BADGE: Readonly<Record<PersonOutcome['status'], { tone: Tone; label: string }>> = {
   sent: { tone: 'good', label: 'Kuyruğa alındı' },
@@ -58,20 +58,20 @@ export function PeopleSummary({
   return (
     <section aria-labelledby="people-summary-heading" className="space-y-4">
       <div className="space-y-1">
-        <h2 id="people-summary-heading" className="text-sm font-medium text-neutral-100">
+        <h2 id="people-summary-heading" className="text-sm font-medium text-foreground">
           Gönderim sonucu
         </h2>
-        <p className="text-xs text-neutral-500">{what}</p>
+        <p className="text-xs text-subtle-foreground">{what}</p>
       </div>
-      <NoticeBox tone={allSent ? 'success' : 'warning'}>{summaryOf(outcomes)}</NoticeBox>
-      <ul className="divide-y divide-white/5 rounded-lg border border-white/10" aria-label="Kişiler">
+      <Notice tone={allSent ? 'success' : 'warning'}>{summaryOf(outcomes)}</Notice>
+      <ul className="divide-y divide-border-subtle rounded-lg border border-border" aria-label="Kişiler">
         {outcomes.map((outcome) => (
           <li key={outcome.email} className="flex flex-col gap-1.5 px-4 py-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
             <div className="min-w-0">
-              <p className="text-sm break-words text-neutral-100">{outcome.name || outcome.email}</p>
-              {outcome.name ? <p className="text-xs break-all text-neutral-500">{outcome.email}</p> : null}
+              <p className="text-sm break-words text-foreground">{outcome.name || outcome.email}</p>
+              {outcome.name ? <p className="text-xs break-all text-subtle-foreground">{outcome.email}</p> : null}
               {outcome.status === 'sent' ? null : (
-                <p className={`mt-1 text-xs ${outcome.status === 'final' ? 'text-red-300' : 'text-amber-300'}`}>{outcome.reason}</p>
+                <p className={`mt-1 text-xs ${outcome.status === 'final' ? 'text-destructive' : 'text-warning'}`}>{outcome.reason}</p>
               )}
             </div>
             <div className="flex shrink-0 items-center gap-3">
@@ -87,19 +87,19 @@ export function PeopleSummary({
       </ul>
       <div className="flex flex-wrap gap-2">
         {canRetry ? (
-          <Button onClick={onRetry} disabled={busy}>
+          <Button variant="primary" onClick={onRetry} disabled={busy}>
             <RotateCcw className="h-4 w-4" aria-hidden />
             Yeniden gönder…
           </Button>
         ) : null}
-        <Button variant="secondary" onClick={onNew} disabled={busy}>
+        <Button variant="outline" onClick={onNew} disabled={busy}>
           <SendIcon className="h-4 w-4" aria-hidden />
           Yeni gönderim
         </Button>
         {canOpen ? (
-          <Button variant="secondary" href={SEND_LIST_PATH} disabled={busy}>
+          <NavButton variant="outline" href={SEND_LIST_PATH} disabled={busy}>
             Gönderimlere git
-          </Button>
+          </NavButton>
         ) : null}
       </div>
     </section>

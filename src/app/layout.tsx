@@ -1,18 +1,21 @@
 import type { Metadata, Viewport } from "next";
-import { Geist_Mono, Space_Grotesk } from "next/font/google";
-import Script from "next/script";
+import { Space_Grotesk, Space_Mono } from "next/font/google";
+import { ThemeScript } from "@skylab-kulubu/skylcn-ui";
 import { ThemeSync } from "@/components/layout/ThemeSync";
-import { themeInitScript } from "@/lib/theme";
+import { themeMigrationScript } from "@/lib/theme";
+import { Providers } from "./providers";
 import "./globals.css";
 
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-sans-loaded",
+// skylcn-ui's faces (ADR 0064: the products use Space Grotesk and Space Mono).
+const sans = Space_Grotesk({
+  variable: "--skylcn-font-sans",
   subsets: ["latin", "latin-ext"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+const mono = Space_Mono({
+  variable: "--skylcn-font-mono",
+  subsets: ["latin", "latin-ext"],
+  weight: ["400", "700"],
 });
 
 export const metadata: Metadata = {
@@ -28,17 +31,17 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    // The theme script sets data-theme before React hydrates; without it the
-    // tokens fall back to the dark theme.
-    <html lang="tr" suppressHydrationWarning>
+    // The theme scripts set data-theme before React hydrates (src/lib/theme.ts).
+    <html lang="tr" className={`${sans.variable} ${mono.variable}`} suppressHydrationWarning>
       <head>
-        <Script id="theme-init" strategy="beforeInteractive">
-          {themeInitScript}
-        </Script>
+        <script dangerouslySetInnerHTML={{ __html: themeMigrationScript }} />
+        <ThemeScript />
       </head>
-      <body className={`${spaceGrotesk.variable} ${geistMono.variable} antialiased`}>
-        <ThemeSync />
-        {children}
+      <body className="antialiased">
+        <Providers>
+          <ThemeSync />
+          {children}
+        </Providers>
       </body>
     </html>
   );

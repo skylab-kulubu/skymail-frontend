@@ -1,8 +1,6 @@
 'use client';
 
-import { FilterPills } from '@/components/chrome/FilterPills';
-import { NoticeBox } from '@/components/chrome/Notice';
-import { Tag } from '@/components/chrome/Tag';
+import { Badge, FilterPills, Notice } from '@skylab-kulubu/skylcn-ui';
 import { NO_FREE_TEMPLATE } from '@/lib/send-form/send';
 import type { MailTemplate } from '@/lib/templates';
 import { ChoiceList, type Choice } from './ChoiceList';
@@ -18,7 +16,7 @@ const WHAT_OPTIONS: ReadonlyArray<{ value: What; label: string }> = [
 function templateChoice(template: MailTemplate): Choice {
   return {
     name: template.name,
-    tag: template.system ? <Tag tone="system">System</Tag> : undefined,
+    tag: template.system ? <Badge tone="brand" size="xs">System</Badge> : undefined,
     detail: template.key ? (
       <span className="font-mono">
         <span className="sr-only">Template key: </span>
@@ -51,15 +49,15 @@ export function WhatPart({
 }) {
   return (
     <>
-      <FilterPills ariaLabel="Ne gönderilecek" value={what} onChange={onWhat} options={WHAT_OPTIONS} />
+      <FilterPills aria-label="Ne gönderilecek" value={what} onValueChange={onWhat} options={WHAT_OPTIONS} />
       {what === 'free' ? (
         free ? (
-          <p className="text-xs text-neutral-500">
+          <p className="text-xs text-subtle-foreground">
             Serbest Gönderim template&apos;inin (<code>{free.key}</code>) yayımlanmış çerçevesiyle gider: konuyu, başlığı ve gövdeyi sen
             yazarsın.
           </p>
         ) : (
-          <NoticeBox tone="warning">{NO_FREE_TEMPLATE} Bir Mail template seçebilirsin.</NoticeBox>
+          <Notice tone="warning">{NO_FREE_TEMPLATE} Bir Mail template seçebilirsin.</Notice>
         )
       ) : (
         <ChoiceList
@@ -74,7 +72,7 @@ export function WhatPart({
           error={problem}
         />
       )}
-      {draftNote ? <NoticeBox tone="info">{draftNote}</NoticeBox> : null}
+      {draftNote ? <Notice tone="info">{draftNote}</Notice> : null}
     </>
   );
 }

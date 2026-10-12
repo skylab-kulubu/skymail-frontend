@@ -2,10 +2,10 @@
 
 import { useId, useState, type KeyboardEvent } from 'react';
 import { ClipboardPaste, Plus, Trash2 } from 'lucide-react';
-import { FormField } from '@/components/chrome/FormField';
-import { Button } from '@/components/ui/Button';
+import { FormField } from '@/components/common/FormField';
 import { formatCount } from '@/lib/sends';
 import { parsePeople, type PeopleCheck, type PersonRow } from '@/lib/send-form/audience';
+import { Button, Textarea } from '@skylab-kulubu/skylcn-ui';
 
 /** A row of the editor: a person, and an id that stays with the row while others come and go. */
 export type PersonEntry = PersonRow & Readonly<{ id: string }>;
@@ -52,7 +52,7 @@ export function PeopleEditor({
 
   return (
     <div className="space-y-3">
-      <div className="hidden grid-cols-[minmax(0,1fr)_minmax(0,1fr)_5.5rem] gap-2 text-xs font-medium text-neutral-300 sm:grid" aria-hidden>
+      <div className="hidden grid-cols-[minmax(0,1fr)_minmax(0,1fr)_5.5rem] gap-2 text-xs font-medium text-secondary-foreground sm:grid" aria-hidden>
         <span>Ad soyad</span>
         <span>E-posta</span>
       </div>
@@ -60,7 +60,7 @@ export function PeopleEditor({
         {rows.map((row, index) => (
           <li
             key={row.id}
-            className="grid grid-cols-1 gap-2 rounded-lg border border-white/5 p-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_5.5rem] sm:border-0 sm:p-0"
+            className="grid grid-cols-1 gap-2 rounded-lg border border-border-subtle p-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_5.5rem] sm:border-0 sm:p-0"
           >
             <FormField
               label={`${index + 1}. kişinin adı soyadı`}
@@ -68,7 +68,7 @@ export function PeopleEditor({
               value={row.name}
               onChange={(event) => set(row.id, { name: event.target.value })}
               onKeyDown={enterSends(onSend)}
-              hint={check.warnings[index] ? <span className="text-amber-300">{check.warnings[index]}</span> : null}
+              hint={check.warnings[index] ? <span className="text-warning">{check.warnings[index]}</span> : null}
               placeholder="Ayşe Yılmaz"
               autoComplete="off"
             />
@@ -85,7 +85,7 @@ export function PeopleEditor({
               autoComplete="off"
             />
             <Button
-              variant="secondary"
+              variant="outline"
               onClick={() => onChange(rows.length === 1 ? [personEntry()] : rows.filter((other) => other.id !== row.id))}
               aria-label={`${index + 1}. kişiyi çıkar`}
               title="Çıkar"
@@ -98,37 +98,37 @@ export function PeopleEditor({
         ))}
       </ol>
       <div className="flex flex-wrap items-center gap-2">
-        <Button variant="secondary" onClick={() => onChange([...rows, personEntry()])} className="h-8 py-0">
+        <Button variant="outline" onClick={() => onChange([...rows, personEntry()])} className="h-8 py-0">
           <Plus className="h-3.5 w-3.5" aria-hidden />
           Kişi ekle
         </Button>
-        <Button variant="secondary" onClick={() => setPasting(!pasting)} className="h-8 py-0">
+        <Button variant="outline" onClick={() => setPasting(!pasting)} className="h-8 py-0">
           <ClipboardPaste className="h-3.5 w-3.5" aria-hidden />
           Toplu ekle
         </Button>
-        <span className="text-xs text-neutral-500 tabular-nums" aria-live="polite">
+        <span className="text-xs text-subtle-foreground tabular-nums" aria-live="polite">
           {filled > 0 ? `${formatCount(filled)} kişi` : ''}
         </span>
       </div>
       {pasting ? (
-        <div className="space-y-2 rounded-lg border border-white/10 p-3">
-          <label htmlFor={pasteId} className="block text-xs font-medium text-neutral-300">
+        <div className="space-y-2 rounded-lg border border-border p-3">
+          <label htmlFor={pasteId} className="block text-xs font-medium text-secondary-foreground">
             Kişileri yapıştır
           </label>
-          <p className="text-xs text-neutral-500">
+          <p className="text-xs text-subtle-foreground">
             Her satıra bir kişi: <code>Ayşe Yılmaz &lt;ayse@ornek.com&gt;</code>, yalnız adres ya da bir tablodan ad ve adres sütunları.
           </p>
-          <textarea
+          <Textarea
             id={pasteId}
             value={pasted}
             onChange={(event) => setPasted(event.target.value)}
             rows={4}
-            className="focus:border-skylab-400/50 w-full rounded-md border border-white/10 bg-white/3 px-3 py-2 font-mono text-xs text-neutral-100 placeholder:text-neutral-600 focus:bg-white/5 focus:outline-none"
+            className="font-mono"
             placeholder={'Ayşe Yılmaz <ayse@ornek.com>\nali@ornek.com'}
           />
           <div className="flex flex-wrap gap-2">
             <Button
-              variant="outlineBrand"
+              variant="primary"
               disabled={pasted.trim() === ''}
               onClick={() => {
                 const kept = rows.filter((row) => row.name.trim() !== '' || row.email.trim() !== '');
@@ -139,7 +139,7 @@ export function PeopleEditor({
             >
               Listeye ekle
             </Button>
-            <Button variant="secondary" onClick={() => setPasting(false)}>
+            <Button variant="outline" onClick={() => setPasting(false)}>
               Vazgeç
             </Button>
           </div>

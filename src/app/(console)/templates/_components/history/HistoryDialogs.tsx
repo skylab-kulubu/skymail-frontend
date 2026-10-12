@@ -1,10 +1,9 @@
 'use client';
 
 import { AlertTriangle, ArrowRight } from 'lucide-react';
-import { StateCard } from '@/components/chrome/StateCard';
-import { Button } from '@/components/ui/Button';
-import { Modal } from '@/components/ui/Modal';
-import { ModalPrimaryActions } from '@/components/ui/modal-actions';
+import { Button, StateCard } from '@skylab-kulubu/skylcn-ui';
+import { PanelDialog } from '@/components/common/PanelDialog';
+import { PrimaryActions } from '@/components/common/PanelDialog';
 import { useApiLoad } from '@/lib/api/react';
 import { useRepoSample } from '@/lib/template-editor/use-repo-sample';
 import {
@@ -46,17 +45,17 @@ export function RestoreDialog({
   onCancel: () => void;
 }) {
   return (
-    <Modal isOpen onClose={onCancel} title="Sürümü geri getir">
+    <PanelDialog isOpen onClose={onCancel} title="Sürümü geri getir">
       <div className="space-y-3">
         <p>
-          <strong className="font-medium text-neutral-100">{versionLine(version, viewerSub)}</strong> senin yeni taslağın
+          <strong className="font-medium text-foreground">{versionLine(version, viewerSub)}</strong> senin yeni taslağın
           olarak açılır: adı, konusu, kaynakları ve Main source&apos;u ({AUTHORING_MODE_LABEL[version.main_mode]}) olduğu
           gibi. Taslak, şu an gönderilen sürümden başlamış sayılır.
         </p>
         <p>Gönderilen mail değişmez; taslağı yayımlayana kadar alıcılar bugünkü sürümü almaya devam eder.</p>
         <p>Süren bir taslağın varsa geçmişte kalır ve buradan yine geri getirilebilir; editör bundan sonra yeni taslağı açar.</p>
         {refusal ? <RefusalNotice refusal={refusal} /> : null}
-        <ModalPrimaryActions
+        <PrimaryActions
           onCancel={onCancel}
           onConfirm={onConfirm}
           confirmLabel="Taslak olarak geri getir"
@@ -65,7 +64,7 @@ export function RestoreDialog({
           confirmDisabled={refusal?.problem !== undefined && isFinalRestoreRefusal(refusal.problem)}
         />
       </div>
-    </Modal>
+    </PanelDialog>
   );
 }
 
@@ -73,24 +72,24 @@ export function RestoreDialog({
 function FactRow({ fact, olderSeq, newerSeq }: { fact: ComparisonFact; olderSeq: number; newerSeq: number }) {
   const quote = (text: string | null) => (text === null ? '—' : fact.kind === 'text' ? `“${text}”` : text);
   return (
-    <tr className="border-t border-white/5 first:border-t-0">
-      <th scope="row" className="w-28 py-1.5 pr-3 text-left align-top text-xs font-normal text-neutral-500">
+    <tr className="border-t border-border-subtle first:border-t-0">
+      <th scope="row" className="w-28 py-1.5 pr-3 text-left align-top text-xs font-normal text-subtle-foreground">
         {fact.label}
       </th>
       <td className="min-w-0 py-1.5 text-sm break-words">
         {fact.same ? (
-          <span className="text-neutral-400">
-            Aynı{fact.newer !== null ? <span className="text-neutral-300">: {quote(fact.newer)}</span> : null}
+          <span className="text-muted-foreground">
+            Aynı{fact.newer !== null ? <span className="text-secondary-foreground">: {quote(fact.newer)}</span> : null}
           </span>
         ) : fact.kind === 'body' ? (
-          <span className="text-amber-300">Farklı; render edilmiş hâlleri aşağıda.</span>
+          <span className="text-warning">Farklı; render edilmiş hâlleri aşağıda.</span>
         ) : (
           <span className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-            <span className="text-neutral-400">
-              <span className="font-mono text-xs text-neutral-500">#{olderSeq}</span> {quote(fact.older)}
+            <span className="text-muted-foreground">
+              <span className="font-mono text-xs text-subtle-foreground">#{olderSeq}</span> {quote(fact.older)}
             </span>
-            <ArrowRight className="h-3 w-3 shrink-0 self-center text-amber-300" role="img" aria-label="yerine" />
-            <span className="text-amber-300">
+            <ArrowRight className="h-3 w-3 shrink-0 self-center text-warning" role="img" aria-label="yerine" />
+            <span className="text-warning">
               <span className="font-mono text-xs">#{newerSeq}</span> {quote(fact.newer)}
             </span>
           </span>
@@ -150,7 +149,7 @@ export function VersionComparison({
       <>
         <VersionStateBadge badge={versionBadge(version, standing)} />
         {onRestore && version.id !== standing.publishedVersionId ? (
-          <Button variant="outlineBrand" onClick={() => onRestore(version)} aria-label={`Geri getir: sürüm #${version.seq}`}>
+          <Button variant="primary" onClick={() => onRestore(version)} aria-label={`Geri getir: sürüm #${version.seq}`}>
             Geri getir
           </Button>
         ) : null}
@@ -159,12 +158,12 @@ export function VersionComparison({
   });
 
   return (
-    <Modal isOpen onClose={onClose} title="Sürümleri karşılaştır" size="wide">
+    <PanelDialog isOpen onClose={onClose} title="Sürümleri karşılaştır" size="wide">
       {state.status === 'loading' ? (
-        <StateCard isLoading title="Sürümler yükleniyor" />
+        <StateCard loading title="Sürümler yükleniyor" />
       ) : state.status === 'error' ? (
-        <StateCard Icon={AlertTriangle} tone="danger" title="Sürümler yüklenemedi" description={state.error.message}>
-          <Button variant="secondary" onClick={() => void state.reload()}>
+        <StateCard icon={AlertTriangle} tone="danger" title="Sürümler yüklenemedi" description={state.error.message}>
+          <Button variant="outline" onClick={() => void state.reload()}>
             Tekrar dene
           </Button>
         </StateCard>
@@ -174,7 +173,7 @@ export function VersionComparison({
             Önce eski olan (#{older.seq}), sonra yeni olan (#{newer.seq}); ikisi de gönderilecekleri gibi, aynı örnek
             değerlerle render edilmiş.
           </p>
-          <table aria-label="Farklar" className="w-full table-fixed rounded-lg border border-white/10">
+          <table aria-label="Farklar" className="w-full table-fixed rounded-lg border border-border">
             <tbody className="[&_td]:pr-4 [&_th]:pl-4">
               {comparisonFacts(older, newer).map((fact) => (
                 <FactRow key={fact.label} fact={fact} olderSeq={older.seq} newerSeq={newer.seq} />
@@ -183,7 +182,7 @@ export function VersionComparison({
           </table>
           <VersionSideBySide sides={[side(older), side(newer)]} viewerSub={viewerSub} sample={samples.sample} />
           <div className="flex justify-end">
-            <Button variant="secondary" onClick={onClose}>
+            <Button variant="outline" onClick={onClose}>
               Kapat
             </Button>
           </div>
@@ -191,6 +190,6 @@ export function VersionComparison({
       ) : (
         <StateCard title="Karşılaştırılacak bir sürüm yok" description="Bu sürümden önce yayımlanmış bir sürüm bulunamadı." />
       )}
-    </Modal>
+    </PanelDialog>
   );
 }

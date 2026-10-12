@@ -2,11 +2,11 @@
 
 import Link from 'next/link';
 import { AlertTriangle, History } from 'lucide-react';
-import { NoticeBox } from '@/components/chrome/Notice';
-import { ToneBadge, type Tone } from '@/components/chrome/ToneBadge';
+import { ToneBadge, type Tone } from '@/components/common/ToneBadge';
 import type { VersionBadge } from '@/lib/template-history/history';
 import { seedRefusalBadge, seedRefusalText } from '@/lib/template-history/seed-refusal';
 import { templateHref, type MailTemplate } from '@/lib/templates';
+import { Notice } from '@skylab-kulubu/skylcn-ui';
 
 /** The sent version is good news, a draft on its way (or stale) wants attention, the rest is history. */
 function badgeTone(badge: VersionBadge): Tone {
@@ -21,7 +21,7 @@ export function VersionStateBadge({ badge }: { badge: VersionBadge }) {
 }
 
 const LINK_CLASS =
-  'text-skylab-300 focus-visible:ring-skylab-400/40 inline-flex items-center gap-1 rounded text-xs font-medium hover:underline focus-visible:ring-2 focus-visible:outline-none';
+  'text-skylab-300 focus-visible:ring-ring inline-flex items-center gap-1 rounded text-xs font-medium hover:underline focus-visible:ring-2 outline-hidden';
 
 /**
  * The way to a template's version history from its header, and beside it a
@@ -56,7 +56,7 @@ export function HistoryLinks({
         </Link>
       )}
       {refused ? (
-        <span className="text-2xs inline-flex items-center gap-1 rounded-md border border-amber-400/40 bg-amber-400/10 px-1.5 py-0.5 font-medium text-amber-300">
+        <span className="text-2xs inline-flex items-center gap-1 rounded-md border border-warning/40 bg-warning/10 px-1.5 py-0.5 font-medium text-warning">
           <AlertTriangle className="h-3 w-3 shrink-0" aria-hidden />
           {refused}
         </span>
@@ -75,8 +75,8 @@ export function SeedRefusalNotice({ template }: { template: Pick<MailTemplate, '
   if (!text) return null;
   return (
     <section aria-labelledby="seed-refusal-title">
-      <NoticeBox tone="warning">
-        <h2 id="seed-refusal-title" className="font-medium text-amber-300">
+      <Notice tone="warning">
+        <h2 id="seed-refusal-title" className="font-medium text-warning">
           Template seed reddedildi
         </h2>
         <p className="mt-1">{text.headline}</p>
@@ -94,7 +94,7 @@ export function SeedRefusalNotice({ template }: { template: Pick<MailTemplate, '
             <li key={step}>{step}</li>
           ))}
         </ul>
-      </NoticeBox>
+      </Notice>
     </section>
   );
 }

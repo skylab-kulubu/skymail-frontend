@@ -2,9 +2,9 @@
 
 import { createContext, useContext, useState } from 'react';
 import { Braces } from 'lucide-react';
-import { FormField } from '@/components/chrome/FormField';
-import { Button } from '@/components/ui/Button';
+import { FormField } from '@/components/common/FormField';
 import { TEMPLATE_BODY_ALLOWANCE, isVariableName, type VisualAllowance } from '@/lib/mail-render/visual-document';
+import { Button } from '@skylab-kulubu/skylcn-ui';
 
 /** What the editor says in the words of where it is mounted; a template's editor names the template. */
 export type VisualEditorWording = Readonly<{
@@ -63,10 +63,10 @@ function VariableChip({
       onMouseDown={keepFocus ? (event) => event.preventDefault() : undefined}
       onClick={onClick}
       aria-pressed={pressed}
-      className={`focus-visible:ring-skylab-400/40 inline-flex max-w-full items-center gap-1 rounded-md border px-1.5 py-0.5 font-mono text-xs break-all focus-visible:ring-2 focus-visible:outline-none ${
+      className={`focus-visible:ring-ring inline-flex max-w-full items-center gap-1 rounded-md border px-1.5 py-0.5 font-mono text-xs break-all focus-visible:ring-2 outline-hidden ${
         pressed
           ? 'border-skylab-400/60 bg-skylab-500/20 text-skylab-300'
-          : 'hover:border-skylab-400/40 border-white/10 bg-white/[0.03] text-neutral-300'
+          : 'hover:border-skylab-400/40 border-border bg-card text-secondary-foreground'
       }`}
     >
       <Braces className="h-3 w-3 shrink-0" aria-hidden />
@@ -122,7 +122,7 @@ export function VariableInsertPanel({ onInsert, onClose }: { onInsert: (name: st
   const [name, setName] = useState('');
   return (
     <div className="space-y-3">
-      <p className="text-xs text-neutral-400">
+      <p className="text-xs text-muted-foreground">
         Değişken gönderimde alıcıya göre dolar; metne <span className="font-mono">{'{{.Ad}}'}</span> olarak girer.
       </p>
       {variables.length > 0 ? (
@@ -132,7 +132,7 @@ export function VariableInsertPanel({ onInsert, onClose }: { onInsert: (name: st
           ))}
         </div>
       ) : (
-        <p className="text-xs text-neutral-500">{wording.noKnownVariables}</p>
+        <p className="text-xs text-subtle-foreground">{wording.noKnownVariables}</p>
       )}
       <form
         className="flex flex-wrap items-end gap-2"
@@ -153,10 +153,10 @@ export function VariableInsertPanel({ onInsert, onClose }: { onInsert: (name: st
             error={name === '' ? null : variableNameProblem(name)}
           />
         </div>
-        <Button type="submit" variant="outlineBrand" disabled={!isVariableName(name)}>
+        <Button type="submit" variant="primary" disabled={!isVariableName(name)}>
           Ekle
         </Button>
-        <Button variant="secondary" onClick={onClose}>
+        <Button variant="outline" onClick={onClose}>
           Vazgeç
         </Button>
       </form>

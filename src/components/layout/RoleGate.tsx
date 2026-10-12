@@ -3,7 +3,7 @@
 import { usePathname } from 'next/navigation';
 import { Lock } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { StateCard } from '@/components/chrome/StateCard';
+import { StateCard } from '@skylab-kulubu/skylcn-ui';
 import { useConsole } from '@/components/layout/ConsoleContext';
 import { hasAnyRole, requiredRolesFor, type Role } from '@/lib/access';
 
@@ -26,7 +26,7 @@ export function RoleGate({ role, children }: { role?: Role | readonly Role[]; ch
   if (!hasAnyRole(roles, required)) {
     return (
       <StateCard
-        Icon={Lock}
+        icon={Lock}
         tone="warning"
         title="Bu sayfayı görme yetkin yok"
         description={`Bu sayfa için ${required.join(' ya da ')} rolü gerekiyor. Erişime ihtiyacın varsa kulüp yönetimine başvur.`}

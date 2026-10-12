@@ -1,6 +1,6 @@
 'use client';
 
-import { ArchiveDialog } from '@/components/chrome/ArchiveDialog';
+import { ArchiveDialog } from '@/components/common/ArchiveDialog';
 import type { NoticeData } from '@/lib/notice';
 import { useApi } from '@/lib/api/react';
 import { archiveList } from '@/lib/mailing-lists';
@@ -37,7 +37,7 @@ export function ArchiveListDialog({
     >
       {(target) => (
         <p className="leading-relaxed">
-          <strong className="font-medium text-neutral-100">“{target.name}”</strong> arşivlenecek. Alıcıları ve geçmiş
+          <strong className="font-medium text-foreground">“{target.name}”</strong> arşivlenecek. Alıcıları ve geçmiş
           gönderimleri silinmez; listeyi Mail listeleri ekranındaki Arşivli filtresinden geri alabilirsin. Arşivdeki
           bir listeye gönderim yapılamaz.
         </p>

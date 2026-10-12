@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
-import { Modal } from '@/components/ui/Modal';
-import { ModalDangerActions } from '@/components/ui/modal-actions';
+import { PanelDialog } from '@/components/common/PanelDialog';
+import { DangerActions } from '@/components/common/PanelDialog';
 import { apiErrorMessage } from '@/lib/api/errors';
 
 type Archivable = Readonly<{ id: string }>;
@@ -33,7 +33,7 @@ export function ArchiveDialog<T extends Archivable>({
 }) {
   const [pending, setPending] = useState(false);
   return (
-    <Modal isOpen={record !== null} onClose={() => (pending ? undefined : onClose())} title={title}>
+    <PanelDialog isOpen={record !== null} onClose={() => (pending ? undefined : onClose())} title={title}>
       {record ? (
         // Keyed by record, so an earlier attempt's error does not carry over.
         <ArchiveConfirm
@@ -48,7 +48,7 @@ export function ArchiveDialog<T extends Archivable>({
           {children(record)}
         </ArchiveConfirm>
       ) : null}
-    </Modal>
+    </PanelDialog>
   );
 }
 
@@ -93,11 +93,11 @@ function ArchiveConfirm<T extends Archivable>({
     <>
       {children}
       {error ? (
-        <p role="alert" className="mt-3 text-red-300">
+        <p role="alert" className="mt-3 text-destructive">
           {error}
         </p>
       ) : null}
-      <ModalDangerActions
+      <DangerActions
         onCancel={onCancel}
         onConfirm={() => void confirm()}
         confirmLabel="Arşivle"

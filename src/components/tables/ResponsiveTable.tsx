@@ -22,13 +22,13 @@ export function ResponsiveTable<T extends { id: string }>({
   return (
     <>
       {rows.length > 0 ? (
-        <ul className="divide-y divide-white/5 rounded-lg border border-white/5 md:hidden">
+        <ul className="divide-y divide-border-subtle rounded-lg border border-border-subtle md:hidden">
           {rows.map((row) => (
             <Fragment key={row.id}>{renderItem(row)}</Fragment>
           ))}
         </ul>
       ) : (
-        <p className="rounded-lg border border-white/5 px-4 py-6 text-center text-sm text-neutral-500 md:hidden">
+        <p className="rounded-lg border border-border-subtle px-4 py-6 text-center text-sm text-subtle-foreground md:hidden">
           {emptyText}
         </p>
       )}
