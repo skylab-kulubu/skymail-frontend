@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { DeveloperCredit } from '@/components/auth/DeveloperCredit';
 import { BrandMark } from '@/components/layout/BrandMark';
 import { ThemeToggle } from '@/components/layout/ThemeToggle';
 
@@ -41,6 +42,9 @@ export function AuthScreen({
           <div className="mt-3 space-y-4 text-sm leading-relaxed text-neutral-400">{children}</div>
         </div>
       </main>
+      <footer className="flex justify-center pb-[env(safe-area-inset-bottom)]">
+        <DeveloperCredit />
+      </footer>
     </div>
   );
 }
