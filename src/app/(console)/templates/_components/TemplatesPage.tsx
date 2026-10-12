@@ -1,18 +1,14 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { AlertTriangle } from 'lucide-react';
-import { ArchiveDialog } from '@/components/chrome/ArchiveDialog';
-import { FilterPills } from '@/components/chrome/FilterPills';
-import { Notice } from '@/components/chrome/Notice';
-import { Pagination } from '@/components/chrome/Pagination';
-import { StateCard } from '@/components/chrome/StateCard';
+import { AlertTriangle, Plus } from 'lucide-react';
+import { ArchiveDialog } from '@/components/common/ArchiveDialog';
+import { Button, FilterPills, Pagination, StateCard } from '@skylab-kulubu/skylcn-ui';
 import { useConsole } from '@/components/layout/ConsoleContext';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { ResponsiveTable } from '@/components/tables/ResponsiveTable';
 import { RowActions } from '@/components/tables/RowActions';
-import { Button } from '@/components/ui/Button';
-import { CreatePageButton } from '@/components/ui/CreatePageButton';
+import { NavButton } from '@/components/common/NavButton';
 import { ROLE, hasRole, sectionLabel } from '@/lib/access';
 import { useApi } from '@/lib/api/react';
 import { LIFECYCLE_FILTERS, type Lifecycle } from '@/lib/list-view';
@@ -33,6 +29,7 @@ import {
 import { useArchivableList, type ArchivableRecord } from '@/lib/ui/use-archivable-list';
 import { DraftIndicator } from './DraftIndicator';
 import { MainSource, TemplateName } from './TemplateRowParts';
+import { OutcomeNotice } from '@/components/common/OutcomeNotice';
 
 const EMPTY_TEXT: Readonly<Record<Lifecycle, string>> = {
   current: 'Henüz Mail template yok.',
@@ -101,7 +98,7 @@ export function TemplatesPage() {
       key: 'subject',
       header: 'Konu',
       render: (value: string) => (
-        <span className="block max-w-[15rem] truncate text-neutral-300" title={value}>
+        <span className="block max-w-[15rem] truncate text-secondary-foreground" title={value}>
           {value}
         </span>
       ),
@@ -115,7 +112,7 @@ export function TemplatesPage() {
       key: 'drafts',
       header: 'Taslak',
       render: (_: unknown, row: TemplateRow) =>
-        row.drafts ? <DraftIndicator drafts={row.drafts} /> : <span className="text-neutral-500">—</span>,
+        row.drafts ? <DraftIndicator drafts={row.drafts} /> : <span className="text-subtle-foreground">—</span>,
     },
     ...(canWrite ? [{ key: 'actions', header: 'İşlemler', render: (_: unknown, row: TemplateRow) => rowActions(row) }] : []),
   ];
@@ -125,34 +122,34 @@ export function TemplatesPage() {
       <PageHeader
         title={sectionLabel('/templates')}
         description="Kulübün gönderdiği her mailin konusu ve gövdesi. Gönderilen, her Mail template'in yayımlanmış sürümüdür."
-        actions={canWrite ? <CreatePageButton href={templateHref.create}>Yeni template</CreatePageButton> : null}
+        actions={canWrite ? <NavButton variant="primary" href={templateHref.create}><Plus aria-hidden />Yeni template</NavButton> : null}
       />
 
-      {list.notice ? <Notice {...list.notice} /> : null}
+      {list.notice ? <OutcomeNotice {...list.notice} /> : null}
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <FilterPills
-          ariaLabel="Gösterilen Mail template'ler"
+          aria-label="Gösterilen Mail template'ler"
           value={view.lifecycle}
           options={LIFECYCLE_FILTERS}
-          onChange={(next) => list.show({ lifecycle: next, page: 1 })}
+          onValueChange={(next) => list.show({ lifecycle: next, page: 1 })}
         />
         {/* Present from the start, so a screen reader hears the count change with the filter. */}
-        <p className="text-xs text-neutral-500 tabular-nums" aria-live="polite">
+        <p className="text-xs text-subtle-foreground tabular-nums" aria-live="polite">
           {state.status === 'success' ? `${state.data.total} Mail template` : ''}
         </p>
       </div>
 
       {state.status === 'loading' ? (
-        <StateCard isLoading title="Mail template'ler yükleniyor" />
+        <StateCard loading title="Mail template'ler yükleniyor" />
       ) : state.status === 'error' ? (
         <StateCard
-          Icon={AlertTriangle}
+          icon={AlertTriangle}
           tone="danger"
           title="Mail template'ler yüklenemedi"
           description={state.error.message}
         >
-          <Button variant="secondary" onClick={() => void state.reload()}>
+          <Button variant="outline" onClick={() => void state.reload()}>
             Tekrar dene
           </Button>
         </StateCard>
@@ -169,7 +166,7 @@ export function TemplatesPage() {
             )}
           />
           <Pagination
-            ariaLabel="Mail template sayfaları"
+            aria-label="Mail template sayfaları"
             current={view.page}
             totalPages={list.lastPage ?? 1}
             onPageChange={(next) => list.show({ ...view, page: next })}
@@ -185,7 +182,7 @@ export function TemplatesPage() {
       >
         {(template) => (
           <p className="leading-relaxed">
-            <strong className="font-medium text-neutral-100">“{template.name}”</strong> arşivlenecek. Sürümleri ve
+            <strong className="font-medium text-foreground">“{template.name}”</strong> arşivlenecek. Sürümleri ve
             geçmiş gönderimleri silinmez; Mail template&apos;ler ekranındaki Arşivli filtresinden geri alabilirsin.
             Arşivdeki bir Mail template ile gönderim yapılamaz.
           </p>
@@ -208,13 +205,13 @@ function TemplateItem({
   return (
     <li className="space-y-2 px-3.5 py-3 text-sm">
       <TemplateName row={row} actions={actions} />
-      <p className="text-xs break-words text-neutral-300">
-        <span className="text-neutral-500">Konu: </span>
+      <p className="text-xs break-words text-secondary-foreground">
+        <span className="text-subtle-foreground">Konu: </span>
         {row.subject}
       </p>
       <div className="flex flex-wrap items-start gap-x-3 gap-y-1.5 text-xs">
         <span className="inline-flex items-center gap-1.5">
-          <span className="text-neutral-500">Main source</span>
+          <span className="text-subtle-foreground">Main source</span>
           <MainSource mode={row.mainSource} />
         </span>
         {row.drafts ? <DraftIndicator drafts={row.drafts} /> : null}

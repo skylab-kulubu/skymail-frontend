@@ -1,6 +1,6 @@
 'use client';
 
-// Copied from superadmin (ADR-0017).
+// The bar under a form page: İptal on the left, Kaydet on the right.
 
 import { ReactNode } from 'react';
 
@@ -12,7 +12,7 @@ interface FormActionsProps {
   className?: string;
 }
 
-const BAR = 'border-white/5 mt-6 flex flex-wrap items-center justify-between gap-3 border-t pt-5';
+const BAR = 'border-border-subtle mt-6 flex flex-wrap items-center justify-between gap-3 border-t pt-5';
 
 /** Form sayfalarında tutarlı alt aksiyon çubuğu: iptal solda, kaydet sağda. */
 export function FormActions({ cancel, submit, className }: FormActionsProps) {

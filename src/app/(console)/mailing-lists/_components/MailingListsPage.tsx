@@ -1,18 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { AlertTriangle, Lock } from 'lucide-react';
-import { FilterPills } from '@/components/chrome/FilterPills';
-import { Notice } from '@/components/chrome/Notice';
-import { Pagination } from '@/components/chrome/Pagination';
-import { StateCard } from '@/components/chrome/StateCard';
-import { Tag } from '@/components/chrome/Tag';
+import { AlertTriangle, Lock, Plus } from 'lucide-react';
+import { Badge, Button, FilterPills, Pagination, StateCard } from '@skylab-kulubu/skylcn-ui';
 import { useConsole } from '@/components/layout/ConsoleContext';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { DataTable } from '@/components/tables/DataTable';
 import { ROW_ACTION_CLASS, RowActions } from '@/components/tables/RowActions';
-import { Button } from '@/components/ui/Button';
-import { CreatePageButton } from '@/components/ui/CreatePageButton';
+import { NavButton } from '@/components/common/NavButton';
 import { ROLE, hasRole, sectionLabel } from '@/lib/access';
 import { formatDateTime } from '@/lib/format';
 import { LIFECYCLE_FILTERS, type Lifecycle } from '@/lib/list-view';
@@ -28,6 +23,7 @@ import {
 } from '@/lib/mailing-lists';
 import { useArchivableList } from '@/lib/ui/use-archivable-list';
 import { ArchiveListDialog, archivedNotice } from './ArchiveListDialog';
+import { OutcomeNotice } from '@/components/common/OutcomeNotice';
 
 const EMPTY_TEXT: Record<Lifecycle, string> = {
   current: 'Henüz mail listesi yok.',
@@ -58,7 +54,7 @@ export function MailingListsPage() {
       key: 'createdAt',
       header: 'Oluşturulma',
       render: (value: string | null) =>
-        value ? formatDateTime(value) : <span className="text-neutral-500">—</span>,
+        value ? formatDateTime(value) : <span className="text-subtle-foreground">—</span>,
     },
     ...(canWrite
       ? [
@@ -77,7 +73,7 @@ export function MailingListsPage() {
                   {actions.change ? (
                     <Link
                       href={listHref.edit(row.id)}
-                      className={`${ROW_ACTION_CLASS} hover:text-skylab-300 text-neutral-400`}
+                      className={`${ROW_ACTION_CLASS} hover:text-skylab-300 text-muted-foreground`}
                       aria-label={`“${row.name}” listesini düzenle`}
                     >
                       Düzenle
@@ -96,28 +92,28 @@ export function MailingListsPage() {
       <PageHeader
         title={sectionLabel('/mailing-lists')}
         description="Internal listeler ve Keycloak grupları."
-        actions={canWrite ? <CreatePageButton href={listHref.create}>Yeni liste</CreatePageButton> : null}
+        actions={canWrite ? <NavButton variant="primary" href={listHref.create}><Plus aria-hidden />Yeni liste</NavButton> : null}
       />
 
-      {list.notice ? <Notice {...list.notice} /> : null}
+      {list.notice ? <OutcomeNotice {...list.notice} /> : null}
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <FilterPills
-          ariaLabel="Gösterilen listeler"
+          aria-label="Gösterilen listeler"
           value={view.lifecycle}
           options={LIFECYCLE_FILTERS}
-          onChange={(next) => list.show({ lifecycle: next, page: 1 })}
+          onValueChange={(next) => list.show({ lifecycle: next, page: 1 })}
         />
         {state.status === 'success' ? (
-          <p className="text-xs text-neutral-500 tabular-nums">{state.data.total} liste</p>
+          <p className="text-xs text-subtle-foreground tabular-nums">{state.data.total} liste</p>
         ) : null}
       </div>
 
       {state.status === 'loading' ? (
-        <StateCard isLoading title="Listeler yükleniyor" />
+        <StateCard loading title="Listeler yükleniyor" />
       ) : state.status === 'error' ? (
-        <StateCard Icon={AlertTriangle} tone="danger" title="Listeler yüklenemedi" description={state.error.message}>
-          <Button variant="secondary" onClick={() => void state.reload()}>
+        <StateCard icon={AlertTriangle} tone="danger" title="Listeler yüklenemedi" description={state.error.message}>
+          <Button variant="outline" onClick={() => void state.reload()}>
             Tekrar dene
           </Button>
         </StateCard>
@@ -125,7 +121,7 @@ export function MailingListsPage() {
         <div className="space-y-2">
           <DataTable data={state.data.rows} columns={columns} emptyText={EMPTY_TEXT[view.lifecycle]} />
           <Pagination
-            ariaLabel="Liste sayfaları"
+            aria-label="Liste sayfaları"
             current={view.page}
             totalPages={list.lastPage ?? 1}
             onPageChange={(next) => list.show({ ...view, page: next })}
@@ -154,25 +150,25 @@ function ListName({ row, actions }: { row: ListRow; actions: ListActions }) {
         {actions.open ? (
           <Link
             href={listHref.show(row.id)}
-            className="hover:text-skylab-300 font-medium text-neutral-100 hover:underline"
+            className="hover:text-skylab-300 font-medium text-foreground hover:underline"
           >
             {row.name}
           </Link>
         ) : (
-          <span className="font-medium text-neutral-300">{row.name}</span>
+          <span className="font-medium text-secondary-foreground">{row.name}</span>
         )}
-        {row.external ? <Tag tone="external">Harici</Tag> : null}
-        {row.archivedAt ? <Tag tone="archived">Arşivli</Tag> : null}
+        {row.external ? <Badge tone="warning" size="xs">Harici</Badge> : null}
+        {row.archivedAt ? <Badge tone="neutral" size="xs">Arşivli</Badge> : null}
       </div>
-      {row.groupPath ? <p className="mt-0.5 text-xs text-neutral-500">{row.groupPath}</p> : null}
+      {row.groupPath ? <p className="mt-0.5 text-xs text-subtle-foreground">{row.groupPath}</p> : null}
       {actions.readOnly ? (
-        <p className="mt-0.5 inline-flex items-center gap-1.5 text-xs text-neutral-500">
+        <p className="mt-0.5 inline-flex items-center gap-1.5 text-xs text-subtle-foreground">
           <Lock className="h-3 w-3 shrink-0" aria-hidden />
           {GROUP_READ_ONLY_NOTE}
         </p>
       ) : null}
       {row.archivedAt ? (
-        <p className="mt-0.5 text-xs text-neutral-500">Arşivlendi: {formatDateTime(row.archivedAt)}</p>
+        <p className="mt-0.5 text-xs text-subtle-foreground">Arşivlendi: {formatDateTime(row.archivedAt)}</p>
       ) : null}
     </div>
   );

@@ -2,25 +2,23 @@
 
 import { Lock } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { Field } from '@/components/chrome/Field';
-import { NoticeBox } from '@/components/chrome/Notice';
 import { variableAction } from '@/lib/mail-render/go-template';
 import type { SampleValues } from '@/lib/mail-render/preview';
-import { Button } from '@/components/ui/Button';
 import type { Blocker, EditableMode } from '@/lib/template-editor/editor-state';
 import type { MissingVariable, VersionProblem } from '@/lib/template-editor/refusals';
 import { AUTHORING_MODE_LABEL, SYSTEM_TEMPLATE_NOTE, type MailTemplate } from '@/lib/templates';
+import { Button, Input, Notice } from '@skylab-kulubu/skylcn-ui';
 
 /** The Template key, read-only here: a service may address the template by it (ADR-0045). */
 export function TemplateKey({ template }: { template: MailTemplate }) {
   return (
     <div className="space-y-1.5">
-      <p className="text-xs font-medium text-neutral-300">Template key</p>
-      <p className="flex h-8 items-center rounded-md border border-white/5 bg-white/[0.02] px-3 font-mono text-xs break-all text-neutral-300">
-        {template.key ?? <span className="font-sans text-neutral-500">Yok</span>}
+      <p className="text-xs font-medium text-secondary-foreground">Template key</p>
+      <p className="flex h-8 items-center rounded-md border border-border-subtle bg-card px-3 font-mono text-xs break-all text-secondary-foreground">
+        {template.key ?? <span className="font-sans text-subtle-foreground">Yok</span>}
       </p>
       {template.system ? (
-        <p className="flex items-start gap-1.5 text-xs text-neutral-500">
+        <p className="flex items-start gap-1.5 text-xs text-subtle-foreground">
           <Lock className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
           {SYSTEM_TEMPLATE_NOTE} Adı, konusu ve gövdesi burada düzenlenir; Template key değişmez.
         </p>
@@ -36,20 +34,20 @@ export function TemplateKey({ template }: { template: MailTemplate }) {
 export function RenderWarnings({ warnings, when }: { warnings: readonly string[]; when: string }) {
   if (warnings.length === 0) return null;
   return (
-    <NoticeBox tone="warning">
+    <Notice tone="warning">
       <p className="font-medium">{when}</p>
       <ul className="mt-1 list-disc space-y-1 pl-4">
         {warnings.map((warning) => (
           <li key={warning}>{warning}</li>
         ))}
       </ul>
-    </NoticeBox>
+    </Notice>
   );
 }
 
 /** A note beside the editor: a stale draft, someone else's draft, what the preview shows. */
 export function EditorNote({ tone = 'info', children }: { tone?: 'info' | 'warning'; children: ReactNode }) {
-  return <NoticeBox tone={tone}>{children}</NoticeBox>;
+  return <Notice tone={tone}>{children}</Notice>;
 }
 
 export type Refusal = Readonly<{ title: string; problem?: VersionProblem; blockers?: readonly Blocker[] }>;
@@ -60,7 +58,7 @@ export function MissingVariables({ missing }: { missing: readonly MissingVariabl
     <ul className="space-y-1.5">
       {missing.map((variable) => (
         <li key={`${variable.source}:${variable.name}`}>
-          <code className="rounded bg-red-500/10 px-1 font-mono text-xs">{variableAction(variable.name)}</code>{' '}
+          <code className="rounded bg-destructive/10 px-1 font-mono text-xs">{variableAction(variable.name)}</code>{' '}
           {variable.why} ({variable.source === 'contract' ? 'gönderen servisin sözleşmesi' : 'operatör işaretledi'})
         </li>
       ))}
@@ -88,13 +86,13 @@ export function RefusalNotice({
     blocker.mode && onRevert?.can(blocker.mode) ? [blocker.mode] : [],
   );
   return (
-    <NoticeBox tone="error">
+    <Notice tone="danger">
       <p className="font-medium">{title}</p>
       <div className="mt-1.5 space-y-2">
         {problem ? <p>{problem.message}</p> : null}
         {problem?.kind === 'missing-variables' && problem.missing.length > 0 ? <MissingVariables missing={problem.missing} /> : null}
         {problem?.kind === 'unparseable' && problem.detail ? (
-          <pre className="overflow-x-auto rounded bg-red-500/10 px-2 py-1 font-mono text-xs whitespace-pre-wrap">{problem.detail}</pre>
+          <pre className="overflow-x-auto rounded bg-destructive/10 px-2 py-1 font-mono text-xs whitespace-pre-wrap">{problem.detail}</pre>
         ) : null}
         {blockers && blockers.length > 0 ? (
           <ul className="list-disc space-y-1 pl-4">
@@ -106,14 +104,14 @@ export function RefusalNotice({
         {revertable.length > 0 ? (
           <div className="flex flex-wrap gap-2 pt-1">
             {[...new Set(revertable)].map((mode) => (
-              <Button key={mode} variant="secondary" onClick={() => onRevert?.revert(mode)}>
+              <Button key={mode} variant="outline" onClick={() => onRevert?.revert(mode)}>
                 {AUTHORING_MODE_LABEL[mode]} kaynağındaki değişiklikleri geri al
               </Button>
             ))}
           </div>
         ) : null}
       </div>
-    </NoticeBox>
+    </Notice>
   );
 }
 
@@ -139,23 +137,23 @@ export function SamplePanel({
     return typeof value === 'object' ? JSON.stringify(value) : String(value);
   };
   return (
-    <details className="group rounded-lg border border-white/10 bg-white/[0.02]">
-      <summary className="cursor-pointer px-4 py-2.5 text-xs font-medium text-neutral-300 select-none">
+    <details className="group rounded-lg border border-border bg-card">
+      <summary className="cursor-pointer px-4 py-2.5 text-xs font-medium text-secondary-foreground select-none">
         Örnek değerler ({names.length})
       </summary>
-      <div className="space-y-3 border-t border-white/5 px-4 py-3">
-        <p className="text-xs text-neutral-500">
+      <div className="space-y-3 border-t border-border-subtle px-4 py-3">
+        <p className="text-xs text-subtle-foreground">
           Önizleme bu değerlerle dolar; kaydedilmez, gönderilmez. Yazdıkların bu tarayıcıda bu template için saklanır.
           Değeri olmayan değişken önizlemede «Ad» olarak görünür.
         </p>
         {names.length === 0 ? (
-          <p className="text-xs text-neutral-500">Bu template değişken kullanmıyor.</p>
+          <p className="text-xs text-subtle-foreground">Bu template değişken kullanmıyor.</p>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">
             {names.map((name) => (
               <label key={name} className="block min-w-0 space-y-1">
-                <span className="block truncate font-mono text-xs text-neutral-400">{name}</span>
-                <Field value={shown(name)} placeholder={`«${name}»`} onChange={(event) => onType(name, event.target.value)} />
+                <span className="block truncate font-mono text-xs text-muted-foreground">{name}</span>
+                <Input inputSize="sm" value={shown(name)} placeholder={`«${name}»`} onChange={(event) => onType(name, event.target.value)} />
               </label>
             ))}
           </div>

@@ -1,14 +1,14 @@
 'use client';
 
-import { NoticeBox } from '@/components/chrome/Notice';
-import { Modal } from '@/components/ui/Modal';
-import { ModalPrimaryActions } from '@/components/ui/modal-actions';
+import { PanelDialog } from '@/components/common/PanelDialog';
+import { PrimaryActions } from '@/components/common/PanelDialog';
 import type { ApprovalRequest } from '@/lib/mail-approvals/edit';
 import type { ListRow } from '@/lib/mailing-lists';
 import { formatCount } from '@/lib/sends';
 import { peopleSentApart, type PersonRow } from '@/lib/send-form/audience';
 import type { Retry, SendPlan } from '@/lib/send-form/send';
 import type { Progress } from './use-sending';
+import { Notice } from '@skylab-kulubu/skylcn-ui';
 
 /**
  * What the dialog is asked to confirm: a send; a send to a list again when
@@ -73,14 +73,14 @@ export function ConfirmSend({
   const busy = progress !== null || submitting;
   const submission = confirming?.kind === 'submit';
   return (
-    <Modal isOpen={confirming !== null} onClose={busy ? () => {} : onCancel} title={title}>
+    <PanelDialog isOpen={confirming !== null} onClose={busy ? () => {} : onCancel} title={title}>
       {confirming?.kind === 'retryPeople' ? (
         <div className="space-y-3">
           {confirming.retry.uncertain.length > 0 ? (
-            <NoticeBox tone="warning">
+            <Notice tone="warning">
               <p className="font-medium">Bu kişilere gönderim açılmış olabilir; yeniden göndermek aynı maili ikinci kez gönderebilir:</p>
               <p className="mt-1 break-words">{confirming.retry.uncertain.map(person).join(', ')}</p>
-            </NoticeBox>
+            </Notice>
           ) : null}
           {confirming.retry.notSent.length > 0 ? (
             <p className="break-words">
@@ -92,12 +92,12 @@ export function ConfirmSend({
         <>
           <dl className="space-y-2">
             <div>
-              <dt className="text-xs text-neutral-500">{submission ? 'Onaya sunulacak' : 'Gönderilecek'}</dt>
-              <dd className="break-words text-neutral-100">{what}</dd>
+              <dt className="text-xs text-subtle-foreground">{submission ? 'Onaya sunulacak' : 'Gönderilecek'}</dt>
+              <dd className="break-words text-foreground">{what}</dd>
             </div>
             <div>
-              <dt className="text-xs text-neutral-500">Kime</dt>
-              <dd className="break-words text-neutral-100">
+              <dt className="text-xs text-subtle-foreground">Kime</dt>
+              <dd className="break-words text-foreground">
                 {submission && people.length === 1
                   ? person(people[0])
                   : people.length > 0
@@ -105,47 +105,47 @@ export function ConfirmSend({
                     : audienceText(list, size)}
               </dd>
               {people.length > 0 && !(submission && people.length === 1) ? (
-                <dd className="mt-1 max-h-32 overflow-y-auto text-xs text-neutral-400">{people.map(({ name, email }) => name || email).join(', ')}</dd>
+                <dd className="mt-1 max-h-32 overflow-y-auto text-xs text-muted-foreground">{people.map(({ name, email }) => name || email).join(', ')}</dd>
               ) : null}
             </div>
           </dl>
           {confirming?.kind === 'resendList' ? (
             <div className="mt-3">
-              <NoticeBox tone="warning">
+              <Notice tone="warning">
                 Bu listeye az önceki gönderim açılmış olabilir. Yeniden göndermek listedeki herkese aynı maili ikinci kez gönderebilir.
-              </NoticeBox>
+              </Notice>
             </div>
           ) : null}
           {warnings.length > 0 ? (
             <div className="mt-3">
-              <NoticeBox tone="warning">
+              <Notice tone="warning">
                 <p className="font-medium">Göndermeden önce bak:</p>
                 <ul className="mt-1 list-disc space-y-0.5 pl-4">
                   {warnings.map((warning) => (
                     <li key={warning}>{warning}</li>
                   ))}
                 </ul>
-              </NoticeBox>
+              </Notice>
             </div>
           ) : null}
           {submission ? (
-            <p className="mt-3 text-xs text-neutral-500">
+            <p className="mt-3 text-xs text-subtle-foreground">
               {draftNote ?? 'Yalnız yayımlanmış sürüm gönderilir.'} Bir onaycı onaylayınca gönderilir; onaycı değişkenleri düzenleyebilir
               ya da gerekçesiyle reddedebilir. 7 gün içinde karar verilmezse süresi dolar ve gönderilmez.
             </p>
           ) : (
-            <p className="mt-3 text-xs text-neutral-500">
+            <p className="mt-3 text-xs text-subtle-foreground">
               {draftNote ?? 'Yalnız yayımlanmış sürüm gönderilir.'} Gönderim açıldıktan sonra geri alınamaz.
             </p>
           )}
         </>
       )}
       {progress && progress.total > 1 ? (
-        <p className="mt-3 text-xs text-neutral-300" role="status">
+        <p className="mt-3 text-xs text-secondary-foreground" role="status">
           Gönderiliyor: {progress.done}/{progress.total}
         </p>
       ) : null}
-      <ModalPrimaryActions
+      <PrimaryActions
         onCancel={onCancel}
         onConfirm={() => confirming && onConfirm(confirming)}
         confirmLabel={
@@ -160,6 +160,6 @@ export function ConfirmSend({
         pendingLabel={submission ? 'Sunuluyor…' : 'Gönderiliyor…'}
         isPending={busy}
       />
-    </Modal>
+    </PanelDialog>
   );
 }

@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { AlertTriangle, SearchX } from 'lucide-react';
-import { StateCard } from '@/components/chrome/StateCard';
-import { Button } from '@/components/ui/Button';
+import { Button, StateCard } from '@skylab-kulubu/skylcn-ui';
 import type { ApiError } from '@/lib/api/errors';
 import { listHref } from '@/lib/mailing-lists';
 
@@ -14,7 +13,7 @@ export function ListLoadFailure({ error, onRetry }: { error: ApiError; onRetry: 
   if (error.status === 404) {
     return (
       <StateCard
-        Icon={SearchX}
+        icon={SearchX}
         title="Liste bulunamadı"
         description="Bu adreste bir liste yok ya da liste arşivlenmiş. Arşivlenmiş bir liste, Mail listeleri ekranındaki Arşivli filtresinde görünür ve oradan geri alınabilir."
       >
@@ -30,8 +29,8 @@ export function ListLoadFailure({ error, onRetry }: { error: ApiError; onRetry: 
     );
   }
   return (
-    <StateCard Icon={AlertTriangle} tone="danger" title="Liste yüklenemedi" description={error.message}>
-      <Button variant="secondary" onClick={onRetry}>
+    <StateCard icon={AlertTriangle} tone="danger" title="Liste yüklenemedi" description={error.message}>
+      <Button variant="outline" onClick={onRetry}>
         Tekrar dene
       </Button>
     </StateCard>

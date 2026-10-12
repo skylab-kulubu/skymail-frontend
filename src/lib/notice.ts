@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 
 /**
- * The outcome of an action, as a page says it (`components/chrome/Notice`):
+ * The outcome of an action, as a page says it (`components/common/OutcomeNotice`):
  * a success as a success, an error as the API's Turkish sentence, and a
  * success with something left undone — an approval request no approver was
  * told of — as a warning.

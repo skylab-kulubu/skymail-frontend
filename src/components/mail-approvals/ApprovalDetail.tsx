@@ -13,8 +13,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { AlertTriangle, SearchX } from 'lucide-react';
-import { Notice, NoticeBox } from '@/components/chrome/Notice';
-import { StateCard } from '@/components/chrome/StateCard';
+import { Button, Notice, StateCard } from '@skylab-kulubu/skylcn-ui';
 import { useCan, useConsole } from '@/components/layout/ConsoleContext';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { MailFrame, SchemeToggle } from '@/components/mail-preview/MailPreview';
@@ -22,7 +21,6 @@ import type { MailScheme } from '@/components/mail-preview/preview-document';
 import { Audience } from '@/components/sends/Audience';
 import { SectionTitle } from '@/components/sends/SectionTitle';
 import { VariableFields } from '@/components/sends/compose/VariableFields';
-import { Button } from '@/components/ui/Button';
 import { ROLE } from '@/lib/access';
 import { useApi, useApiLoad } from '@/lib/api/react';
 import { approvalViewer, viewerActions, type ViewerActions } from '@/lib/mail-approvals/actions';
@@ -63,6 +61,8 @@ import { ApprovalStateBadge, Deadline, SendsLink, Submitter } from './ApprovalPa
 import { ApprovalHistory } from './ApprovalHistory';
 import { DecisionDialog } from './DecisionDialog';
 import { EditComparison } from './EditComparison';
+import { OutcomeNotice } from '@/components/common/OutcomeNotice';
+import { NavButton } from '@/components/common/NavButton';
 
 /** How many of a request's people the facts name before "+N kişi"; all of them are listed below. */
 const PEOPLE_NAMED = 3;
@@ -72,17 +72,17 @@ export function ApprovalDetail({ id }: { id: string }) {
   // The send form leaves one here when it submits.
   const [notice, setNotice] = useFlashNotice(approvalHref(id));
 
-  if (approval.status === 'loading') return <StateCard isLoading title="İstek yükleniyor" />;
+  if (approval.status === 'loading') return <StateCard loading title="İstek yükleniyor" />;
   if (approval.status === 'error') {
     return approval.error.status === 404 ? (
-      <StateCard Icon={SearchX} title="İstek bulunamadı" description="Bu adreste bir onay isteği yok ya da görme yetkin yok: bir isteği yalnız sunan ve onaycılar görür.">
+      <StateCard icon={SearchX} title="İstek bulunamadı" description="Bu adreste bir onay isteği yok ya da görme yetkin yok: bir isteği yalnız sunan ve onaycılar görür.">
         <Link href={APPROVAL_LIST_PATH} className="text-skylab-300 text-sm hover:underline">
           Mail onaylarına dön
         </Link>
       </StateCard>
     ) : (
-      <StateCard Icon={AlertTriangle} tone="danger" title="İstek yüklenemedi" description={approval.error.message}>
-        <Button variant="secondary" onClick={() => void approval.reload()}>
+      <StateCard icon={AlertTriangle} tone="danger" title="İstek yüklenemedi" description={approval.error.message}>
+        <Button variant="outline" onClick={() => void approval.reload()}>
           Tekrar dene
         </Button>
       </StateCard>
@@ -198,14 +198,14 @@ function ApprovalView({
         meta={
           <>
             <ApprovalStateBadge state={actions.state} />
-            {approval.template.key ? <span className="text-2xs font-mono text-neutral-500">{approval.template.key}</span> : null}
+            {approval.template.key ? <span className="text-2xs font-mono text-subtle-foreground">{approval.template.key}</span> : null}
           </>
         }
       />
 
-      {notice ? <Notice notice={notice} onDismiss={() => setNotice(null)} /> : null}
+      {notice ? <OutcomeNotice notice={notice} onDismiss={() => setNotice(null)} /> : null}
 
-      <section aria-label="Karar" className="space-y-4 rounded-lg border border-white/10 bg-white/[0.02] p-4">
+      <section aria-label="Karar" className="space-y-4 rounded-lg border border-border bg-card p-4">
         {editing ? (
           <EditPanel
             fields={fields}
@@ -253,7 +253,7 @@ function ApprovalView({
         </Fact>
         <Fact term="Mail template">
           <span className="block truncate">{approval.template.name}</span>
-          <span className="text-2xs block whitespace-normal text-neutral-500">
+          <span className="text-2xs block whitespace-normal text-subtle-foreground">
             {approval.template.republished ? 'Sunulduktan sonra yeni sürümü yayımlandı' : 'Sunulduğu andaki yayımlanmış sürümü'}
           </span>
         </Fact>
@@ -291,9 +291,9 @@ function ApprovalView({
 
 function Fact({ term, children, className = '' }: { term: string; children: ReactNode; className?: string }) {
   return (
-    <div className={`min-w-0 rounded-md border border-white/5 bg-white/[0.03] px-3.5 py-3 ${className}`}>
-      <dt className="text-2xs text-neutral-500">{term}</dt>
-      <dd className="mt-1 min-w-0 text-sm text-neutral-200">{children}</dd>
+    <div className={`min-w-0 rounded-md border border-border-subtle bg-card px-3.5 py-3 ${className}`}>
+      <dt className="text-2xs text-subtle-foreground">{term}</dt>
+      <dd className="mt-1 min-w-0 text-sm text-secondary-foreground">{children}</dd>
     </div>
   );
 }
@@ -302,8 +302,8 @@ function Fact({ term, children, className = '' }: { term: string; children: Reac
 function Lead({ title, children }: { title: string; children?: ReactNode }) {
   return (
     <div className="space-y-1">
-      <h2 className="text-sm font-medium text-neutral-100">{title}</h2>
-      {children ? <div className="space-y-1 text-sm text-neutral-400">{children}</div> : null}
+      <h2 className="text-sm font-medium text-foreground">{title}</h2>
+      {children ? <div className="space-y-1 text-sm text-muted-foreground">{children}</div> : null}
     </div>
   );
 }
@@ -341,10 +341,10 @@ function DecisionPanel({
   const can = (action: ViewerActions['actions'][number]) => actions.actions.includes(action);
   const decision = [...(approval.history ?? [])].sort((a, b) => a.seq - b.seq).findLast((event) => event.kind === 'rejected' || event.kind === 'declined');
   const republished = (
-    <NoticeBox tone="warning">
+    <Notice tone="warning">
       Bu istek sunulduktan sonra “{approval.template.name}” template&apos;inin yeni bir sürümü yayımlandı. Onaylanırsa sunulan mail
       gitmez; bu yüzden {can('decline') ? 'düzenleme kabul edilemez. Kabul etmeyip isteği yeni sürümle yeniden sunabilirsin.' : 'onaylanamaz. İsteği gerekçesiyle reddet; sunan yeni sürümle yeniden sunabilir.'}
-    </NoticeBox>
+    </Notice>
   );
 
   if (can('approve') || can('reject')) {
@@ -360,16 +360,16 @@ function DecisionPanel({
         {actions.republished ? republished : null}
         <div className="flex flex-wrap gap-2">
           {can('approve') ? (
-            <Button onClick={() => onDecide('approve')} disabled={busy}>
+            <Button variant="primary" onClick={() => onDecide('approve')} disabled={busy}>
               Onayla ve gönder…
             </Button>
           ) : null}
           {can('edit') ? (
-            <Button variant="secondary" onClick={onEdit} disabled={busy || pinned.status === 'loading'}>
+            <Button variant="outline" onClick={onEdit} disabled={busy || pinned.status === 'loading'}>
               Düzenle
             </Button>
           ) : null}
-          <Button variant="outlineDanger" onClick={() => onDecide('reject')} disabled={busy}>
+          <Button variant="destructive" onClick={() => onDecide('reject')} disabled={busy}>
             Reddet…
           </Button>
         </div>
@@ -386,7 +386,7 @@ function DecisionPanel({
             {before?.editor ? `${eventActorName({ actor: before.editor })} ` : ''}değişkenleri değiştirdi. Kabul edersen düzenlenmiş hâli
             gönderilir; etmezsen isteği kendi değerlerinle düzenleyip yeniden sunabilirsin.
           </p>
-          {before?.note ? <p className="text-neutral-300">Onaycının notu: “{before.note}”</p> : null}
+          {before?.note ? <p className="text-secondary-foreground">Onaycının notu: “{before.note}”</p> : null}
           <DeadlineLine approval={approval} />
         </Lead>
         {actions.republished ? republished : null}
@@ -400,11 +400,11 @@ function DecisionPanel({
         />
         <div className="flex flex-wrap gap-2">
           {can('accept') ? (
-            <Button onClick={() => onDecide('accept')} disabled={busy}>
+            <Button variant="primary" onClick={() => onDecide('accept')} disabled={busy}>
               Kabul et ve gönder…
             </Button>
           ) : null}
-          <Button variant="outlineDanger" onClick={() => onDecide('decline')} disabled={busy}>
+          <Button variant="destructive" onClick={() => onDecide('decline')} disabled={busy}>
             Kabul etme…
           </Button>
         </div>
@@ -417,14 +417,14 @@ function DecisionPanel({
       <>
         <Lead title={actions.state === 'rejected' ? 'İsteğin reddedildi' : 'Onaycının düzenlemesini kabul etmedin'}>
           {decision?.kind === 'rejected' ? (
-            <p className="text-neutral-300">
+            <p className="text-secondary-foreground">
               {eventActorName(decision)}: “{decision.note}”
             </p>
           ) : null}
           <p>Hiçbir şey gönderilmedi. İsteği düzenleyip yeniden onaya sunabilirsin; 7 günlük süre yeniden başlar.</p>
         </Lead>
         <div>
-          <Button href={resubmitHref(approval.id)}>Düzenleyip yeniden sun</Button>
+          <NavButton variant="primary" href={resubmitHref(approval.id)}>Düzenleyip yeniden sun</NavButton>
         </div>
       </>
     );
@@ -438,9 +438,9 @@ function DecisionPanel({
           <p>Aynı değerlerle yeni bir gönderim başlatabilirsin.</p>
         </Lead>
         <div>
-          <Button variant="secondary" href={copyApprovalHref(approval.id)}>
+          <NavButton variant="outline" href={copyApprovalHref(approval.id)}>
             Bu istekten yeni gönderim başlat
-          </Button>
+          </NavButton>
         </div>
       </>
     );
@@ -476,7 +476,7 @@ function DecisionPanel({
       return (
         <Lead title="Reddedildi">
           {decision?.note ? (
-            <p className="text-neutral-300">
+            <p className="text-secondary-foreground">
               {eventActorName(decision)}: “{decision.note}”
             </p>
           ) : null}
@@ -533,13 +533,13 @@ function EditPanel({
         </p>
       </Lead>
       {inexact.length > 0 ? (
-        <NoticeBox tone="warning">
+        <Notice tone="warning">
           {inexact.map((field) => field.label).join(', ')} Visual editöre birebir aktarılamadı: değiştirmezsen sunulduğu gibi gider,
           değiştirirsen editördeki hâliyle gider.
-        </NoticeBox>
+        </Notice>
       ) : null}
       {fields.length === 0 ? (
-        <p className="text-xs text-neutral-500">Bu istekte düzenlenecek bir değişken yok.</p>
+        <p className="text-xs text-subtle-foreground">Bu istekte düzenlenecek bir değişken yok.</p>
       ) : (
         <VariableFields
           fields={fields}
@@ -550,17 +550,17 @@ function EditPanel({
           warnings={warnings}
         />
       )}
-      {unchanged ? <NoticeBox tone="error">Henüz bir değişkeni değiştirmedin: olduğu gibi göndermek için “Onayla ve gönder”i kullan.</NoticeBox> : null}
-      {problems ? <NoticeBox tone="error">Düzenleme gönderilemez: işaretli yerleri düzelt.</NoticeBox> : null}
-      <div className="flex flex-wrap justify-between gap-2 border-t border-white/5 pt-4">
-        <Button variant="secondary" onClick={onCancel} disabled={busy}>
+      {unchanged ? <Notice tone="danger">Henüz bir değişkeni değiştirmedin: olduğu gibi göndermek için “Onayla ve gönder”i kullan.</Notice> : null}
+      {problems ? <Notice tone="danger">Düzenleme gönderilemez: işaretli yerleri düzelt.</Notice> : null}
+      <div className="flex flex-wrap justify-between gap-2 border-t border-border-subtle pt-4">
+        <Button variant="outline" onClick={onCancel} disabled={busy}>
           Vazgeç
         </Button>
         <div className="flex flex-wrap gap-2">
-          <Button variant="secondary" onClick={onReturn} disabled={busy}>
+          <Button variant="outline" onClick={onReturn} disabled={busy}>
             Sunana geri gönder…
           </Button>
-          <Button onClick={onSend} disabled={busy}>
+          <Button variant="primary" onClick={onSend} disabled={busy}>
             Düzenlemeyle gönder…
           </Button>
         </div>
@@ -582,18 +582,18 @@ function Recipients({ approval }: { approval: MailApproval }) {
   return (
     <section id={RECIPIENTS_ANCHOR} aria-labelledby="recipients-title" className="scroll-mt-20 md:scroll-mt-4">
       <SectionTitle id="recipients-title">Kişiler ({formatCount(people.length)})</SectionTitle>
-      <ol className="max-h-80 divide-y divide-white/5 overflow-y-auto rounded-lg border border-white/5">
+      <ol className="max-h-80 divide-y divide-border-subtle overflow-y-auto rounded-lg border border-border-subtle">
         {people.map((person, index) => {
           const send = sends[index];
           const { name, address } = recipientLabel(person.full_name, person.email);
           return (
             <li key={`${index}:${person.email}`} className="flex items-center gap-3 px-3.5 py-2 text-sm">
-              <span className="text-2xs w-6 shrink-0 text-right text-neutral-600 tabular-nums" aria-hidden>
+              <span className="text-2xs w-6 shrink-0 text-right text-faint-foreground tabular-nums" aria-hidden>
                 {index + 1}.
               </span>
               <span className="flex min-w-0 flex-1 flex-col sm:flex-row sm:items-baseline sm:gap-3">
-                <span className="truncate text-neutral-200">{name}</span>
-                {address ? <span className="text-2xs truncate text-neutral-500">{address}</span> : null}
+                <span className="truncate text-secondary-foreground">{name}</span>
+                {address ? <span className="text-2xs truncate text-subtle-foreground">{address}</span> : null}
               </span>
               {send && canSeeSends ? (
                 <Link
@@ -620,22 +620,22 @@ function PreviewSection({ approval }: { approval: MailApproval }) {
     // Scrolled to from the mail's #preview link: clear of the phone's sticky top bar.
     <section id="preview" tabIndex={-1} aria-labelledby="preview-title" className="scroll-mt-20 space-y-3 outline-none md:scroll-mt-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id="preview-title" className="text-sm font-medium text-neutral-100">
+        <h2 id="preview-title" className="text-sm font-medium text-foreground">
           Önizleme
         </h2>
         <SchemeToggle value={scheme} onChange={setScheme} />
       </div>
       {preview ? (
         <>
-          <p className="text-xs text-neutral-500">{previewNote(approval)}</p>
-          <p className="text-sm break-words text-neutral-200">
-            <span className="text-2xs mr-2 font-medium tracking-[0.14em] text-neutral-500 uppercase">Konu</span>
-            {preview.subject.trim() === '' ? <span className="text-neutral-500">—</span> : preview.subject}
+          <p className="text-xs text-subtle-foreground">{previewNote(approval)}</p>
+          <p className="text-sm break-words text-secondary-foreground">
+            <span className="text-2xs mr-2 font-medium tracking-[0.14em] text-subtle-foreground uppercase">Konu</span>
+            {preview.subject.trim() === '' ? <span className="text-subtle-foreground">—</span> : preview.subject}
           </p>
           <MailFrame title="İsteğin önizlemesi" html={preview.html} scheme={scheme} className="h-[70vh] min-h-[420px]" />
         </>
       ) : (
-        <NoticeBox tone="warning">{previewFailureNote(approval)}</NoticeBox>
+        <Notice tone="warning">{previewFailureNote(approval)}</Notice>
       )}
     </section>
   );
@@ -645,19 +645,19 @@ function PreviewSection({ approval }: { approval: MailApproval }) {
 function Variables({ approval, fields }: { approval: MailApproval; fields: readonly VariableField[] }) {
   const variables = approval.body_variables ?? {};
   // approvalFields gives a field for every value the request carries.
-  if (fields.length === 0) return <p className="text-xs text-neutral-500">Bu istekte değişken yok.</p>;
+  if (fields.length === 0) return <p className="text-xs text-subtle-foreground">Bu istekte değişken yok.</p>;
   return (
-    <dl className="divide-y divide-white/5 rounded-lg border border-white/5">
+    <dl className="divide-y divide-border-subtle rounded-lg border border-border-subtle">
       {fields.map((field) => {
         const text = valueText(variables[field.name], field.kind);
         return (
           <div key={field.name} className="grid gap-1 px-3.5 py-2.5 sm:grid-cols-[12rem_minmax(0,1fr)] sm:gap-4">
-            <dt className="text-xs text-neutral-400">
+            <dt className="text-xs text-muted-foreground">
               {field.label}
-              {field.label !== field.name ? <code className="text-2xs ml-2 text-neutral-500">{field.name}</code> : null}
+              {field.label !== field.name ? <code className="text-2xs ml-2 text-subtle-foreground">{field.name}</code> : null}
             </dt>
-            <dd className="max-h-48 overflow-y-auto text-sm break-words whitespace-pre-line text-neutral-200">
-              {text === null || text === '' ? <span className="text-neutral-600">boş</span> : text}
+            <dd className="max-h-48 overflow-y-auto text-sm break-words whitespace-pre-line text-secondary-foreground">
+              {text === null || text === '' ? <span className="text-faint-foreground">boş</span> : text}
             </dd>
           </div>
         );

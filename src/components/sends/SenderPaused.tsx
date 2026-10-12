@@ -5,12 +5,12 @@
 // screen and the send list say so above everything else, with no way to close
 // it: the notice lasts as long as the pause.
 
-import { NoticeBox } from '@/components/chrome/Notice';
 import { useApiLoad } from '@/lib/api/react';
 import { fetchSenderPaused, SENDER_PAUSED_TEXT } from '@/lib/sends';
+import { Notice } from '@skylab-kulubu/skylcn-ui';
 
 export function SenderPausedNotice() {
-  return <NoticeBox tone="warning">{SENDER_PAUSED_TEXT}</NoticeBox>;
+  return <Notice tone="warning">{SENDER_PAUSED_TEXT}</Notice>;
 }
 
 /**

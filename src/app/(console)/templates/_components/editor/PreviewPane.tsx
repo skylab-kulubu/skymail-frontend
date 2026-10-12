@@ -2,13 +2,13 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Loader2 } from 'lucide-react';
-import { NoticeBox } from '@/components/chrome/Notice';
 import { referencedVariables } from '@/lib/mail-render/go-template';
 import type { SampleValues } from '@/lib/mail-render/preview';
 import type { MailScheme } from '@/components/mail-preview/preview-document';
 import { readTypedSamples, sampleNames, sampleValues, writeTypedSamples } from '@/lib/template-editor/samples';
 import { EditorNote, RenderWarnings, SamplePanel } from './EditorParts';
 import { MailFrame, SchemeToggle, SubjectPreview } from '@/components/mail-preview/MailPreview';
+import { Notice } from '@skylab-kulubu/skylcn-ui';
 
 /** The variables of a stored body, for a preview that has no render of its own yet. */
 function storedVariables(html: string | null): string[] {
@@ -99,7 +99,7 @@ export function PreviewPane({
         <h2 id="preview-heading" className="flex items-center gap-2 text-sm font-medium">
           Önizleme
           {pending && html !== null ? (
-            <span role="status" className="inline-flex items-center gap-1 text-xs font-normal text-neutral-500">
+            <span role="status" className="inline-flex items-center gap-1 text-xs font-normal text-subtle-foreground">
               <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
               güncelleniyor
             </span>
@@ -109,7 +109,7 @@ export function PreviewPane({
       </div>
       {note ? <EditorNote>{note}</EditorNote> : null}
       {failure ? (
-        <NoticeBox tone="error">
+        <Notice tone="danger">
           <p className="font-medium">
             {failureKept
               ? 'Bu kaynak panelde render edilemedi. Ona dokunmadığın sürece kaydetmek, kayıtlı gövdeyi olduğu gibi korur.'
@@ -117,7 +117,7 @@ export function PreviewPane({
           </p>
           <p className="mt-1 font-mono text-xs whitespace-pre-wrap">{failure}</p>
           {html !== null ? <p className="mt-1 text-xs">Aşağıda son başarılı render duruyor.</p> : null}
-        </NoticeBox>
+        </Notice>
       ) : null}
       <RenderWarnings warnings={warnings} when="Bu mail gönderilebilir, ama düzeltmen iyi olur:" />
       <SubjectPreview subject={subject} sample={samples.sample} />

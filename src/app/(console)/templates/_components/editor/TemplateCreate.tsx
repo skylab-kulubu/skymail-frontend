@@ -13,12 +13,10 @@
  */
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { FormField } from '@/components/chrome/FormField';
-import { FilterPills } from '@/components/chrome/FilterPills';
+import { FormField } from '@/components/common/FormField';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { RoleGate } from '@/components/layout/RoleGate';
-import { Button } from '@/components/ui/Button';
-import { FormActions } from '@/components/ui/FormActions';
+import { FormActions } from '@/components/common/FormActions';
 import { ROLE } from '@/lib/access';
 import { useApi } from '@/lib/api/react';
 import { flashNotice } from '@/lib/notice';
@@ -30,6 +28,8 @@ import { AUTHORING_MODE_LABEL, createTemplate, templateHref } from '@/lib/templa
 import { RefusalNotice, type Refusal } from './EditorParts';
 import { PreviewPane, useSample } from './PreviewPane';
 import { SourcePanel } from './SourcePane';
+import { Button, FilterPills } from '@skylab-kulubu/skylcn-ui';
+import { NavButton } from '@/components/common/NavButton';
 
 /** The modes a template can be created in: the ones `POST /templates` takes. */
 const CREATE_MODES = ['jsx', 'html'] as const;
@@ -117,12 +117,12 @@ function CreateForm() {
       </div>
       <div className="grid gap-6 xl:grid-cols-2">
         <section aria-label="İlk kaynak" className="min-w-0">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-3">
-            <p className="text-sm font-medium text-neutral-200">İlk kaynak</p>
-            <FilterPills value={start} onChange={setStart} options={START_OPTIONS} ariaLabel="İlk kaynağın Authoring mode'u" />
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
+            <p className="text-sm font-medium text-secondary-foreground">İlk kaynak</p>
+            <FilterPills value={start} onValueChange={setStart} options={START_OPTIONS} aria-label="İlk kaynağın Authoring mode'u" />
           </div>
           {start === 'visual' ? (
-            <div className="space-y-2 pt-3 text-sm text-neutral-300">
+            <div className="space-y-2 pt-3 text-sm text-secondary-foreground">
               <p>
                 Yeni bir template bir Visual belgeyle oluşturulamıyor. Bu yüzden ilk yayımlanan sürüm sade bir HTML
                 başlangıcıdır (yandaki önizleme); template oluşturulunca mail şimdilik onunla gider.
@@ -153,12 +153,12 @@ function CreateForm() {
       </div>
       <FormActions
         cancel={
-          <Button variant="secondary" href={templateHref.index} disabled={saving}>
+          <NavButton variant="outline" href={templateHref.index} disabled={saving}>
             İptal
-          </Button>
+          </NavButton>
         }
         submit={
-          <Button onClick={() => void create()} disabled={saving}>
+          <Button variant="primary" onClick={() => void create()} disabled={saving}>
             {saving ? 'Oluşturuluyor…' : 'Oluştur ve yayımla'}
           </Button>
         }

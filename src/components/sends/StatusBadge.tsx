@@ -4,7 +4,7 @@ import {
   type RecipientStatus,
   type SendStatus,
 } from '@/lib/sends';
-import { ToneBadge, type Tone } from '@/components/chrome/ToneBadge';
+import { ToneBadge, type Tone } from '@/components/common/ToneBadge';
 
 const SEND_TONE: Readonly<Record<SendStatus, Tone>> = {
   sent: 'good',
