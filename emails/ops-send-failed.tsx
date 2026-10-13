@@ -1,6 +1,5 @@
 import * as React from "react";
-import { Text } from "@react-email/components";
-import { Chip, Cta, DetailRow, Heading, Label, Paragraph, Shell, colors } from "./theme";
+import { CodeBlock, Context, Cta, Label, Paragraph, RowItem, Rows, RowsEnd, Shell, Title } from "./theme";
 import { end, ifSet, v } from "./go";
 import type { TemplateMeta } from "./types";
 
@@ -10,7 +9,7 @@ export const meta: TemplateMeta = {
   subject: "SkyMail gönderiminde hata",
   system: false,
   contentSensitive: false,
-  brand: "skylab",
+  brand: "mail",
   trigger:
     "SkyMail, bir görevdeki mailler yeniden denemeler bittikten sonra da gönderilemediğinde, gönderimi başlatan kişiye. NOT: bu uyarıyı gönderen kod henüz yazılmadı.",
   variables: ["TaskId", "TemplateName", "FailedCount", "TotalCount", "FirstError", "TaskUrl"],
@@ -30,43 +29,31 @@ export const meta: TemplateMeta = {
  */
 export default function OpsSendFailed() {
   return (
-    <Shell preview="Bir SkyMail gönderiminde başarısız olan alıcılar var." brand="skylab">
-      <Heading>Gönderimde Hata</Heading>
-
-      <Chip tone="alert">
+    <Shell
+      preview="Bir SkyMail gönderiminde başarısız olan alıcılar var."
+      brand="mail"
+      reason="Bu e-postayı, bu gönderimi sen başlattığın için alıyorsun."
+    >
+      <Context tone="bad">
         {v("FailedCount")} / {v("TotalCount")} başarısız
-      </Chip>
+      </Context>
+      <Title>Gönderimde Hata</Title>
 
-      <Paragraph style={{ marginTop: "18px" }}>
+      <Paragraph>
         Başlattığın gönderimde bazı mailler yeniden denemelerden sonra da iletilemedi. Başarılı olanlar gitti;
         aşağıdaki sayı yalnızca iletilemeyenleri gösteriyor.
       </Paragraph>
 
-      <div style={{ marginTop: "24px" }}>
-        <DetailRow label="Şablon" value={v("TemplateName")} />
-        <DetailRow label="Görev" value={v("TaskId")} last />
-      </div>
+      <Rows>
+        <RowItem label="Şablon">{v("TemplateName")}</RowItem>
+        <RowItem label="Görev">{v("TaskId")}</RowItem>
+        <RowsEnd />
+      </Rows>
 
       {ifSet("FirstError")}
       <div style={{ marginTop: "24px" }}>
         <Label>İlk Hata</Label>
-        <Text
-          className="code-block"
-          style={{
-            margin: "6px 0 0",
-            padding: "10px 14px",
-            borderRadius: "8px",
-            border: `1px solid ${colors.cardBorder}`,
-            backgroundColor: colors.noteBg,
-            fontSize: "12px",
-            lineHeight: "1.6",
-            color: colors.textBody,
-            fontFamily: "'SF Mono', Menlo, Consolas, monospace",
-            wordBreak: "break-all",
-          }}
-        >
-          {v("FirstError")}
-        </Text>
+        <CodeBlock size={12}>{v("FirstError")}</CodeBlock>
       </div>
       {end}
 

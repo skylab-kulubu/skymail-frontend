@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Chip, Cta, DetailRow, Heading, Note, Paragraph, Shell, Strong } from "./theme";
+import { Context, Cta, Note, Paragraph, RowItem, Rows, RowsEnd, Shell, Strong, Title } from "./theme";
 import { elseBranch, elseIfEq, end, ifEq, ifSet, v } from "./go";
 import type { TemplateMeta } from "./types";
 
@@ -41,18 +41,21 @@ export default function ClubRoleMembership() {
   const admin = elseIfEq("Role", "admin");
 
   return (
-    <Shell preview="SKY LAB yönetim yetkilerinde bir değişiklik oldu." brand="account">
-      <Heading>
-        {added}Bir Yönetim Grubuna Eklendin{elseBranch}Bir Yönetim Grubundan Çıkarıldın{end}
-      </Heading>
-
+    <Shell
+      preview="SKY LAB yönetim yetkilerinde bir değişiklik oldu."
+      brand="account"
+      reason="Bu e-postayı, bir SKY LAB yönetim grubundaki üyeliğin değiştiği için alıyorsun."
+    >
       {added}
-      <Chip>{v("GroupName")}</Chip>
+      <Context tone="ok">{v("GroupName")}</Context>
       {elseBranch}
-      <Chip tone="alert">{v("GroupName")}</Chip>
+      <Context tone="neutral">{v("GroupName")}</Context>
       {end}
+      <Title>
+        {added}Bir Yönetim Grubuna Eklendin{elseBranch}Bir Yönetim Grubundan Çıkarıldın{end}
+      </Title>
 
-      <Paragraph style={{ marginTop: "18px" }}>
+      <Paragraph>
         {added}
         <Strong>{v("GroupName")}</Strong> grubuna eklendin.{" "}
         {board}Bu grup SKY LAB Yönetim Kurulu&apos;na bağlı.{audit}Bu grup SKY LAB Denetim Kurulu&apos;na bağlı.
@@ -69,19 +72,16 @@ export default function ClubRoleMembership() {
         {end}
       </Paragraph>
 
-      <div style={{ marginTop: "24px" }}>
-        <DetailRow label="Grup" value={v("GroupName")} />
+      <Rows>
+        <RowItem label="Grup">{v("GroupName")}</RowItem>
+        <RowItem label="Geçerlilik">{v("EffectiveAt")}</RowItem>
         {ifSet("ActorName")}
-        <DetailRow label="Geçerlilik" value={v("EffectiveAt")} />
-        <DetailRow label="İşlemi yapan" value={v("ActorName")} last />
-        {elseBranch}
-        <DetailRow label="Geçerlilik" value={v("EffectiveAt")} last />
+        <RowItem label="İşlemi yapan">{v("ActorName")}</RowItem>
         {end}
-      </div>
+        <RowsEnd />
+      </Rows>
 
-      <Note tone="alert">
-        Bu değişikliği beklemiyorsan hemen kulüp yöneticilerine haber ver.
-      </Note>
+      <Note tone="alert">Bu değişikliği beklemiyorsan hemen kulüp yöneticilerine haber ver.</Note>
 
       <Paragraph style={{ marginTop: "24px" }}>
         Hesabındaki güncel yetkileri her zaman Hesap Merkezi&apos;ndeki İzinler ekranından görebilirsin.

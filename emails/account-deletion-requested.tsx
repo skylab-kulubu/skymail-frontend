@@ -1,6 +1,5 @@
 import * as React from "react";
-import { Text } from "@react-email/components";
-import { Chip, Cta, Heading, Note, Paragraph, Shell, Strong, colors, fontStack } from "./theme";
+import { Context, Cta, Note, Paragraph, Shell, Small, Strong, Title } from "./theme";
 import { end, ifSet, v } from "./go";
 import type { TemplateMeta } from "./types";
 
@@ -25,14 +24,17 @@ export const meta: TemplateMeta = {
 
 export default function AccountDeletionRequested() {
   return (
-    <Shell preview="SKY LAB hesabının silinmesi için talebini aldık." brand="account">
-      <Heading>Silme Talebini Aldık</Heading>
+    <Shell
+      preview="SKY LAB hesabının silinmesi için talebini aldık."
+      brand="account"
+      reason="Bu e-postayı, SKY LAB hesabının silinmesi istendiği için alıyorsun."
+    >
+      <Context tone="wait">
+        Hesap silme{ifSet("RequestedAt")} · {v("RequestedAt")}{end}
+      </Context>
+      <Title>Silme Talebini Aldık</Title>
 
-      {ifSet("RequestedAt")}
-      <Chip>{v("RequestedAt")}</Chip>
-      {end}
-
-      <Paragraph style={{ marginTop: "18px" }}>
+      <Paragraph>
         SKY LAB hesabının silinmesi için talebini aldık. Hesabına erişimin şu andan itibaren kapalı. Kişisel bilgilerin{" "}
         {ifSet("CompletesAt")}<Strong>{v("CompletesAt")}</Strong> tarihine kadar {end}
         sistemlerimizden kaldırılacak.
@@ -44,18 +46,13 @@ export default function AccountDeletionRequested() {
       </Paragraph>
 
       {ifSet("CancelUrl")}
-      <div style={{ marginTop: "28px" }}>
-        <Note>Fikrini değiştirdiysen silme tamamlanmadan önce talebi geri alabilirsin.</Note>
-      </div>
+      <Note>Fikrini değiştirdiysen silme tamamlanmadan önce talebi geri alabilirsin.</Note>
       <Cta href={v("CancelUrl")}>Silme Talebimi Geri Al</Cta>
       {end}
 
-      <Text
-        className="t-faint"
-        style={{ marginTop: "24px", marginBottom: 0, fontSize: "12px", lineHeight: "1.7", color: colors.textFaint, fontFamily: fontStack }}
-      >
+      <Small style={{ marginTop: "24px" }}>
         Bu talebi sen yapmadıysan hemen info@yildizskylab.com adresine yaz — silme tamamlanmadan durdurabiliriz.
-      </Text>
+      </Small>
     </Shell>
   );
 }

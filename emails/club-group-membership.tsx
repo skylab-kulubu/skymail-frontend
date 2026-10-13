@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Chip, Cta, DetailRow, Heading, Paragraph, Shell, Strong } from "./theme";
+import { Context, Cta, Paragraph, RowItem, Rows, RowsEnd, Shell, Strong, Title } from "./theme";
 import { elseBranch, end, ifEq, ifSet, v } from "./go";
 import type { TemplateMeta } from "./types";
 
@@ -28,18 +28,21 @@ export default function ClubGroupMembership() {
   const added = ifEq("Action", "added");
 
   return (
-    <Shell preview="SKY LAB grup üyeliğinde bir değişiklik oldu." brand="account">
-      <Heading>
-        {added}Bir Gruba Eklendin{elseBranch}Bir Gruptan Çıkarıldın{end}
-      </Heading>
-
+    <Shell
+      preview="SKY LAB grup üyeliğinde bir değişiklik oldu."
+      brand="account"
+      reason="Bu e-postayı, bir SKY LAB grubundaki üyeliğin değiştiği için alıyorsun."
+    >
       {added}
-      <Chip>{v("GroupName")}</Chip>
+      <Context tone="ok">{v("GroupName")}</Context>
       {elseBranch}
-      <Chip tone="alert">{v("GroupName")}</Chip>
+      <Context tone="neutral">{v("GroupName")}</Context>
       {end}
+      <Title>
+        {added}Bir Gruba Eklendin{elseBranch}Bir Gruptan Çıkarıldın{end}
+      </Title>
 
-      <Paragraph style={{ marginTop: "18px" }}>
+      <Paragraph>
         {added}
         <Strong>{v("GroupName")}</Strong> grubuna eklendin. Bu gruba bağlı izinler varsa hesabına tanımlandı.
         {elseBranch}
@@ -47,15 +50,14 @@ export default function ClubGroupMembership() {
         {end}
       </Paragraph>
 
-      <div style={{ marginTop: "24px" }}>
-        <DetailRow label="Grup" value={v("GroupName")} />
+      <Rows>
+        <RowItem label="Grup">{v("GroupName")}</RowItem>
+        <RowItem label="Geçerlilik">{v("EffectiveAt")}</RowItem>
         {ifSet("ActorName")}
-        <DetailRow label="Geçerlilik" value={v("EffectiveAt")} />
-        <DetailRow label="İşlemi yapan" value={v("ActorName")} last />
-        {elseBranch}
-        <DetailRow label="Geçerlilik" value={v("EffectiveAt")} last />
+        <RowItem label="İşlemi yapan">{v("ActorName")}</RowItem>
         {end}
-      </div>
+        <RowsEnd />
+      </Rows>
 
       <Paragraph style={{ marginTop: "24px" }}>
         Hesabındaki güncel yetkileri her zaman Hesap Merkezi&apos;ndeki İzinler ekranından görebilirsin.

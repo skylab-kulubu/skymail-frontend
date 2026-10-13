@@ -7,8 +7,7 @@
  * never to hand it to anybody.
  */
 import * as React from "react";
-import { Heading, Note, Paragraph, Shell, colors, fontStack } from "./theme";
-import { Section, Text } from "@react-email/components";
+import { CodeBlock, Context, Note, Paragraph, Shell, Small, Title, type Tone } from "./theme";
 import { end, ifSet, v } from "./go";
 
 export function CodeMail({
@@ -17,15 +16,24 @@ export function CodeMail({
   intro,
   /** What the reader should do if they did not ask for this. */
   disclaimer,
+  /** The line above the heading: what the mail is about. */
+  context = "SKY LAB hesabı",
+  tone = "wait",
+  /** Why the reader got it, for the footer. */
+  reason = "Bu e-postayı, bu adres bir SKY LAB hesabına eklenmek istendiği için alıyorsun.",
 }: {
   preview: string;
   heading: React.ReactNode;
   intro: React.ReactNode;
   disclaimer: React.ReactNode;
+  context?: React.ReactNode;
+  tone?: Tone;
+  reason?: React.ReactNode;
 }) {
   return (
-    <Shell preview={preview} brand="account">
-      <Heading>{heading}</Heading>
+    <Shell preview={preview} brand="account" reason={reason}>
+      <Context tone={tone}>{context}</Context>
+      <Title>{heading}</Title>
 
       <Paragraph>
         {/* firstName is empty for an account that has not filled in a name yet,
@@ -34,69 +42,25 @@ export function CodeMail({
         {intro}
       </Paragraph>
 
-      {/* An opaque box with the theme's code-block role, so a client that darkens
-          the mail itself inverts it cleanly instead of washing it out. */}
-      <Section
-        className="code-block"
-        style={{
-          marginTop: "24px",
-          borderRadius: "12px",
-          padding: "18px 24px",
-          backgroundColor: colors.noteBg,
-          border: `1.5px solid ${colors.cardBorder}`,
-          textAlign: "center",
-        }}
-      >
-        <Text
-          className="t-primary"
-          style={{
-            margin: 0,
-            fontSize: "32px",
-            lineHeight: "1.2",
-            fontWeight: 700,
-            letterSpacing: "8px",
-            color: colors.textPrimary,
-            fontFamily: "'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace",
-          }}
-        >
+      {/* An opaque box with the code-block role, so a client that darkens the
+          mail itself inverts it cleanly instead of washing it out. */}
+      <div style={{ marginTop: "24px" }}>
+        <CodeBlock size={28} center>
           {v("code")}
-        </Text>
-      </Section>
+        </CodeBlock>
+      </div>
 
       {ifSet("codeExpirationMinutes")}
-      <Text
-        className="t-muted"
-        style={{
-          marginTop: "14px",
-          marginBottom: 0,
-          fontSize: "13px",
-          lineHeight: "1.7",
-          color: colors.textMuted,
-          fontFamily: fontStack,
-          textAlign: "center",
-        }}
-      >
+      <Small style={{ textAlign: "center" }}>
         Bu kod {v("codeExpirationMinutes")} dakika geçerli ve yalnızca bir kez kullanılabilir.
-      </Text>
+      </Small>
       {end}
 
       <Note tone="alert">
         Bu kodu kimseyle paylaşma. SKY LAB ekibi seni arayıp ya da yazıp bu kodu asla istemez.
       </Note>
 
-      <Text
-        className="t-faint"
-        style={{
-          marginTop: "24px",
-          marginBottom: 0,
-          fontSize: "12px",
-          lineHeight: "1.7",
-          color: colors.textFaint,
-          fontFamily: fontStack,
-        }}
-      >
-        {disclaimer}
-      </Text>
+      <Small style={{ marginTop: "24px" }}>{disclaimer}</Small>
     </Shell>
   );
 }
