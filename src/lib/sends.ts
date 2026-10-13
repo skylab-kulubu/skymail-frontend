@@ -58,17 +58,40 @@ export type Send = Readonly<{
    * that cannot show content.
    */
   content_access?: ContentAccess;
-  /** When the content is emptied; null unless content_access is available. */
+  /** When the content is emptied; null unless content_access is available or masked. */
   content_expires_at?: string | null;
 }>;
 
 /**
- * Whether a send's content can be opened, and if not why. `sensitive` mail
- * carries a code or a one-time link and is shown to no one; `restricted` is
- * shown to others (its sender, those who send to lists for a send to many,
- * SkyMail's administrators); `expired` is past the retention period, emptied.
+ * Whether a send's content can be opened, and if not why (skymail-backend,
+ * sent mail content). `masked`: mail that may carry a code or a one-time link,
+ * shown whole with every code and one-time link replaced by `••••••` on the
+ * server (Yusuf, 2026-10-13); `restricted` is shown to others (its sender,
+ * those who send to lists for a send to many, SkyMail's administrators);
+ * `expired` is past the retention period, emptied; `not_kept` is mail of the
+ * masked kind whose content was emptied minutes after it went out, before such
+ * content was kept; `sensitive` (a backend from before masking, or a mail the
+ * backend could not mask for certain) is shown to no one.
  */
-export type ContentAccess = "available" | "sensitive" | "restricted" | "expired";
+export type ContentAccess = "available" | "masked" | "sensitive" | "restricted" | "expired" | "not_kept";
+
+/** Whether a send's recipients' mails open: as sent, or masked. */
+export function contentOpens(access: ContentAccess | "unavailable" | undefined): boolean {
+  return access === "available" || access === "masked";
+}
+
+/** What a masked value reads as: skymail-backend's mailer.Mask. */
+export const MASK = "••••••";
+
+/** Text cut where it shows a masked value, so each mask can be marked. */
+export function maskedSegments(text: string): ReadonlyArray<{ text: string; masked: boolean }> {
+  const segments: { text: string; masked: boolean }[] = [];
+  text.split(MASK).forEach((part, index) => {
+    if (index > 0) segments.push({ text: MASK, masked: true });
+    if (part !== "") segments.push({ text: part, masked: false });
+  });
+  return segments;
+}
 
 /** `GET /mail_tasks/:id/queue/:rowId/content`: one recipient's mail as it was sent. */
 export type SentContent = Readonly<{
@@ -78,8 +101,13 @@ export type SentContent = Readonly<{
   access: ContentAccess | "unavailable";
   subject: string | null;
   plain_text: string | null;
+  /** Masked, each masked value in the text is `<mark data-skymail-masked="">••••••</mark>`. */
   html: string | null;
   expires_at: string | null;
+  /** Masked content: the send's variables masked (`link`, `code`, `answers[0].url`). */
+  masked_variables?: readonly string[] | null;
+  /** Masked content: `variables` (rendered again with them masked) or `patterns` (every link, long number and code masked). */
+  masked_by?: "variables" | "patterns" | null;
 }>;
 
 /** `GET /mail_tasks/summary`. */
@@ -268,10 +296,18 @@ export function contentNote(send: Pick<Send, "content_access" | "content_expires
           ? `Her alıcının postasını gönderildiği hâliyle açabilirsin. İçerik ${formatClubTime(send.content_expires_at)} tarihine kadar saklanır.`
           : "Her alıcının postasını gönderildiği hâliyle açabilirsin.",
       };
+    case "masked":
+      return {
+        text: send.content_expires_at
+          ? `Her alıcının postasını açabilirsin; kodlar ve tek kullanımlık bağlantılar güvenlik için gizlendi (${MASK}). Her açılış kaydedilir. İçerik ${formatClubTime(send.content_expires_at)} tarihine kadar saklanır.`
+          : `Her alıcının postasını açabilirsin; kodlar ve tek kullanımlık bağlantılar güvenlik için gizlendi (${MASK}). Her açılış kaydedilir.`,
+      };
     case "sensitive":
       return {
         text: "Bu postanın içeriği gizli: giriş kodu, doğrulama kodu ya da tek kullanımlık bağlantı taşıyabilir. Yalnız kime, ne zaman gittiği ve durumu görünür.",
       };
+    case "not_kept":
+      return { text: NOT_KEPT_TEXT };
     case "restricted":
       return {
         text: "Bu gönderimin içeriğini göremezsin. İçeriği gönderen, toplu gönderimlerde gönderme yetkisi olanlar ve SkyMail yöneticileri görür.",
@@ -286,9 +322,14 @@ export function contentNote(send: Pick<Send, "content_access" | "content_expires
 }
 
 /** What the content viewer says when a recipient's mail is not there to show. */
+const NOT_KEPT_TEXT =
+  "Bu postanın içeriği saklanmadı: gönderildiği dönemde kod ya da tek kullanımlık bağlantı taşıyabilen postaların içeriği gönderimden birkaç dakika sonra siliniyordu. Silinen içerik geri getirilemez; alıcılar ve durumları duruyor.";
+
 export const CONTENT_MISSING_TEXT: Readonly<Record<SentContent["access"], string>> = {
   available: "",
-  sensitive: "Bu postanın içeriği gizli.",
+  masked: "",
+  sensitive: "Bu postanın içeriği gösterilemiyor: içindeki kod ya da tek kullanımlık bağlantı güvenle gizlenemedi.",
+  not_kept: NOT_KEPT_TEXT,
   restricted: "Bu postanın içeriğini göremezsin.",
   expired: "İçerik saklama süresi dolduğu için silindi.",
   unavailable: "Bu alıcının postası saklanmıyor: hesabı silindiği için temizlendi ya da posta hiç oluşturulamadı.",

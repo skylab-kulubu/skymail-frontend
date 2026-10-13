@@ -227,6 +227,9 @@ type Viewer = { sub: string; can: (...roles: string[]) => boolean };
 
 /** How many days a send's content is kept. */
 const CONTENT_RETENTION_DAYS = 90;
+/** skymail-backend's mailer.Mask, and the names whose value it masks: the last word is a code or a link. */
+const MASK = "••••••";
+const MASKED_VARIABLE = /(link|links|url|urls|uri|href|code|codes|otp|pin|token|tokens|passcode|password|secret)$/i;
 
 /** Locked sensitive, as skymail-backend's list (internal/handlers/content_sensitivity.go). */
 function contentSensitiveLocked(key: string | null): boolean {
@@ -989,19 +992,20 @@ export class MockSkymail {
 
   /**
    * Whether `viewer` may open the send's content, as skymail-backend decides
-   * it (internal/handlers/sent_content.go): sensitive to no one, then the
-   * send's sender, whoever reads system mail, and for a send to many whoever
-   * sends to lists; then whether it is still kept.
+   * it (internal/handlers/sent_content.go): the send's sender, whoever reads
+   * system mail, and for a send to many whoever sends to lists; then whether
+   * it is still kept; a sensitive one is shown masked, and one emptied before
+   * sensitive content was kept is not_kept.
    */
   private contentAccess(send: SendRecord, viewer: Viewer): { access: string; expires_at: string | null } {
     const bulk = send.list !== null || send.approved;
     const sensitive = send.template.content_sensitive ?? !bulk;
-    if (sensitive) return { access: "sensitive", expires_at: null };
     const mayRead =
       viewer.sub === send.sent_by || viewer.can("skymail:system-mails:read") || (bulk && viewer.can("skymail:mails:write"));
     if (!mayRead) return { access: "restricted", expires_at: null };
-    if (send.cleared) return { access: "expired", expires_at: null };
-    return { access: "available", expires_at: new Date(Date.parse(send.created_at) + CONTENT_RETENTION_DAYS * 86_400_000).toISOString() };
+    if (send.cleared) return { access: sensitive ? "not_kept" : "expired", expires_at: null };
+    const expires_at = new Date(Date.parse(send.created_at) + CONTENT_RETENTION_DAYS * 86_400_000).toISOString();
+    return { access: sensitive ? "masked" : "available", expires_at };
   }
 
   /** `GET /mail_tasks/:id/queue/:rowId/content`: the template filled in for the recipient, as the mailer renders it. */
@@ -1012,17 +1016,24 @@ export class MockSkymail {
     if (!send || !recipient) return refuse(404, "server.not_found");
     const { access, expires_at } = this.contentAccess(send, viewer);
     const answer = { id: rowId, task_id: sendId, access, subject: null, plain_text: null, html: null, expires_at: null };
-    if (access !== "available") return { status: 200, body: answer };
+    if (access !== "available" && access !== "masked") return { status: 200, body: answer };
     const values: Record<string, unknown> = { ...send.body_variables, Email: recipient.email, FullName: recipient.full_name };
-    const fill = (text: string) => text.replace(/\{\{\s*\.(\w+)\s*\}\}/g, (_, name: string) => String(values[name] ?? ""));
+    // Masked as skymail-backend's mailer masks by variables: a code or a link
+    // variable (by the last word of its name) is never sent; the HTML marks it.
+    const masked = access === "masked" ? Object.keys(send.body_variables).filter((name) => MASKED_VARIABLE.test(name)).sort() : [];
+    const fillWith = (mask: string) => (text: string) =>
+      text.replace(/\{\{\s*\.(\w+)\s*\}\}/g, (_, name: string) => (masked.includes(name) ? mask : String(values[name] ?? "")));
+    const fill = fillWith(MASK);
     return {
       status: 200,
       body: {
         ...answer,
         subject: fill(send.template.subject),
         plain_text: fill(send.template.plain_text_content),
-        html: fill(send.template.html_content),
+        html: fillWith(`<mark data-skymail-masked="">${MASK}</mark>`)(send.template.html_content),
         expires_at,
+        masked_variables: access === "masked" ? masked : null,
+        masked_by: access === "masked" ? "variables" : null,
       },
     };
   }

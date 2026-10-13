@@ -8,7 +8,7 @@
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
-import { AlertTriangle, Clock, Eye, Inbox, Lock, SearchX } from 'lucide-react';
+import { AlertTriangle, Clock, Eye, Inbox, Lock, SearchX, ShieldCheck } from 'lucide-react';
 import { Button, FilterPills, Notice, Pagination, StateCard } from '@skylab-kulubu/skylcn-ui';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { DataTable } from '@/components/tables/DataTable';
@@ -16,6 +16,7 @@ import { useApiLoad } from '@/lib/api/react';
 import {
   audienceLabel,
   contentNote,
+  contentOpens,
   fetchRecipientPage,
   fetchSend,
   formatSendTime,
@@ -129,7 +130,14 @@ const EMPTY_TEXT: Readonly<Record<RecipientFilter, string>> = {
 function ContentNotice({ send }: { send: Send }) {
   const note = contentNote(send);
   if (!note) return null;
-  const icon = send.content_access === 'available' ? Eye : send.content_access === 'expired' ? Clock : Lock;
+  const icon =
+    send.content_access === 'available'
+      ? Eye
+      : send.content_access === 'masked'
+        ? ShieldCheck
+        : send.content_access === 'expired' || send.content_access === 'not_kept'
+          ? Clock
+          : Lock;
   return (
     <Notice tone="info" icon={icon} title="İçerik" aria-label="İçerik">
       {note.text}
@@ -139,7 +147,7 @@ function ContentNotice({ send }: { send: Send }) {
 
 function Recipients({ send }: { send: Send }) {
   const router = useRouter();
-  const canOpen = send.content_access === 'available';
+  const canOpen = contentOpens(send.content_access);
   const [opened, setOpened] = useState<{ rowId: string; recipient: string } | null>(null);
   const open = (row: RecipientRow) =>
     setOpened({ rowId: row.id, recipient: mailRecipientLabel(row.recipient_full_name, row.recipient_email).name });

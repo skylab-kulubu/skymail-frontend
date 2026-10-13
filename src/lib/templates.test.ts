@@ -537,6 +537,10 @@ describe("whether a template's sends show their content", () => {
     );
     assert.equal(contentVisibility({ content_sensitive: true, content_sensitive_locked: false })?.shown, false);
     assert.match(contentVisibility({ content_sensitive: null, content_sensitive_locked: false })?.text ?? "", /Ayarlanmadı/);
+    // Off is masked, not hidden: the content opens with its codes and links hidden.
+    assert.match(contentVisibility({ content_sensitive: true, content_sensitive_locked: false })?.text ?? "", /maskeli açılır/);
+    assert.match(contentVisibility({ content_sensitive: true, content_sensitive_locked: true })?.text ?? "", /maskeli açılır/);
+    assert.doesNotMatch(contentVisibility({ content_sensitive: true, content_sensitive_locked: false })?.text ?? "", /gösterilmez/);
     const locked = contentVisibility({ content_sensitive: true, content_sensitive_locked: true });
     assert.equal(locked?.locked, true);
     assert.equal(locked?.shown, false);

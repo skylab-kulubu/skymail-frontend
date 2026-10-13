@@ -14,7 +14,10 @@ import {
   composeHref,
   CONTENT_MISSING_TEXT,
   contentNote,
+  contentOpens,
   fetchSentContent,
+  MASK,
+  maskedSegments,
   dailySeries,
   dayLabel,
   fetchRecipientPage,
@@ -488,5 +491,39 @@ describe("a send's content", () => {
     // A backend from before content says nothing, and the page says nothing either.
     assert.equal(contentNote({}), null);
     assert.equal(CONTENT_MISSING_TEXT.unavailable.includes("silindiği"), true);
+  });
+
+  it("opens a masked send's mails and says its codes and links are hidden, never that it is secret", () => {
+    const masked = contentNote({ content_access: "masked", content_expires_at: "2027-01-10T09:00:00Z" })?.text ?? "";
+    assert.match(masked, /Kodlar ve tek kullanımlık bağlantılar güvenlik için gizlendi/i);
+    assert.match(masked, /Her açılış kaydedilir/);
+    assert.match(masked, /2027/);
+    assert.doesNotMatch(masked, /içeriği gizli/);
+    assert.equal(contentOpens("masked"), true);
+    assert.equal(contentOpens("available"), true);
+    for (const access of ["sensitive", "restricted", "expired", "not_kept", "unavailable", undefined] as const) {
+      assert.equal(contentOpens(access), false, String(access));
+    }
+  });
+
+  it("says a send emptied before such content was kept was not kept, not that it is secret or expired", () => {
+    const note = contentNote({ content_access: "not_kept" })?.text ?? "";
+    assert.match(note, /saklanmadı/);
+    assert.match(note, /geri getirilemez/);
+    assert.doesNotMatch(note, /gizli|saklama süresi/);
+    assert.equal(CONTENT_MISSING_TEXT.not_kept, note);
+    assert.match(CONTENT_MISSING_TEXT.sensitive, /güvenle gizlenemedi/);
+  });
+
+  it("cuts text where it shows a mask, so each can be marked", () => {
+    assert.deepEqual(maskedSegments(`Kodun ${MASK}, bağlantı: ${MASK}${MASK}`), [
+      { text: "Kodun ", masked: false },
+      { text: MASK, masked: true },
+      { text: ", bağlantı: ", masked: false },
+      { text: MASK, masked: true },
+      { text: MASK, masked: true },
+    ]);
+    assert.deepEqual(maskedSegments("Merhaba"), [{ text: "Merhaba", masked: false }]);
+    assert.deepEqual(maskedSegments(""), []);
   });
 });
