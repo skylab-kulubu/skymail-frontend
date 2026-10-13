@@ -33,7 +33,7 @@
  * still here with the same props, restyled: templates an operator wrote in the
  * panel's JSX mode import them by name and must keep compiling.
  */
-import { Body, Head, Html, Img, Link, Preview } from "@react-email/components";
+import { Body, Head, Hr, Html, Img, Link, Preview } from "@react-email/components";
 import * as React from "react";
 
 /** Forms' palette: the light theme, inline. */
@@ -473,17 +473,9 @@ export function Figure({ src, alt, width }: { src: string; alt: string; width?: 
   );
 }
 
-/** A hairline between two parts of the body. */
+/** A hairline between two parts of the body; the plain text draws it as a rule. */
 export function Divider() {
-  return (
-    <Table style={{ marginTop: "28px" }}>
-      <tr>
-        <td className="hair" style={{ borderTop: `1px solid ${ink.hair}`, fontSize: 0, lineHeight: 0, height: "1px" }}>
-          &nbsp;
-        </td>
-      </tr>
-    </Table>
-  );
+  return <Hr className="hair" style={{ margin: "28px 0 0", border: "none", borderTop: `1px solid ${ink.hair}` }} />;
 }
 
 /** A small caption over a value that stands on its own (a code, a number). */

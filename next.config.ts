@@ -41,6 +41,12 @@ const nextConfig: NextConfig = {
         headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
       },
       {
+        // The images sent mails show (emails/theme.tsx). Not named by their
+        // content, so cached for a day rather than for ever.
+        source: "/mail/:file*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=86400" }],
+      },
+      {
         // Monaco, under the version it was copied from (scripts/build-editor-assets.ts).
         source: "/monaco/:version(\\d+\\.\\d+\\.\\d+)/vs/:path*",
         headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
