@@ -581,20 +581,25 @@ export function Rows({ children }: { children: React.ReactNode }) {
 const cell: React.CSSProperties = {
   borderTop: `1px solid ${ink.hair}`,
   padding: "10px 0",
-  fontSize: "13px",
-  lineHeight: "20px",
   verticalAlign: "top",
-  fontFamily: fontStack,
 };
 
+const cellText: React.CSSProperties = { margin: 0, fontSize: "13px", lineHeight: "20px", fontFamily: fontStack };
+
+// Each side is a <p>: the plain-text part joins table cells with nothing
+// between them, and a block keeps the label and its value on lines of their own.
 export function RowItem({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
   return (
     <tr>
-      <td className="hair t-muted" style={{ ...cell, color: ink.muted }}>
-        {label}
+      <td className="hair" style={cell}>
+        <p className="t-muted" style={{ ...cellText, color: ink.muted }}>
+          {label}
+        </p>
       </td>
-      <td className="hair t-primary" align="right" style={{ ...cell, padding: "10px 0 10px 16px", color: ink.primary, fontWeight: 500, textAlign: "right" }}>
-        {children}
+      <td className="hair" align="right" style={{ ...cell, padding: "10px 0 10px 16px", textAlign: "right" }}>
+        <p className="t-primary" style={{ ...cellText, color: ink.primary, fontWeight: 500, textAlign: "right" }}>
+          {children}
+        </p>
       </td>
     </tr>
   );
@@ -650,7 +655,7 @@ export function Note({
           ) : null}
           <p
             className={empty ? "t-faint" : "t-primary"}
-            style={{ margin: 0, fontSize: "14px", lineHeight: "22px", color: empty ? ink.faint : ink.primary, whiteSpace: "pre-wrap" }}
+            style={{ margin: 0, fontSize: "14px", lineHeight: "22px", color: empty ? ink.faint : ink.primary }}
           >
             {children}
           </p>
