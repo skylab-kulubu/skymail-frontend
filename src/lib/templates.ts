@@ -312,7 +312,8 @@ export function releaseRequiredVariable(api: ApiClient, templateId: string, name
 
 /**
  * Sets whether the template's sends show their content
- * (`PUT …/content-sensitive`): true hides it from everyone. A template locked
+ * (`PUT …/content-sensitive`): true shows it masked — every code and one-time
+ * link hidden by the server, the rest as sent; false as sent. A template locked
  * sensitive refuses false (409 template.content_sensitive_locked). Each change
  * is recorded with who made it. Writes no version.
  */
@@ -320,7 +321,7 @@ export function setContentSensitive(api: ApiClient, templateId: string, sensitiv
   return api.put<MailTemplate>(`/templates/${templateId}/content-sensitive`, { content_sensitive: sensitive });
 }
 
-/** Whether the panel shows the content of the template's sends, in the editor's words. */
+/** Whether the panel shows the content of the template's sends as sent (the switch on) or masked, in the editor's words. */
 export function contentVisibility(template: Pick<MailTemplate, "content_sensitive" | "content_sensitive_locked">): {
   shown: boolean;
   locked: boolean;
@@ -331,23 +332,27 @@ export function contentVisibility(template: Pick<MailTemplate, "content_sensitiv
     return {
       shown: false,
       locked: true,
-      text: "Bu şablonun postası giriş/doğrulama kodu ya da tek kullanımlık bağlantı taşır: içeriği her zaman gizli kalır, açılamaz.",
+      text: "Bu şablonun postası giriş/doğrulama kodu ya da tek kullanımlık bağlantı taşır: içeriği her zaman maskeli açılır, kodlar ve bağlantılar gizlenir.",
     };
   }
   if (template.content_sensitive === false) {
     return {
       shown: true,
       locked: false,
-      text: "Gönderimlerin içeriği, gönderen, toplu gönderimlerde gönderme yetkisi olanlar ve yöneticiler tarafından açılabilir.",
+      text: "Gönderimlerin içeriği gönderildiği hâliyle açılır: gönderen, toplu gönderimlerde gönderme yetkisi olanlar ve yöneticiler açabilir.",
     };
   }
   if (template.content_sensitive === true) {
-    return { shown: false, locked: false, text: "Gönderimlerin içeriği kimseye gösterilmez; yalnız kime, ne zaman gittiği görünür." };
+    return {
+      shown: false,
+      locked: false,
+      text: "Gönderimlerin içeriği maskeli saklanır ve açılır: kodlar ve tek kullanımlık bağlantılar gönderim bitince gizlenir, gerisi görünür. Her açılış kaydedilir.",
+    };
   }
   return {
     shown: false,
     locked: false,
-    text: "Ayarlanmadı: tekil postalarda içerik gizli, liste ve gruba giden gönderimlerde görünür.",
+    text: "Ayarlanmadı: tekil postalarda içerik maskeli (kodlar ve bağlantılar gizli), liste ve gruba giden gönderimlerde gönderildiği hâliyle açılır.",
   };
 }
 

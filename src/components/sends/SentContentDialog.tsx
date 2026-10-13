@@ -4,16 +4,26 @@
 // frame and the plain text. The frame runs nothing and reaches nothing: no
 // script (an empty sandbox), and no image, font or stylesheet from the
 // network until the operator asks for images — a mail's tracking pixel must
-// not count the operator as its recipient opening it.
+// not count the operator as its recipient opening it. A mail that may carry a
+// code or a one-time link comes masked from the server: each masked value is
+// marked, in the subject, the plain text and the HTML.
 
 import { useState } from 'react';
-import { AlertTriangle } from 'lucide-react';
-import { Button, FilterPills, StateCard } from '@skylab-kulubu/skylcn-ui';
+import { AlertTriangle, ShieldCheck } from 'lucide-react';
+import { Button, FilterPills, Notice, StateCard } from '@skylab-kulubu/skylcn-ui';
 import { PanelDialog } from '@/components/common/PanelDialog';
 import { MailFrame, SchemeToggle } from '@/components/mail-preview/MailPreview';
 import type { MailScheme, RemoteContent } from '@/components/mail-preview/preview-document';
 import { useApiLoad } from '@/lib/api/react';
-import { CONTENT_MISSING_TEXT, fetchSentContent, formatSendTime, type SentContent } from '@/lib/sends';
+import {
+  CONTENT_MISSING_TEXT,
+  contentOpens,
+  fetchSentContent,
+  formatSendTime,
+  MASK,
+  maskedSegments,
+  type SentContent,
+} from '@/lib/sends';
 
 type Part = 'html' | 'text';
 
@@ -57,16 +67,25 @@ function SentMail({ content }: { content: SentContent }) {
   const [scheme, setScheme] = useState<MailScheme>('light');
   const [remote, setRemote] = useState<RemoteContent>('blocked');
 
-  if (content.access !== 'available') {
+  if (!contentOpens(content.access)) {
     return <p className="py-6 text-center text-subtle-foreground">{CONTENT_MISSING_TEXT[content.access]}</p>;
   }
 
+  const masked = content.access === 'masked';
   const html = content.html ?? '';
   return (
     <div className="space-y-3">
+      {masked ? <MaskedNotice content={content} /> : null}
+
       <p className="text-sm break-words text-secondary-foreground">
         <span className="text-2xs mr-2 font-medium tracking-[0.14em] text-subtle-foreground uppercase">Konu</span>
-        {content.subject?.trim() ? <span>{content.subject}</span> : <span className="text-subtle-foreground">—</span>}
+        {content.subject?.trim() ? (
+          <span>
+            <WithMasks text={content.subject} />
+          </span>
+        ) : (
+          <span className="text-subtle-foreground">—</span>
+        )}
       </p>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -100,7 +119,7 @@ function SentMail({ content }: { content: SentContent }) {
         </>
       ) : (
         <pre className="max-h-[65vh] overflow-auto rounded-lg border border-border p-3 text-xs break-words whitespace-pre-wrap text-secondary-foreground">
-          {content.plain_text?.trim() ? content.plain_text : '—'}
+          {content.plain_text?.trim() ? <WithMasks text={content.plain_text} /> : '—'}
         </pre>
       )}
 
@@ -108,5 +127,40 @@ function SentMail({ content }: { content: SentContent }) {
         <p className="text-2xs text-subtle-foreground">Bu içerik {formatSendTime(content.expires_at)} tarihinde silinir.</p>
       ) : null}
     </div>
+  );
+}
+
+/** What a masked mail hides, said before the mail. */
+function MaskedNotice({ content }: { content: SentContent }) {
+  const variables = content.masked_variables ?? [];
+  return (
+    <Notice tone="info" icon={ShieldCheck} title="Kodlar ve bağlantılar gizlendi" aria-label="Maskeli içerik">
+      Kodlar ve tek kullanımlık bağlantılar güvenlik için gizlendi: her biri <MaskMark /> olarak görünür, gerisi
+      gönderildiği hâliyle. Bu açılış kaydedildi.
+      {variables.length > 0 ? <> Gizlenen alanlar: {variables.join(', ')}.</> : null}
+      {content.masked_by === 'patterns'
+        ? ' Postanın şablonu bulunamadığı için içindeki bütün bağlantılar, uzun sayılar ve kodlar gizlendi.'
+        : null}
+    </Notice>
+  );
+}
+
+/** A masked value, marked as the HTML part marks it. */
+function MaskMark() {
+  return (
+    <mark data-skymail-masked="" className="rounded bg-warning/15 px-0.5 font-medium text-warning" title="Güvenlik için gizlendi">
+      {MASK}
+    </mark>
+  );
+}
+
+/** Text with each masked value in it marked. */
+function WithMasks({ text }: { text: string }) {
+  return (
+    <>
+      {maskedSegments(text).map((segment, index) =>
+        segment.masked ? <MaskMark key={index} /> : <span key={index}>{segment.text}</span>,
+      )}
+    </>
   );
 }

@@ -1,7 +1,8 @@
 /**
  * A send's content (Yusuf, 2026-10-12): each recipient's mail as it went out —
- * subject, HTML and plain text — opens from the send's page, except mail that
- * carries a code or a one-time link, which no one sees. The HTML is shown in a
+ * subject, HTML and plain text — opens from the send's page. Mail that may
+ * carry a code or a one-time link opens masked (2026-10-13): the server sends
+ * every code and link as •••••• and the panel marks each. The HTML is shown in a
  * sandboxed frame that reaches nothing on the network until the operator asks
  * for images: a tracking pixel must not count the operator as the recipient.
  * The mock API decides who sees what as skymail-backend does.
@@ -78,24 +79,66 @@ test("the sender opens a recipient's mail as sent, with remote images held back 
   await expect(dialog.locator("pre")).toHaveText("Merhaba Ali Can, Ekim buluşması");
 });
 
-test("a mail with a code or a one-time link shows that it went, never what it said", async ({ page, skymail, signIn }) => {
-  await signIn("admin");
-  const { id: templateId } = skymail.addTemplate({
+function resetMail(skymail: MockSkymail) {
+  return skymail.addTemplate({
     name: "Keycloak · Parola Sıfırlama",
     key: "keycloak.reset-password",
     system: true,
     contentSensitive: true,
     subject: "SKY LAB parola sıfırlama isteği",
     mainMode: "html",
-    htmlContent: "<p>{{.link}}</p>",
-    plainText: "{{.link}}",
+    htmlContent: '<p>Merhaba {{.firstName}}, <a href="{{.link}}">sıfırla</a>: {{.link}}</p>',
+    plainText: "Merhaba {{.firstName}}, {{.link}}",
   });
-  const sendId = skymail.addSend({ templateId, recipients: [{ full_name: "Ali Can", email: "ali@ornek.com" }], variables: { link: "https://sso.example.test/reset?key=secret" } });
+}
+
+test("a mail with a code or a one-time link opens whole, its link masked and marked, never sent unmasked", async ({ page, skymail, signIn }) => {
+  await signIn("admin");
+  const { id: templateId } = resetMail(skymail);
+  const sendId = skymail.addSend({
+    templateId,
+    recipients: [{ full_name: "Ali Can", email: "ali@ornek.com" }],
+    variables: { link: "https://sso.example.test/reset?key=secret", firstName: "Ali" },
+  });
+  const answers: string[] = [];
+  page.on("response", async (response) => {
+    if (response.url().includes("/content")) answers.push(await response.text());
+  });
 
   await page.goto(`/mail-tasks/show/${sendId}`);
-  await expect(page.getByText(/Bu postanın içeriği gizli/)).toBeVisible();
-  await expect(page.getByRole("button", { name: /içeriği gör/ })).toHaveCount(0);
+  await expect(page.getByText(/kodlar ve tek kullanımlık bağlantılar güvenlik için gizlendi/)).toBeVisible();
+  await expect(page.getByText(/içeriği gizli/)).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Ali Can: içeriği gör" }).click();
+  const dialog = page.getByRole("dialog", { name: "Gönderilen posta · Ali Can" });
+  await expect(dialog.getByText(/Kodlar ve tek kullanımlık bağlantılar güvenlik için gizlendi/)).toBeVisible();
+  await expect(dialog.getByText(/Gizlenen alanlar: link/)).toBeVisible();
+  const frame = dialog.locator("iframe").contentFrame();
+  await expect(frame.getByText(/Merhaba Ali/)).toBeVisible();
+  await expect(frame.locator("mark[data-skymail-masked]").first()).toHaveText("••••••");
+
+  await dialog.getByRole("button", { name: "Düz metin" }).click();
+  await expect(dialog.locator("pre")).toHaveText("Merhaba Ali, ••••••");
+  await expect(dialog.locator("pre mark[data-skymail-masked]")).toHaveText("••••••");
+
+  expect(answers.length).toBeGreaterThan(0);
+  for (const answer of answers) expect(answer).not.toContain("reset?key=secret");
   expect(await page.content()).not.toContain("reset?key=secret");
+});
+
+test("a mail with a code or a link emptied before such content was kept says it was not kept", async ({ page, skymail, signIn }) => {
+  await signIn("admin");
+  const { id: templateId } = resetMail(skymail);
+  const sendId = skymail.addSend({
+    templateId,
+    recipients: [{ full_name: "Ali Can", email: "ali@ornek.com" }],
+    variables: { link: "https://sso.example.test/reset?key=secret", firstName: "Ali" },
+    cleared: true,
+  });
+  await page.goto(`/mail-tasks/show/${sendId}`);
+  await expect(page.getByText(/Bu postanın içeriği saklanmadı/)).toBeVisible();
+  await expect(page.getByText(/içeriği gizli/)).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /içeriği gör/ })).toHaveCount(0);
 });
 
 /** A welcome mail (single, shown) and a newsletter to a list, both sent by someone else, and an old newsletter of the viewer's the sweep emptied. */
@@ -186,27 +229,28 @@ test("the template editor's switch shows or hides a template's content, after as
 
   await page.goto(`/templates/edit/${welcomeId}`);
   const panel = page.getByRole("region", { name: "Gönderilen içerik" });
-  const toggle = panel.getByRole("switch", { name: /İçerik panelde görünsün/ });
+  const toggle = panel.getByRole("switch", { name: /İçerik panelde maskesiz görünsün/ });
   await expect(panel).toContainText("Ayarlanmadı");
   await expect(toggle).not.toBeChecked();
 
   // Asked first; cancelling writes nothing.
   await toggle.click();
-  const ask = page.getByRole("dialog", { name: "İçerik panelde görünsün mü?" });
+  const ask = page.getByRole("dialog", { name: "İçerik panelde maskesiz görünsün mü?" });
   await expect(ask).toContainText("kod ya da tek kullanımlık bağlantı varsa açma");
   await ask.getByRole("button", { name: "İptal" }).click();
   await expect(toggle).not.toBeChecked();
   expect(toggles()).toHaveLength(0);
 
   await toggle.click();
-  await page.getByRole("dialog", { name: "İçerik panelde görünsün mü?" }).getByRole("button", { name: "Göster" }).click();
+  await page.getByRole("dialog", { name: "İçerik panelde maskesiz görünsün mü?" }).getByRole("button", { name: "Maskesiz göster" }).click();
   await expect(toggle).toBeChecked();
   expect(toggles().map((request) => request.body)).toEqual([{ content_sensitive: false }]);
 
   await toggle.click();
-  const hide = page.getByRole("dialog", { name: "İçerik gizlensin mi?" });
-  await expect(hide).toContainText("kalıcı olarak silinir");
-  await hide.getByRole("button", { name: "Gizle" }).click();
+  const hide = page.getByRole("dialog", { name: "İçerik maskelensin mi?" });
+  await expect(hide).toContainText("kodlar ve tek kullanımlık bağlantılar gizlenir");
+  await expect(hide).toContainText("gizlenen değerler geri gelmez");
+  await hide.getByRole("button", { name: "Maskele" }).click();
   await expect(toggle).not.toBeChecked();
   expect(toggles().map((request) => request.body)).toEqual([{ content_sensitive: false }, { content_sensitive: true }]);
 
@@ -223,6 +267,6 @@ test("the template editor's switch shows or hides a template's content, after as
   });
   await page.goto(`/templates/edit/${resetId}`);
   const locked = page.getByRole("region", { name: "Gönderilen içerik" });
-  await expect(locked).toContainText("her zaman gizli kalır");
-  await expect(locked.getByRole("switch", { name: /İçerik panelde görünsün/ })).toBeDisabled();
+  await expect(locked).toContainText("her zaman maskeli açılır");
+  await expect(locked.getByRole("switch", { name: /İçerik panelde maskesiz görünsün/ })).toBeDisabled();
 });

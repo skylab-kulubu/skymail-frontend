@@ -57,7 +57,7 @@ function buildCatalogue(): string {
   lines.push(
     "",
     "🔒 = sistem şablonu: arşivlenemez, anahtarı değiştirilemez.",
-    "🙈 = içeriği gizli: SkyMail bir gönderiminin yalnız gittiğini gösterir, ne yazdığını kimseye göstermez (kod, tek kullanımlık ya da hesap bağlantısı, bilet kodu taşır).",
+    "🙈 = içeriği maskeli: SkyMail gönderimin içeriğini gösterir ama kodları ve tek kullanımlık bağlantıları sunucuda gizler (kod, tek kullanımlık ya da hesap bağlantısı, bilet kodu taşır).",
     "",
     "## Ne zaman gider",
     "",

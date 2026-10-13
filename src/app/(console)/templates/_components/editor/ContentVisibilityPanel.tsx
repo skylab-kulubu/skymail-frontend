@@ -1,12 +1,12 @@
 'use client';
 
 /**
- * Whether the content of the template's sends opens on a send's page
- * (skymail-backend, sent mail content). Either way, with a confirmation: to
- * show it lets senders and administrators read what went out; to hide it
- * empties what is kept of its finished sends within minutes, for good. A
- * template whose mail carries a credential is locked hidden; its switch is
- * off and cannot be turned on. The server records who changed it.
+ * Whether the content of the template's sends opens on a send's page as sent
+ * or masked (skymail-backend, sent mail content): masked, the server hides
+ * every code and one-time link and shows the rest. Either way, with a
+ * confirmation. A template whose mail carries a credential is locked masked;
+ * its switch is off and cannot be turned on. The server records who changed
+ * it.
  */
 import { useState } from 'react';
 import { Notice, ToggleRow } from '@skylab-kulubu/skylcn-ui';
@@ -40,7 +40,7 @@ export function ContentVisibilityPanel({ template }: { template: MailTemplate })
   return (
     <section aria-label="Gönderilen içerik" className="space-y-2">
       <ToggleRow
-        title="İçerik panelde görünsün"
+        title="İçerik panelde maskesiz görünsün"
         description={visibility.text}
         checked={visibility.shown}
         disabled={visibility.locked || busy}
@@ -54,12 +54,12 @@ export function ContentVisibilityPanel({ template }: { template: MailTemplate })
         <PanelDialog
           isOpen
           onClose={() => (busy ? undefined : setAsking(null))}
-          title={asking ? 'İçerik panelde görünsün mü?' : 'İçerik gizlensin mi?'}
+          title={asking ? 'İçerik panelde maskesiz görünsün mü?' : 'İçerik maskelensin mi?'}
         >
           <p>
             {asking
-              ? `“${current.name}” ile gönderilen postaların içeriği (konu, gövde) gönderim sayfasında açılabilecek: gönderene, toplu gönderimlerde gönderme yetkisi olanlara ve SkyMail yöneticilerine. Hâlâ saklanan eski gönderimler de dahil. Postada kod ya da tek kullanımlık bağlantı varsa açma.`
-              : `“${current.name}” ile gönderilen postaların içeriği kimseye gösterilmeyecek. Bitmiş gönderimlerinin saklanan içeriği birkaç dakika içinde kalıcı olarak silinir; geri açsan da geri gelmez.`}
+              ? `“${current.name}” ile bundan sonra gönderilen postaların içeriği (konu, gövde) gönderim sayfasında maskesiz, gönderildiği hâliyle açılabilecek: gönderene, toplu gönderimlerde gönderme yetkisi olanlara ve SkyMail yöneticilerine. Daha önce maskeli gönderilenler maskeli kalır. Postada kod ya da tek kullanımlık bağlantı varsa açma.`
+              : `“${current.name}” ile gönderilen postaların içeriği maskeli saklanacak: kodlar ve tek kullanımlık bağlantılar gizlenir, gerisi görünür; her açılış kaydedilir. Bitmiş gönderimlerin saklanan içeriği de birkaç dakika içinde maskelenir; gizlenen değerler geri gelmez.`}
           </p>
           {error ? (
             <div className="mt-3">
@@ -69,7 +69,7 @@ export function ContentVisibilityPanel({ template }: { template: MailTemplate })
           <PrimaryActions
             onCancel={() => setAsking(null)}
             onConfirm={() => void confirm(asking)}
-            confirmLabel={asking ? 'Göster' : 'Gizle'}
+            confirmLabel={asking ? 'Maskesiz göster' : 'Maskele'}
             pendingLabel="Kaydediliyor…"
             isPending={busy}
           />

@@ -20,8 +20,9 @@ export interface TemplateMeta {
   /** Protected from archiving, because another service calls it by key. */
   system: boolean;
   /**
-   * Whether SkyMail never shows what a send of it said (the send's page shows
-   * only that it went, to whom and how it fared). True for mail that carries
+   * Whether SkyMail shows what a send of it said masked: every code and
+   * one-time link hidden by the server, the rest as sent (skymail-backend,
+   * 2026-10-13; before, it was not shown at all). True for mail that carries
    * a code, a one-time or account link, a ticket code or a device's address —
    * anything that lets someone who reads it act as the recipient, or that the
    * recipient alone should see. False for mail whose content an operator may
