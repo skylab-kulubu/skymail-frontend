@@ -168,6 +168,8 @@ body { margin: 0; padding: 0; background-color: ${ink.page}; }
 
 @media (max-width: 480px) {
   .shell { padding: 28px 20px 24px !important; }
+  .foot-cell { display: block !important; width: 100% !important; text-align: left !important; padding-left: 0 !important; }
+  .foot-credit { padding-top: 4px !important; }
 }
 `;
 
@@ -195,24 +197,30 @@ interface Developer {
   href?: string;
 }
 
+const ENES: Developer = { name: "Enes Genç", href: "https://enesgenc.dev" };
+const FATIH: Developer = { name: "Fatih Naz", href: "https://github.com/fatiihnaz" };
+// Unlinked, as the e-skylab sign-in pages credit him.
+const YUSUF: Developer = { name: "Yusuf Açmacı" };
+
 /**
- * The product a mail comes from, its name on top and in the footer, and who
- * built it. The credit follows the product, as each product's own screens
- * sign it:
+ * The product a mail comes from: its name on top, the "<product> by WEBLAB"
+ * line in the footer, and the credit (Yusuf, 2026-10-13).
  *
  *  - account: the account product is e-skylab (Keycloak's sign-in pages and
- *    the account mails), written in lower case as its sign-in page writes it,
- *    signed "Developed by Yusuf Açmacı" there too.
- *  - mail: SkyMail's own mails, signed as SkyMail's sign-in screen is.
+ *    the account mails), in lower case as its sign-in page writes it.
+ *  - mail: SkyMail's own mails.
  *  - forms: as Forms' own mails are signed.
- *  - skylab: the club's mails (core, events, an operator's free mail) come
- *    from no one product with a credit of its own, so they carry none.
+ *  - skylab: the club's own mails. SKY LAB is the club, not a product, so
+ *    they have no product line.
+ *
+ * SkyMail sends and renders every one of them, so every credit names its
+ * developer, after the product's own.
  */
-const brands: Record<Brand, { label: string; href: string; developer?: Developer }> = {
-  skylab: { label: "SKY LAB", href: "https://yildizskylab.com" },
-  forms: { label: "SKY LAB Forms", href: "https://forms.yildizskylab.com", developer: { name: "Fatih Naz", href: "https://github.com/fatiihnaz" } },
-  account: { label: "e-skylab", href: "https://e.yildizskylab.com", developer: { name: "Yusuf Açmacı" } },
-  mail: { label: "SKY LAB Mail", href: "https://mail.yildizskylab.com", developer: { name: "Enes Genç", href: "https://enesgenc.dev" } },
+const brands: Record<Brand, { label: string; href: string; productLine: boolean; developers: Developer[] }> = {
+  skylab: { label: "SKY LAB", href: "https://yildizskylab.com", productLine: false, developers: [ENES] },
+  forms: { label: "SKY LAB Forms", href: "https://forms.yildizskylab.com", productLine: true, developers: [FATIH, ENES] },
+  account: { label: "e-skylab", href: "https://e.yildizskylab.com", productLine: true, developers: [YUSUF, ENES] },
+  mail: { label: "SKY LAB Mail", href: "https://mail.yildizskylab.com", productLine: true, developers: [ENES] },
 };
 
 /**
@@ -274,7 +282,7 @@ function BrandMark({ brand }: { brand: Brand }) {
 }
 
 function Footer({ brand, reason }: { brand: Brand; reason: React.ReactNode }) {
-  const { label, href, developer } = brands[brand];
+  const { label, href, productLine, developers } = brands[brand];
   // Muted, not Forms' faint: the reason and the credit are text to read, and
   // faint is 2.5:1 on white (WCAG AA asks 4.5:1); muted is 4.7:1, 5.7:1 dark.
   const small = { margin: 0, fontSize: "12px", lineHeight: "18px", color: ink.muted, fontFamily: fontStack };
@@ -293,30 +301,47 @@ function Footer({ brand, reason }: { brand: Brand; reason: React.ReactNode }) {
           KVKK metni
         </a>
       </p>
+      {/* Two cells side by side; on a narrow screen they stack (.foot-cell),
+          and a client without the media query wraps between the names. */}
       <Table style={{ marginTop: "24px" }}>
         <tr>
-          <td className="t-muted" style={{ fontSize: "11px", lineHeight: "16px", color: ink.muted, fontFamily: fontStack }}>
-            <a href={href} className="t-muted" style={{ ...quiet, fontWeight: 600 }}>
-              {label}
-            </a>
-            {" by WEBLAB "}
-          </td>
-          {developer ? (
-            <td
-              align="right"
-              style={{ paddingLeft: "12px", fontSize: "11px", lineHeight: "16px", textAlign: "right", whiteSpace: "nowrap", fontFamily: fontStack }}
-            >
-              {developer.href ? (
-                <a href={developer.href} className="t-muted" style={{ color: ink.muted, textDecoration: "none" }}>
-                  Developed by {developer.name}
-                </a>
-              ) : (
-                <span className="t-muted" style={{ color: ink.muted }}>
-                  Developed by {developer.name}
-                </span>
-              )}
+          {productLine ? (
+            <td className="t-muted foot-cell" style={{ fontSize: "11px", lineHeight: "16px", color: ink.muted, fontFamily: fontStack, verticalAlign: "top" }}>
+              <a href={href} className="t-muted" style={{ ...quiet, fontWeight: 600 }}>
+                {label}
+              </a>
+              {" by WEBLAB "}
             </td>
           ) : null}
+          <td
+            align={productLine ? "right" : "left"}
+            className="t-muted foot-cell foot-credit"
+            style={{
+              ...(productLine ? { paddingLeft: "12px" } : {}),
+              fontSize: "11px",
+              lineHeight: "16px",
+              textAlign: productLine ? "right" : "left",
+              color: ink.muted,
+              fontFamily: fontStack,
+              verticalAlign: "top",
+            }}
+          >
+            Developed by{" "}
+            {developers.map((developer, index) => (
+              <React.Fragment key={developer.name}>
+                {index > 0 ? " & " : null}
+                <span style={{ whiteSpace: "nowrap" }}>
+                  {developer.href ? (
+                    <a href={developer.href} className="t-muted" style={{ color: ink.muted, textDecoration: "none" }}>
+                      {developer.name}
+                    </a>
+                  ) : (
+                    developer.name
+                  )}
+                </span>
+              </React.Fragment>
+            ))}
+          </td>
         </tr>
       </Table>
     </div>

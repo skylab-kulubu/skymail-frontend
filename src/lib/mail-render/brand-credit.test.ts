@@ -1,8 +1,9 @@
 /**
- * Which product each template speaks for, and how its footer signs it. The
- * credit follows the product (Yusuf, 2026-10-13): the account product is
- * e-skylab, signed as its sign-in pages are; SkyMail's own mails as SkyMail's
- * sign-in screen; Forms' as Forms'; the club's own mails carry no credit.
+ * Which product each template speaks for, and how its footer signs it
+ * (Yusuf, 2026-10-13). The account product is e-skylab; SKY LAB is the club,
+ * not a product, so its mails have no "<product> by WEBLAB" line. SkyMail
+ * sends every one of them, so every credit names Enes Genç, after the
+ * product's own developer.
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
@@ -37,15 +38,21 @@ const BRAND_OF: Record<string, Brand> = {
   "club.privilege-change": "account",
 };
 
-/** The name on top and in the footer, and the footer's credit (null: none). */
-const SIGNED: Record<Brand, { name: string; credit: string | null }> = {
-  account: { name: "e-skylab", credit: "Developed by Yusuf Açmacı" },
-  mail: { name: "SKY LAB Mail", credit: "Developed by Enes Genç" },
-  forms: { name: "SKY LAB Forms", credit: "Developed by Fatih Naz" },
-  skylab: { name: "SKY LAB", credit: null },
+/** The name on top, the footer's product line (null: none) and its credit. */
+const SIGNED: Record<Brand, { name: string; productLine: string | null; credit: string }> = {
+  account: { name: "e-skylab", productLine: "e-skylab by WEBLAB", credit: "Developed by Yusuf Açmacı & Enes Genç" },
+  mail: { name: "SKY LAB Mail", productLine: "SKY LAB Mail by WEBLAB", credit: "Developed by Enes Genç" },
+  forms: { name: "SKY LAB Forms", productLine: "SKY LAB Forms by WEBLAB", credit: "Developed by Fatih Naz & Enes Genç" },
+  skylab: { name: "SKY LAB", productLine: null, credit: "Developed by Enes Genç" },
 };
 
+const LINKS: Record<string, string> = { "Enes Genç": "https://enesgenc.dev", "Fatih Naz": "https://github.com/fatiihnaz" };
+
 const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+
+/** The plain text's last line, its addresses dropped: the product line and the credit. */
+const lastLine = (plainText: string) =>
+  plainText.trim().split("\n").at(-1)!.replace(/ (?:https?|mailto):\S+/g, "").trim();
 
 describe("the product each template speaks for", () => {
   it("is the one decided for every template", () => {
@@ -53,23 +60,25 @@ describe("the product each template speaks for", () => {
   });
 
   for (const { meta, Component } of templates) {
-    const { name, credit } = SIGNED[meta.brand];
-    it(`${meta.key} is signed ${name}${credit ? `, ${credit}` : ", with no credit"}`, async () => {
+    const { name, productLine, credit } = SIGNED[meta.brand];
+    it(`${meta.key} is signed ${name}, ${productLine ?? "no product line"}, ${credit}`, async () => {
       const rendered = await renderComponent(Component);
       assert.ok(rendered.ok);
-      const shown = text(rendered.html);
-      assert.ok(shown.includes(` ${name} by WEBLAB`), `${meta.key}: footer does not read "${name} by WEBLAB"`);
       const header = /data-skip-in-text="true">\s*<tbody>[\s\S]*?<\/table>/.exec(rendered.html)?.[0] ?? "";
       assert.ok(text(header).includes(` ${name} `), `${meta.key}: the name on top is not "${name}"`);
-      if (credit) {
-        assert.equal(shown.split(credit).length - 1, 1, `${meta.key}: "${credit}" is not in the footer once`);
+
+      assert.equal(lastLine(rendered.plainText), [productLine, credit].filter(Boolean).join(" "), `${meta.key}: footer`);
+      assert.equal(rendered.plainText.split("by WEBLAB").length - 1, productLine ? 1 : 0, `${meta.key}: product lines`);
+      assert.equal(rendered.plainText.split("Developed by").length - 1, 1, `${meta.key}: credits`);
+      for (const [developer, href] of Object.entries(LINKS)) {
+        if (credit.includes(developer)) {
+          assert.match(rendered.html, new RegExp(`<a[^>]*href="${href}"[^>]*>\\s*${developer}\\s*</a`), `${meta.key}: ${developer} is not linked`);
+        }
       }
-      assert.equal(
-        (shown.match(/Developed by/g) ?? []).length,
-        credit ? 1 : 0,
-        `${meta.key}: wrong credit`,
-      );
-      assert.ok(!shown.includes("SKY LAB Hesap"), `${meta.key}: still names "SKY LAB Hesap"`);
+      if (credit.includes("Yusuf Açmacı")) {
+        assert.ok(!/<a[^>]*>\s*Yusuf Açmacı\s*<\/a/.test(rendered.html), `${meta.key}: Yusuf Açmacı is linked`);
+      }
+      assert.ok(!rendered.plainText.includes("SKY LAB Hesap"), `${meta.key}: still names "SKY LAB Hesap"`);
     });
   }
 });
