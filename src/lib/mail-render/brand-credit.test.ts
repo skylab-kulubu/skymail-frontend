@@ -47,10 +47,11 @@ const SIGNED: Record<Brand, { name: string; credits: string[] }> = {
   skylab: { name: "SKY LAB", credits: [SKYMAIL_LINE] },
 };
 
-/** Which credits link where; Yusuf Açmacı is credited unlinked, as on the sign-in pages. */
+/** Where each credit links. */
 const LINKS: Record<string, string> = {
   "Developed by Enes Genç": "https://enesgenc.dev",
   "Developed by Fatih Naz": "https://github.com/fatiihnaz",
+  "Developed by Yusuf Açmacı": "https://www.linkedin.com/in/yusuf-acmaci/",
 };
 
 const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
@@ -84,7 +85,6 @@ describe("the product each template speaks for", () => {
           assert.match(rendered.html, new RegExp(`<a[^>]*href="${href}"[^>]*>\\s*${credit.replaceAll(" ", "\\s+")}\\s*</a`), `${meta.key}: "${credit}" is not linked`);
         }
       }
-      assert.ok(!/<a[^>]*>[^<]*Yusuf Açmacı/.test(rendered.html), `${meta.key}: Yusuf Açmacı is linked`);
       assert.ok(!/SKY LAB (Mail )?by WEBLAB/.test(rendered.plainText), `${meta.key}: a club or SKY LAB Mail product line`);
       assert.ok(!rendered.plainText.includes("SKY LAB Hesap"), `${meta.key}: still names "SKY LAB Hesap"`);
     });

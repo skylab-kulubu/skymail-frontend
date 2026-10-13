@@ -216,8 +216,7 @@ const SKYMAIL: Credit = {
  * with a credit of its own, a line above SkyMail's (Yusuf, 2026-10-13).
  *
  *  - account: the account product is e-skylab (Keycloak's sign-in pages and
- *    the account mails), in lower case and credited unlinked, as its sign-in
- *    pages are.
+ *    the account mails), in lower case as its sign-in pages write it.
  *  - forms: credited as Forms' own mails are.
  *  - mail: SkyMail's own mails; SkyMail's line says it all.
  *  - skylab: the club's own mails; SKY LAB is the club, not a product.
@@ -232,7 +231,11 @@ const brands: Record<Brand, { label: string; href: string; credit?: Credit }> = 
   account: {
     label: "e-skylab",
     href: "https://e.yildizskylab.com",
-    credit: { product: "e-skylab", href: "https://e.yildizskylab.com", developer: { name: "Yusuf Açmacı" } },
+    credit: {
+      product: "e-skylab",
+      href: "https://e.yildizskylab.com",
+      developer: { name: "Yusuf Açmacı", href: "https://www.linkedin.com/in/yusuf-acmaci/" },
+    },
   },
   mail: { label: "SKY LAB Mail", href: "https://mail.yildizskylab.com" },
 };
