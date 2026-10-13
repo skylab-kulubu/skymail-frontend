@@ -119,6 +119,10 @@ Yalnız `main`'den koşar. Çıktı çalışmanın Summary sayfasındadır. Seed
 GitHub ortamlarında durur ve kimse görmez. Kurulumu ve secret'ın yenilenmesi SKY LAB
 ops'taki `skymail-seed-github-wizard.sh` ile yapılır.
 
+Şablonların görünümü `emails/theme.tsx`'tedir (SKY LAB Forms'un mail düzeni). Logolar
+SkyMail'in kendi sitesinden, `public/mail/` altından (`https://mail.yildizskylab.com/mail/…`)
+oturumsuz gelir; bu dosyalara dokunan bir değişiklik, seed'den önce production'a çıkmalıdır.
+
 Elle koşmak için yerelde `corepack yarn emails:seed`: seçenekler ve ortam değişkenleri
 `scripts/seed-templates.ts`'in başında.
 
