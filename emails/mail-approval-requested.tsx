@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Cta, DetailRow, Heading, Note, Paragraph, Shell, Strong } from "./theme";
+import { Context, Cta, Note, Paragraph, RowItem, Rows, RowsEnd, Shell, Small, Strong, Title } from "./theme";
 import { elseBranch, elseIfEq, end, ifEq, ifSet, v } from "./go";
 import type { TemplateMeta } from "./types";
 
@@ -9,7 +9,7 @@ export const meta: TemplateMeta = {
   subject: "Onayını bekleyen bir gönderim var",
   system: false,
   contentSensitive: false,
-  brand: "skylab",
+  brand: "mail",
   trigger:
     "SkyMail, gönderme yetkisi olmayan biri taslak gönderdiğinde onaycılara (ADR-0031, CONTEXT.md \"Mail onayı\", ticket 19).",
   // AudienceKind is the request's audience.kind: mailing_list, single or
@@ -39,8 +39,13 @@ export default function MailApprovalRequested() {
   const toOne = elseIfEq("AudienceKind", "single");
 
   return (
-    <Shell preview="SkyMail'de onayını bekleyen bir gönderim var." brand="skylab">
-      <Heading>Onayını Bekleyen Gönderim</Heading>
+    <Shell
+      preview="SkyMail'de onayını bekleyen bir gönderim var."
+      brand="mail"
+      reason="Bu e-postayı, SkyMail'de gönderimleri onaylayabilen kişilerden biri olduğun için alıyorsun."
+    >
+      <Context tone="wait">Mail onayı</Context>
+      <Title>Onayını Bekleyen Gönderim</Title>
 
       <Paragraph>
         <Strong>{v("RequesterName")}</Strong> bir gönderim hazırladı ve senin onayını bekliyor.
@@ -50,30 +55,28 @@ export default function MailApprovalRequested() {
         {end} Onaylarsan mail olduğu gibi gider; onaylamazsan hiçbir şey gönderilmez.
       </Paragraph>
 
-      <div style={{ marginTop: "24px" }}>
-        <DetailRow label="Şablon" value={v("TemplateName")} />
-        <DetailRow
+      <Rows>
+        <RowItem label="Şablon">{v("TemplateName")}</RowItem>
+        <RowItem
           label={
             <>
               {ifEq("AudienceKind", "people")}Alıcılar{elseIfEq("AudienceKind", "single")}Alıcı{elseBranch}Alıcı listesi
               {end}
             </>
           }
-          value={v("AudienceName")}
-        />
-        <DetailRow label="Alıcı sayısı" value={v("RecipientCount")} last />
-      </div>
+        >
+          {v("AudienceName")}
+        </RowItem>
+        <RowItem label="Alıcı sayısı">{v("RecipientCount")}</RowItem>
+        <RowsEnd />
+      </Rows>
 
-      <div style={{ marginTop: "24px" }}>
-        <Note>Onaylamadan önce gönderimi önizle — onaydan sonra geri alınamaz.</Note>
-      </div>
+      <Note>Onaylamadan önce gönderimi önizle — onaydan sonra geri alınamaz.</Note>
 
       <Cta href={v("ApproveUrl")}>Gönderimi İncele</Cta>
 
       {ifSet("PreviewUrl")}
-      <Paragraph style={{ marginTop: "18px", fontSize: "13px" }}>
-        Sadece önizlemek istersen: {v("PreviewUrl")}
-      </Paragraph>
+      <Small style={{ wordBreak: "break-all" }}>Sadece önizlemek istersen: {v("PreviewUrl")}</Small>
       {end}
     </Shell>
   );

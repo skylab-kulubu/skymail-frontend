@@ -1,5 +1,4 @@
 import * as React from "react";
-import { Text } from "@react-email/components";
 import { Cta, Heading, Shell, colors, fontStack } from "./theme";
 import { end, ifSet, v } from "./go";
 import type { TemplateMeta } from "./types";
@@ -36,7 +35,11 @@ export const meta: TemplateMeta = {
  */
 export default function FreeBasic() {
   return (
-    <Shell preview={v("Subject")} brand="skylab">
+    <Shell
+      preview={v("Subject")}
+      brand="skylab"
+      reason="Bu e-postayı SKY LAB üyesi ya da etkinlik katılımcısı olduğun için alıyorsun."
+    >
       {ifSet("Heading")}
       <Heading>{v("Heading")}</Heading>
       {end}
@@ -44,10 +47,10 @@ export default function FreeBasic() {
       <div
         className="t-body free-body"
         style={{
-          marginTop: "14px",
+          marginTop: "12px",
           fontSize: "15px",
-          lineHeight: "1.75",
-          color: colors.textBody,
+          lineHeight: "24px",
+          color: colors.body,
           fontFamily: fontStack,
         }}
       >
@@ -59,13 +62,6 @@ export default function FreeBasic() {
         {ifSet("CtaLabel")}{v("CtaLabel")}{end}
       </Cta>
       {end}
-
-      <Text
-        className="t-faint"
-        style={{ marginTop: "28px", marginBottom: 0, fontSize: "12px", lineHeight: "1.7", color: colors.textFaint, fontFamily: fontStack }}
-      >
-        Bu e-postayı SKY LAB üyesi ya da etkinlik katılımcısı olduğun için alıyorsun.
-      </Text>
     </Shell>
   );
 }

@@ -31,6 +31,8 @@ export default function KeycloakUpdateEmail() {
       intro="SKY LAB hesabının e-posta adresini bu adresle değiştirmek istedin. Değişikliğin tamamlanması için adresi doğrulaman gerekiyor."
       ctaLabel="Adresi Doğrula"
       disclaimer="Bu değişikliği sen istemediysen bağlantıya dokunma: doğrulanmadığı sürece hesabının adresi değişmez."
+      context="E-posta değişikliği"
+      reason="Bu e-postayı, bir SKY LAB hesabının adresi bu adresle değiştirilmek istendiği için alıyorsun."
     />
   );
 }

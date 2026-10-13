@@ -1,6 +1,5 @@
 import * as React from "react";
-import { Text } from "@react-email/components";
-import { Cta, DetailRow, Heading, LinkFallback, Paragraph, Shell, Strong, colors, fontStack } from "./theme";
+import { Context, Cta, LinkFallback, Paragraph, RowItem, Rows, RowsEnd, Shell, Small, Strong, Title } from "./theme";
 import { v } from "./go";
 import type { TemplateMeta } from "./types";
 
@@ -35,31 +34,34 @@ export default function CoreCertificate() {
   const verifyUrl = v("VerifyURL");
 
   return (
-    <Shell preview="Katılım sertifikan hazır — doğrulama bağlantısı içinde." brand="skylab">
-      <Heading>Sertifikan Hazır</Heading>
+    <Shell
+      preview="Katılım sertifikan hazır — doğrulama bağlantısı içinde."
+      brand="skylab"
+      reason={<>Bu e-postayı {v("EventName")} etkinliğine katıldığın için alıyorsun.</>}
+    >
+      <Context tone="ok">{v("EventName")}</Context>
+      <Title>Sertifikan Hazır</Title>
 
       <Paragraph>
         Merhaba {v("FirstName")}, <Strong>{v("EventName")}</Strong> etkinliğine katılımın kayda geçti ve katılım
         sertifikan oluşturuldu. Aşağıdaki bağlantı sertifikanı hem görüntüler hem de doğrular.
       </Paragraph>
 
-      <div style={{ marginTop: "28px" }}>
-        <DetailRow label="Etkinlik" value={v("EventName")} />
-        <DetailRow label="Düzenleyen" value={v("OwnerTeam")} />
-        <DetailRow label="Sertifika No" value={v("Serial")} last />
-      </div>
+      <Rows>
+        <RowItem label="Etkinlik">{v("EventName")}</RowItem>
+        <RowItem label="Düzenleyen">{v("OwnerTeam")}</RowItem>
+        <RowItem label="Sertifika No">{v("Serial")}</RowItem>
+        <RowsEnd />
+      </Rows>
 
       <Cta href={verifyUrl}>Sertifikamı Görüntüle</Cta>
 
       <LinkFallback href={verifyUrl} />
 
-      <Text
-        className="t-faint"
-        style={{ marginTop: "24px", marginBottom: 0, fontSize: "12px", lineHeight: "1.7", color: colors.textFaint, fontFamily: fontStack }}
-      >
+      <Small style={{ marginTop: "24px" }}>
         Bu bağlantıyı paylaştığın herkes sertifikanın gerçekliğini kendisi doğrulayabilir; sertifikanın geçerliliği
         için ayrıca bir belge göndermene gerek yok.
-      </Text>
+      </Small>
     </Shell>
   );
 }

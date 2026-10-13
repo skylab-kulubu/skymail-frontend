@@ -31,6 +31,8 @@ export default function KeycloakIdpLink() {
       intro="YTÜ Microsoft hesabını mevcut SKY LAB hesabına bağlamak için bir istek aldık. Bağlandığında okul e-posta adresin doğrulanmış sayılır ve YTÜ hesabınla da giriş yapabilirsin."
       ctaLabel="Hesapları Bağla"
       disclaimer="Bu isteği sen yapmadıysan bağlantıya dokunma; hesapların bağlanmaz."
+      context="Hesap bağlama"
+      reason="Bu e-postayı, SKY LAB hesabına bir YTÜ hesabı bağlanmak istendiği için alıyorsun."
     />
   );
 }

@@ -12,6 +12,9 @@ export const config = {
   // The Mail template editor's static assets (scripts/build-editor-assets.ts)
   // hold nothing of anyone's, and the render sandbox requests its script from
   // an opaque origin, without the session cookie, so they pass unchecked.
-  // The container health check (/api/health) has no session either.
-  matcher: ["/((?!api/auth|api/health$|_next/static|_next/image|favicon.ico|skylab.svg|render-sandbox/|monaco/).*)"],
+  // The container health check (/api/health) has no session either. The two
+  // logos in public/mail/ are what every sent mail shows (emails/theme.tsx):
+  // a mail client fetches them with no session at all. Only those two names:
+  // any other path under /mail/ is guarded like the rest of the console.
+  matcher: ["/((?!api/auth|api/health$|_next/static|_next/image|favicon.ico|skylab.svg|mail/skylab-(?:ink|lilac)\\.png$|render-sandbox/|monaco/).*)"],
 };

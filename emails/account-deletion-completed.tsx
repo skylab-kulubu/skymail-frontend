@@ -1,6 +1,5 @@
 import * as React from "react";
-import { Text } from "@react-email/components";
-import { Heading, Paragraph, Shell, colors, fontStack } from "./theme";
+import { Context, Paragraph, Shell, Small, Title } from "./theme";
 import { end, ifSet, v } from "./go";
 import type { TemplateMeta } from "./types";
 
@@ -29,8 +28,13 @@ export const meta: TemplateMeta = {
  */
 export default function AccountDeletionCompleted() {
   return (
-    <Shell preview="SKY LAB hesabın ve kişisel bilgilerin silindi." brand="account">
-      <Heading>Hesabın Silindi</Heading>
+    <Shell
+      preview="SKY LAB hesabın ve kişisel bilgilerin silindi."
+      brand="account"
+      reason="Bu e-postayı, SKY LAB hesabının silindiğini haber vermek için gönderdik."
+    >
+      <Context tone="neutral">Hesap silme</Context>
+      <Title>Hesabın Silindi</Title>
 
       <Paragraph>
         SKY LAB hesabın{ifSet("CompletedAt")} {v("CompletedAt")} tarihinde{end} silindi ve kişisel bilgilerin
@@ -45,12 +49,9 @@ export default function AccountDeletionCompleted() {
         Aramıza tekrar katılmak istersen yeni bir hesap açman yeterli; eski Sky Number'ın geri gelmez, yeni bir tane alırsın.
       </Paragraph>
 
-      <Text
-        className="t-faint"
-        style={{ marginTop: "28px", marginBottom: 0, fontSize: "12px", lineHeight: "1.7", color: colors.textFaint, fontFamily: fontStack }}
-      >
+      <Small style={{ marginTop: "24px" }}>
         Bu silme işlemini sen talep etmediysen info@yildizskylab.com adresine yaz. Seninle birlikteydik, iyi ki geldin.
-      </Text>
+      </Small>
     </Shell>
   );
 }

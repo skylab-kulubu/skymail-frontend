@@ -1,0 +1,928 @@
+{
+  "free.basic": {
+    "subject": "{{.Subject}}",
+    "system": false,
+    "contentSensitive": false,
+    "variables": [
+      "Subject",
+      "Heading",
+      "BodyHtml",
+      "CtaLabel",
+      "CtaUrl"
+    ],
+    "requiredVariables": [],
+    "sampleKeys": [
+      "BodyHtml",
+      "CtaLabel",
+      "CtaUrl",
+      "Heading",
+      "Subject"
+    ],
+    "referenced": [
+      "BodyHtml",
+      "CtaLabel",
+      "CtaUrl",
+      "Heading",
+      "Subject"
+    ],
+    "actions": [
+      "{{.CtaLabel}}",
+      "{{.CtaUrl}}",
+      "{{.Heading}}",
+      "{{.Subject}}",
+      "{{if .CtaLabel}}",
+      "{{if .CtaUrl}}",
+      "{{if .Heading}}",
+      "{{safeHTML .BodyHtml}}"
+    ]
+  },
+  "keycloak.verify-email": {
+    "subject": "E-posta adresini doğrula",
+    "system": true,
+    "contentSensitive": true,
+    "variables": [
+      "link",
+      "linkExpirationMinutes",
+      "firstName",
+      "username",
+      "realmDisplayName",
+      "subjectKey"
+    ],
+    "requiredVariables": [
+      "link"
+    ],
+    "sampleKeys": [
+      "firstName",
+      "link",
+      "linkExpirationMinutes",
+      "realmDisplayName",
+      "subjectKey",
+      "username"
+    ],
+    "referenced": [
+      "firstName",
+      "link",
+      "linkExpirationMinutes"
+    ],
+    "actions": [
+      "{{.firstName}}",
+      "{{.linkExpirationMinutes}}",
+      "{{.link}}",
+      "{{if .firstName}}",
+      "{{if .linkExpirationMinutes}}"
+    ]
+  },
+  "keycloak.reset-password": {
+    "subject": "SKY LAB parola sıfırlama isteği",
+    "system": true,
+    "contentSensitive": true,
+    "variables": [
+      "link",
+      "linkExpirationMinutes",
+      "firstName",
+      "username",
+      "realmDisplayName",
+      "subjectKey"
+    ],
+    "requiredVariables": [
+      "link"
+    ],
+    "sampleKeys": [
+      "firstName",
+      "link",
+      "linkExpirationMinutes",
+      "realmDisplayName",
+      "subjectKey",
+      "username"
+    ],
+    "referenced": [
+      "firstName",
+      "link",
+      "linkExpirationMinutes"
+    ],
+    "actions": [
+      "{{.firstName}}",
+      "{{.linkExpirationMinutes}}",
+      "{{.link}}",
+      "{{if .firstName}}",
+      "{{if .linkExpirationMinutes}}"
+    ]
+  },
+  "keycloak.update-email": {
+    "subject": "Yeni e-posta adresini doğrula",
+    "system": true,
+    "contentSensitive": true,
+    "variables": [
+      "link",
+      "linkExpirationMinutes",
+      "firstName",
+      "username",
+      "realmDisplayName",
+      "subjectKey"
+    ],
+    "requiredVariables": [
+      "link"
+    ],
+    "sampleKeys": [
+      "firstName",
+      "link",
+      "linkExpirationMinutes",
+      "realmDisplayName",
+      "subjectKey",
+      "username"
+    ],
+    "referenced": [
+      "firstName",
+      "link",
+      "linkExpirationMinutes"
+    ],
+    "actions": [
+      "{{.firstName}}",
+      "{{.linkExpirationMinutes}}",
+      "{{.link}}",
+      "{{if .firstName}}",
+      "{{if .linkExpirationMinutes}}"
+    ]
+  },
+  "keycloak.idp-link": {
+    "subject": "YTÜ hesabını SKY LAB hesabına bağla",
+    "system": true,
+    "contentSensitive": true,
+    "variables": [
+      "link",
+      "linkExpirationMinutes",
+      "firstName",
+      "username",
+      "realmDisplayName",
+      "subjectKey"
+    ],
+    "requiredVariables": [
+      "link"
+    ],
+    "sampleKeys": [
+      "firstName",
+      "link",
+      "linkExpirationMinutes",
+      "realmDisplayName",
+      "subjectKey",
+      "username"
+    ],
+    "referenced": [
+      "firstName",
+      "link",
+      "linkExpirationMinutes"
+    ],
+    "actions": [
+      "{{.firstName}}",
+      "{{.linkExpirationMinutes}}",
+      "{{.link}}",
+      "{{if .firstName}}",
+      "{{if .linkExpirationMinutes}}"
+    ]
+  },
+  "keycloak.personal-email-confirm": {
+    "subject": "Kişisel e-posta adresini doğrula",
+    "system": true,
+    "contentSensitive": true,
+    "variables": [
+      "code",
+      "codeExpirationMinutes",
+      "firstName",
+      "username",
+      "realmDisplayName",
+      "subjectKey"
+    ],
+    "requiredVariables": [
+      "code"
+    ],
+    "sampleKeys": [
+      "code",
+      "codeExpirationMinutes",
+      "firstName",
+      "realmDisplayName",
+      "subjectKey",
+      "username"
+    ],
+    "referenced": [
+      "code",
+      "codeExpirationMinutes",
+      "firstName"
+    ],
+    "actions": [
+      "{{.codeExpirationMinutes}}",
+      "{{.code}}",
+      "{{.firstName}}",
+      "{{if .codeExpirationMinutes}}",
+      "{{if .firstName}}"
+    ]
+  },
+  "keycloak.generic": {
+    "subject": "SKY LAB hesap bildirimi",
+    "system": true,
+    "contentSensitive": true,
+    "variables": [
+      "link",
+      "linkExpirationMinutes",
+      "firstName",
+      "username",
+      "realmDisplayName",
+      "subjectKey"
+    ],
+    "requiredVariables": [],
+    "sampleKeys": [
+      "firstName",
+      "link",
+      "linkExpirationMinutes",
+      "realmDisplayName",
+      "subjectKey",
+      "username"
+    ],
+    "referenced": [
+      "firstName",
+      "link",
+      "linkExpirationMinutes",
+      "subjectKey"
+    ],
+    "actions": [
+      "{{.firstName}}",
+      "{{.linkExpirationMinutes}}",
+      "{{.link}}",
+      "{{.subjectKey}}",
+      "{{if .firstName}}",
+      "{{if .linkExpirationMinutes}}",
+      "{{if .link}}",
+      "{{if .subjectKey}}"
+    ]
+  },
+  "core.welcome": {
+    "subject": "SKY LAB ekosistemine hoş geldin",
+    "system": true,
+    "contentSensitive": false,
+    "variables": [
+      "FirstName",
+      "LastName",
+      "Email",
+      "SkyNumber",
+      "CreatedAt"
+    ],
+    "requiredVariables": [],
+    "sampleKeys": [
+      "CreatedAt",
+      "Email",
+      "FirstName",
+      "LastName",
+      "SkyNumber"
+    ],
+    "referenced": [
+      "CreatedAt",
+      "Email",
+      "FirstName",
+      "LastName",
+      "SkyNumber"
+    ],
+    "actions": [
+      "{{.CreatedAt}}",
+      "{{.Email}}",
+      "{{.FirstName}}",
+      "{{.LastName}}",
+      "{{.SkyNumber}}"
+    ]
+  },
+  "core.certificate": {
+    "subject": "Katılım sertifikan hazır",
+    "system": true,
+    "contentSensitive": false,
+    "variables": [
+      "FirstName",
+      "EventName",
+      "VerifyURL",
+      "Serial",
+      "OwnerTeam"
+    ],
+    "requiredVariables": [
+      "VerifyURL"
+    ],
+    "sampleKeys": [
+      "EventName",
+      "FirstName",
+      "OwnerTeam",
+      "Serial",
+      "VerifyURL"
+    ],
+    "referenced": [
+      "EventName",
+      "FirstName",
+      "OwnerTeam",
+      "Serial",
+      "VerifyURL"
+    ],
+    "actions": [
+      "{{.EventName}}",
+      "{{.FirstName}}",
+      "{{.OwnerTeam}}",
+      "{{.Serial}}",
+      "{{.VerifyURL}}"
+    ]
+  },
+  "account.security-alert": {
+    "subject": "SKY LAB hesabında: {{.EventTitle}}",
+    "system": true,
+    "contentSensitive": true,
+    "variables": [
+      "EventTitle",
+      "EventDetail",
+      "OccurredAt",
+      "DeviceLabel",
+      "IpAddress",
+      "Location",
+      "SecureAccountUrl"
+    ],
+    "requiredVariables": [],
+    "sampleKeys": [
+      "DeviceLabel",
+      "EventDetail",
+      "EventTitle",
+      "IpAddress",
+      "Location",
+      "OccurredAt",
+      "SecureAccountUrl"
+    ],
+    "referenced": [
+      "DeviceLabel",
+      "EventDetail",
+      "EventTitle",
+      "IpAddress",
+      "Location",
+      "OccurredAt",
+      "SecureAccountUrl"
+    ],
+    "actions": [
+      "{{.DeviceLabel}}",
+      "{{.EventDetail}}",
+      "{{.EventTitle}}",
+      "{{.IpAddress}}",
+      "{{.Location}}",
+      "{{.OccurredAt}}",
+      "{{.SecureAccountUrl}}",
+      "{{if .DeviceLabel}}",
+      "{{if .IpAddress}}",
+      "{{if .Location}}",
+      "{{if .OccurredAt}}"
+    ]
+  },
+  "account.primary-email-changed": {
+    "subject": "SKY LAB hesabının e-posta adresi değişti",
+    "system": true,
+    "contentSensitive": true,
+    "variables": [
+      "OldEmail",
+      "NewEmail",
+      "OccurredAt",
+      "SecureAccountUrl"
+    ],
+    "requiredVariables": [],
+    "sampleKeys": [
+      "NewEmail",
+      "OccurredAt",
+      "OldEmail",
+      "SecureAccountUrl"
+    ],
+    "referenced": [
+      "NewEmail",
+      "OccurredAt",
+      "OldEmail",
+      "SecureAccountUrl"
+    ],
+    "actions": [
+      "{{.NewEmail}}",
+      "{{.OccurredAt}}",
+      "{{.OldEmail}}",
+      "{{.SecureAccountUrl}}"
+    ]
+  },
+  "account.deletion-requested": {
+    "subject": "Hesap silme talebini aldık",
+    "system": true,
+    "contentSensitive": true,
+    "variables": [
+      "RequestedAt",
+      "CompletesAt",
+      "CancelUrl"
+    ],
+    "requiredVariables": [],
+    "sampleKeys": [
+      "CancelUrl",
+      "CompletesAt",
+      "RequestedAt"
+    ],
+    "referenced": [
+      "CancelUrl",
+      "CompletesAt",
+      "RequestedAt"
+    ],
+    "actions": [
+      "{{.CancelUrl}}",
+      "{{.CompletesAt}}",
+      "{{.RequestedAt}}",
+      "{{if .CancelUrl}}",
+      "{{if .CompletesAt}}",
+      "{{if .RequestedAt}}"
+    ]
+  },
+  "account.deletion-completed": {
+    "subject": "SKY LAB hesabın silindi",
+    "system": true,
+    "contentSensitive": true,
+    "variables": [
+      "CompletedAt",
+      "RetainedDataNote"
+    ],
+    "requiredVariables": [],
+    "sampleKeys": [
+      "CompletedAt",
+      "RetainedDataNote"
+    ],
+    "referenced": [
+      "CompletedAt",
+      "RetainedDataNote"
+    ],
+    "actions": [
+      "{{.CompletedAt}}",
+      "{{.RetainedDataNote}}",
+      "{{if .CompletedAt}}",
+      "{{if .RetainedDataNote}}"
+    ]
+  },
+  "event.ticket-created": {
+    "subject": "{{.EventName}} biletin hazır",
+    "system": false,
+    "contentSensitive": true,
+    "variables": [
+      "EventName",
+      "EventDate",
+      "Venue",
+      "TicketQrUrl",
+      "TicketCode",
+      "OwnerTeam",
+      "EventUrl"
+    ],
+    "requiredVariables": [],
+    "sampleKeys": [
+      "EventDate",
+      "EventName",
+      "EventUrl",
+      "OwnerTeam",
+      "TicketCode",
+      "TicketQrUrl",
+      "Venue"
+    ],
+    "referenced": [
+      "EventDate",
+      "EventName",
+      "EventUrl",
+      "OwnerTeam",
+      "TicketCode",
+      "TicketQrUrl",
+      "Venue"
+    ],
+    "actions": [
+      "{{.EventDate}}",
+      "{{.EventName}}",
+      "{{.EventUrl}}",
+      "{{.OwnerTeam}}",
+      "{{.TicketCode}}",
+      "{{.TicketQrUrl}}",
+      "{{.Venue}}",
+      "{{if .EventDate}}",
+      "{{if .EventUrl}}",
+      "{{if .OwnerTeam}}",
+      "{{if .TicketCode}}",
+      "{{if .TicketQrUrl}}",
+      "{{if .Venue}}"
+    ]
+  },
+  "event.reminder": {
+    "subject": "Yarın: {{.EventName}}",
+    "system": false,
+    "contentSensitive": true,
+    "variables": [
+      "EventName",
+      "StartsAt",
+      "Venue",
+      "TicketQrUrl",
+      "MapUrl"
+    ],
+    "requiredVariables": [],
+    "sampleKeys": [
+      "EventName",
+      "MapUrl",
+      "StartsAt",
+      "TicketQrUrl",
+      "Venue"
+    ],
+    "referenced": [
+      "EventName",
+      "MapUrl",
+      "StartsAt",
+      "TicketQrUrl",
+      "Venue"
+    ],
+    "actions": [
+      "{{.EventName}}",
+      "{{.MapUrl}}",
+      "{{.StartsAt}}",
+      "{{.TicketQrUrl}}",
+      "{{.Venue}}",
+      "{{if .MapUrl}}",
+      "{{if .TicketQrUrl}}"
+    ]
+  },
+  "event.updated": {
+    "subject": "{{.EventName}} etkinliğinde değişiklik var",
+    "system": false,
+    "contentSensitive": false,
+    "variables": [
+      "EventName",
+      "ChangeSummary",
+      "NewStartsAt",
+      "NewVenue",
+      "EventUrl"
+    ],
+    "requiredVariables": [],
+    "sampleKeys": [
+      "ChangeSummary",
+      "EventName",
+      "EventUrl",
+      "NewStartsAt",
+      "NewVenue"
+    ],
+    "referenced": [
+      "ChangeSummary",
+      "EventName",
+      "EventUrl",
+      "NewStartsAt",
+      "NewVenue"
+    ],
+    "actions": [
+      "{{.ChangeSummary}}",
+      "{{.EventName}}",
+      "{{.EventUrl}}",
+      "{{.NewStartsAt}}",
+      "{{.NewVenue}}",
+      "{{if .ChangeSummary}}",
+      "{{if .EventUrl}}",
+      "{{if .NewStartsAt}}",
+      "{{if .NewVenue}}"
+    ]
+  },
+  "event.cancelled": {
+    "subject": "{{.EventName}} iptal edildi",
+    "system": false,
+    "contentSensitive": false,
+    "variables": [
+      "EventName",
+      "CancelReason",
+      "ContactEmail"
+    ],
+    "requiredVariables": [],
+    "sampleKeys": [
+      "CancelReason",
+      "ContactEmail",
+      "EventName"
+    ],
+    "referenced": [
+      "CancelReason",
+      "ContactEmail",
+      "EventName"
+    ],
+    "actions": [
+      "{{.CancelReason}}",
+      "{{.ContactEmail}}",
+      "{{.EventName}}",
+      "{{if .CancelReason}}",
+      "{{if .ContactEmail}}"
+    ]
+  },
+  "mail.approval-requested": {
+    "subject": "Onayını bekleyen bir gönderim var",
+    "system": false,
+    "contentSensitive": false,
+    "variables": [
+      "RequesterName",
+      "TemplateName",
+      "AudienceName",
+      "AudienceKind",
+      "RecipientCount",
+      "PreviewUrl",
+      "ApproveUrl"
+    ],
+    "requiredVariables": [],
+    "sampleKeys": [
+      "ApproveUrl",
+      "AudienceKind",
+      "AudienceName",
+      "PreviewUrl",
+      "RecipientCount",
+      "RequesterName",
+      "TemplateName"
+    ],
+    "referenced": [
+      "ApproveUrl",
+      "AudienceKind",
+      "AudienceName",
+      "PreviewUrl",
+      "RecipientCount",
+      "RequesterName",
+      "TemplateName"
+    ],
+    "actions": [
+      "{{.ApproveUrl}}",
+      "{{.AudienceName}}",
+      "{{.PreviewUrl}}",
+      "{{.RecipientCount}}",
+      "{{.RequesterName}}",
+      "{{.TemplateName}}",
+      "{{else if eq .AudienceKind `people`}}",
+      "{{else if eq .AudienceKind `single`}}",
+      "{{if .PreviewUrl}}",
+      "{{if eq .AudienceKind `mailing_list`}}",
+      "{{if eq .AudienceKind `people`}}"
+    ]
+  },
+  "mail.approval-resolved": {
+    "subject": "{{if eq .Decision `approved`}}Gönderimin onaylandı ve gitti{{else if eq .Decision `rejected`}}Gönderimin reddedildi{{else if eq .Decision `returned`}}Gönderimin sana geri döndü{{else if eq .Decision `expired`}}Gönderimin süresi doldu{{else if eq .Decision `declined`}}Gönderimdeki düzenleme kabul edilmedi{{else}}Gönderim isteğin sonuçlandı{{end}}",
+    "system": false,
+    "contentSensitive": false,
+    "variables": [
+      "TemplateName",
+      "AudienceName",
+      "AudienceKind",
+      "RecipientCount",
+      "Decision",
+      "DecidedBy",
+      "DecisionNote",
+      "RequestUrl",
+      "DeadlineAt"
+    ],
+    "requiredVariables": [],
+    "sampleKeys": [
+      "AudienceKind",
+      "AudienceName",
+      "DeadlineAt",
+      "DecidedBy",
+      "Decision",
+      "DecisionNote",
+      "RecipientCount",
+      "RequestUrl",
+      "TemplateName"
+    ],
+    "referenced": [
+      "AudienceKind",
+      "AudienceName",
+      "DeadlineAt",
+      "DecidedBy",
+      "Decision",
+      "DecisionNote",
+      "RecipientCount",
+      "RequestUrl",
+      "TemplateName"
+    ],
+    "actions": [
+      "{{.AudienceName}}",
+      "{{.DeadlineAt}}",
+      "{{.DecidedBy}}",
+      "{{.DecisionNote}}",
+      "{{.Decision}}",
+      "{{.RecipientCount}}",
+      "{{.RequestUrl}}",
+      "{{.TemplateName}}",
+      "{{else if eq .AudienceKind `people`}}",
+      "{{else if eq .AudienceKind `single`}}",
+      "{{else if eq .Decision `declined`}}",
+      "{{else if eq .Decision `expired`}}",
+      "{{else if eq .Decision `rejected`}}",
+      "{{else if eq .Decision `returned`}}",
+      "{{if .DeadlineAt}}",
+      "{{if .DecisionNote}}",
+      "{{if .RecipientCount}}",
+      "{{if .RequestUrl}}",
+      "{{if eq .AudienceKind `mailing_list`}}",
+      "{{if eq .AudienceKind `people`}}",
+      "{{if eq .Decision `approved`}}",
+      "{{if eq .Decision `returned`}}"
+    ]
+  },
+  "ops.send-failed": {
+    "subject": "SkyMail gönderiminde hata",
+    "system": false,
+    "contentSensitive": false,
+    "variables": [
+      "TaskId",
+      "TemplateName",
+      "FailedCount",
+      "TotalCount",
+      "FirstError",
+      "TaskUrl"
+    ],
+    "requiredVariables": [],
+    "sampleKeys": [
+      "FailedCount",
+      "FirstError",
+      "TaskId",
+      "TaskUrl",
+      "TemplateName",
+      "TotalCount"
+    ],
+    "referenced": [
+      "FailedCount",
+      "FirstError",
+      "TaskId",
+      "TaskUrl",
+      "TemplateName",
+      "TotalCount"
+    ],
+    "actions": [
+      "{{.FailedCount}}",
+      "{{.FirstError}}",
+      "{{.TaskId}}",
+      "{{.TaskUrl}}",
+      "{{.TemplateName}}",
+      "{{.TotalCount}}",
+      "{{if .FirstError}}",
+      "{{if .TaskUrl}}"
+    ]
+  },
+  "club.team-membership": {
+    "subject": "SKY LAB takım üyeliğinde değişiklik",
+    "system": false,
+    "contentSensitive": false,
+    "variables": [
+      "TeamName",
+      "Action",
+      "Role",
+      "EffectiveAt",
+      "LeaderName"
+    ],
+    "requiredVariables": [],
+    "sampleKeys": [
+      "Action",
+      "EffectiveAt",
+      "LeaderName",
+      "Role",
+      "TeamName"
+    ],
+    "referenced": [
+      "Action",
+      "EffectiveAt",
+      "LeaderName",
+      "Role",
+      "TeamName"
+    ],
+    "actions": [
+      "{{.EffectiveAt}}",
+      "{{.LeaderName}}",
+      "{{.TeamName}}",
+      "{{else if eq .Role `coordinator`}}",
+      "{{if .LeaderName}}",
+      "{{if eq .Action `added`}}",
+      "{{if eq .Role `leader`}}"
+    ]
+  },
+  "club.role-membership": {
+    "subject": "SKY LAB yönetim yetkilerinde değişiklik",
+    "system": false,
+    "contentSensitive": false,
+    "variables": [
+      "GroupName",
+      "Role",
+      "Action",
+      "EffectiveAt",
+      "ActorName"
+    ],
+    "requiredVariables": [],
+    "sampleKeys": [
+      "Action",
+      "ActorName",
+      "EffectiveAt",
+      "GroupName",
+      "Role"
+    ],
+    "referenced": [
+      "Action",
+      "ActorName",
+      "EffectiveAt",
+      "GroupName",
+      "Role"
+    ],
+    "actions": [
+      "{{.ActorName}}",
+      "{{.EffectiveAt}}",
+      "{{.GroupName}}",
+      "{{else if eq .Role `admin`}}",
+      "{{else if eq .Role `audit`}}",
+      "{{if .ActorName}}",
+      "{{if eq .Action `added`}}",
+      "{{if eq .Role `board`}}"
+    ]
+  },
+  "club.group-membership": {
+    "subject": "SKY LAB grup üyeliğinde değişiklik",
+    "system": false,
+    "contentSensitive": false,
+    "variables": [
+      "GroupName",
+      "Action",
+      "EffectiveAt",
+      "ActorName"
+    ],
+    "requiredVariables": [],
+    "sampleKeys": [
+      "Action",
+      "ActorName",
+      "EffectiveAt",
+      "GroupName"
+    ],
+    "referenced": [
+      "Action",
+      "ActorName",
+      "EffectiveAt",
+      "GroupName"
+    ],
+    "actions": [
+      "{{.ActorName}}",
+      "{{.EffectiveAt}}",
+      "{{.GroupName}}",
+      "{{if .ActorName}}",
+      "{{if eq .Action `added`}}"
+    ]
+  },
+  "club.privilege-change": {
+    "subject": "SKY LAB yönetim yetkilerinde değişiklik bildirimi",
+    "system": false,
+    "contentSensitive": false,
+    "variables": [
+      "Change",
+      "GroupName",
+      "GroupId",
+      "Root",
+      "SubjectName",
+      "ActorName",
+      "OccurredAt",
+      "RolesAdded",
+      "RolesRemoved",
+      "AdminRole",
+      "MemberCount"
+    ],
+    "requiredVariables": [],
+    "sampleKeys": [
+      "ActorName",
+      "AdminRole",
+      "Change",
+      "GroupId",
+      "GroupName",
+      "MemberCount",
+      "OccurredAt",
+      "RolesAdded",
+      "RolesRemoved",
+      "Root",
+      "SubjectName"
+    ],
+    "referenced": [
+      "ActorName",
+      "AdminRole",
+      "Change",
+      "GroupId",
+      "GroupName",
+      "MemberCount",
+      "OccurredAt",
+      "RolesAdded",
+      "RolesRemoved",
+      "Root",
+      "SubjectName"
+    ],
+    "actions": [
+      "{{.ActorName}}",
+      "{{.GroupId}}",
+      "{{.GroupName}}",
+      "{{.MemberCount}}",
+      "{{.OccurredAt}}",
+      "{{.RolesAdded}}",
+      "{{.RolesRemoved}}",
+      "{{.SubjectName}}",
+      "{{else if eq .Change `member-removed`}}",
+      "{{else if eq .Root `admin`}}",
+      "{{else if eq .Root `audit`}}",
+      "{{if .ActorName}}",
+      "{{if .GroupId}}",
+      "{{if .MemberCount}}",
+      "{{if .RolesAdded}}",
+      "{{if .RolesRemoved}}",
+      "{{if .SubjectName}}",
+      "{{if eq .AdminRole `yes`}}",
+      "{{if eq .Change `member-added`}}",
+      "{{if eq .Change `member-removed`}}",
+      "{{if eq .Change `roles-changed`}}",
+      "{{if eq .Root `board`}}"
+    ]
+  }
+}

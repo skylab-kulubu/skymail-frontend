@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Chip, Cta, DetailRow, Heading, Note, Paragraph, Shell, Strong } from "./theme";
+import { Context, Cta, Note, Paragraph, RowItem, Rows, RowsEnd, Shell, Strong, Title } from "./theme";
 import { elseBranch, elseIfEq, end, ifEq, ifSet, v } from "./go";
 import type { TemplateMeta } from "./types";
 
@@ -75,21 +75,32 @@ export default function ClubPrivilegeChange() {
       {end}
     </>
   );
+  // Why this reader got it depends on the change: a role mapping goes to ADMIN alone.
+  const reason = (
+    <>
+      {isRoles}
+      Bu postayı yönetici grubunda (ADMIN) olduğun için alıyorsun. Grubun üyelerine bu değişiklik için posta
+      gitmez.
+      {elseBranch}
+      Bu postayı yönetici grubunda (ADMIN) ya da bu yönetim grubunda olduğun için alıyorsun. Eklenen ya da çıkarılan
+      kişi kendi bildirimini ayrıca alır.
+      {end}
+    </>
+  );
 
   return (
-    <Shell preview="SKY LAB yönetim yetkilerinde bir değişiklik oldu." brand="account">
-      <Heading>
+    <Shell preview="SKY LAB yönetim yetkilerinde bir değişiklik oldu." brand="account" reason={reason}>
+      {ifEq("Change", "member-removed")}
+      <Context tone="bad">{v("GroupName")}</Context>
+      {elseBranch}
+      <Context tone="wait">{v("GroupName")}</Context>
+      {end}
+      <Title>
         {added}Bir Yönetim Grubuna Üye Eklendi{removed}Bir Yönetim Grubundan Üye Çıkarıldı{elseBranch}Bir Grubun Rolleri
         Değişti{end}
-      </Heading>
+      </Title>
 
-      {ifEq("Change", "member-removed")}
-      <Chip tone="alert">{v("GroupName")}</Chip>
-      {elseBranch}
-      <Chip>{v("GroupName")}</Chip>
-      {end}
-
-      <Paragraph style={{ marginTop: "18px" }}>
+      <Paragraph>
         {added}
         {subject}, <Strong>{v("GroupName")}</Strong> grubuna eklendi. {rootSentence} Bu grubun yönetim yetkileri artık
         bu hesapta.
@@ -103,39 +114,28 @@ export default function ClubPrivilegeChange() {
         {end}
       </Paragraph>
 
-      <div style={{ marginTop: "24px" }}>
-        <DetailRow label="Grup" value={v("GroupName")} />
+      <Rows>
+        <RowItem label="Grup">{v("GroupName")}</RowItem>
         {ifSet("SubjectName")}
-        <DetailRow label="Kişi" value={v("SubjectName")} />
+        <RowItem label="Kişi">{v("SubjectName")}</RowItem>
         {end}
         {ifSet("RolesAdded")}
-        <DetailRow label="Eklenen roller" value={v("RolesAdded")} />
+        <RowItem label="Eklenen roller">{v("RolesAdded")}</RowItem>
         {end}
         {ifSet("RolesRemoved")}
-        <DetailRow label="Kaldırılan roller" value={v("RolesRemoved")} />
+        <RowItem label="Kaldırılan roller">{v("RolesRemoved")}</RowItem>
         {end}
         {ifSet("MemberCount")}
-        <DetailRow label="Etkilenen kişi" value={v("MemberCount")} />
+        <RowItem label="Etkilenen kişi">{v("MemberCount")}</RowItem>
         {end}
         {ifSet("ActorName")}
-        <DetailRow label="İşlemi yapan" value={v("ActorName")} />
+        <RowItem label="İşlemi yapan">{v("ActorName")}</RowItem>
         {end}
-        <DetailRow label="Zaman" value={v("OccurredAt")} last />
-      </div>
+        <RowItem label="Zaman">{v("OccurredAt")}</RowItem>
+        <RowsEnd />
+      </Rows>
 
-      <Note tone="alert">
-        Bu değişikliği beklemiyorsan hemen kulüp yöneticilerine haber ver.
-      </Note>
-
-      <Paragraph style={{ marginTop: "24px" }}>
-        {isRoles}
-        Bu postayı yönetici grubunda (ADMIN) olduğun için alıyorsun. Grubun üyelerine bu değişiklik için posta
-        gitmez.
-        {elseBranch}
-        Bu postayı yönetici grubunda (ADMIN) ya da bu yönetim grubunda olduğun için alıyorsun. Eklenen ya da çıkarılan
-        kişi kendi bildirimini ayrıca alır.
-        {end}
-      </Paragraph>
+      <Note tone="alert">Bu değişikliği beklemiyorsan hemen kulüp yöneticilerine haber ver.</Note>
 
       {ifSet("GroupId")}
       <Cta href={`https://admin.yildizskylab.com/groups/${v("GroupId")}`}>Grubu Panelde Aç</Cta>

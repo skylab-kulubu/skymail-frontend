@@ -1,6 +1,6 @@
 import * as React from "react";
-import { Img, Text } from "@react-email/components";
-import { Cta, DetailRow, Heading, Paragraph, Shell, Strong, colors, fontStack } from "./theme";
+import { Img } from "@react-email/components";
+import { Context, Cta, Paragraph, RowItem, Rows, RowsEnd, Shell, Small, Strong, Title } from "./theme";
 import { end, ifSet, v } from "./go";
 import type { TemplateMeta } from "./types";
 
@@ -25,17 +25,23 @@ export const meta: TemplateMeta = {
 
 export default function EventReminder() {
   return (
-    <Shell preview={`${v("EventName")} yarın başlıyor.`} brand="skylab">
-      <Heading>Yarın Görüşüyoruz</Heading>
+    <Shell
+      preview={`${v("EventName")} yarın başlıyor.`}
+      brand="skylab"
+      reason={<>Bu e-postayı {v("EventName")} etkinliğine kayıtlı olduğun için alıyorsun.</>}
+    >
+      <Context tone="wait">{v("EventName")}</Context>
+      <Title>Yarın Görüşüyoruz</Title>
 
       <Paragraph>
         <Strong>{v("EventName")}</Strong> yarın başlıyor. Biletin hazır; kapıda QR kodunu okutman yeterli.
       </Paragraph>
 
-      <div style={{ marginTop: "24px" }}>
-        <DetailRow label="Başlangıç" value={v("StartsAt")} />
-        <DetailRow label="Yer" value={v("Venue")} last />
-      </div>
+      <Rows>
+        <RowItem label="Başlangıç">{v("StartsAt")}</RowItem>
+        <RowItem label="Yer">{v("Venue")}</RowItem>
+        <RowsEnd />
+      </Rows>
 
       {ifSet("TicketQrUrl")}
       <div style={{ marginTop: "28px", textAlign: "center" }}>
@@ -44,7 +50,7 @@ export default function EventReminder() {
           width="160"
           height="160"
           alt="Bilet QR kodu"
-          style={{ margin: "0 auto", borderRadius: "12px", backgroundColor: "#ffffff", padding: "12px" }}
+          style={{ margin: "0 auto", borderRadius: "8px", backgroundColor: "#ffffff", padding: "12px", border: "1px solid #e5e5e5" }}
         />
       </div>
       {end}
@@ -53,12 +59,7 @@ export default function EventReminder() {
       <Cta href={v("MapUrl")}>Yol Tarifi</Cta>
       {end}
 
-      <Text
-        className="t-faint"
-        style={{ marginTop: "24px", marginBottom: 0, fontSize: "12px", lineHeight: "1.7", color: colors.textFaint, fontFamily: fontStack }}
-      >
-        Gelemeyeceksen haber vermen yeter — yerini bekleyen birine açarız.
-      </Text>
+      <Small style={{ marginTop: "24px" }}>Gelemeyeceksen haber vermen yeter — yerini bekleyen birine açarız.</Small>
     </Shell>
   );
 }

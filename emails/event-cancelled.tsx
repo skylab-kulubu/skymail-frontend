@@ -1,6 +1,5 @@
 import * as React from "react";
-import { Text } from "@react-email/components";
-import { Chip, Heading, Note, Paragraph, Shell, Strong, colors, fontStack } from "./theme";
+import { Context, Note, Paragraph, Shell, Small, Strong, Title } from "./theme";
 import { end, ifSet, v } from "./go";
 import type { TemplateMeta } from "./types";
 
@@ -26,30 +25,26 @@ export const meta: TemplateMeta = {
  */
 export default function EventCancelled() {
   return (
-    <Shell preview={`${v("EventName")} iptal edildi.`} brand="skylab">
-      <Heading>Etkinlik İptal Edildi</Heading>
+    <Shell
+      preview={`${v("EventName")} iptal edildi.`}
+      brand="skylab"
+      reason={<>Bu e-postayı {v("EventName")} etkinliğine kayıtlı olduğun için alıyorsun.</>}
+    >
+      <Context tone="bad">İptal</Context>
+      <Title>Etkinlik İptal Edildi</Title>
 
-      <Chip tone="alert">İptal</Chip>
-
-      <Paragraph style={{ marginTop: "18px" }}>
+      <Paragraph>
         <Strong>{v("EventName")}</Strong> etkinliği iptal edildi. Biletin geçersiz; gelmene gerek yok.
       </Paragraph>
 
       {ifSet("CancelReason")}
-      <div style={{ marginTop: "20px" }}>
-        <Note tone="alert">{v("CancelReason")}</Note>
-      </div>
+      <Note tone="alert">{v("CancelReason")}</Note>
       {end}
 
       <Paragraph style={{ marginTop: "24px" }}>Bu kadar geç haber verdiğimiz için kusura bakma.</Paragraph>
 
       {ifSet("ContactEmail")}
-      <Text
-        className="t-faint"
-        style={{ marginTop: "24px", marginBottom: 0, fontSize: "12px", lineHeight: "1.7", color: colors.textFaint, fontFamily: fontStack }}
-      >
-        Sorun olursa {v("ContactEmail")} adresinden bize ulaşabilirsin.
-      </Text>
+      <Small style={{ marginTop: "24px" }}>Sorun olursa {v("ContactEmail")} adresinden bize ulaşabilirsin.</Small>
       {end}
     </Shell>
   );
