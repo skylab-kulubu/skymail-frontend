@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Context, Cta, Note, Paragraph, RowItem, Rows, RowsEnd, Shell, Title } from "./theme";
+import { Context, Cta, Note, Paragraph, RowItem, Rows, RowsEnd, Shell, Small, Title } from "./theme";
 import { end, ifSet, v } from "./go";
 import type { TemplateMeta } from "./types";
 
@@ -40,7 +40,7 @@ export default function AccountSecurityAlert() {
     <Shell
       preview={`SKY LAB hesabında: ${v("EventTitle")}`}
       brand="account"
-      reason="Bu bildirimi, hesabında güvenlikle ilgili bir değişiklik olduğu için alıyorsun; bu postaların gönderimi kapatılamaz. Konum ve IP bilgisi yaklaşıktır."
+      reason="Bu bildirimi, hesabında güvenlikle ilgili bir değişiklik olduğu için alıyorsun; bu postaların gönderimi kapatılamaz."
     >
       <Context tone="wait">
         Hesap güvenliği{ifSet("OccurredAt")} · {v("OccurredAt")}{end}
@@ -67,6 +67,9 @@ export default function AccountSecurityAlert() {
       </Note>
 
       <Cta href={v("SecureAccountUrl")}>Hesabımı Güvene Al</Cta>
+
+      {/* About the rows above, so it stays in the body rather than the footer. */}
+      <Small style={{ marginTop: "24px" }}>Konum ve IP bilgisi yaklaşıktır.</Small>
     </Shell>
   );
 }

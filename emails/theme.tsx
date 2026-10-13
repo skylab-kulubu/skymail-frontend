@@ -190,31 +190,23 @@ const OUTLOOK_COLUMN_CLOSE = "<!--[if mso]></td></tr></table><![endif]-->";
  */
 export type Brand = "skylab" | "forms" | "account" | "mail";
 
-const brands: Record<Brand, { label: string; href: string; reason: string }> = {
-  skylab: {
-    label: "SKY LAB",
-    href: "https://yildizskylab.com",
-    reason: "Bu e-postayı SKY LAB üyesi ya da etkinlik katılımcısı olduğun için alıyorsun.",
-  },
-  forms: {
-    label: "SKY LAB Forms",
-    href: "https://forms.yildizskylab.com",
-    reason: "Bu e-postayı SKY LAB Forms'ta bir formla ilgili olduğun için alıyorsun.",
-  },
-  account: {
-    label: "SKY LAB Hesap",
-    href: "https://my.yildizskylab.com",
-    reason: "Bu e-postayı SKY LAB hesabınla ilgili olduğu için alıyorsun.",
-  },
-  mail: {
-    label: "SKY LAB Mail",
-    href: "https://mail.yildizskylab.com",
-    reason: "Bu e-postayı SkyMail'de bir gönderimle ilgili olduğun için alıyorsun.",
-  },
+const brands: Record<Brand, { label: string; href: string }> = {
+  skylab: { label: "SKY LAB", href: "https://yildizskylab.com" },
+  forms: { label: "SKY LAB Forms", href: "https://forms.yildizskylab.com" },
+  account: { label: "SKY LAB Hesap", href: "https://my.yildizskylab.com" },
+  mail: { label: "SKY LAB Mail", href: "https://mail.yildizskylab.com" },
 };
 
-/** The footer's sentence a mail gets when it does not say its own. */
-export const defaultReason = (brand: Brand = "skylab") => brands[brand].reason;
+/**
+ * The footer's sentence for a mail that does not say its own: every Visual
+ * mail and every JSX template written before `reason` existed. It claims
+ * nothing about the reader, because an operator's list may reach people who
+ * are neither members nor participants (a sponsor, an applicant).
+ */
+const NEUTRAL_REASON = "Bu e-postayı SKY LAB'den aldın.";
+
+/** The footer's sentence a mail gets when it does not say its own; the same for every brand. */
+export const defaultReason = () => NEUTRAL_REASON;
 
 /** A presentation table: the only layout every client, Outlook included, agrees on. */
 function Table({ children, style, ...props }: React.TableHTMLAttributes<HTMLTableElement>) {
@@ -265,14 +257,16 @@ function BrandMark({ brand }: { brand: Brand }) {
 
 function Footer({ brand, reason }: { brand: Brand; reason: React.ReactNode }) {
   const { label, href } = brands[brand];
-  const small = { margin: 0, fontSize: "12px", lineHeight: "18px", color: ink.faint, fontFamily: fontStack };
+  // Muted, not Forms' faint: the reason and the credit are text to read, and
+  // faint is 2.5:1 on white (WCAG AA asks 4.5:1); muted is 4.7:1, 5.7:1 dark.
+  const small = { margin: 0, fontSize: "12px", lineHeight: "18px", color: ink.muted, fontFamily: fontStack };
   const quiet = { color: ink.muted, textDecoration: "none" };
   return (
     <div style={{ marginTop: "48px" }}>
-      <p className="t-faint" style={small}>
+      <p className="t-muted" style={small}>
         {reason}
       </p>
-      <p className="t-faint" style={{ ...small, margin: "8px 0 0" }}>
+      <p className="t-muted" style={{ ...small, margin: "8px 0 0" }}>
         <a href={REPORT} className="t-muted" style={quiet}>
           Sorun bildir
         </a>
@@ -283,7 +277,7 @@ function Footer({ brand, reason }: { brand: Brand; reason: React.ReactNode }) {
       </p>
       <Table style={{ marginTop: "24px" }}>
         <tr>
-          <td className="t-faint" style={{ fontSize: "11px", lineHeight: "16px", color: ink.faint, fontFamily: fontStack }}>
+          <td className="t-muted" style={{ fontSize: "11px", lineHeight: "16px", color: ink.muted, fontFamily: fontStack }}>
             <a href={href} className="t-muted" style={{ ...quiet, fontWeight: 600 }}>
               {label}
             </a>
@@ -293,7 +287,7 @@ function Footer({ brand, reason }: { brand: Brand; reason: React.ReactNode }) {
             align="right"
             style={{ paddingLeft: "12px", fontSize: "11px", lineHeight: "16px", textAlign: "right", whiteSpace: "nowrap", fontFamily: fontStack }}
           >
-            <a href={DEVELOPER.href} className="t-faint" style={{ color: ink.faint, textDecoration: "none" }}>
+            <a href={DEVELOPER.href} className="t-muted" style={{ color: ink.muted, textDecoration: "none" }}>
               Developed by {DEVELOPER.name}
             </a>
           </td>
@@ -336,7 +330,7 @@ export function Shell({
                   <td className="shell" style={{ padding: "40px 24px 32px", fontFamily: fontStack, textAlign: "left" }}>
                     <BrandMark brand={brand} />
                     <div style={{ paddingTop: "32px" }}>{children}</div>
-                    <Footer brand={brand} reason={reason ?? defaultReason(brand)} />
+                    <Footer brand={brand} reason={reason ?? defaultReason()} />
                   </td>
                 </tr>
               </Table>
@@ -597,7 +591,13 @@ export function RowItem({ label, children }: { label: React.ReactNode; children:
         </p>
       </td>
       <td className="hair" align="right" style={{ ...cell, padding: "10px 0 10px 16px", textAlign: "right" }}>
-        <p className="t-primary" style={{ ...cellText, color: ink.primary, fontWeight: 500, textAlign: "right" }}>
+        {/* break-word lets a long UUID or address wrap at any character, and
+            unlike overflow-wrap alone it also narrows the cell, so the table
+            cannot grow past a 320 px screen. */}
+        <p
+          className="t-primary"
+          style={{ ...cellText, color: ink.primary, fontWeight: 500, textAlign: "right", wordBreak: "break-word", overflowWrap: "break-word" }}
+        >
           {children}
         </p>
       </td>
