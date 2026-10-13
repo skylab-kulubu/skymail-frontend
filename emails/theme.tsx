@@ -114,7 +114,6 @@ const LOGO_LILAC = `${ASSETS}/skylab-lilac.png`;
 
 const REPORT = "mailto:info@yildizskylab.com?subject=SKY%20LAB%20-%20Sorun%20Bildirimi";
 const KVKK = "https://skyl.app/kvkk-metni";
-const DEVELOPER = { name: "Enes Genç", href: "https://enesgenc.dev" };
 
 // Comments inside this string ship in every message, so the reasoning lives out
 // here instead.
@@ -190,11 +189,30 @@ const OUTLOOK_COLUMN_CLOSE = "<!--[if mso]></td></tr></table><![endif]-->";
  */
 export type Brand = "skylab" | "forms" | "account" | "mail";
 
-const brands: Record<Brand, { label: string; href: string }> = {
+/** Who built a product, for the footer's "Developed by"; no href prints the name alone. */
+interface Developer {
+  name: string;
+  href?: string;
+}
+
+/**
+ * The product a mail comes from, its name on top and in the footer, and who
+ * built it. The credit follows the product, as each product's own screens
+ * sign it:
+ *
+ *  - account: the account product is e-skylab (Keycloak's sign-in pages and
+ *    the account mails), written in lower case as its sign-in page writes it,
+ *    signed "Developed by Yusuf Açmacı" there too.
+ *  - mail: SkyMail's own mails, signed as SkyMail's sign-in screen is.
+ *  - forms: as Forms' own mails are signed.
+ *  - skylab: the club's mails (core, events, an operator's free mail) come
+ *    from no one product with a credit of its own, so they carry none.
+ */
+const brands: Record<Brand, { label: string; href: string; developer?: Developer }> = {
   skylab: { label: "SKY LAB", href: "https://yildizskylab.com" },
-  forms: { label: "SKY LAB Forms", href: "https://forms.yildizskylab.com" },
-  account: { label: "SKY LAB Hesap", href: "https://my.yildizskylab.com" },
-  mail: { label: "SKY LAB Mail", href: "https://mail.yildizskylab.com" },
+  forms: { label: "SKY LAB Forms", href: "https://forms.yildizskylab.com", developer: { name: "Fatih Naz", href: "https://github.com/fatiihnaz" } },
+  account: { label: "e-skylab", href: "https://e.yildizskylab.com", developer: { name: "Yusuf Açmacı" } },
+  mail: { label: "SKY LAB Mail", href: "https://mail.yildizskylab.com", developer: { name: "Enes Genç", href: "https://enesgenc.dev" } },
 };
 
 /**
@@ -256,7 +274,7 @@ function BrandMark({ brand }: { brand: Brand }) {
 }
 
 function Footer({ brand, reason }: { brand: Brand; reason: React.ReactNode }) {
-  const { label, href } = brands[brand];
+  const { label, href, developer } = brands[brand];
   // Muted, not Forms' faint: the reason and the credit are text to read, and
   // faint is 2.5:1 on white (WCAG AA asks 4.5:1); muted is 4.7:1, 5.7:1 dark.
   const small = { margin: 0, fontSize: "12px", lineHeight: "18px", color: ink.muted, fontFamily: fontStack };
@@ -283,14 +301,22 @@ function Footer({ brand, reason }: { brand: Brand; reason: React.ReactNode }) {
             </a>
             {" by WEBLAB "}
           </td>
-          <td
-            align="right"
-            style={{ paddingLeft: "12px", fontSize: "11px", lineHeight: "16px", textAlign: "right", whiteSpace: "nowrap", fontFamily: fontStack }}
-          >
-            <a href={DEVELOPER.href} className="t-muted" style={{ color: ink.muted, textDecoration: "none" }}>
-              Developed by {DEVELOPER.name}
-            </a>
-          </td>
+          {developer ? (
+            <td
+              align="right"
+              style={{ paddingLeft: "12px", fontSize: "11px", lineHeight: "16px", textAlign: "right", whiteSpace: "nowrap", fontFamily: fontStack }}
+            >
+              {developer.href ? (
+                <a href={developer.href} className="t-muted" style={{ color: ink.muted, textDecoration: "none" }}>
+                  Developed by {developer.name}
+                </a>
+              ) : (
+                <span className="t-muted" style={{ color: ink.muted }}>
+                  Developed by {developer.name}
+                </span>
+              )}
+            </td>
+          ) : null}
         </tr>
       </Table>
     </div>
