@@ -41,9 +41,10 @@ const nextConfig: NextConfig = {
         headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
       },
       {
-        // The images sent mails show (emails/theme.tsx). Not named by their
-        // content, so cached for a day rather than for ever.
-        source: "/mail/:file*",
+        // The two logos sent mails show (emails/theme.tsx). Not named by their
+        // content, so cached for a day rather than for ever. Only those two:
+        // any other /mail/ path is a signed-in page a shared cache must not keep.
+        source: "/mail/:file(skylab-(?:ink|lilac)\\.png)",
         headers: [{ key: "Cache-Control", value: "public, max-age=86400" }],
       },
       {
