@@ -19,6 +19,16 @@ export interface TemplateMeta {
   subject: string;
   /** Protected from archiving, because another service calls it by key. */
   system: boolean;
+  /**
+   * Whether SkyMail never shows what a send of it said (the send's page shows
+   * only that it went, to whom and how it fared). True for mail that carries
+   * a code, a one-time or account link, a ticket code or a device's address —
+   * anything that lets someone who reads it act as the recipient, or that the
+   * recipient alone should see. False for mail whose content an operator may
+   * read: the club's own writing, a notice. The seed writes it to the
+   * template's `content_sensitive`; every template states it.
+   */
+  contentSensitive: boolean;
   /** Decides the footer. */
   brand: Brand;
   /** Who sends it and when — documentation for whoever edits it next. */

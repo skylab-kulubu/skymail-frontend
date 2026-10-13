@@ -7,6 +7,7 @@ export const meta: TemplateMeta = {
   name: "Keycloak · YTÜ Hesabı Bağlama",
   subject: "YTÜ hesabını SKY LAB hesabına bağla",
   system: true,
+  contentSensitive: true,
   brand: "account",
   trigger: "Keycloak, YTÜ Microsoft kimliği mevcut bir SKY LAB hesabına bağlanırken (IdP link).",
   variables: ["link", "linkExpirationMinutes", "firstName", "username", "realmDisplayName", "subjectKey"],
@@ -30,6 +31,8 @@ export default function KeycloakIdpLink() {
       intro="YTÜ Microsoft hesabını mevcut SKY LAB hesabına bağlamak için bir istek aldık. Bağlandığında okul e-posta adresin doğrulanmış sayılır ve YTÜ hesabınla da giriş yapabilirsin."
       ctaLabel="Hesapları Bağla"
       disclaimer="Bu isteği sen yapmadıysan bağlantıya dokunma; hesapların bağlanmaz."
+      context="Hesap bağlama"
+      reason="Bu e-postayı, SKY LAB hesabına bir YTÜ hesabı bağlanmak istendiği için alıyorsun."
     />
   );
 }

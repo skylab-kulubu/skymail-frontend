@@ -1,6 +1,5 @@
 import * as React from "react";
-import { Text } from "@react-email/components";
-import { Cta, Heading, Label, LinkFallback, Paragraph, Shell, colors, fontStack } from "./theme";
+import { CodeBlock, Context, Cta, Label, LinkFallback, Paragraph, Shell, Small, Title } from "./theme";
 import { end, ifSet, v } from "./go";
 import type { TemplateMeta } from "./types";
 
@@ -9,6 +8,7 @@ export const meta: TemplateMeta = {
   name: "Keycloak · Genel Sistem Postası",
   subject: "SKY LAB hesap bildirimi",
   system: true,
+  contentSensitive: true,
   brand: "account",
   trigger:
     "Keycloak gönderici SPI'ın yedeği: eşlenmemiş bir sistem postası (ileride eklenecek bir required action gibi) bu anahtara düşer. subjectKey hangi posta olduğunu söyler.",
@@ -37,8 +37,13 @@ export default function KeycloakGeneric() {
   const link = v("link");
 
   return (
-    <Shell preview="SKY LAB hesabınla ilgili bir işlem bekliyor." brand="account">
-      <Heading>Hesabınla İlgili Bir İşlem Var</Heading>
+    <Shell
+      preview="SKY LAB hesabınla ilgili bir işlem bekliyor."
+      brand="account"
+      reason="Bu e-postayı, SKY LAB hesabınla ilgili bir işlem olduğu için alıyorsun."
+    >
+      <Context>Hesap bildirimi</Context>
+      <Title>Hesabınla İlgili Bir İşlem Var</Title>
 
       <Paragraph>
         {ifSet("firstName")}Merhaba {v("firstName")}, {end}
@@ -57,12 +62,7 @@ export default function KeycloakGeneric() {
       {end}
 
       {ifSet("linkExpirationMinutes")}
-      <Text
-        className="t-muted"
-        style={{ marginTop: "18px", marginBottom: 0, fontSize: "13px", lineHeight: "1.7", color: colors.textMuted, fontFamily: fontStack }}
-      >
-        Bu bağlantı {v("linkExpirationMinutes")} dakika geçerli.
-      </Text>
+      <Small>Bu bağlantı {v("linkExpirationMinutes")} dakika geçerli.</Small>
       {end}
 
       {ifSet("link")}
@@ -72,31 +72,14 @@ export default function KeycloakGeneric() {
       {ifSet("subjectKey")}
       <div style={{ marginTop: "24px" }}>
         <Label>İşlem Kodu</Label>
-        <Text
-          className="code-block"
-          style={{
-            margin: "6px 0 0",
-            padding: "8px 12px",
-            borderRadius: "8px",
-            border: `1px solid ${colors.cardBorder}`,
-            backgroundColor: colors.noteBg,
-            fontSize: "12px",
-            color: colors.textBody,
-            fontFamily: "'SF Mono', Menlo, Consolas, monospace",
-          }}
-        >
-          {v("subjectKey")}
-        </Text>
+        <CodeBlock size={12}>{v("subjectKey")}</CodeBlock>
       </div>
       {end}
 
-      <Text
-        className="t-faint"
-        style={{ marginTop: "24px", marginBottom: 0, fontSize: "12px", lineHeight: "1.7", color: colors.textFaint, fontFamily: fontStack }}
-      >
+      <Small style={{ marginTop: "24px" }}>
         Bu isteği sen yapmadıysan bu e-postayı yok sayabilirsin. Bu posta sana anlamsız geldiyse yukarıdaki işlem koduyla birlikte
         info@yildizskylab.com adresine yaz — o postanın kendi şablonunu yazalım.
-      </Text>
+      </Small>
     </Shell>
   );
 }

@@ -8,7 +8,7 @@
     "@monaco-editor/react": "^4.7.0",
     "@react-email/components": "^1.0.8",
     "@react-email/render": "^2.0.4",
-    "@skylab-kulubu/skylcn-ui": "^0.1.8",
+    "@skylab-kulubu/skylcn-ui": "^0.1.9",
     "@tiptap/core": "^3.12.1",
     "@tiptap/extension-list": "^3.12.1",
     "@tiptap/extensions": "^3.12.1",

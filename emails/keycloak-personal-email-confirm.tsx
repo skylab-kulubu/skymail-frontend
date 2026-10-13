@@ -7,6 +7,7 @@ export const meta: TemplateMeta = {
   name: "Keycloak · Kişisel E-posta Onayı",
   subject: "Kişisel e-posta adresini doğrula",
   system: true,
+  contentSensitive: true,
   brand: "account",
   trigger:
     "Account center'da ya da ilk YTÜ girişinin sonundaki öneride kişisel e-posta eklendiğinde; 6 haneli kod, 10 dakika geçerli, yalnız isteyen kişinin açık oturumunda çalışır (K3c, ADR-0044 güncellemesi). Keycloak'tan K5 ile gelir.",
@@ -30,6 +31,8 @@ export default function KeycloakPersonalEmailConfirm() {
       heading="Kişisel E-postanı Doğrula"
       intro="SKY LAB hesabına bu adresi kişisel e-posta olarak eklemek istedin. Aşağıdaki kodu açık olan sayfaya (Hesap Merkezi ya da giriş sayfası) gir. Doğruladıktan sonra bu adresle de giriş yapabilir, istersen birincil adresin olarak seçebilirsin."
       disclaimer="Bu isteği sen yapmadıysan bu e-postayı yok say: kod girilmeden adres hesabına eklenmez."
+      context="Kişisel e-posta"
+      reason="Bu e-postayı, bu adres bir SKY LAB hesabına kişisel e-posta olarak eklenmek istendiği için alıyorsun."
     />
   );
 }

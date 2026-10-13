@@ -1,40 +1,68 @@
 /**
- * The shared shell every SKY LAB e-mail is built from.
+ * The shared layout every SKY LAB e-mail is built from.
  *
- * Two things make e-mail styling awkward and both are handled here so a template
- * author never has to think about them:
+ * It follows SKY LAB Forms' mail layout (forms-frontend mail-templates/
+ * _components/Layout.jsx) piece for piece, so a mail from SkyMail and one from
+ * Forms read as the same family: the same type, colours and tones, the small
+ * logo and product name on top, a status line (Context) above the title, rows
+ * of facts between hairlines, a quiet footer that says why the mail came.
+ *
+ * Three things make e-mail styling awkward and all are handled here so a
+ * template author never has to think about them:
  *
  *  - Dark mode. Inline styles are the light theme, because that is what clients
- *    without `prefers-color-scheme` render. Role classes (.t-primary, .card, …)
+ *    without `prefers-color-scheme` render. Role classes (.t-primary, .hair, …)
  *    carry the dark theme with `!important`, so a client that does understand
- *    the media query flips the whole mail at once.
+ *    the media query (Apple Mail, iOS Mail, Outlook for Mac) flips the whole
+ *    mail at once. Outlook's own dark mode is reached through the attributes it
+ *    marks what it recolours with ([data-ogsc], [data-ogsb]).
  *  - Backgrounds. Gmail strips `background-color` off `<body>` and off `<div>`,
  *    so the page background is painted on a full-width table with the `bgcolor`
  *    HTML attribute instead.
+ *  - Outlook for Windows. Its Word engine ignores `max-width`, so the column
+ *    gets a fixed width there from a table only it reads, and padding that it
+ *    drops off a link is repeated as `mso-padding-alt`.
  *
  * Variables are Go templates rendered by skymail-backend, not React props. A
  * template writes `{{.formTitle}}`; the mailer substitutes it per send. Missing
  * variables render as empty in HTML but as `<no value>` in the subject and the
  * plain-text part, so only ever put a variable in a subject when the sender is
  * guaranteed to supply it.
+ *
+ * Every export the earlier shell had (Heading, Chip, DetailRow, Label, …) is
+ * still here with the same props, restyled: templates an operator wrote in the
+ * panel's JSX mode import them by name and must keep compiling.
  */
-import {
-  Body,
-  Column,
-  Container,
-  Head,
-  Hr,
-  Html,
-  Img,
-  Link,
-  Preview,
-  Row,
-  Section,
-  Text,
-} from "@react-email/components";
+import { Body, Head, Hr, Html, Img, Link, Preview } from "@react-email/components";
 import * as React from "react";
 
+/** Forms' palette: the light theme, inline. */
+const ink = {
+  primary: "#171717",
+  body: "#525252",
+  muted: "#737373",
+  faint: "#a3a3a3",
+  hair: "#ebebeb",
+  link: "#8f5e98",
+  page: "#ffffff",
+  surface: "#fafafa",
+  border: "#e5e5e5",
+} as const;
+
+/** The status colours of Context's dot and of a few emphasised words. */
+export const tones = {
+  ok: "#059669",
+  wait: "#d97706",
+  bad: "#dc2626",
+  neutral: "#a3a3a3",
+  brand: "#ae7eb6",
+} as const;
+
+export type Tone = keyof typeof tones;
+
 export const colors = {
+  ...ink,
+  // The club's purple scale, for a template that wants the brand colour.
   skylab300: "#f3e8f5",
   skylab400: "#ebd5ee",
   skylab500: "#e0c8e5",
@@ -42,268 +70,415 @@ export const colors = {
   skylab700: "#ae7eb6",
   skylab800: "#8f5e98",
   skylab900: "#6e4576",
-  pageBg: "#f4f1f7",
-  // Every surface is opaque on purpose. A mail client that darkens a light
-  // e-mail by itself — which is most of them, because `prefers-color-scheme`
-  // is not something an e-mail can rely on — darkens what is behind a
-  // translucent layer but leaves the layer, and the result is the washed-out
-  // grey-on-grey we shipped first. Opaque colours inverse predictably.
-  cardBg: "#fbfafc",
-  cardBorder: "#e2d7e6",
-  textPrimary: "#1b1620",
-  textBody: "#4a4253",
-  textMuted: "#6f6579",
-  textFaint: "#8c8397",
-  divider: "#e7e6e8",
-  noteBg: "#f5f1f6",
-  ctaBg: "#ece4ee",
-  ctaBorder: "#cab4cf",
-  // A caution accent for the mails that report something the reader may need to
-  // undo — a password change they did not make, a cancelled event.
-  alert: "#b06b78",
-  alertBg: "#f3e3e5",
-  alertBorder: "#dcb6bd",
-  alertText: "#9e5560",
+  // The names the earlier shell used, kept for templates written against it.
+  // Every surface is opaque on purpose: a client that darkens a light e-mail by
+  // itself darkens what is behind a translucent layer but leaves the layer.
+  pageBg: ink.page,
+  cardBg: ink.page,
+  cardBorder: ink.border,
+  textPrimary: ink.primary,
+  textBody: ink.body,
+  textMuted: ink.muted,
+  textFaint: ink.faint,
+  divider: ink.hair,
+  noteBg: ink.surface,
+  ctaBg: ink.surface,
+  ctaBorder: ink.border,
+  alert: tones.bad,
+  alertBg: ink.surface,
+  alertBorder: ink.border,
+  alertText: tones.bad,
 } as const;
 
-/** The dark theme's card, which the stylesheet below paints; editors show images on it. */
-export const darkColors = { cardBg: "#121115" } as const;
-
-export const fontStack = "'Space Grotesk', Helvetica, Arial, sans-serif";
+/** The dark theme's page, which the stylesheet below paints; editors show images on it. */
+export const darkColors = { cardBg: "#0a0a0a" } as const;
 
 /*
-  A PNG, not the SVG the app itself uses: Gmail and Outlook do not render SVG at
-  all, so that logo was simply missing for most recipients. This is the same
-  asset the welcome mail has been sending from production, at 280×280 with
-  transparency, so it stays sharp at both sizes and sits on either theme.
+  No webfont is loaded. Most clients block remote CSS, Gmail ignores webfonts
+  altogether, and a font fetched from a third party tells it who opened the
+  mail. Recipients who have Space Grotesk get it; everyone else gets their
+  system's UI font, as most Forms recipients do too.
 */
-const LOGO = "https://cdn.yildizskylab.com/images/fe6b25b5-6dc6-4981-ab09-907b304f369a";
+export const fontStack = "'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif";
 
-const darkStarfield = [
-  "radial-gradient(1px 1px at 12% 18%, rgba(255,255,255,0.35), transparent 50%)",
-  "radial-gradient(1px 1px at 28% 62%, rgba(255,255,255,0.28), transparent 50%)",
-  "radial-gradient(1.4px 1.4px at 62% 8%, rgba(224,200,229,0.45), transparent 50%)",
-  "radial-gradient(1px 1px at 80% 46%, rgba(255,255,255,0.30), transparent 50%)",
-  "radial-gradient(1px 1px at 92% 78%, rgba(255,255,255,0.22), transparent 50%)",
-  "radial-gradient(1.2px 1.2px at 44% 88%, rgba(224,200,229,0.32), transparent 50%)",
-  "radial-gradient(1px 1px at 18% 92%, rgba(255,255,255,0.22), transparent 50%)",
-  "radial-gradient(ellipse 620px 380px at 50% -4%, rgba(224,200,229,0.16), transparent 62%)",
-  "radial-gradient(1200px 760px at 80% 0%, rgba(224,200,229,0.10), transparent 60%)",
-  "radial-gradient(900px 700px at 6% 100%, rgba(170,140,200,0.06), transparent 60%)",
-].join(", ");
+const MONO = "'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace";
+
+/*
+  PNGs, not the SVG the app uses: Gmail and Outlook do not render SVG. Two
+  colours of the same mark, the ink one on light and the lilac one on dark,
+  both served by SkyMail's own site (public/mail/, open without a session).
+*/
+const ASSETS = "https://mail.yildizskylab.com/mail";
+const LOGO_INK = `${ASSETS}/skylab-ink.png`;
+const LOGO_LILAC = `${ASSETS}/skylab-lilac.png`;
+
+const REPORT = "mailto:info@yildizskylab.com?subject=SKY%20LAB%20-%20Sorun%20Bildirimi";
+const KVKK = "https://skyl.app/kvkk-metni";
 
 // Comments inside this string ship in every message, so the reasoning lives out
 // here instead.
 //
-// There is deliberately no webfont @import. A webfont is close to useless in an
-// e-mail because most clients block remote CSS, and Apple Mail blocks remote
-// content by default — which put a failing remote import at the top of the one
-// stylesheet the dark theme depends on. The font stack falls back to Helvetica,
-// which is what most recipients were seeing anyway.
-//
 // `color-scheme` tells a client that understands it not to apply its own
 // inversion on top of these rules. A client that ignores it falls back to the
 // opaque light theme, which survives its inversion on its own.
-const darkModeCss = `
+//
+// The page colour lives here rather than inline on <Body>: react-email copies
+// an inline background from <Body> onto a wrapper cell it generates itself, and
+// that cell carries no class, so it would stay light in dark mode.
+//
+// The free-form body is the one place markup comes from the sender, so its
+// links are plain <a> with nothing on them; the server's allowlist drops style
+// and class inside that body, so their colour can only come from here.
+const css = `
 :root { color-scheme: light dark; supported-color-schemes: light dark; }
-
-/*
-  The page tint lives here rather than inline on <Body>. react-email copies an
-  inline background from <Body> onto a wrapper cell it generates itself, and
-  that cell carries no class, so it stayed light in dark mode and painted over
-  everything behind it. The full-width table below is classed and carries the
-  tint inline for clients that drop this stylesheet.
-*/
-body { background-color: #f4f1f7; }
-
-/*
-  The free-form body is the one place markup comes from the sender, so its links
-  are plain <a> with nothing on them — a client colours those its own default
-  blue, which is close to unreadable on the dark card. The rule cannot live on
-  the element: the server's allowlist drops style and class inside that body.
-*/
-.free-body a { color: #6e4576; }
+body { margin: 0; padding: 0; background-color: ${ink.page}; }
+.free-body a { color: ${ink.link}; }
+.free-body p { margin: 12px 0 0; }
+.free-body p:first-child { margin-top: 0; }
 
 @media (prefers-color-scheme: dark) {
-  .email-bg   { background-color: #08070b !important; background-image: ${darkStarfield} !important; }
-  .card       { background-color: ${darkColors.cardBg} !important; border-color: #2a292c !important; }
-  .t-primary  { color: #ffffff !important; }
-  .t-body     { color: #dcdcdc !important; }
-  .t-muted    { color: #a3a3a3 !important; }
-  .t-faint    { color: #8f8f8f !important; }
-  .t-brand    { color: #efe3fe !important; }
-  .t-num      { color: #c8a4ce !important; }
-  .dev-link   { color: #9a9a9a !important; }
-  .divider    { border-top-color: #2a292c !important; border-bottom-color: #2a292c !important; }
-  .note-box   { background-color: #19181c !important; }
-  .chip       { background-color: #2b272e !important; border-color: #4c444f !important; color: #f3e8f5 !important; }
-  .cta        { background-color: #695f6c !important; border-color: #837d85 !important; color: #ffffff !important; }
-  .alert-chip { background-color: #2b272b !important; border-color: #51484c !important; color: #f3e8ea !important; }
-  .alert-note { border-left-color: #c0848f !important; }
-  .code-block { background-color: #201f23 !important; color: #f3e8f5 !important; border-color: #2a292c !important; }
-  .free-body a { color: #e0c8e5 !important; }
+  .email-bg   { background-color: #0a0a0a !important; }
+  .t-primary  { color: #fafafa !important; }
+  .t-body     { color: #a3a3a3 !important; }
+  .t-muted    { color: #8a8a8a !important; }
+  .t-faint    { color: #6b6b6b !important; }
+  .t-link     { color: #ebd5ee !important; }
+  .hair       { border-color: #262626 !important; }
+  .note       { border-left-color: #404040 !important; }
+  .note-alert { border-left-color: #f87171 !important; }
+  .card, .chip, .code-block { background-color: #141414 !important; border-color: #262626 !important; }
+  .tone-ok      { color: #34d399 !important; }
+  .tone-wait    { color: #fbbf24 !important; }
+  .tone-bad     { color: #fca5a5 !important; }
+  .tone-neutral { color: #6b6b6b !important; }
+  .tone-brand   { color: #ebd5ee !important; }
+  .logo-light { display: none !important; }
+  .logo-dark  { display: inline-block !important; max-height: none !important; }
+  .free-body a { color: #ebd5ee !important; }
 }
 
-/*
-  Outlook does not honour prefers-color-scheme. Instead it rewrites the colours
-  itself and marks what it touched: [data-ogsc] on an element whose text colour
-  it changed, [data-ogsb] on one whose background it changed. Targeting those
-  attributes is the only way to tell it what we actually want. Other clients
-  never set them, so these rules simply never match there.
-*/
-[data-ogsb] .card, .card[data-ogsb] { background-color: ${darkColors.cardBg} !important; border-color: #2a292c !important; }
-[data-ogsb] .email-bg, .email-bg[data-ogsb] { background-color: #08070b !important; }
-[data-ogsc] .t-primary, .t-primary[data-ogsc] { color: #ffffff !important; }
-[data-ogsc] .t-body, .t-body[data-ogsc] { color: #dcdcdc !important; }
-[data-ogsc] .t-muted, .t-muted[data-ogsc] { color: #a3a3a3 !important; }
-[data-ogsc] .t-faint, .t-faint[data-ogsc] { color: #8f8f8f !important; }
-[data-ogsc] .t-brand, .t-brand[data-ogsc] { color: #efe3fe !important; }
-[data-ogsb] .note-box, .note-box[data-ogsb] { background-color: #19181c !important; }
-[data-ogsb] .chip, .chip[data-ogsb] { background-color: #2b272e !important; border-color: #4c444f !important; }
-[data-ogsc] .chip, .chip[data-ogsc] { color: #f3e8f5 !important; }
-[data-ogsb] .alert-chip, .alert-chip[data-ogsb] { background-color: #2b272b !important; border-color: #51484c !important; }
-[data-ogsc] .alert-chip, .alert-chip[data-ogsc] { color: #f3e8ea !important; }
-[data-ogsb] .cta, .cta[data-ogsb] { background-color: #695f6c !important; border-color: #837d85 !important; }
-[data-ogsc] .cta, .cta[data-ogsc] { color: #ffffff !important; }
-[data-ogsb] .code-block, .code-block[data-ogsb] { background-color: #201f23 !important; }
-[data-ogsc] .code-block, .code-block[data-ogsc] { color: #f3e8f5 !important; }
-[data-ogsc] .free-body a { color: #e0c8e5 !important; }
+[data-ogsb] .email-bg, .email-bg[data-ogsb] { background-color: #0a0a0a !important; }
+[data-ogsb] .card, .card[data-ogsb], [data-ogsb] .chip, .chip[data-ogsb], [data-ogsb] .code-block, .code-block[data-ogsb] { background-color: #141414 !important; border-color: #262626 !important; }
+[data-ogsc] .t-primary, .t-primary[data-ogsc] { color: #fafafa !important; }
+[data-ogsc] .t-body, .t-body[data-ogsc] { color: #a3a3a3 !important; }
+[data-ogsc] .t-muted, .t-muted[data-ogsc] { color: #8a8a8a !important; }
+[data-ogsc] .t-faint, .t-faint[data-ogsc] { color: #6b6b6b !important; }
+[data-ogsc] .t-link, .t-link[data-ogsc] { color: #ebd5ee !important; }
+[data-ogsc] .free-body a { color: #ebd5ee !important; }
 
-.brand-link:hover { opacity: 0.85; }
-.dev-link:hover   { color: #e0c8e5 !important; }
-.legal-link:hover { opacity: 0.8; }
-.cta:hover        { background-color: #f5d3e5 !important; }
+@media (max-width: 480px) {
+  .shell { padding: 28px 20px 24px !important; }
+  .foot-cell { display: block !important; width: 100% !important; text-align: left !important; padding-left: 0 !important; }
+  .foot-credit { padding-top: 0 !important; padding-bottom: 6px !important; }
+}
 `;
 
-/**
- * Which product the mail comes from. It decides the footer only — an account
- * security notice must not look like it came from Forms, and an event mail must
- * not send the reader to the Forms admin.
- */
-export type Brand = "skylab" | "forms" | "account";
+/*
+  Outlook for Windows ignores max-width, so it gets the column as a fixed-width
+  "ghost" table that only it sees: conditional comments, which it reads and
+  every other client skips. React cannot write a comment, so each half travels
+  as the inner HTML of an empty <div>, the way react-email's own Button carries
+  its Outlook spacing. The halves are not balanced markup on their own, which
+  is also what keeps the HTML formatter from reflowing them.
+*/
+const OUTLOOK_COLUMN_OPEN = '<!--[if mso]><table role="presentation" width="520" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->';
+const OUTLOOK_COLUMN_CLOSE = "<!--[if mso]></td></tr></table><![endif]-->";
 
-const brands: Record<Brand, { label: string; href: string }> = {
-  skylab: { label: "SKY LAB", href: "https://yildizskylab.com" },
-  forms: { label: "SKY LAB Forms", href: "https://forms.yildizskylab.com" },
-  account: { label: "SKY LAB Hesap", href: "https://my.yildizskylab.com" },
+/**
+ * Which product the mail comes from. It decides the name beside the logo and
+ * in the footer: an account security notice must not look like it came from
+ * Forms, and an approval request comes from SkyMail itself.
+ */
+export type Brand = "skylab" | "forms" | "account" | "mail";
+
+/** Who built a product, for the footer's "Developed by"; no href prints the name alone. */
+interface Developer {
+  name: string;
+  href?: string;
+}
+
+/** A credit line of the footer: "<product> by WEBLAB" on the left, "Developed by …" on the right. */
+interface Credit {
+  product: string;
+  href: string;
+  developer: Developer;
+}
+
+/** SkyMail sends and renders every mail, so every mail ends with its line. */
+const SKYMAIL: Credit = {
+  product: "SkyMail",
+  href: "https://mail.yildizskylab.com",
+  developer: { name: "Enes Genç", href: "https://enesgenc.dev" },
 };
+
+/**
+ * The product a mail comes from: its name beside the logo and, for a product
+ * with a credit of its own, a line above SkyMail's (Yusuf, 2026-10-13).
+ *
+ *  - account: the account product is e-skylab (Keycloak's sign-in pages and
+ *    the account mails), in lower case as its sign-in pages write it.
+ *  - forms: credited as Forms' own mails are.
+ *  - mail: SkyMail's own mails; SkyMail's line says it all.
+ *  - skylab: the club's own mails; SKY LAB is the club, not a product.
+ */
+const brands: Record<Brand, { label: string; href: string; credit?: Credit }> = {
+  skylab: { label: "SKY LAB", href: "https://yildizskylab.com" },
+  forms: {
+    label: "SKY LAB Forms",
+    href: "https://forms.yildizskylab.com",
+    credit: { product: "SKY LAB Forms", href: "https://forms.yildizskylab.com", developer: { name: "Fatih Naz", href: "https://github.com/fatiihnaz" } },
+  },
+  account: {
+    label: "e-skylab",
+    href: "https://e.yildizskylab.com",
+    credit: {
+      product: "e-skylab",
+      href: "https://e.yildizskylab.com",
+      developer: { name: "Yusuf Açmacı", href: "https://www.linkedin.com/in/yusuf-acmaci/" },
+    },
+  },
+  mail: { label: "SKY LAB Mail", href: "https://mail.yildizskylab.com" },
+};
+
+/**
+ * The footer's sentence for a mail that does not say its own: every Visual
+ * mail and every JSX template written before `reason` existed. It claims
+ * nothing about the reader, because an operator's list may reach people who
+ * are neither members nor participants (a sponsor, an applicant).
+ */
+const NEUTRAL_REASON = "Bu e-postayı SKY LAB'den aldın.";
+
+/** The footer's sentence a mail gets when it does not say its own; the same for every brand. */
+export const defaultReason = () => NEUTRAL_REASON;
+
+/** A presentation table: the only layout every client, Outlook included, agrees on. */
+function Table({ children, style, ...props }: React.TableHTMLAttributes<HTMLTableElement>) {
+  return (
+    <table role="presentation" width="100%" cellPadding="0" cellSpacing="0" border={0} style={{ width: "100%", ...style }} {...props}>
+      <tbody>{children}</tbody>
+    </table>
+  );
+}
+
+/** Attributes React renders but its types do not know on these elements. */
+const legacy = (attributes: Record<string, string>) => attributes as React.HTMLAttributes<HTMLElement>;
+
+function BrandMark({ brand }: { brand: Brand }) {
+  const { label, href } = brands[brand];
+  // The footer names the product again with its link, so the plain-text part
+  // skips this and starts with what the mail says. The logo is not a link: a
+  // link with no text renders there as a bare URL glued to what follows.
+  return (
+    <table role="presentation" cellPadding="0" cellSpacing="0" border={0} data-skip-in-text="true">
+      <tbody>
+        <tr>
+          <td style={{ paddingRight: "8px", lineHeight: 0 }}>
+            <Img className="logo-light" src={LOGO_INK} width="20" height="19" alt="SKY LAB" style={{ display: "inline-block", border: 0 }} />
+            <Img
+              className="logo-dark"
+              src={LOGO_LILAC}
+              width="20"
+              height="19"
+              alt=""
+              style={{ display: "none", maxHeight: 0, overflow: "hidden", border: 0, msoHide: "all" } as React.CSSProperties}
+            />
+          </td>
+          <td>
+            <a
+              href={href}
+              className="t-primary"
+              style={{ fontSize: "13px", lineHeight: "19px", fontWeight: 600, color: ink.primary, textDecoration: "none", fontFamily: fontStack }}
+            >
+              {label}
+            </a>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  );
+}
+
+function Footer({ brand, reason }: { brand: Brand; reason: React.ReactNode }) {
+  const { credit } = brands[brand];
+  // Muted, not Forms' faint: the reason and the credit are text to read, and
+  // faint is 2.5:1 on white (WCAG AA asks 4.5:1); muted is 4.7:1, 5.7:1 dark.
+  const small = { margin: 0, fontSize: "12px", lineHeight: "18px", color: ink.muted, fontFamily: fontStack };
+  const quiet = { color: ink.muted, textDecoration: "none" };
+  return (
+    <div style={{ marginTop: "48px" }}>
+      <p className="t-muted" style={small}>
+        {reason}
+      </p>
+      <p className="t-muted" style={{ ...small, margin: "8px 0 0" }}>
+        <a href={REPORT} className="t-muted" style={quiet}>
+          Sorun bildir
+        </a>
+        {"  ·  "}
+        <a href={KVKK} className="t-muted" style={quiet}>
+          KVKK metni
+        </a>
+      </p>
+      <div style={{ marginTop: "24px" }}>
+        {credit ? <CreditLine credit={credit} /> : null}
+        <CreditLine credit={SKYMAIL} />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * One credit line, its two cells side by side; on a narrow screen they stack
+ * (.foot-cell), and each phrase keeps its words together.
+ */
+function CreditLine({ credit: { product, href, developer } }: { credit: Credit }) {
+  const cell: React.CSSProperties = { fontSize: "11px", lineHeight: "16px", color: ink.muted, fontFamily: fontStack, verticalAlign: "top", paddingTop: "4px" };
+  const link = { color: ink.muted, textDecoration: "none" };
+  return (
+    <Table>
+      <tr>
+        <td className="t-muted foot-cell" style={cell}>
+          <span style={{ whiteSpace: "nowrap" }}>
+            <a href={href} className="t-muted" style={{ ...link, fontWeight: 600 }}>
+              {product}
+            </a>
+            {" by WEBLAB "}
+          </span>
+        </td>
+        <td align="right" className="t-muted foot-cell foot-credit" style={{ ...cell, paddingLeft: "12px", textAlign: "right" }}>
+          <span style={{ whiteSpace: "nowrap" }}>
+            {/* One string, so React writes no <!-- --> between its parts. */}
+            {developer.href ? (
+              <a href={developer.href} className="t-muted" style={link}>
+                {`Developed by ${developer.name}`}
+              </a>
+            ) : (
+              `Developed by ${developer.name}`
+            )}
+          </span>
+        </td>
+      </tr>
+    </Table>
+  );
+}
 
 export function Shell({
   preview,
   brand = "skylab",
+  reason,
   children,
 }: {
   preview: string;
   brand?: Brand;
+  /** Why the reader got this mail, in one sentence; the footer opens with it. */
+  reason?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
-    <Html lang="tr">
+    <Html lang="tr" dir="ltr">
       <Head>
         <meta name="color-scheme" content="light dark" />
         <meta name="supported-color-schemes" content="light dark" />
-        <style>{darkModeCss}</style>
+        <meta name="x-apple-disable-message-reformatting" />
+        <style>{css}</style>
       </Head>
       <Preview>{preview}</Preview>
-      <Body
-        className="email-bg"
-        style={{ margin: 0, padding: 0, fontFamily: fontStack }}
-      >
-        <table
-          role="presentation"
-          width="100%"
-          cellPadding="0"
-          cellSpacing="0"
-          border={0}
-          className="email-bg"
-          style={{ width: "100%", backgroundColor: colors.pageBg }}
-        >
-          <tbody>
-            <tr>
-              {/* bgcolor, not a CSS background: Gmail strips background-color
-                  from <body> and <div>, and the HTML attribute is what survives.
-                  React renders it fine but its types do not know it on <td>. */}
-              <td
-                align="center"
-                className="email-bg"
-                {...({ bgcolor: colors.pageBg } as React.TdHTMLAttributes<HTMLTableCellElement>)}
-                style={{ padding: "48px 0" }}
-              >
-                <Container style={{ margin: "0 auto", maxWidth: "600px", padding: "0 24px" }}>
-                  <Section style={{ marginTop: "8px", marginBottom: "32px", textAlign: "center" }}>
-                    <Img src={LOGO} width="56" height="56" alt="SKY LAB" style={{ margin: "0 auto" }} />
-                  </Section>
-
-                  <Section
-                    className="card"
-                    style={{
-                      borderRadius: "24px",
-                      border: `1px solid ${colors.cardBorder}`,
-                      backgroundColor: colors.cardBg,
-                      padding: "40px 32px",
-                    }}
-                  >
-                    {children}
-                  </Section>
-
-                  <Footer brand={brand} />
-                </Container>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      <Body className="email-bg" style={{ margin: 0, padding: 0, fontFamily: fontStack }}>
+        <Table className="email-bg" {...legacy({ bgcolor: ink.page })} style={{ backgroundColor: ink.page }}>
+          <tr>
+            {/* bgcolor, not only a CSS background: Gmail strips background-color
+                from <body> and <div>, and the HTML attribute is what survives. */}
+            <td align="center" className="email-bg" {...legacy({ bgcolor: ink.page })} style={{ backgroundColor: ink.page }}>
+              <div dangerouslySetInnerHTML={{ __html: OUTLOOK_COLUMN_OPEN }} />
+              <Table align="center" style={{ maxWidth: "520px", margin: "0 auto" }}>
+                <tr>
+                  <td className="shell" style={{ padding: "40px 24px 32px", fontFamily: fontStack, textAlign: "left" }}>
+                    <BrandMark brand={brand} />
+                    <div style={{ paddingTop: "32px" }}>{children}</div>
+                    <Footer brand={brand} reason={reason ?? defaultReason()} />
+                  </td>
+                </tr>
+              </Table>
+              <div dangerouslySetInnerHTML={{ __html: OUTLOOK_COLUMN_CLOSE }} />
+            </td>
+          </tr>
+        </Table>
       </Body>
     </Html>
   );
 }
 
-/** The mail's heading; `spaced` gives one further down the mail room above it. */
-export function Heading({ children, spaced }: { children: React.ReactNode; spaced?: boolean }) {
-  // A <Text> rather than a <Heading>: react-email upper-cases headings in the
-  // plain-text part, which would mangle a Go template action inside one.
+/**
+ * The line above the title: what the mail is about, with a dot in the colour
+ * of how it went. The dot is decoration, so the plain text leaves it out.
+ */
+export function Context({ tone = "brand", children }: { tone?: Tone; children: React.ReactNode }) {
   return (
-    <Text
-      className="t-primary"
-      style={{
-        margin: 0,
-        textAlign: "left",
-        fontSize: "24px",
-        fontWeight: 700,
-        letterSpacing: "-0.02em",
-        lineHeight: "1.25",
-        color: colors.textPrimary,
-        fontFamily: fontStack,
-        ...(spaced ? { marginTop: "28px" } : {}),
-      }}
-    >
+    <p className="t-muted" style={{ margin: 0, fontSize: "13px", lineHeight: "20px", color: ink.muted, fontFamily: fontStack }}>
+      <span
+        className={`tone-${tone}`}
+        aria-hidden="true"
+        data-skip-in-text="true"
+        style={{ color: tones[tone], fontSize: "10px", lineHeight: "20px", paddingRight: "6px" }}
+      >
+        ●
+      </span>
       {children}
-    </Text>
+    </p>
+  );
+}
+
+/*
+  A <p> with the heading role rather than an <h1>: react-email's plain text
+  upper-cases a heading, which reads as shouting and gets Turkish wrong
+  ("i" → "I"). Screen readers still announce it as the mail's heading.
+*/
+const titleStyle: React.CSSProperties = {
+  fontSize: "22px",
+  lineHeight: "30px",
+  fontWeight: 600,
+  letterSpacing: "-0.01em",
+  color: ink.primary,
+  fontFamily: fontStack,
+};
+
+/** The mail's title, under its Context. */
+export function Title({ children }: { children: React.ReactNode }) {
+  return (
+    <p role="heading" aria-level={1} className="t-primary" style={{ margin: "6px 0 0", ...titleStyle }}>
+      {children}
+    </p>
+  );
+}
+
+/** A title with no Context above it; `spaced` gives one further down the mail room above it. */
+export function Heading({ children, spaced }: { children: React.ReactNode; spaced?: boolean }) {
+  return (
+    <p role="heading" aria-level={1} className="t-primary" style={{ margin: spaced ? "28px 0 0" : 0, ...titleStyle }}>
+      {children}
+    </p>
   );
 }
 
 export function Paragraph({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
   return (
-    <Text
-      className="t-body"
-      style={{
-        marginTop: "14px",
-        marginBottom: 0,
-        textAlign: "left",
-        fontSize: "15px",
-        lineHeight: "1.75",
-        color: colors.textBody,
-        fontFamily: fontStack,
-        ...style,
-      }}
-    >
+    <p className="t-body" style={{ margin: "12px 0 0", fontSize: "15px", lineHeight: "24px", color: ink.body, fontFamily: fontStack, ...style }}>
       {children}
-    </Text>
+    </p>
+  );
+}
+
+/** A quieter sentence: an expiry, what to do if this was not you. Muted, not faint, so it stays readable. */
+export function Small({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+  return (
+    <p className="t-muted" style={{ margin: "16px 0 0", fontSize: "13px", lineHeight: "20px", color: ink.muted, fontFamily: fontStack, ...style }}>
+      {children}
+    </p>
   );
 }
 
 export function Strong({ children }: { children: React.ReactNode }) {
   return (
-    <strong className="t-primary" style={{ color: colors.textPrimary }}>
+    <strong className="t-primary" style={{ color: ink.primary, fontWeight: 500 }}>
       {children}
     </strong>
   );
@@ -314,10 +489,19 @@ export function Em({ children }: { children: React.ReactNode }) {
   return <em>{children}</em>;
 }
 
+/** A word in a status colour inside running text. */
+export function Toned({ tone, children }: { tone: Tone; children: React.ReactNode }) {
+  return (
+    <span className={`tone-${tone}`} style={{ color: tones[tone] }}>
+      {children}
+    </span>
+  );
+}
+
 /** A link inside running text, in the brand colour both themes read. */
 export function TextLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
-    <Link href={href} className="t-brand" style={{ color: colors.skylab800, textDecoration: "underline" }}>
+    <Link href={href} className="t-link" style={{ color: ink.link, textDecoration: "underline" }}>
       {children}
     </Link>
   );
@@ -325,13 +509,13 @@ export function TextLink({ href, children }: { href: string; children: React.Rea
 
 /**
  * An image in the body. It has no background of its own: a transparent PNG
- * sits on the card in either theme, while one with a white background stays a
+ * sits on the page in either theme, while one with a white background stays a
  * white block in the dark theme. PNG or JPG only — Gmail and Outlook do not
- * show SVG (see LOGO).
+ * show SVG.
  */
 export function Figure({ src, alt, width }: { src: string; alt: string; width?: number }) {
   return (
-    <Section style={{ marginTop: "24px" }}>
+    <div style={{ marginTop: "24px" }}>
       <Img
         src={src}
         alt={alt}
@@ -340,59 +524,45 @@ export function Figure({ src, alt, width }: { src: string; alt: string; width?: 
           display: "block",
           ...(width === undefined ? { width: "100%" } : { maxWidth: "100%" }),
           height: "auto",
-          borderRadius: "12px",
+          borderRadius: "8px",
         }}
       />
-    </Section>
+    </div>
   );
 }
 
-/** A rule between two parts of the body. */
+/** A hairline between two parts of the body; the plain text draws it as a rule. */
 export function Divider() {
-  return (
-    <Hr
-      className="divider"
-      style={{ margin: "28px 0 0", border: "none", borderTop: `1px solid ${colors.divider}` }}
-    />
-  );
+  return <Hr className="hair" style={{ margin: "28px 0 0", border: "none", borderTop: `1px solid ${ink.hair}` }} />;
 }
 
+/** A small caption over a value that stands on its own (a code, a number). */
 export function Label({ children }: { children: React.ReactNode }) {
   return (
-    <Text
-      className="t-muted"
-      style={{
-        margin: 0,
-        fontSize: "11px",
-        fontWeight: 700,
-        textTransform: "uppercase",
-        letterSpacing: "0.14em",
-        color: colors.textMuted,
-        fontFamily: fontStack,
-      }}
-    >
+    <p className="t-muted" style={{ margin: 0, fontSize: "12px", lineHeight: "18px", color: ink.muted, fontFamily: fontStack }}>
       {children}
-    </Text>
+    </p>
   );
 }
 
+/** A short tag; the layout's own way is a Context line above the title. */
 export function Chip({ children, tone = "brand" }: { children: React.ReactNode; tone?: "brand" | "alert" }) {
   const alert = tone === "alert";
   return (
-    <table role="presentation" cellPadding="0" cellSpacing="0" style={{ marginTop: "16px" }}>
+    <table role="presentation" cellPadding="0" cellSpacing="0" border={0} style={{ marginTop: "12px" }}>
       <tbody>
         <tr>
           <td
-            className={alert ? "alert-chip" : "chip"}
+            className={`chip ${alert ? "tone-bad" : "t-muted"}`}
             style={{
-              padding: "5px 13px",
+              padding: "3px 10px",
               borderRadius: "9999px",
-              backgroundColor: alert ? colors.alertBg : "#ece3ef",
-              border: `1px solid ${alert ? colors.alertBorder : colors.ctaBorder}`,
-              color: alert ? colors.alertText : colors.skylab900,
+              backgroundColor: ink.surface,
+              border: `1px solid ${ink.border}`,
+              color: alert ? tones.bad : ink.muted,
               fontSize: "12px",
-              fontWeight: 600,
-              letterSpacing: "0.02em",
+              lineHeight: "18px",
+              fontWeight: 500,
               fontFamily: fontStack,
               whiteSpace: "nowrap",
             }}
@@ -405,212 +575,203 @@ export function Chip({ children, tone = "brand" }: { children: React.ReactNode; 
   );
 }
 
+/**
+ * The one action of a mail: a full-width row with an arrow, as Forms draws it.
+ * One link, so a screen reader hears it once and the plain text prints its
+ * address once; the arrow is decoration.
+ */
 export function Cta({ href, children }: { href: string; children: React.ReactNode }) {
-  // A table-wrapped anchor rather than <Button>: Outlook ignores padding on an
-  // inline-block, and the anchor keeps the label readable when images are off.
   return (
-    <table role="presentation" cellPadding="0" cellSpacing="0" style={{ margin: "28px 0 0" }}>
-      <tbody>
-        <tr>
-          <td
-            className="cta"
+    <Table style={{ marginTop: "28px", borderCollapse: "separate" }}>
+      <tr>
+        <td
+          className="card"
+          style={{ border: `1px solid ${ink.border}`, borderRadius: "8px", backgroundColor: ink.surface, padding: 0, msoPaddingAlt: "13px 16px" } as React.CSSProperties}
+        >
+          <a
+            href={href}
+            className="t-primary"
             style={{
-              borderRadius: "12px",
-              backgroundColor: colors.ctaBg,
-              border: `1.5px solid ${colors.ctaBorder}`,
+              display: "block",
+              padding: "13px 16px",
+              fontSize: "14px",
+              lineHeight: "20px",
+              fontWeight: 500,
+              color: ink.primary,
+              textDecoration: "none",
+              fontFamily: fontStack,
             }}
           >
-            <Link
-              href={href}
-              className="cta"
-              style={{
-                display: "inline-block",
-                padding: "12px 32px",
-                fontSize: "14px",
-                fontWeight: 600,
-                color: colors.skylab900,
-                textDecoration: "none",
-                fontFamily: fontStack,
-              }}
+            {/* Floated first so it sits at the right end; Outlook for Windows
+                cannot float and would print it before the label, so it hides it. */}
+            <span
+              className="t-link"
+              aria-hidden="true"
+              data-skip-in-text="true"
+              style={{ float: "right", paddingLeft: "12px", color: ink.link, fontWeight: 400, msoHide: "all" } as React.CSSProperties}
             >
-              {children}
-            </Link>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+              →
+            </span>
+            {children}
+          </a>
+        </td>
+      </tr>
+    </Table>
   );
 }
 
-/** A fallback for the CTA: some clients strip buttons, and some people copy links. */
+/** A fallback for the action: some clients strip it, and some people copy links. */
 export function LinkFallback({ href }: { href: string }) {
   return (
-    <Text
-      className="t-faint"
-      style={{
-        marginTop: "18px",
-        marginBottom: 0,
-        fontSize: "12px",
-        lineHeight: "1.7",
-        color: colors.textFaint,
-        wordBreak: "break-all",
-        fontFamily: fontStack,
-      }}
-    >
+    <p className="t-muted" style={{ margin: "16px 0 0", fontSize: "12px", lineHeight: "18px", color: ink.muted, wordBreak: "break-all", fontFamily: fontStack }}>
       Buton çalışmazsa bu adresi tarayıcına yapıştır:
       <br />
       {href}
-    </Text>
+    </p>
   );
 }
 
+/** Facts in rows between hairlines: RowItem for each, RowsEnd to close. */
+export function Rows({ children }: { children: React.ReactNode }) {
+  return <Table style={{ marginTop: "24px", borderCollapse: "collapse" }}>{children}</Table>;
+}
+
+const cell: React.CSSProperties = {
+  borderTop: `1px solid ${ink.hair}`,
+  padding: "10px 0",
+  verticalAlign: "top",
+};
+
+const cellText: React.CSSProperties = { margin: 0, fontSize: "13px", lineHeight: "20px", fontFamily: fontStack };
+
+// Each side is a <p>: the plain-text part joins table cells with nothing
+// between them, and a block keeps the label and its value on lines of their own.
+export function RowItem({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <tr>
+      <td className="hair" style={cell}>
+        <p className="t-muted" style={{ ...cellText, color: ink.muted }}>
+          {label}
+        </p>
+      </td>
+      <td className="hair" align="right" style={{ ...cell, padding: "10px 0 10px 16px", textAlign: "right" }}>
+        {/* break-word lets a long UUID or address wrap at any character, and
+            unlike overflow-wrap alone it also narrows the cell, so the table
+            cannot grow past a 320 px screen. */}
+        <p
+          className="t-primary"
+          style={{ ...cellText, color: ink.primary, fontWeight: 500, textAlign: "right", wordBreak: "break-word", overflowWrap: "break-word" }}
+        >
+          {children}
+        </p>
+      </td>
+    </tr>
+  );
+}
+
+export function RowsEnd() {
+  return (
+    <tr>
+      <td colSpan={2} className="hair" style={{ borderTop: `1px solid ${ink.hair}`, fontSize: 0, lineHeight: 0, height: "1px" }}>
+        &nbsp;
+      </td>
+    </tr>
+  );
+}
+
+/** One row on its own, for a template written against the earlier shell; Rows + RowItem is the layout's way. */
 export function DetailRow({ label, value, last }: { label: React.ReactNode; value: React.ReactNode; last?: boolean }) {
   return (
-    <Row
-      className="divider"
-      style={{
-        borderTop: `1px solid ${colors.divider}`,
-        ...(last ? { borderBottom: `1px solid ${colors.divider}` } : {}),
-      }}
-    >
-      <Column style={{ paddingTop: "12px", paddingBottom: "12px", verticalAlign: "top" }}>
-        <Text
-          className="t-muted"
-          style={{
-            margin: 0,
-            fontSize: "11px",
-            textTransform: "uppercase",
-            letterSpacing: "0.12em",
-            color: colors.textMuted,
-            fontFamily: fontStack,
-          }}
-        >
-          {label}
-        </Text>
-      </Column>
-      <Column style={{ paddingTop: "12px", paddingBottom: "12px", textAlign: "right", verticalAlign: "top" }}>
-        <Text
-          className="t-primary"
-          style={{
-            margin: 0,
-            textAlign: "right",
-            fontSize: "14px",
-            fontWeight: 500,
-            color: colors.textPrimary,
-            fontFamily: fontStack,
-          }}
-        >
-          {value}
-        </Text>
-      </Column>
-    </Row>
+    <Table style={{ borderCollapse: "collapse" }}>
+      <RowItem label={label}>{value}</RowItem>
+      {last ? <RowsEnd /> : null}
+    </Table>
   );
 }
 
-export function Note({ children, tone = "brand" }: { children: React.ReactNode; tone?: "brand" | "alert" }) {
+/**
+ * A quoted note: someone's words, or the one warning a mail carries. `label`
+ * names it; `empty` greys the text when there was nothing to quote.
+ */
+export function Note({
+  children,
+  tone = "brand",
+  label,
+  empty = false,
+}: {
+  children: React.ReactNode;
+  tone?: "brand" | "alert";
+  label?: React.ReactNode;
+  empty?: boolean;
+}) {
   const alert = tone === "alert";
   return (
-    <Section
-      className={alert ? "note-box alert-note" : "note-box"}
-      style={{
-        marginTop: "12px",
-        borderRadius: "12px",
-        padding: "16px 20px",
-        backgroundColor: colors.noteBg,
-        borderLeft: `3px solid ${alert ? colors.alert : colors.skylab800}`,
-      }}
-    >
-      <Text
-        className="t-primary"
-        style={{
-          margin: 0,
-          textAlign: "left",
-          fontSize: "15px",
-          lineHeight: "1.6",
-          color: colors.textPrimary,
-          fontFamily: fontStack,
-        }}
-      >
-        {children}
-      </Text>
-    </Section>
+    <Table style={{ marginTop: "24px" }}>
+      <tr>
+        <td
+          className={alert ? "note-alert" : "note"}
+          style={{ borderLeft: `2px solid ${alert ? tones.bad : ink.border}`, paddingLeft: "12px", fontFamily: fontStack }}
+        >
+          {label ? (
+            <p className="t-muted" style={{ margin: "0 0 2px", fontSize: "12px", lineHeight: "18px", color: ink.muted }}>
+              {label}
+            </p>
+          ) : null}
+          <p
+            className={empty ? "t-faint" : "t-primary"}
+            style={{ margin: 0, fontSize: "14px", lineHeight: "22px", color: empty ? ink.faint : ink.primary }}
+          >
+            {children}
+          </p>
+        </td>
+      </tr>
+    </Table>
   );
 }
 
-function Footer({ brand }: { brand: Brand }) {
-  const { label, href } = brands[brand];
+/** A value to read or type exactly: a code, an error. `size` is the type size in pixels. */
+export function CodeBlock({ children, size = 13, center = false }: { children: React.ReactNode; size?: number; center?: boolean }) {
+  const big = size >= 20;
   return (
-    <Section style={{ marginTop: "32px", textAlign: "center" }}>
-      <table role="presentation" align="center" cellPadding="0" cellSpacing="0" style={{ margin: "0 auto" }}>
-        <tbody>
-          <tr>
-            {/* Not a link: a link with no text renders in the plain-text part as
-                a bare URL glued to whatever follows it. The brand name beside it
-                goes to the same place. */}
-            <td valign="middle" style={{ paddingRight: "7px", lineHeight: "0" }}>
-              <Img src={LOGO} width="24" height="24" alt="SKY LAB" style={{ display: "inline-block", verticalAlign: "middle" }} />
-            </td>
-            <td valign="middle" style={{ paddingRight: "8px" }}>
-              <Link href={href} className="brand-link" style={{ textDecoration: "none", color: colors.skylab800 }}>
-                <span
-                  className="t-brand"
-                  style={{
-                    fontSize: "14px",
-                    fontWeight: 600,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.04em",
-                    color: colors.skylab800,
-                    fontFamily: fontStack,
-                  }}
-                >
-                  {label}
-                </span>
-              </Link>
-            </td>
-            <td valign="middle">
-              <span className="t-faint" style={{ fontSize: "13px", color: colors.textFaint, fontFamily: fontStack }}>
-                {" by WEBLAB"}
-              </span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <Table style={{ marginTop: "8px", borderCollapse: "separate" }}>
+      <tr>
+        <td
+          className="code-block t-primary"
+          align={center ? "center" : "left"}
+          style={{
+            border: `1px solid ${ink.border}`,
+            borderRadius: "8px",
+            backgroundColor: ink.surface,
+            padding: big ? "16px 20px" : "10px 14px",
+            fontSize: `${size}px`,
+            lineHeight: big ? "1.2" : "1.6",
+            fontWeight: big ? 600 : 400,
+            letterSpacing: big ? "6px" : "normal",
+            color: ink.primary,
+            fontFamily: MONO,
+            textAlign: center ? "center" : "left",
+            wordBreak: "break-all",
+          }}
+        >
+          {children}
+        </td>
+      </tr>
+    </Table>
+  );
+}
 
-      <table role="presentation" align="center" cellPadding="0" cellSpacing="0" style={{ margin: "14px auto 0" }}>
-        <tbody>
-          <tr>
-            <td valign="middle" style={{ padding: "0 10px" }}>
-              <Link href="https://skyl.app/kvkk-metni" className="t-muted legal-link" style={{ fontSize: "11px", color: colors.textMuted, textDecoration: "none", fontFamily: fontStack }}>
-                Kullanım Koşulları
-              </Link>
-            </td>
-            <td valign="middle">
-              <span className="t-faint" style={{ fontSize: "11px", color: colors.textFaint, fontFamily: fontStack }}>
-                {" · "}
-              </span>
-            </td>
-            <td valign="middle" style={{ padding: "0 10px" }}>
-              <Link href="https://skyl.app/kvkk-metni" className="t-muted legal-link" style={{ fontSize: "11px", color: colors.textMuted, textDecoration: "none", fontFamily: fontStack }}>
-                Gizlilik Politikası
-              </Link>
-            </td>
-            <td valign="middle">
-              <span className="t-faint" style={{ fontSize: "11px", color: colors.textFaint, fontFamily: fontStack }}>
-                {" · "}
-              </span>
-            </td>
-            <td valign="middle" style={{ padding: "0 10px" }}>
-              <Link
-                href="mailto:info@yildizskylab.com?subject=SKY%20LAB%20-%20Sorun%20Bildirimi"
-                className="t-muted legal-link"
-                style={{ fontSize: "11px", color: colors.textMuted, textDecoration: "none", fontFamily: fontStack }}
-              >
-                Sorun Bildir
-              </Link>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </Section>
+/** The heading of a list, with its count on the right. */
+export function ListHeader({ title, count }: { title: React.ReactNode; count?: React.ReactNode }) {
+  return (
+    <Table style={{ marginTop: "32px" }}>
+      <tr>
+        <td className="t-primary" style={{ paddingBottom: "8px", fontSize: "13px", lineHeight: "20px", fontWeight: 500, color: ink.primary, fontFamily: fontStack }}>
+          {title}
+        </td>
+        <td className="t-muted" align="right" style={{ paddingBottom: "8px", fontSize: "12px", lineHeight: "20px", color: ink.muted, textAlign: "right", fontFamily: fontStack }}>
+          {count}
+        </td>
+      </tr>
+    </Table>
   );
 }

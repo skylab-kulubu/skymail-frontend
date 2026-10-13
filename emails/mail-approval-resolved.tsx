@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Chip, Cta, DetailRow, Heading, Note, Paragraph, Shell, Strong } from "./theme";
+import { Context, Cta, Note, Paragraph, RowItem, Rows, RowsEnd, Shell, Strong, Title } from "./theme";
 import { elseBranch, elseIfEq, end, ifEq, ifSet, v } from "./go";
 import type { TemplateMeta } from "./types";
 
@@ -19,7 +19,8 @@ export const meta: TemplateMeta = {
     elseIfEq("Decision", "declined") + "Gönderimdeki düzenleme kabul edilmedi" +
     elseBranch + "Gönderim isteğin sonuçlandı" + end,
   system: false,
-  brand: "skylab",
+  contentSensitive: false,
+  brand: "mail",
   trigger:
     "SkyMail, bir onay isteği sonuçlandığında. approved/rejected/returned/expired talebi açana, declined onaycılara gider (ADR-0031, ticket 19).",
   // AudienceKind is the request's audience.kind: mailing_list, single or
@@ -77,8 +78,25 @@ export default function MailApprovalResolved() {
   const declined = elseIfEq("Decision", "declined");
 
   return (
-    <Shell preview={`SkyMail onay isteği sonuçlandı: ${v("TemplateName")}`} brand="skylab">
-      <Heading>
+    <Shell
+      preview={`SkyMail onay isteği sonuçlandı: ${v("TemplateName")}`}
+      brand="mail"
+      reason="Bu e-postayı, SkyMail'de sunduğun ya da onaylayabildiğin bir gönderim sonuçlandığı için alıyorsun."
+    >
+      {approved}
+      <Context tone="ok">Onaylandı</Context>
+      {rejected}
+      <Context tone="bad">Reddedildi</Context>
+      {returned}
+      <Context tone="wait">Sana geri döndü</Context>
+      {expired}
+      <Context tone="bad">Süresi doldu</Context>
+      {declined}
+      <Context tone="bad">Kabul edilmedi</Context>
+      {elseBranch}
+      <Context>{v("Decision")}</Context>
+      {end}
+      <Title>
         {approved}Gönderimin Onaylandı
         {rejected}Gönderimin Reddedildi
         {returned}Gönderimin Sana Geri Döndü
@@ -86,23 +104,9 @@ export default function MailApprovalResolved() {
         {declined}Düzenleme Kabul Edilmedi
         {elseBranch}Gönderim İsteğin Sonuçlandı
         {end}
-      </Heading>
+      </Title>
 
-      {approved}
-      <Chip>Onaylandı</Chip>
-      {rejected}
-      <Chip tone="alert">Reddedildi</Chip>
-      {returned}
-      <Chip>Sana geri döndü</Chip>
-      {expired}
-      <Chip tone="alert">Süresi doldu</Chip>
-      {declined}
-      <Chip tone="alert">Kabul edilmedi</Chip>
-      {elseBranch}
-      <Chip>{v("Decision")}</Chip>
-      {end}
-
-      <Paragraph style={{ marginTop: "18px" }}>
+      <Paragraph>
         {approved}
         <Strong>{v("TemplateName")}</Strong> gönderimin {v("DecidedBy")} tarafından onaylandı ve
         {ifEq("AudienceKind", "mailing_list")} <Strong>{v("AudienceName")}</Strong> listesine
@@ -129,30 +133,30 @@ export default function MailApprovalResolved() {
       </Paragraph>
 
       {ifSet("DecisionNote")}
-      <div style={{ marginTop: "24px" }}>
-        <Note>{v("DecisionNote")}</Note>
-      </div>
+      <Note label="Karar notu">{v("DecisionNote")}</Note>
       {end}
 
-      <div style={{ marginTop: "24px" }}>
-        <DetailRow label="Şablon" value={v("TemplateName")} />
-        <DetailRow
+      <Rows>
+        <RowItem label="Şablon">{v("TemplateName")}</RowItem>
+        <RowItem
           label={
             <>
               {ifEq("AudienceKind", "people")}Alıcılar{elseIfEq("AudienceKind", "single")}Alıcı{elseBranch}Alıcı listesi
               {end}
             </>
           }
-          value={v("AudienceName")}
-        />
+        >
+          {v("AudienceName")}
+        </RowItem>
         {ifSet("RecipientCount")}
-        <DetailRow label="Alıcı sayısı" value={v("RecipientCount")} />
+        <RowItem label="Alıcı sayısı">{v("RecipientCount")}</RowItem>
         {end}
         {ifSet("DeadlineAt")}
-        <DetailRow label="Son tarih" value={v("DeadlineAt")} />
+        <RowItem label="Son tarih">{v("DeadlineAt")}</RowItem>
         {end}
-        <DetailRow label="Karar veren" value={v("DecidedBy")} last />
-      </div>
+        <RowItem label="Karar veren">{v("DecidedBy")}</RowItem>
+        <RowsEnd />
+      </Rows>
 
       {/* Only the outcome that needs the reader to act carries a button. */}
       {ifEq("Decision", "returned")}

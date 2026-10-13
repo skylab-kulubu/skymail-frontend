@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Cta, DetailRow, Heading, Note, Paragraph, Shell, Strong } from "./theme";
+import { Context, Cta, Note, Paragraph, RowItem, Rows, RowsEnd, Shell, Strong, Title } from "./theme";
 import { end, ifSet, v } from "./go";
 import type { TemplateMeta } from "./types";
 
@@ -8,6 +8,7 @@ export const meta: TemplateMeta = {
   name: "Etkinlik · Güncellendi",
   subject: `${v("EventName")} etkinliğinde değişiklik var`,
   system: false,
+  contentSensitive: false,
   brand: "skylab",
   trigger:
     "Etkinliğin saati veya yeri değiştiğinde, bileti olan herkese. NOT: gönderim kodu henüz yazılmadı.",
@@ -23,27 +24,31 @@ export const meta: TemplateMeta = {
 
 export default function EventUpdated() {
   return (
-    <Shell preview={`${v("EventName")} etkinliğinde bir değişiklik var.`} brand="skylab">
-      <Heading>Etkinlikte Değişiklik Var</Heading>
+    <Shell
+      preview={`${v("EventName")} etkinliğinde bir değişiklik var.`}
+      brand="skylab"
+      reason={<>Bu e-postayı {v("EventName")} etkinliğine kayıtlı olduğun için alıyorsun.</>}
+    >
+      <Context tone="wait">{v("EventName")}</Context>
+      <Title>Etkinlikte Değişiklik Var</Title>
 
       <Paragraph>
         <Strong>{v("EventName")}</Strong> etkinliğinde bir değişiklik oldu. Biletin geçerli; sadece aşağıdaki bilgiler güncellendi.
       </Paragraph>
 
       {ifSet("ChangeSummary")}
-      <div style={{ marginTop: "20px" }}>
-        <Note>{v("ChangeSummary")}</Note>
-      </div>
+      <Note label="Ne değişti">{v("ChangeSummary")}</Note>
       {end}
 
-      <div style={{ marginTop: "24px" }}>
+      <Rows>
         {ifSet("NewStartsAt")}
-        <DetailRow label="Yeni başlangıç" value={v("NewStartsAt")} />
+        <RowItem label="Yeni başlangıç">{v("NewStartsAt")}</RowItem>
         {end}
         {ifSet("NewVenue")}
-        <DetailRow label="Yeni yer" value={v("NewVenue")} last />
+        <RowItem label="Yeni yer">{v("NewVenue")}</RowItem>
+        <RowsEnd />
         {end}
-      </div>
+      </Rows>
 
       {ifSet("EventUrl")}
       <Cta href={v("EventUrl")}>Güncel Bilgileri Gör</Cta>

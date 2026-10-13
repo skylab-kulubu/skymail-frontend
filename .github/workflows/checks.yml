@@ -55,9 +55,11 @@ jobs:
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: yarn emails:check
 
-      - name: yarn api:check (a 204 archive is a success)
+      # Every unit test in src/**/*.test.ts. `yarn api:check` is the same
+      # command under its older name.
+      - name: yarn test (every unit test in src)
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: yarn api:check
+        run: yarn test
 
       - name: yarn templates:check (never save a body that did not render)
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}

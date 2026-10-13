@@ -7,6 +7,7 @@ export const meta: TemplateMeta = {
   name: "Keycloak · Parola Sıfırlama",
   subject: "SKY LAB parola sıfırlama isteği",
   system: true,
+  contentSensitive: true,
   brand: "account",
   trigger: "Keycloak, giriş ekranında \"parolamı unuttum\" akışında.",
   variables: ["link", "linkExpirationMinutes", "firstName", "username", "realmDisplayName", "subjectKey"],
@@ -30,6 +31,8 @@ export default function KeycloakResetPassword() {
       intro="SKY LAB hesabının parolasını sıfırlamak için bir istek aldık. Yeni parolanı belirlemek için aşağıdaki bağlantıyı kullan."
       ctaLabel="Yeni Parola Belirle"
       disclaimer="Bu isteği sen yapmadıysan parolan değişmedi; bu e-postayı yok sayman yeterli. Hesabına birinin eriştiğinden şüpheleniyorsan info@yildizskylab.com adresinden bize yaz."
+      context="Parola sıfırlama"
+      reason="Bu e-postayı, bu adrese bağlı SKY LAB hesabı için parola sıfırlama istendiği için alıyorsun."
     />
   );
 }

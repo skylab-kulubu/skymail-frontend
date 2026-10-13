@@ -52,6 +52,34 @@ export type Send = Readonly<{
   audience: SendAudience;
   status: SendStatus;
   recipient_counts: RecipientCounts;
+  /**
+   * Whether the viewer may open the send's content (skymail-backend, sent mail
+   * content): its recipients' mails as they were sent. Missing from a backend
+   * that cannot show content.
+   */
+  content_access?: ContentAccess;
+  /** When the content is emptied; null unless content_access is available. */
+  content_expires_at?: string | null;
+}>;
+
+/**
+ * Whether a send's content can be opened, and if not why. `sensitive` mail
+ * carries a code or a one-time link and is shown to no one; `restricted` is
+ * shown to others (its sender, those who send to lists for a send to many,
+ * SkyMail's administrators); `expired` is past the retention period, emptied.
+ */
+export type ContentAccess = "available" | "sensitive" | "restricted" | "expired";
+
+/** `GET /mail_tasks/:id/queue/:rowId/content`: one recipient's mail as it was sent. */
+export type SentContent = Readonly<{
+  id: string;
+  task_id: string;
+  /** `unavailable`: nothing kept for this recipient (Account erasure emptied it, or it never rendered). */
+  access: ContentAccess | "unavailable";
+  subject: string | null;
+  plain_text: string | null;
+  html: string | null;
+  expires_at: string | null;
 }>;
 
 /** `GET /mail_tasks/summary`. */
@@ -224,6 +252,47 @@ export function fetchRecipientPage(
   const query = view.status === "all" ? range : { status: view.status, ...range };
   return api.getPage<RecipientRow>(`/mail_tasks/${id}/queue`, { query, signal });
 }
+
+/** One recipient's mail as it was sent; the access says whether its parts are there. */
+export function fetchSentContent(api: ApiClient, sendId: string, rowId: string, signal?: AbortSignal): Promise<SentContent> {
+  if (!UUID.test(sendId)) return Promise.reject(new ApiError(404, "server.not_found"));
+  return api.get<SentContent>(`/mail_tasks/${sendId}/queue/${encodeURIComponent(rowId)}/content`, { signal });
+}
+
+/** What a send's page says about its content; null for a backend that does not say. */
+export function contentNote(send: Pick<Send, "content_access" | "content_expires_at">): { text: string } | null {
+  switch (send.content_access) {
+    case "available":
+      return {
+        text: send.content_expires_at
+          ? `Her alıcının postasını gönderildiği hâliyle açabilirsin. İçerik ${formatClubTime(send.content_expires_at)} tarihine kadar saklanır.`
+          : "Her alıcının postasını gönderildiği hâliyle açabilirsin.",
+      };
+    case "sensitive":
+      return {
+        text: "Bu postanın içeriği gizli: giriş kodu, doğrulama kodu ya da tek kullanımlık bağlantı taşıyabilir. Yalnız kime, ne zaman gittiği ve durumu görünür.",
+      };
+    case "restricted":
+      return {
+        text: "Bu gönderimin içeriğini göremezsin. İçeriği gönderen, toplu gönderimlerde gönderme yetkisi olanlar ve SkyMail yöneticileri görür.",
+      };
+    case "expired":
+      return {
+        text: "İçerik saklama süresi dolduğu için silindi. Alıcılar ve durumları duruyor.",
+      };
+    default:
+      return null;
+  }
+}
+
+/** What the content viewer says when a recipient's mail is not there to show. */
+export const CONTENT_MISSING_TEXT: Readonly<Record<SentContent["access"], string>> = {
+  available: "",
+  sensitive: "Bu postanın içeriği gizli.",
+  restricted: "Bu postanın içeriğini göremezsin.",
+  expired: "İçerik saklama süresi dolduğu için silindi.",
+  unavailable: "Bu alıcının postası saklanmıyor: hesabı silindiği için temizlendi ya da posta hiç oluşturulamadı.",
+};
 
 // ---------------------------------------------------------------------------
 // A paused sender (skymail-backend ticket 28)

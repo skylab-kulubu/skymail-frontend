@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Chip, Cta, DetailRow, Heading, Paragraph, Shell, Strong } from "./theme";
+import { Context, Cta, Paragraph, RowItem, Rows, RowsEnd, Shell, Strong, Title } from "./theme";
 import { elseBranch, elseIfEq, end, ifEq, ifSet, v } from "./go";
 import type { TemplateMeta } from "./types";
 
@@ -8,6 +8,7 @@ export const meta: TemplateMeta = {
   name: "Kulüp · Takım Üyeliği Değişti",
   subject: "SKY LAB takım üyeliğinde değişiklik",
   system: false,
+  contentSensitive: false,
   brand: "account",
   trigger:
     "core-backend, admin panelinde bir kişi bir takıma ya da takımın LIDERLER/KOORDINATORLER alt grubuna eklendiğinde veya oradan çıkarıldığında; değişikliği kuyruğa yazar ve SkyMail'e anahtarla gönderir (core-backend#215, docs/team-membership-mail.md).",
@@ -33,23 +34,26 @@ export default function ClubTeamMembership() {
   const coordinator = elseIfEq("Role", "coordinator");
 
   return (
-    <Shell preview="SKY LAB takım üyeliğinde bir değişiklik oldu." brand="account">
-      <Heading>
+    <Shell
+      preview="SKY LAB takım üyeliğinde bir değişiklik oldu."
+      brand="account"
+      reason="Bu e-postayı, SKY LAB'de bir takımdaki yerin değiştiği için alıyorsun."
+    >
+      {added}
+      <Context tone="ok">{v("TeamName")}</Context>
+      {elseBranch}
+      <Context tone="neutral">{v("TeamName")}</Context>
+      {end}
+      <Title>
         {added}
         {leader}Takım Liderliğine Eklendin{coordinator}Takım Koordinatörlüğüne Eklendin{elseBranch}Takıma Eklendin{end}
         {elseBranch}
         {leader}Takım Liderliğin Sona Erdi{coordinator}Takım Koordinatörlüğün Sona Erdi{elseBranch}Takım Üyeliğin Sona Erdi
         {end}
         {end}
-      </Heading>
+      </Title>
 
-      {added}
-      <Chip>{v("TeamName")}</Chip>
-      {elseBranch}
-      <Chip tone="alert">{v("TeamName")}</Chip>
-      {end}
-
-      <Paragraph style={{ marginTop: "18px" }}>
+      <Paragraph>
         {added}
         {leader}
         <Strong>{v("TeamName")}</Strong> takımına lider olarak eklendin. Takımın etkinliklerini ve içeriklerini
@@ -74,18 +78,17 @@ export default function ClubTeamMembership() {
         {end}
       </Paragraph>
 
-      <div style={{ marginTop: "24px" }}>
-        <DetailRow label="Takım" value={v("TeamName")} />
+      <Rows>
+        <RowItem label="Takım">{v("TeamName")}</RowItem>
+        <RowItem label="Geçerlilik">{v("EffectiveAt")}</RowItem>
         {ifSet("LeaderName")}
-        <DetailRow label="Geçerlilik" value={v("EffectiveAt")} />
-        <DetailRow label="İşlemi yapan" value={v("LeaderName")} last />
-        {elseBranch}
-        <DetailRow label="Geçerlilik" value={v("EffectiveAt")} last />
+        <RowItem label="İşlemi yapan">{v("LeaderName")}</RowItem>
         {end}
-      </div>
+        <RowsEnd />
+      </Rows>
 
       <Paragraph style={{ marginTop: "24px" }}>
-        Hesabındaki güncel yetkileri her zaman Hesap Merkezi'ndeki İzinler ekranından görebilirsin.
+        Hesabındaki güncel yetkileri her zaman Hesap Merkezi&apos;ndeki İzinler ekranından görebilirsin.
       </Paragraph>
 
       <Cta href="https://my.yildizskylab.com/izinler">İzinlerimi Gör</Cta>

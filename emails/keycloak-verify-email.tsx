@@ -7,6 +7,7 @@ export const meta: TemplateMeta = {
   name: "Keycloak · E-posta Doğrulama",
   subject: "E-posta adresini doğrula",
   system: true,
+  contentSensitive: true,
   brand: "account",
   trigger: "Keycloak, hesap açılışında veya e-posta doğrulanmamışken (sky-account SPI üzerinden SkyMail'e düşer).",
   variables: ["link", "linkExpirationMinutes", "firstName", "username", "realmDisplayName", "subjectKey"],
@@ -30,6 +31,8 @@ export default function KeycloakVerifyEmail() {
       intro="SKY LAB hesabını kullanmaya başlamak için e-posta adresinin sana ait olduğunu doğrulaman gerekiyor."
       ctaLabel="E-postamı Doğrula"
       disclaimer="Bu hesabı sen oluşturmadıysan bu e-postayı yok sayabilirsin; doğrulanmayan adresle hesap açılmaz."
+      context="E-posta doğrulama"
+      reason="Bu e-postayı, bu adres bir SKY LAB hesabına yazıldığı ve henüz doğrulanmadığı için alıyorsun."
     />
   );
 }

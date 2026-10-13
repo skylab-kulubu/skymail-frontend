@@ -41,6 +41,13 @@ const nextConfig: NextConfig = {
         headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
       },
       {
+        // The two logos sent mails show (emails/theme.tsx). Not named by their
+        // content, so cached for a day rather than for ever. Only those two:
+        // any other /mail/ path is a signed-in page a shared cache must not keep.
+        source: "/mail/:file(skylab-(?:ink|lilac)\\.png)",
+        headers: [{ key: "Cache-Control", value: "public, max-age=86400" }],
+      },
+      {
         // Monaco, under the version it was copied from (scripts/build-editor-assets.ts).
         source: "/monaco/:version(\\d+\\.\\d+\\.\\d+)/vs/:path*",
         headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],

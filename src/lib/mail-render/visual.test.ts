@@ -24,6 +24,7 @@ import {
 } from "../../../scripts/mail-checks";
 import { blockBalance, fillSampleValues, referencedVariables, renderSource, type Rendered } from ".";
 import { findActions } from "./go-template";
+import { defaultReason } from "../../../emails/theme";
 import {
   visualDocumentVariables,
   visualSource,
@@ -238,8 +239,9 @@ describe("a Visual document rendered", () => {
       ]),
     );
 
-    // The Shell's footer follows; it is the same in every mail.
-    const body = plainText.slice(0, plainText.indexOf("SKY LAB https://yildizskylab.com")).trim();
+    // The Shell's footer follows, opening with why the mail came; it is the
+    // same in every Visual mail.
+    const body = plainText.slice(0, plainText.indexOf(defaultReason())).trim();
     assert.equal(
       body,
       [

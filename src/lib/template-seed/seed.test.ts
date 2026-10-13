@@ -24,6 +24,7 @@ function template(key: string, text: string, overrides: Partial<TemplateMeta> = 
       name: `Ad ${key}`,
       subject: `Konu ${key}`,
       system: false,
+      contentSensitive: false,
       brand: "skylab",
       trigger: "test",
       variables: [],
@@ -104,6 +105,7 @@ describe("the Template seed", () => {
   it("sends each template's own source as its JSX source, with the render the module makes of it", async () => {
     const welcome = template("core.welcome", "Hoş geldin", {
       system: true,
+      contentSensitive: true,
       requiredVariables: [{ name: "link", reason: "Bağlantı." }],
     });
     const { fetch, calls } = scriptedFetch(seeded("core.welcome"));
@@ -120,8 +122,20 @@ describe("the Template seed", () => {
     assert.equal(body.plain_text_content, "Hoş geldin");
     assert.match(String(body.html_content), /<p[^>]*>\s*Hoş geldin\s*<\/p>/);
     assert.deepEqual(
-      { name: body.name, subject: body.subject, system: body.system, contract: body.contract_required_variables },
-      { name: "Ad core.welcome", subject: "Konu core.welcome", system: true, contract: [{ name: "link", reason: "Bağlantı." }] },
+      {
+        name: body.name,
+        subject: body.subject,
+        system: body.system,
+        content_sensitive: body.content_sensitive,
+        contract: body.contract_required_variables,
+      },
+      {
+        name: "Ad core.welcome",
+        subject: "Konu core.welcome",
+        system: true,
+        content_sensitive: true,
+        contract: [{ name: "link", reason: "Bağlantı." }],
+      },
     );
     assert.match(output, /✓ core\.welcome\s+id-core\.welcome/);
     assert.match(output, /1 şablon https:\/\/skymail\.example\.test üzerine yazıldı\./);
