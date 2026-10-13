@@ -512,7 +512,14 @@ describe("a send's content", () => {
     assert.match(note, /geri getirilemez/);
     assert.doesNotMatch(note, /gizli|saklama süresi/);
     assert.equal(CONTENT_MISSING_TEXT.not_kept, note);
-    assert.match(CONTENT_MISSING_TEXT.sensitive, /güvenle gizlenemedi/);
+    assert.match(note, /güvenle maskelenemedi/);
+  });
+
+  it("says a send not masked yet is being masked, and does not open it", () => {
+    const note = contentNote({ content_access: "pending" })?.text ?? "";
+    assert.match(note, /maskeleniyor/);
+    assert.equal(CONTENT_MISSING_TEXT.pending, note);
+    assert.equal(contentOpens("pending"), false);
   });
 
   it("cuts text where it shows a mask, so each can be marked", () => {

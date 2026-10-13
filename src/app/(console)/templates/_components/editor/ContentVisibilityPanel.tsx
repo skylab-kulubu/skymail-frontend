@@ -58,8 +58,8 @@ export function ContentVisibilityPanel({ template }: { template: MailTemplate })
         >
           <p>
             {asking
-              ? `“${current.name}” ile gönderilen postaların içeriği (konu, gövde) gönderim sayfasında maskesiz, gönderildiği hâliyle açılabilecek: gönderene, toplu gönderimlerde gönderme yetkisi olanlara ve SkyMail yöneticilerine. Hâlâ saklanan eski gönderimler de dahil. Postada kod ya da tek kullanımlık bağlantı varsa açma.`
-              : `“${current.name}” ile gönderilen postaların içeriği maskeli açılacak: kodlar ve tek kullanımlık bağlantılar gizlenir, gerisi görünür; her açılış kaydedilir. Saklanan içerik silinmez.`}
+              ? `“${current.name}” ile bundan sonra gönderilen postaların içeriği (konu, gövde) gönderim sayfasında maskesiz, gönderildiği hâliyle açılabilecek: gönderene, toplu gönderimlerde gönderme yetkisi olanlara ve SkyMail yöneticilerine. Daha önce maskeli gönderilenler maskeli kalır. Postada kod ya da tek kullanımlık bağlantı varsa açma.`
+              : `“${current.name}” ile gönderilen postaların içeriği maskeli saklanacak: kodlar ve tek kullanımlık bağlantılar gizlenir, gerisi görünür; her açılış kaydedilir. Bitmiş gönderimlerin saklanan içeriği de birkaç dakika içinde maskelenir; gizlenen değerler geri gelmez.`}
           </p>
           {error ? (
             <div className="mt-3">

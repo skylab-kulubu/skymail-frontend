@@ -69,11 +69,12 @@ export type Send = Readonly<{
  * server (Yusuf, 2026-10-13); `restricted` is shown to others (its sender,
  * those who send to lists for a send to many, SkyMail's administrators);
  * `expired` is past the retention period, emptied; `not_kept` is mail of the
- * masked kind whose content was emptied minutes after it went out, before such
- * content was kept; `sensitive` (a backend from before masking, or a mail the
- * backend could not mask for certain) is shown to no one.
+ * masked kind whose content was emptied (before such content was kept, or
+ * because it could not be masked for certain); `pending` is such mail not
+ * masked yet (the server masks it once the send is done), not shown;
+ * `sensitive` (a backend from before masking) is shown to no one.
  */
-export type ContentAccess = "available" | "masked" | "sensitive" | "restricted" | "expired" | "not_kept";
+export type ContentAccess = "available" | "masked" | "pending" | "sensitive" | "restricted" | "expired" | "not_kept";
 
 /** Whether a send's recipients' mails open: as sent, or masked. */
 export function contentOpens(access: ContentAccess | "unavailable" | undefined): boolean {
@@ -308,6 +309,8 @@ export function contentNote(send: Pick<Send, "content_access" | "content_expires
       };
     case "not_kept":
       return { text: NOT_KEPT_TEXT };
+    case "pending":
+      return { text: PENDING_TEXT };
     case "restricted":
       return {
         text: "Bu gönderimin içeriğini göremezsin. İçeriği gönderen, toplu gönderimlerde gönderme yetkisi olanlar ve SkyMail yöneticileri görür.",
@@ -323,12 +326,16 @@ export function contentNote(send: Pick<Send, "content_access" | "content_expires
 
 /** What the content viewer says when a recipient's mail is not there to show. */
 const NOT_KEPT_TEXT =
-  "Bu postanın içeriği saklanmadı: gönderildiği dönemde kod ya da tek kullanımlık bağlantı taşıyabilen postaların içeriği gönderimden birkaç dakika sonra siliniyordu. Silinen içerik geri getirilemez; alıcılar ve durumları duruyor.";
+  "Bu postanın içeriği saklanmadı: kod ya da tek kullanımlık bağlantı taşıyabilen postaların içeriği o dönemde gönderimden birkaç dakika sonra siliniyordu ya da güvenle maskelenemedi. Silinen içerik geri getirilemez; alıcılar ve durumları duruyor.";
+
+const PENDING_TEXT =
+  "İçerik maskeleniyor: kodlar ve tek kullanımlık bağlantılar gönderim bitince birkaç dakika içinde gizlenir, içerik o zaman açılır.";
 
 export const CONTENT_MISSING_TEXT: Readonly<Record<SentContent["access"], string>> = {
   available: "",
   masked: "",
-  sensitive: "Bu postanın içeriği gösterilemiyor: içindeki kod ya da tek kullanımlık bağlantı güvenle gizlenemedi.",
+  pending: PENDING_TEXT,
+  sensitive: "Bu postanın içeriği gizli.",
   not_kept: NOT_KEPT_TEXT,
   restricted: "Bu postanın içeriğini göremezsin.",
   expired: "İçerik saklama süresi dolduğu için silindi.",

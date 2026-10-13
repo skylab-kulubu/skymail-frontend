@@ -249,7 +249,7 @@ test("the template editor's switch shows or hides a template's content, after as
   await toggle.click();
   const hide = page.getByRole("dialog", { name: "İçerik maskelensin mi?" });
   await expect(hide).toContainText("kodlar ve tek kullanımlık bağlantılar gizlenir");
-  await expect(hide).toContainText("Saklanan içerik silinmez");
+  await expect(hide).toContainText("gizlenen değerler geri gelmez");
   await hide.getByRole("button", { name: "Maskele" }).click();
   await expect(toggle).not.toBeChecked();
   expect(toggles().map((request) => request.body)).toEqual([{ content_sensitive: false }, { content_sensitive: true }]);

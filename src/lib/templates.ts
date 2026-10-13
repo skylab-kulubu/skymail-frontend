@@ -346,7 +346,7 @@ export function contentVisibility(template: Pick<MailTemplate, "content_sensitiv
     return {
       shown: false,
       locked: false,
-      text: "Gönderimlerin içeriği maskeli açılır: kodlar ve tek kullanımlık bağlantılar gizlenir, gerisi görünür. Her açılış kaydedilir.",
+      text: "Gönderimlerin içeriği maskeli saklanır ve açılır: kodlar ve tek kullanımlık bağlantılar gönderim bitince gizlenir, gerisi görünür. Her açılış kaydedilir.",
     };
   }
   return {

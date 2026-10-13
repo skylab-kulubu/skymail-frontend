@@ -135,7 +135,7 @@ function ContentNotice({ send }: { send: Send }) {
       ? Eye
       : send.content_access === 'masked'
         ? ShieldCheck
-        : send.content_access === 'expired' || send.content_access === 'not_kept'
+        : send.content_access === 'expired' || send.content_access === 'not_kept' || send.content_access === 'pending'
           ? Clock
           : Lock;
   return (
