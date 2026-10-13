@@ -1,6 +1,6 @@
 import * as React from "react";
-import { Img, Text } from "@react-email/components";
-import { Cta, DetailRow, Heading, Label, Paragraph, Shell, Strong, colors, fontStack } from "./theme";
+import { Img } from "@react-email/components";
+import { CodeBlock, Context, Cta, Label, Paragraph, RowItem, Rows, RowsEnd, Shell, Small, Strong, Title } from "./theme";
 import { end, ifSet, v } from "./go";
 import type { TemplateMeta } from "./types";
 
@@ -9,6 +9,7 @@ export const meta: TemplateMeta = {
   name: "Etkinlik · Bilet Oluşturuldu",
   subject: `${v("EventName")} biletin hazır`,
   system: false,
+  contentSensitive: true,
   brand: "skylab",
   trigger:
     "core-backend, Member apply / Guest apply / Apply-for-other bir Ticket yazdığında. NOT: bu gönderimi yapan kod henüz yazılmadı.",
@@ -30,26 +31,33 @@ export const meta: TemplateMeta = {
  */
 export default function EventTicketCreated() {
   return (
-    <Shell preview={`${v("EventName")} için biletin hazır — kapıda bu QR okutulacak.`} brand="skylab">
-      <Heading>Biletin Hazır</Heading>
+    <Shell
+      preview={`${v("EventName")} için biletin hazır — kapıda bu QR okutulacak.`}
+      brand="skylab"
+      reason={<>Bu e-postayı {v("EventName")} etkinliğine kaydolduğun için alıyorsun.</>}
+    >
+      <Context tone="ok">{v("EventName")}</Context>
+      <Title>Biletin Hazır</Title>
 
       <Paragraph>
         <Strong>{v("EventName")}</Strong> için kaydın alındı. Kapıda aşağıdaki QR kodu okutman yeterli.
       </Paragraph>
 
-      <div style={{ marginTop: "24px" }}>
-        <DetailRow label="Etkinlik" value={v("EventName")} />
+      <Rows>
+        <RowItem label="Etkinlik">{v("EventName")}</RowItem>
         {ifSet("EventDate")}
-        <DetailRow label="Tarih" value={v("EventDate")} />
+        <RowItem label="Tarih">{v("EventDate")}</RowItem>
         {end}
         {ifSet("Venue")}
-        <DetailRow label="Yer" value={v("Venue")} />
+        <RowItem label="Yer">{v("Venue")}</RowItem>
         {end}
         {ifSet("OwnerTeam")}
-        <DetailRow label="Düzenleyen" value={v("OwnerTeam")} last />
+        <RowItem label="Düzenleyen">{v("OwnerTeam")}</RowItem>
         {end}
-      </div>
+        <RowsEnd />
+      </Rows>
 
+      {/* The QR keeps a white ground of its own: a scanner needs the contrast in either theme. */}
       {ifSet("TicketQrUrl")}
       <div style={{ marginTop: "28px", textAlign: "center" }}>
         <Img
@@ -57,28 +65,17 @@ export default function EventTicketCreated() {
           width="180"
           height="180"
           alt="Bilet QR kodu"
-          style={{ margin: "0 auto", borderRadius: "12px", backgroundColor: "#ffffff", padding: "12px" }}
+          style={{ margin: "0 auto", borderRadius: "8px", backgroundColor: "#ffffff", padding: "12px", border: "1px solid #e5e5e5" }}
         />
       </div>
       {end}
 
       {ifSet("TicketCode")}
-      <div style={{ marginTop: "16px", textAlign: "center" }}>
+      <div style={{ marginTop: "16px" }}>
         <Label>Bilet Kodu</Label>
-        <Text
-          className="t-primary"
-          style={{
-            margin: "6px 0 0",
-            textAlign: "center",
-            fontSize: "16px",
-            fontWeight: 600,
-            letterSpacing: "0.08em",
-            color: colors.textPrimary,
-            fontFamily: "'SF Mono', Menlo, Consolas, monospace",
-          }}
-        >
+        <CodeBlock size={16} center>
           {v("TicketCode")}
-        </Text>
+        </CodeBlock>
       </div>
       {end}
 
@@ -86,12 +83,9 @@ export default function EventTicketCreated() {
       <Cta href={v("EventUrl")}>Etkinlik Sayfası</Cta>
       {end}
 
-      <Text
-        className="t-faint"
-        style={{ marginTop: "24px", marginBottom: 0, fontSize: "12px", lineHeight: "1.7", color: colors.textFaint, fontFamily: fontStack }}
-      >
+      <Small style={{ marginTop: "24px" }}>
         Görseller görünmüyorsa bilet kodunu kapıdaki görevliye söylemen yeterli. Bu bilet sana ait; başkasına devredilemez.
-      </Text>
+      </Small>
     </Shell>
   );
 }

@@ -1,6 +1,5 @@
 import * as React from "react";
-import { Text } from "@react-email/components";
-import { Chip, Cta, DetailRow, Heading, Note, Paragraph, Shell, colors, fontStack } from "./theme";
+import { Context, Cta, Note, Paragraph, RowItem, Rows, RowsEnd, Shell, Small, Title } from "./theme";
 import { end, ifSet, v } from "./go";
 import type { TemplateMeta } from "./types";
 
@@ -11,6 +10,7 @@ export const meta: TemplateMeta = {
   // it; no other variable belongs in the subject.
   subject: `SKY LAB hesabında: ${v("EventTitle")}`,
   system: true,
+  contentSensitive: true,
   brand: "account",
   trigger:
     "Account center / sky-account SPI, hesapta güvenlikle ilgili bir şey değiştiğinde: parola değişti, geçiş anahtarı eklendi/silindi, doğrulama uygulaması eklendi/kaldırıldı, yeni cihazdan giriş, tüm oturumlar kapatıldı, kullanıcı adı değişti, kişisel e-posta eklendi/kaldırıldı.",
@@ -37,42 +37,39 @@ export const meta: TemplateMeta = {
  */
 export default function AccountSecurityAlert() {
   return (
-    <Shell preview={`SKY LAB hesabında: ${v("EventTitle")}`} brand="account">
-      <Heading>{v("EventTitle")}</Heading>
+    <Shell
+      preview={`SKY LAB hesabında: ${v("EventTitle")}`}
+      brand="account"
+      reason="Bu bildirimi, hesabında güvenlikle ilgili bir değişiklik olduğu için alıyorsun; bu postaların gönderimi kapatılamaz."
+    >
+      <Context tone="wait">
+        Hesap güvenliği{ifSet("OccurredAt")} · {v("OccurredAt")}{end}
+      </Context>
+      <Title>{v("EventTitle")}</Title>
 
-      {ifSet("OccurredAt")}
-      <Chip>{v("OccurredAt")}</Chip>
-      {end}
-
-      <Paragraph style={{ marginTop: "18px" }}>{v("EventDetail")}</Paragraph>
+      <Paragraph>{v("EventDetail")}</Paragraph>
 
       {ifSet("DeviceLabel")}
-      <div style={{ marginTop: "24px" }}>
-        <DetailRow label="Cihaz" value={v("DeviceLabel")} />
+      <Rows>
+        <RowItem label="Cihaz">{v("DeviceLabel")}</RowItem>
         {ifSet("Location")}
-        <DetailRow label="Konum" value={v("Location")} />
+        <RowItem label="Konum">{v("Location")}</RowItem>
         {end}
         {ifSet("IpAddress")}
-        <DetailRow label="IP adresi" value={v("IpAddress")} last />
+        <RowItem label="IP adresi">{v("IpAddress")}</RowItem>
         {end}
-      </div>
+        <RowsEnd />
+      </Rows>
       {end}
 
-      <div style={{ marginTop: "28px" }}>
-        <Note tone="alert">
-          Bu işlemi sen yapmadıysan hesabın risk altında olabilir. Hemen parolanı değiştir ve açık oturumları kapat.
-        </Note>
-      </div>
+      <Note tone="alert">
+        Bu işlemi sen yapmadıysan hesabın risk altında olabilir. Hemen parolanı değiştir ve açık oturumları kapat.
+      </Note>
 
       <Cta href={v("SecureAccountUrl")}>Hesabımı Güvene Al</Cta>
 
-      <Text
-        className="t-faint"
-        style={{ marginTop: "24px", marginBottom: 0, fontSize: "12px", lineHeight: "1.7", color: colors.textFaint, fontFamily: fontStack }}
-      >
-        Bu bildirimi, hesabında güvenlikle ilgili bir değişiklik olduğu için alıyorsun; bu postaların gönderimi
-        kapatılamaz. Konum ve IP bilgisi yaklaşıktır.
-      </Text>
+      {/* About the rows above, so it stays in the body rather than the footer. */}
+      <Small style={{ marginTop: "24px" }}>Konum ve IP bilgisi yaklaşıktır.</Small>
     </Shell>
   );
 }

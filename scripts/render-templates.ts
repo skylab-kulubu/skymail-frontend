@@ -50,10 +50,18 @@ function buildCatalogue(): string {
   for (const { meta } of templates) {
     const variables = meta.variables.map((name) => `\`${name}\``).join(", ") || "—";
     const system = meta.system ? " 🔒" : "";
-    lines.push(`| ${meta.name}${system} | \`${meta.key}\` | ${meta.subject} | ${variables} |`);
+    const hidden = meta.contentSensitive ? " 🙈" : "";
+    lines.push(`| ${meta.name}${system}${hidden} | \`${meta.key}\` | ${meta.subject} | ${variables} |`);
   }
 
-  lines.push("", "🔒 = sistem şablonu: arşivlenemez, anahtarı değiştirilemez.", "", "## Ne zaman gider", "");
+  lines.push(
+    "",
+    "🔒 = sistem şablonu: arşivlenemez, anahtarı değiştirilemez.",
+    "🙈 = içeriği gizli: SkyMail bir gönderiminin yalnız gittiğini gösterir, ne yazdığını kimseye göstermez (kod, tek kullanımlık ya da hesap bağlantısı, bilet kodu taşır).",
+    "",
+    "## Ne zaman gider",
+    "",
+  );
 
   for (const { meta } of templates) {
     lines.push(`- **${meta.name}** (\`${meta.key}\`) — ${meta.trigger}`);

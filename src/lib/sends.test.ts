@@ -12,6 +12,9 @@ import { TEST_BASE_URL, json, scriptedClient } from "./api/testing";
 import {
   audienceLabel,
   composeHref,
+  CONTENT_MISSING_TEXT,
+  contentNote,
+  fetchSentContent,
   dailySeries,
   dayLabel,
   fetchRecipientPage,
@@ -452,5 +455,38 @@ describe("a send's time", () => {
   it("is a dash when missing or unreadable", () => {
     assert.equal(formatSendTime(null), "—");
     assert.equal(formatSendTime("not a date"), "—");
+  });
+});
+
+describe("a send's content", () => {
+  const ROW_ID = "0b6c1f0e-55d2-4a43-9a3e-6f1f6a2b7c10";
+
+  it("asks for one recipient's mail by the send and the queue row", async () => {
+    const answer = { id: ROW_ID, task_id: SEND_ID, access: "available", subject: "Konu", plain_text: "x", html: "<p>x</p>", expires_at: null };
+    const { api, calls } = scriptedClient(json(200, answer));
+
+    assert.deepEqual(await fetchSentContent(api, SEND_ID, ROW_ID), answer);
+    assert.equal(calls[0].url, `${TEST_BASE_URL}/mail_tasks/${SEND_ID}/queue/${ROW_ID}/content`);
+  });
+
+  it("reports a send id that is not a UUID as missing, without a request, and keeps a row id within its path segment", async () => {
+    const { api, calls } = scriptedClient(json(404, { code: "server.not_found" }));
+    const error = await fetchSentContent(api, "not-a-send", ROW_ID).catch((reason: unknown) => reason);
+    assert.ok(error instanceof ApiError);
+    assert.equal(error.status, 404);
+    assert.equal(calls.length, 0);
+
+    await fetchSentContent(api, SEND_ID, "../../templates").catch(() => undefined);
+    assert.equal(calls[0].url, `${TEST_BASE_URL}/mail_tasks/${SEND_ID}/queue/..%2F..%2Ftemplates/content`);
+  });
+
+  it("says why the content cannot be opened, and until when it can", () => {
+    assert.match(contentNote({ content_access: "available", content_expires_at: "2027-01-10T09:00:00Z" })?.text ?? "", /10 Oca 2027|10\.01\.2027|2027/);
+    assert.match(contentNote({ content_access: "sensitive" })?.text ?? "", /gizli/);
+    assert.match(contentNote({ content_access: "restricted" })?.text ?? "", /göremezsin/);
+    assert.match(contentNote({ content_access: "expired" })?.text ?? "", /saklama süresi/);
+    // A backend from before content says nothing, and the page says nothing either.
+    assert.equal(contentNote({}), null);
+    assert.equal(CONTENT_MISSING_TEXT.unavailable.includes("silindiği"), true);
   });
 });

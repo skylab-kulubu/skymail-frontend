@@ -136,6 +136,7 @@ export function Sidebar() {
         <SidebarUser
           name={fullName}
           email={user.email}
+          subtitle={user.email ?? undefined}
           menu={
             <>
               {user.email ? <MenuLabel>{user.email}</MenuLabel> : null}

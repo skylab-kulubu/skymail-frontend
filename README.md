@@ -75,7 +75,7 @@ sitenin kök adresidir (Refine uygulamasının kullandığı adres).
 yarn typecheck        # next typegen && tsc --noEmit
 yarn build            # ortam değişkeni gerekmez
 yarn lint             # ESLint (TypeScript, hooks, Next.js kuralları)
-yarn api:check        # bütün Node testleri (src/**/*.test.ts): HTTP istemcisi, oturum token'ı, roller, tema ve render modülü
+yarn test             # bütün Node testleri (src/**/*.test.ts): HTTP istemcisi, oturum token'ı, roller, tema ve render modülü (`yarn api:check` aynı komut)
 yarn emails:check     # serbest duyuru gövdesi: yalnız sunucunun izin listesindeki etiketler, yazılan metin işaretlemeye dönmez, bağlantı adresleri Go'nun okuduğu gibi
 yarn templates:check  # yalnız render modülünün testleri: repo template'leri JSX modunda, Visual belge ve modu (emails:render kontrolleriyle), HTML modu, değişkenler, önizleme, kaydetme kararı
 yarn emails:render    # repodaki Mail template'leri render edip denetler
@@ -118,6 +118,10 @@ Yalnız `main`'den koşar. Çıktı çalışmanın Summary sayfasındadır. Seed
 `skymail-seed` servis hesabıyla yazar. Secret'ı yalnız `seed-sandbox` / `seed-production`
 GitHub ortamlarında durur ve kimse görmez. Kurulumu ve secret'ın yenilenmesi SKY LAB
 ops'taki `skymail-seed-github-wizard.sh` ile yapılır.
+
+Şablonların görünümü `emails/theme.tsx`'tedir (SKY LAB Forms'un mail düzeni). Logolar
+SkyMail'in kendi sitesinden, `public/mail/` altından (`https://mail.yildizskylab.com/mail/…`)
+oturumsuz gelir; bu dosyalara dokunan bir değişiklik, seed'den önce production'a çıkmalıdır.
 
 Elle koşmak için yerelde `corepack yarn emails:seed`: seçenekler ve ortam değişkenleri
 `scripts/seed-templates.ts`'in başında.

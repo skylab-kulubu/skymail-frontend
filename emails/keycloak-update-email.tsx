@@ -7,6 +7,7 @@ export const meta: TemplateMeta = {
   name: "Keycloak · E-posta Değişikliği Doğrulama",
   subject: "Yeni e-posta adresini doğrula",
   system: true,
+  contentSensitive: true,
   brand: "account",
   trigger: "Keycloak, kişi hesabının e-posta adresini değiştirdiğinde — doğrulama YENİ adrese gider.",
   variables: ["link", "linkExpirationMinutes", "firstName", "username", "realmDisplayName", "subjectKey"],
@@ -30,6 +31,8 @@ export default function KeycloakUpdateEmail() {
       intro="SKY LAB hesabının e-posta adresini bu adresle değiştirmek istedin. Değişikliğin tamamlanması için adresi doğrulaman gerekiyor."
       ctaLabel="Adresi Doğrula"
       disclaimer="Bu değişikliği sen istemediysen bağlantıya dokunma: doğrulanmadığı sürece hesabının adresi değişmez."
+      context="E-posta değişikliği"
+      reason="Bu e-postayı, bir SKY LAB hesabının adresi bu adresle değiştirilmek istendiği için alıyorsun."
     />
   );
 }

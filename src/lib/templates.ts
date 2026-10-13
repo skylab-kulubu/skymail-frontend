@@ -115,6 +115,14 @@ export type MailTemplate = {
   operator_required_variables?: string[];
   /** Null when no Template seed is refused. Absent from a backend before ticket 09. */
   seed_refusal?: SeedRefusal | null;
+  /**
+   * Whether SkyMail never shows what a send of it said: true hidden, false
+   * shown, null left to the kind of send (a single mail hidden, a send to many
+   * shown). Absent from a backend before sent mail content.
+   */
+  content_sensitive?: boolean | null;
+  /** The mail carries a credential (a code, a one-time link): it stays hidden and cannot be shown. */
+  content_sensitive_locked?: boolean;
 };
 
 export const TEMPLATE_PAGE_SIZE = 25;
@@ -300,6 +308,47 @@ export function markRequiredVariable(api: ApiClient, templateId: string, name: s
 /** Releases a variable operators marked; a contract one is refused (409). Writes no version. */
 export function releaseRequiredVariable(api: ApiClient, templateId: string, name: string): Promise<MailTemplate> {
   return api.delete<MailTemplate>(`/templates/${templateId}/required-variables/${encodeURIComponent(name)}`);
+}
+
+/**
+ * Sets whether the template's sends show their content
+ * (`PUT …/content-sensitive`): true hides it from everyone. A template locked
+ * sensitive refuses false (409 template.content_sensitive_locked). Each change
+ * is recorded with who made it. Writes no version.
+ */
+export function setContentSensitive(api: ApiClient, templateId: string, sensitive: boolean): Promise<MailTemplate> {
+  return api.put<MailTemplate>(`/templates/${templateId}/content-sensitive`, { content_sensitive: sensitive });
+}
+
+/** Whether the panel shows the content of the template's sends, in the editor's words. */
+export function contentVisibility(template: Pick<MailTemplate, "content_sensitive" | "content_sensitive_locked">): {
+  shown: boolean;
+  locked: boolean;
+  text: string;
+} | null {
+  if (template.content_sensitive_locked === undefined) return null;
+  if (template.content_sensitive_locked) {
+    return {
+      shown: false,
+      locked: true,
+      text: "Bu şablonun postası giriş/doğrulama kodu ya da tek kullanımlık bağlantı taşır: içeriği her zaman gizli kalır, açılamaz.",
+    };
+  }
+  if (template.content_sensitive === false) {
+    return {
+      shown: true,
+      locked: false,
+      text: "Gönderimlerin içeriği, gönderen, toplu gönderimlerde gönderme yetkisi olanlar ve yöneticiler tarafından açılabilir.",
+    };
+  }
+  if (template.content_sensitive === true) {
+    return { shown: false, locked: false, text: "Gönderimlerin içeriği kimseye gösterilmez; yalnız kime, ne zaman gittiği görünür." };
+  }
+  return {
+    shown: false,
+    locked: false,
+    text: "Ayarlanmadı: tekil postalarda içerik gizli, liste ve gruba giden gönderimlerde görünür.",
+  };
 }
 
 /** What `POST /templates/{id}/drafts` takes (`requests.SaveTemplateDraft`). */

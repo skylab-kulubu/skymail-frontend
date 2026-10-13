@@ -1,11 +1,11 @@
 'use client';
 
-import { useId, useState, type KeyboardEvent } from 'react';
+import { useState, type KeyboardEvent } from 'react';
 import { ClipboardPaste, Plus, Trash2 } from 'lucide-react';
-import { FormField } from '@/components/common/FormField';
+import { FormField, FormTextArea } from '@/components/common/FormField';
 import { formatCount } from '@/lib/sends';
 import { parsePeople, type PeopleCheck, type PersonRow } from '@/lib/send-form/audience';
-import { Button, Textarea } from '@skylab-kulubu/skylcn-ui';
+import { Button } from '@skylab-kulubu/skylcn-ui';
 
 /** A row of the editor: a person, and an id that stays with the row while others come and go. */
 export type PersonEntry = PersonRow & Readonly<{ id: string }>;
@@ -45,7 +45,6 @@ export function PeopleEditor({
 }) {
   const [pasting, setPasting] = useState(false);
   const [pasted, setPasted] = useState('');
-  const pasteId = useId();
   const filled = rows.filter((row) => row.name.trim() !== '' || row.email.trim() !== '').length;
   const set = (id: string, change: Partial<PersonRow>) => onChange(rows.map((row) => (row.id === id ? { ...row, ...change } : row)));
   const none = check.shown?.none ?? false;
@@ -112,14 +111,13 @@ export function PeopleEditor({
       </div>
       {pasting ? (
         <div className="space-y-2 rounded-lg border border-border p-3">
-          <label htmlFor={pasteId} className="block text-xs font-medium text-secondary-foreground">
-            Kişileri yapıştır
-          </label>
-          <p className="text-xs text-subtle-foreground">
-            Her satıra bir kişi: <code>Ayşe Yılmaz &lt;ayse@ornek.com&gt;</code>, yalnız adres ya da bir tablodan ad ve adres sütunları.
-          </p>
-          <Textarea
-            id={pasteId}
+          <FormTextArea
+            label="Kişileri yapıştır"
+            hint={
+              <>
+                Her satıra bir kişi: <code>Ayşe Yılmaz &lt;ayse@ornek.com&gt;</code>, yalnız adres ya da bir tablodan ad ve adres sütunları.
+              </>
+            }
             value={pasted}
             onChange={(event) => setPasted(event.target.value)}
             rows={4}

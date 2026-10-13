@@ -16,28 +16,32 @@ zaman verdiği değişkenler kullanılır.
 | Şablon adı | key | Konu | Değişkenler |
 | --- | --- | --- | --- |
 | Serbest Gönderim | `free.basic` | {{.Subject}} | `Subject`, `Heading`, `BodyHtml`, `CtaLabel`, `CtaUrl` |
-| Keycloak · E-posta Doğrulama 🔒 | `keycloak.verify-email` | E-posta adresini doğrula | `link`, `linkExpirationMinutes`, `firstName`, `username`, `realmDisplayName`, `subjectKey` |
-| Keycloak · Parola Sıfırlama 🔒 | `keycloak.reset-password` | SKY LAB parola sıfırlama isteği | `link`, `linkExpirationMinutes`, `firstName`, `username`, `realmDisplayName`, `subjectKey` |
-| Keycloak · E-posta Değişikliği Doğrulama 🔒 | `keycloak.update-email` | Yeni e-posta adresini doğrula | `link`, `linkExpirationMinutes`, `firstName`, `username`, `realmDisplayName`, `subjectKey` |
-| Keycloak · YTÜ Hesabı Bağlama 🔒 | `keycloak.idp-link` | YTÜ hesabını SKY LAB hesabına bağla | `link`, `linkExpirationMinutes`, `firstName`, `username`, `realmDisplayName`, `subjectKey` |
-| Keycloak · Kişisel E-posta Onayı 🔒 | `keycloak.personal-email-confirm` | Kişisel e-posta adresini doğrula | `code`, `codeExpirationMinutes`, `firstName`, `username`, `realmDisplayName`, `subjectKey` |
-| Keycloak · Genel Sistem Postası 🔒 | `keycloak.generic` | SKY LAB hesap bildirimi | `link`, `linkExpirationMinutes`, `firstName`, `username`, `realmDisplayName`, `subjectKey` |
+| Keycloak · E-posta Doğrulama 🔒 🙈 | `keycloak.verify-email` | E-posta adresini doğrula | `link`, `linkExpirationMinutes`, `firstName`, `username`, `realmDisplayName`, `subjectKey` |
+| Keycloak · Parola Sıfırlama 🔒 🙈 | `keycloak.reset-password` | SKY LAB parola sıfırlama isteği | `link`, `linkExpirationMinutes`, `firstName`, `username`, `realmDisplayName`, `subjectKey` |
+| Keycloak · E-posta Değişikliği Doğrulama 🔒 🙈 | `keycloak.update-email` | Yeni e-posta adresini doğrula | `link`, `linkExpirationMinutes`, `firstName`, `username`, `realmDisplayName`, `subjectKey` |
+| Keycloak · YTÜ Hesabı Bağlama 🔒 🙈 | `keycloak.idp-link` | YTÜ hesabını SKY LAB hesabına bağla | `link`, `linkExpirationMinutes`, `firstName`, `username`, `realmDisplayName`, `subjectKey` |
+| Keycloak · Kişisel E-posta Onayı 🔒 🙈 | `keycloak.personal-email-confirm` | Kişisel e-posta adresini doğrula | `code`, `codeExpirationMinutes`, `firstName`, `username`, `realmDisplayName`, `subjectKey` |
+| Keycloak · Genel Sistem Postası 🔒 🙈 | `keycloak.generic` | SKY LAB hesap bildirimi | `link`, `linkExpirationMinutes`, `firstName`, `username`, `realmDisplayName`, `subjectKey` |
 | Hoş Geldin 🔒 | `core.welcome` | SKY LAB ekosistemine hoş geldin | `FirstName`, `LastName`, `Email`, `SkyNumber`, `CreatedAt` |
 | Katılım Sertifikası 🔒 | `core.certificate` | Katılım sertifikan hazır | `FirstName`, `EventName`, `VerifyURL`, `Serial`, `OwnerTeam` |
-| Hesap Güvenlik Bildirimi 🔒 | `account.security-alert` | SKY LAB hesabında: {{.EventTitle}} | `EventTitle`, `EventDetail`, `OccurredAt`, `DeviceLabel`, `IpAddress`, `Location`, `SecureAccountUrl` |
-| Birincil E-posta Değişti (eski adrese) 🔒 | `account.primary-email-changed` | SKY LAB hesabının e-posta adresi değişti | `OldEmail`, `NewEmail`, `OccurredAt`, `SecureAccountUrl` |
-| Hesap Silme Talebi Alındı 🔒 | `account.deletion-requested` | Hesap silme talebini aldık | `RequestedAt`, `CompletesAt`, `CancelUrl` |
-| Hesap Silindi 🔒 | `account.deletion-completed` | SKY LAB hesabın silindi | `CompletedAt`, `RetainedDataNote` |
-| Etkinlik · Bilet Oluşturuldu | `event.ticket-created` | {{.EventName}} biletin hazır | `EventName`, `EventDate`, `Venue`, `TicketQrUrl`, `TicketCode`, `OwnerTeam`, `EventUrl` |
-| Etkinlik · Hatırlatma | `event.reminder` | Yarın: {{.EventName}} | `EventName`, `StartsAt`, `Venue`, `TicketQrUrl`, `MapUrl` |
+| Hesap Güvenlik Bildirimi 🔒 🙈 | `account.security-alert` | SKY LAB hesabında: {{.EventTitle}} | `EventTitle`, `EventDetail`, `OccurredAt`, `DeviceLabel`, `IpAddress`, `Location`, `SecureAccountUrl` |
+| Birincil E-posta Değişti (eski adrese) 🔒 🙈 | `account.primary-email-changed` | SKY LAB hesabının e-posta adresi değişti | `OldEmail`, `NewEmail`, `OccurredAt`, `SecureAccountUrl` |
+| Hesap Silme Talebi Alındı 🔒 🙈 | `account.deletion-requested` | Hesap silme talebini aldık | `RequestedAt`, `CompletesAt`, `CancelUrl` |
+| Hesap Silindi 🔒 🙈 | `account.deletion-completed` | SKY LAB hesabın silindi | `CompletedAt`, `RetainedDataNote` |
+| Etkinlik · Bilet Oluşturuldu 🙈 | `event.ticket-created` | {{.EventName}} biletin hazır | `EventName`, `EventDate`, `Venue`, `TicketQrUrl`, `TicketCode`, `OwnerTeam`, `EventUrl` |
+| Etkinlik · Hatırlatma 🙈 | `event.reminder` | Yarın: {{.EventName}} | `EventName`, `StartsAt`, `Venue`, `TicketQrUrl`, `MapUrl` |
 | Etkinlik · Güncellendi | `event.updated` | {{.EventName}} etkinliğinde değişiklik var | `EventName`, `ChangeSummary`, `NewStartsAt`, `NewVenue`, `EventUrl` |
 | Etkinlik · İptal Edildi | `event.cancelled` | {{.EventName}} iptal edildi | `EventName`, `CancelReason`, `ContactEmail` |
 | Mail Onayı · Onayını Bekliyor | `mail.approval-requested` | Onayını bekleyen bir gönderim var | `RequesterName`, `TemplateName`, `AudienceName`, `AudienceKind`, `RecipientCount`, `PreviewUrl`, `ApproveUrl` |
 | Mail Onayı · Sonuçlandı | `mail.approval-resolved` | {{if eq .Decision `approved`}}Gönderimin onaylandı ve gitti{{else if eq .Decision `rejected`}}Gönderimin reddedildi{{else if eq .Decision `returned`}}Gönderimin sana geri döndü{{else if eq .Decision `expired`}}Gönderimin süresi doldu{{else if eq .Decision `declined`}}Gönderimdeki düzenleme kabul edilmedi{{else}}Gönderim isteğin sonuçlandı{{end}} | `TemplateName`, `AudienceName`, `AudienceKind`, `RecipientCount`, `Decision`, `DecidedBy`, `DecisionNote`, `RequestUrl`, `DeadlineAt` |
 | Operasyon · Gönderim Hatası | `ops.send-failed` | SkyMail gönderiminde hata | `TaskId`, `TemplateName`, `FailedCount`, `TotalCount`, `FirstError`, `TaskUrl` |
 | Kulüp · Takım Üyeliği Değişti | `club.team-membership` | SKY LAB takım üyeliğinde değişiklik | `TeamName`, `Action`, `Role`, `EffectiveAt`, `LeaderName` |
+| Kulüp · Yönetim Grubu Üyeliği Değişti | `club.role-membership` | SKY LAB yönetim yetkilerinde değişiklik | `GroupName`, `Role`, `Action`, `EffectiveAt`, `ActorName` |
+| Kulüp · Grup Üyeliği Değişti | `club.group-membership` | SKY LAB grup üyeliğinde değişiklik | `GroupName`, `Action`, `EffectiveAt`, `ActorName` |
+| Kulüp · Yetki Değişikliği Bildirimi | `club.privilege-change` | SKY LAB yönetim yetkilerinde değişiklik bildirimi | `Change`, `GroupName`, `GroupId`, `Root`, `SubjectName`, `ActorName`, `OccurredAt`, `RolesAdded`, `RolesRemoved`, `AdminRole`, `MemberCount` |
 
 🔒 = sistem şablonu: arşivlenemez, anahtarı değiştirilemez.
+🙈 = içeriği gizli: SkyMail bir gönderiminin yalnız gittiğini gösterir, ne yazdığını kimseye göstermez (kod, tek kullanımlık ya da hesap bağlantısı, bilet kodu taşır).
 
 ## Ne zaman gider
 
@@ -62,3 +66,6 @@ zaman verdiği değişkenler kullanılır.
 - **Mail Onayı · Sonuçlandı** (`mail.approval-resolved`) — SkyMail, bir onay isteği sonuçlandığında. approved/rejected/returned/expired talebi açana, declined onaycılara gider (ADR-0031, ticket 19).
 - **Operasyon · Gönderim Hatası** (`ops.send-failed`) — SkyMail, bir görevdeki mailler yeniden denemeler bittikten sonra da gönderilemediğinde, gönderimi başlatan kişiye. NOT: bu uyarıyı gönderen kod henüz yazılmadı.
 - **Kulüp · Takım Üyeliği Değişti** (`club.team-membership`) — core-backend, admin panelinde bir kişi bir takıma ya da takımın LIDERLER/KOORDINATORLER alt grubuna eklendiğinde veya oradan çıkarıldığında; değişikliği kuyruğa yazar ve SkyMail'e anahtarla gönderir (core-backend#215, docs/team-membership-mail.md).
+- **Kulüp · Yönetim Grubu Üyeliği Değişti** (`club.role-membership`) — core-backend, admin panelinde bir kişi ayrıcalıklı bir gruba (Yönetim Kurulu, Denetim Kurulu, yönetici grubu ya da bunların alt grupları; AUTHZ_PRIVILEGED_ROOTS) eklendiğinde veya oradan çıkarıldığında; değişikliği kuyruğa yazar ve SkyMail'e anahtarla gönderir (docs/team-membership-mail.md).
+- **Kulüp · Grup Üyeliği Değişti** (`club.group-membership`) — core-backend, admin panelinde bir kişi takım ya da yönetim grubu olmayan bir gruba (kulüp, alan grupları ör. /UYELER/ARGE, alanın LIDERLER'i, teknik gruplar) eklendiğinde veya oradan çıkarıldığında; değişikliği kuyruğa yazar ve SkyMail'e anahtarla gönderir (docs/team-membership-mail.md).
+- **Kulüp · Yetki Değişikliği Bildirimi** (`club.privilege-change`) — core-backend, yönetim yetkisi veren bir değişiklikte (docs/privilege-change-mail.md): bir grubun rol eşlemesi değişince yalnız ADMIN üyelerine; bir yönetim grubuna (ADMIN, YK, DK ya da altları; AUTHZ_PRIVILEGED_ROOTS) kişi eklenince ya da çıkarılınca ADMIN üyelerine ve o kökün diğer üyelerine. Değişikliği yapan ve eklenen/çıkarılan kişi bu postayı almaz; kişi kendi club.role-membership postasını alır. Core kuyruğa yazar ve SkyMail'e anahtarla gönderir.
