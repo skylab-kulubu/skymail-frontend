@@ -141,6 +141,29 @@ describe("the Template seed", () => {
     assert.match(output, /1 şablon https:\/\/skymail\.example\.test üzerine yazıldı\./);
   });
 
+  it("sends the sensitive variables a template lists, an empty list too, and leaves the field out when it lists none", async () => {
+    const templates = [
+      template("keycloak.verify-email", "Doğrula", { sensitiveVariables: ["link"] }),
+      template("account.deletion-completed", "Silindi", { sensitiveVariables: [] }),
+      template("core.welcome", "Hoş geldin"),
+    ];
+    const { fetch, calls } = scriptedFetch(
+      seeded("keycloak.verify-email"),
+      seeded("account.deletion-completed"),
+      seeded("core.welcome"),
+    );
+
+    const { exitCode, output } = await run({ templates, fetch });
+
+    assert.equal(exitCode, 0, output);
+    assert.deepEqual(bodyOf(calls[0]).sensitive_variables, ["link"]);
+    // [] clears the template's list on SkyMail; it is a decision, so it is sent.
+    assert.deepEqual(bodyOf(calls[1]).sensitive_variables, []);
+    // Left out, SkyMail keeps the list the template has — and a SkyMail from
+    // before the field never sees it.
+    assert.equal("sensitive_variables" in bodyOf(calls[2]), false);
+  });
+
   it("goes on past a template SkyMail refuses, then lists it with why and how to force it, and fails", async () => {
     const templates = [
       template("free.basic", "Serbest"),

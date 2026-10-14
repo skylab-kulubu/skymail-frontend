@@ -14,6 +14,7 @@ export const meta: TemplateMeta = {
   trigger:
     "core-backend, Member apply / Guest apply / Apply-for-other bir Ticket yazdığında. NOT: bu gönderimi yapan kod henüz yazılmadı.",
   variables: ["EventName", "EventDate", "Venue", "TicketQrUrl", "TicketCode", "OwnerTeam", "EventUrl"],
+  sensitiveVariables: ["TicketCode", "TicketQrUrl"],
   sample: {
     EventName: "GECEKODU 2026",
     EventDate: "12–13 Nisan 2026, 10:00",
