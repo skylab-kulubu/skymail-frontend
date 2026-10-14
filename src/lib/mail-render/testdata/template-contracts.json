@@ -232,6 +232,73 @@
       "{{if .firstName}}"
     ]
   },
+  "keycloak.login-code": {
+    "subject": "{{if eq .purpose `signup`}}SKY LAB hesap açma kodun{{else if eq .purpose `link`}}SKY LAB hesap bağlama kodun{{else}}SKY LAB giriş kodun{{end}}",
+    "system": true,
+    "contentSensitive": true,
+    "variables": [
+      "code",
+      "codeExpirationMinutes",
+      "purpose",
+      "firstName",
+      "username",
+      "realmDisplayName",
+      "subjectKey"
+    ],
+    "requiredVariables": [
+      "code"
+    ],
+    "sensitiveVariables": [
+      "code"
+    ],
+    "sampleKeys": [
+      "code",
+      "codeExpirationMinutes",
+      "firstName",
+      "purpose",
+      "realmDisplayName",
+      "subjectKey",
+      "username"
+    ],
+    "referenced": [
+      "code",
+      "codeExpirationMinutes",
+      "firstName",
+      "purpose"
+    ],
+    "actions": [
+      "{{.codeExpirationMinutes}}",
+      "{{.code}}",
+      "{{.firstName}}",
+      "{{else if eq .purpose `link`}}",
+      "{{if .codeExpirationMinutes}}",
+      "{{if .firstName}}",
+      "{{if eq .purpose `signup`}}"
+    ]
+  },
+  "keycloak.login-code-alarm": {
+    "subject": "{{if eq .subjectKey `skyLoginCodeAlarmFullSubject`}}SKY LAB: e-posta kodu gönderimi günlük sınıra ulaştı{{else}}SKY LAB: e-posta kodu gönderimi günlük sınırın yarısında{{end}}",
+    "system": true,
+    "contentSensitive": false,
+    "variables": [
+      "realmDisplayName",
+      "subjectKey"
+    ],
+    "requiredVariables": [],
+    "sensitiveVariables": null,
+    "sampleKeys": [
+      "realmDisplayName",
+      "subjectKey"
+    ],
+    "referenced": [
+      "realmDisplayName",
+      "subjectKey"
+    ],
+    "actions": [
+      "{{.realmDisplayName}}",
+      "{{if eq .subjectKey `skyLoginCodeAlarmFullSubject`}}"
+    ]
+  },
   "keycloak.generic": {
     "subject": "SKY LAB hesap bildirimi",
     "system": true,

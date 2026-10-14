@@ -18,6 +18,8 @@ const BRAND_OF: Record<string, Brand> = {
   "keycloak.update-email": "account",
   "keycloak.idp-link": "account",
   "keycloak.personal-email-confirm": "account",
+  "keycloak.login-code": "account",
+  "keycloak.login-code-alarm": "account",
   "keycloak.generic": "account",
   "core.welcome": "skylab",
   "core.certificate": "skylab",
