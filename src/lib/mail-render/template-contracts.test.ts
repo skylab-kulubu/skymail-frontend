@@ -24,6 +24,8 @@ interface Contract {
   contentSensitive: boolean;
   variables: string[];
   requiredVariables: string[];
+  /** null: the seed sends no list, and SkyMail keeps the one it has. */
+  sensitiveVariables: string[] | null;
   sampleKeys: string[];
   /** The fields the rendered body reads. */
   referenced: string[];
@@ -48,6 +50,7 @@ async function contractOf(index: number): Promise<Contract> {
     contentSensitive: meta.contentSensitive,
     variables: [...meta.variables],
     requiredVariables: (meta.requiredVariables ?? []).map(({ name }) => name),
+    sensitiveVariables: meta.sensitiveVariables ? [...meta.sensitiveVariables] : null,
     sampleKeys: Object.keys(meta.sample).sort(),
     referenced: [...rendered.variables].sort(),
     actions: [...actions].sort(),

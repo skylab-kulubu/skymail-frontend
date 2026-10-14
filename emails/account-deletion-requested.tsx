@@ -13,6 +13,7 @@ export const meta: TemplateMeta = {
   trigger:
     "Account center, kişi hesabını sildiğinde. Erişim anında kapanır, kişisel veriler sonra anonimleştirilir (ADR-0042). ACCOUNT_ERASURE_MODE açıldığında devreye girer.",
   variables: ["RequestedAt", "CompletesAt", "CancelUrl"],
+  sensitiveVariables: ["CancelUrl"],
   // Nothing yet: no service sends it. Its sender declares the contract (CancelUrl, likely).
   requiredVariables: [],
   sample: {

@@ -11,6 +11,7 @@
       "CtaUrl"
     ],
     "requiredVariables": [],
+    "sensitiveVariables": null,
     "sampleKeys": [
       "BodyHtml",
       "CtaLabel",
@@ -51,6 +52,9 @@
     "requiredVariables": [
       "link"
     ],
+    "sensitiveVariables": [
+      "link"
+    ],
     "sampleKeys": [
       "firstName",
       "link",
@@ -85,6 +89,9 @@
       "subjectKey"
     ],
     "requiredVariables": [
+      "link"
+    ],
+    "sensitiveVariables": [
       "link"
     ],
     "sampleKeys": [
@@ -123,6 +130,9 @@
     "requiredVariables": [
       "link"
     ],
+    "sensitiveVariables": [
+      "link"
+    ],
     "sampleKeys": [
       "firstName",
       "link",
@@ -157,6 +167,9 @@
       "subjectKey"
     ],
     "requiredVariables": [
+      "link"
+    ],
+    "sensitiveVariables": [
       "link"
     ],
     "sampleKeys": [
@@ -195,6 +208,9 @@
     "requiredVariables": [
       "code"
     ],
+    "sensitiveVariables": [
+      "code"
+    ],
     "sampleKeys": [
       "code",
       "codeExpirationMinutes",
@@ -229,6 +245,9 @@
       "subjectKey"
     ],
     "requiredVariables": [],
+    "sensitiveVariables": [
+      "link"
+    ],
     "sampleKeys": [
       "firstName",
       "link",
@@ -266,6 +285,7 @@
       "CreatedAt"
     ],
     "requiredVariables": [],
+    "sensitiveVariables": null,
     "sampleKeys": [
       "CreatedAt",
       "Email",
@@ -302,6 +322,7 @@
     "requiredVariables": [
       "VerifyURL"
     ],
+    "sensitiveVariables": null,
     "sampleKeys": [
       "EventName",
       "FirstName",
@@ -338,6 +359,9 @@
       "SecureAccountUrl"
     ],
     "requiredVariables": [],
+    "sensitiveVariables": [
+      "SecureAccountUrl"
+    ],
     "sampleKeys": [
       "DeviceLabel",
       "EventDetail",
@@ -381,6 +405,9 @@
       "SecureAccountUrl"
     ],
     "requiredVariables": [],
+    "sensitiveVariables": [
+      "SecureAccountUrl"
+    ],
     "sampleKeys": [
       "NewEmail",
       "OccurredAt",
@@ -410,6 +437,9 @@
       "CancelUrl"
     ],
     "requiredVariables": [],
+    "sensitiveVariables": [
+      "CancelUrl"
+    ],
     "sampleKeys": [
       "CancelUrl",
       "CompletesAt",
@@ -438,6 +468,7 @@
       "RetainedDataNote"
     ],
     "requiredVariables": [],
+    "sensitiveVariables": [],
     "sampleKeys": [
       "CompletedAt",
       "RetainedDataNote"
@@ -467,6 +498,10 @@
       "EventUrl"
     ],
     "requiredVariables": [],
+    "sensitiveVariables": [
+      "TicketCode",
+      "TicketQrUrl"
+    ],
     "sampleKeys": [
       "EventDate",
       "EventName",
@@ -513,6 +548,9 @@
       "MapUrl"
     ],
     "requiredVariables": [],
+    "sensitiveVariables": [
+      "TicketQrUrl"
+    ],
     "sampleKeys": [
       "EventName",
       "MapUrl",
@@ -549,6 +587,7 @@
       "EventUrl"
     ],
     "requiredVariables": [],
+    "sensitiveVariables": null,
     "sampleKeys": [
       "ChangeSummary",
       "EventName",
@@ -585,6 +624,7 @@
       "ContactEmail"
     ],
     "requiredVariables": [],
+    "sensitiveVariables": null,
     "sampleKeys": [
       "CancelReason",
       "ContactEmail",
@@ -617,6 +657,7 @@
       "ApproveUrl"
     ],
     "requiredVariables": [],
+    "sensitiveVariables": null,
     "sampleKeys": [
       "ApproveUrl",
       "AudienceKind",
@@ -665,6 +706,7 @@
       "DeadlineAt"
     ],
     "requiredVariables": [],
+    "sensitiveVariables": null,
     "sampleKeys": [
       "AudienceKind",
       "AudienceName",
@@ -725,6 +767,7 @@
       "TaskUrl"
     ],
     "requiredVariables": [],
+    "sensitiveVariables": null,
     "sampleKeys": [
       "FailedCount",
       "FirstError",
@@ -764,6 +807,7 @@
       "LeaderName"
     ],
     "requiredVariables": [],
+    "sensitiveVariables": null,
     "sampleKeys": [
       "Action",
       "EffectiveAt",
@@ -800,6 +844,7 @@
       "ActorName"
     ],
     "requiredVariables": [],
+    "sensitiveVariables": null,
     "sampleKeys": [
       "Action",
       "ActorName",
@@ -836,6 +881,7 @@
       "ActorName"
     ],
     "requiredVariables": [],
+    "sensitiveVariables": null,
     "sampleKeys": [
       "Action",
       "ActorName",
@@ -874,6 +920,7 @@
       "MemberCount"
     ],
     "requiredVariables": [],
+    "sensitiveVariables": null,
     "sampleKeys": [
       "ActorName",
       "AdminRole",

@@ -11,6 +11,7 @@ export const meta: TemplateMeta = {
   brand: "account",
   trigger: "Keycloak, hesap açılışında veya e-posta doğrulanmamışken (sky-account SPI üzerinden SkyMail'e düşer).",
   variables: ["link", "linkExpirationMinutes", "firstName", "username", "realmDisplayName", "subjectKey"],
+  sensitiveVariables: ["link"],
   // The verification link; Keycloak's SkyMail provider always passes it.
   requiredVariables: [{ name: "link", reason: "E-posta doğrulama bağlantısı; kaldırılırsa kişi adresini doğrulayamaz ve mail işe yaramaz." }],
   sample: {

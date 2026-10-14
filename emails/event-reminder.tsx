@@ -14,6 +14,7 @@ export const meta: TemplateMeta = {
   trigger:
     "Etkinlikten bir gün önce, bileti olan herkese. NOT: zamanlayıcı ve gönderim kodu henüz yazılmadı; konu satırı T-1 varsayıyor.",
   variables: ["EventName", "StartsAt", "Venue", "TicketQrUrl", "MapUrl"],
+  sensitiveVariables: ["TicketQrUrl"],
   sample: {
     EventName: "GECEKODU 2026",
     StartsAt: "12 Nisan 2026, 10:00",

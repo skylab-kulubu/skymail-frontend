@@ -198,6 +198,7 @@ interface SeedPayload {
   system: boolean;
   content_sensitive: boolean;
   contract_required_variables: NonNullable<TemplateMeta["requiredVariables"]>;
+  sensitive_variables?: string[];
 }
 
 /** Runs the seed and resolves to the exit code the command should end with. */
@@ -226,6 +227,10 @@ export async function runSeed(run: SeedRun): Promise<number> {
         // seed always sends it: none declared is an empty set, not a set left
         // alone.
         contract_required_variables: meta.requiredVariables ?? [],
+        // Unlike the contract, a template that lists none sends nothing:
+        // SkyMail then keeps the list it has, and a SkyMail from before the
+        // field (skymail-backend #65) never sees it.
+        ...(meta.sensitiveVariables !== undefined && { sensitive_variables: meta.sensitiveVariables }),
       },
     });
   }

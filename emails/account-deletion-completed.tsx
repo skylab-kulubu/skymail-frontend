@@ -12,6 +12,7 @@ export const meta: TemplateMeta = {
   brand: "account",
   trigger: "Account center, anonimleştirme tamamlandığında. Bu, bu adrese gönderdiğimiz son postadır.",
   variables: ["CompletedAt", "RetainedDataNote"],
+  sensitiveVariables: [],
   // Nothing yet: no service sends it.
   requiredVariables: [],
   sample: {
