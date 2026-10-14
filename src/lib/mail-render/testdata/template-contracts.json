@@ -277,7 +277,7 @@
     ]
   },
   "keycloak.login-code-alarm": {
-    "subject": "{{if eq .subjectKey `skyLoginCodeAlarmFullSubject`}}SKY LAB: e-posta kodu gönderimi günlük sınıra ulaştı{{else}}SKY LAB: e-posta kodu gönderimi günlük sınırın yarısında{{end}}",
+    "subject": "{{if eq .subjectKey `skyLoginCodeAlarmFullSubject`}}SKY LAB: e-posta kodu gönderimi günlük sınıra ulaştı{{else if eq .subjectKey `skyLoginCodeAlarmCeilingSubject`}}SKY LAB: bir hesap e-posta kodunda günlük yanlış kod tavanına ulaştı{{else}}SKY LAB: e-posta kodu gönderimi günlük sınırın yarısında{{end}}",
     "system": true,
     "contentSensitive": false,
     "variables": [
@@ -296,6 +296,8 @@
     ],
     "actions": [
       "{{.realmDisplayName}}",
+      "{{else if eq .subjectKey `skyLoginCodeAlarmCeilingSubject`}}",
+      "{{if eq .subjectKey `skyLoginCodeAlarmCeilingSubject`}}",
       "{{if eq .subjectKey `skyLoginCodeAlarmFullSubject`}}"
     ]
   },

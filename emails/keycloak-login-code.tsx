@@ -14,13 +14,13 @@ export const meta: TemplateMeta = {
   contentSensitive: true,
   brand: "account",
   trigger:
-    "Keycloak'ın e.yildizskylab.com giriş sayfasında \"E-postayla devam et\" ile kod istendiğinde (sky-email-code, eskylab-login-ux 08, ADR-0063). Kod hesabın birincil e-postasına gider; 6 haneli, 10 dakika geçerli, yalnız isteyen tarayıcıda çalışır. purpose: login (giriş); ileride signup (kayıt) ve link (YTÜ ilk girişinde var olan hesabı bağlama). Keycloak'tan K5 ile gelir.",
+    "Keycloak'ın e.yildizskylab.com giriş sayfasında \"E-postayla devam et\" ile kod istendiğinde (sky-email-code, eskylab-login-ux 08, ADR-0063). Kod hesabın birincil e-postasına gider; 8 haneli, 10 dakika geçerli, yalnız isteyen tarayıcıda çalışır. purpose: login (giriş); ileride signup (kayıt) ve link (YTÜ ilk girişinde var olan hesabı bağlama). Keycloak'tan K5 ile gelir.",
   variables: ["code", "codeExpirationMinutes", "purpose", "firstName", "username", "realmDisplayName", "subjectKey"],
   sensitiveVariables: ["code"],
   // The code the person types into the open sign-in page; Keycloak's SkyMail provider always passes it.
   requiredVariables: [{ name: "code", reason: "Giriş sayfasına yazılacak kod; kaldırılırsa kişi e-postayla giremez." }],
   sample: {
-    code: "731904",
+    code: "73190452",
     codeExpirationMinutes: "10",
     purpose: "login",
     firstName: "Yusuf",
