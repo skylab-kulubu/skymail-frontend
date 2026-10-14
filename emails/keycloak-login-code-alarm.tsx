@@ -14,7 +14,7 @@ export const meta: TemplateMeta = {
   contentSensitive: false,
   brand: "account",
   trigger:
-    "Keycloak, realm'in gün içinde (UTC) gönderdiği e-posta kodları günlük genel sınırın yarısına ve sonuna ulaştığında, günde birer kez, operatör adresine (SKY_EMAIL_CODE_ALARM_EMAIL; eskylab-login-ux 08). Kişi, adres ya da IP taşımaz. SkyMail'e ulaşılamazsa Keycloak aynı uyarıyı düz metinle SMTP'den yollar.",
+    "Keycloak, realm'in gün içinde (UTC) gönderdiği e-posta kodları günlük genel sınırın yarısına ve sonuna ulaştığında, günde birer kez, /ADMIN grubunun her üyesine ayrı ayrı (SKY_EMAIL_CODE_ALARM_GROUP; eskylab-login-ux 08). Kod isteyen kişiyi, adresi ya da IP'yi taşımaz. SkyMail'e ulaşılamazsa Keycloak aynı uyarıyı düz metinle SMTP'den yollar.",
   variables: ["realmDisplayName", "subjectKey"],
   requiredVariables: [],
   sample: {
@@ -28,7 +28,7 @@ export default function KeycloakLoginCodeAlarm() {
     <Shell
       preview="E-posta kodu gönderimi günlük sınıra yaklaştı."
       brand="account"
-      reason="Bu e-postayı, Keycloak'ın e-posta kodu alarmının alıcısı olduğun için alıyorsun."
+      reason="Bu e-postayı, SKY LAB'in yönetici grubunda (ADMIN) olduğun ve Keycloak'ın e-posta kodu alarmı sana gittiği için alıyorsun."
     >
       <Context tone="bad">Operasyon uyarısı</Context>
       <Title>
