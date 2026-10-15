@@ -16,6 +16,8 @@ import KeycloakResetPassword, { meta as keycloakResetPassword } from "./keycloak
 import KeycloakUpdateEmail, { meta as keycloakUpdateEmail } from "./keycloak-update-email";
 import KeycloakIdpLink, { meta as keycloakIdpLink } from "./keycloak-idp-link";
 import KeycloakPersonalEmailConfirm, { meta as keycloakPersonalEmailConfirm } from "./keycloak-personal-email-confirm";
+import KeycloakLoginCode, { meta as keycloakLoginCode } from "./keycloak-login-code";
+import KeycloakLoginCodeAlarm, { meta as keycloakLoginCodeAlarm } from "./keycloak-login-code-alarm";
 import KeycloakGeneric, { meta as keycloakGeneric } from "./keycloak-generic";
 
 import CoreWelcome, { meta as coreWelcome } from "./core-welcome";
@@ -52,6 +54,8 @@ export const templates: EmailTemplate[] = [
   { meta: keycloakUpdateEmail, Component: KeycloakUpdateEmail },
   { meta: keycloakIdpLink, Component: KeycloakIdpLink },
   { meta: keycloakPersonalEmailConfirm, Component: KeycloakPersonalEmailConfirm },
+  { meta: keycloakLoginCode, Component: KeycloakLoginCode },
+  { meta: keycloakLoginCodeAlarm, Component: KeycloakLoginCodeAlarm },
   { meta: keycloakGeneric, Component: KeycloakGeneric },
 
   { meta: coreWelcome, Component: CoreWelcome },

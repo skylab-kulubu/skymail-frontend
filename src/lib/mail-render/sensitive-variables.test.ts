@@ -49,6 +49,7 @@ const LISTS: Record<string, string[]> = {
   "keycloak.idp-link": ["link"],
   "keycloak.generic": ["link"],
   "keycloak.personal-email-confirm": ["code"],
+  "keycloak.login-code": ["code"],
   "account.security-alert": ["SecureAccountUrl"],
   "account.primary-email-changed": ["SecureAccountUrl"],
   "account.deletion-requested": ["CancelUrl"],
