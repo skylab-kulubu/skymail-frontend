@@ -577,7 +577,7 @@ function EditPanel({
 function Recipients({ approval }: { approval: MailApproval }) {
   const canSeeSends = useCan(ROLE.mailsRead);
   const people = approval.recipients;
-  if (people.length < 2) return null;
+  if (approval.audience.kind === 'form' || people.length < 2) return null;
   const sends = approval.task_ids;
   return (
     <section id={RECIPIENTS_ANCHOR} aria-labelledby="recipients-title" className="scroll-mt-20 md:scroll-mt-4">

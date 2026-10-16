@@ -7,8 +7,10 @@ import type { SendAccess } from '@/lib/send-form/access';
 import type { PeopleCheck } from '@/lib/send-form/audience';
 import { ChoiceList, type Choice } from './ChoiceList';
 import { PeopleEditor, type PersonEntry } from './PeopleEditor';
+import type { FormSource } from '@/lib/form-mail-source';
+import { FormSourceCard } from '../FormSourceCard';
 
-export type Audience = 'list' | 'people';
+export type Audience = 'list' | 'people' | 'form';
 
 const AUDIENCE_OPTIONS: ReadonlyArray<{ value: Audience; label: string }> = [
   { value: 'list', label: 'Mail listesi' },
@@ -47,6 +49,7 @@ export function AudiencePart({
   peopleCheck,
   peopleWarnings,
   onSend,
+  formSource,
 }: {
   access: SendAccess;
   audience: Audience;
@@ -63,7 +66,11 @@ export function AudiencePart({
   peopleCheck: Pick<PeopleCheck, 'rows' | 'none'> | null;
   peopleWarnings: readonly (string | null)[];
   onSend: () => void;
+  formSource?: FormSource | null;
 }) {
+  if (audience === 'form') return formSource
+    ? <FormSourceCard source={formSource} />
+    : <Notice tone="danger">Forms kaynağı kullanılamıyor. Forms'tan yeniden hazırla.</Notice>;
   return (
     <>
       {access.list ? (

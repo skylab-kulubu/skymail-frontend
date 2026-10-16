@@ -48,7 +48,7 @@ export function sendAccess(roles: readonly string[]): SendAccess {
 }
 
 /** Whether a send to `audience` goes at once; if not, it is submitted for approval. */
-export function directSend(access: SendAccess, audience: "list" | "people"): boolean {
+export function directSend(access: SendAccess, audience: "list" | "people" | "form"): boolean {
   return audience === "list" ? access.send.list : access.send.people;
 }
 
@@ -58,7 +58,8 @@ export function directSend(access: SendAccess, audience: "list" | "people"): boo
  * goes for approval whoever makes it: only the latter. Null when it goes at
  * once.
  */
-export function approvalNote(access: SendAccess, audience: "list" | "people", { resubmit = false }: { resubmit?: boolean } = {}): string | null {
+export function approvalNote(access: SendAccess, audience: "list" | "people" | "form", { resubmit = false }: { resubmit?: boolean } = {}): string | null {
+  if (audience === "form") return resubmit || directSend(access, audience) ? null : "Bu hesap doğrudan mail gönderemez: sabit Forms alıcıları onaya sunulur; bir onaycı onaylayınca gönderilir.";
   if (resubmit) return audience === "people" ? PEOPLE_LIMIT_NOTE : null;
   if (directSend(access, audience)) return null;
   return audience === "list"

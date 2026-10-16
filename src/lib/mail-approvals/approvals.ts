@@ -252,6 +252,7 @@ export const recipientName = (person: ApprovalRecipient) => recipientLabel(perso
  * first `shown` of them, and how many more.
  */
 export function approvalAudience(item: Pick<ApprovalItem, "audience" | "recipients">, shown = 2): AudienceLabel {
+  if (item.audience.kind === "form") return audienceLabel(item.audience);
   const people = item.recipients;
   if (people.length === 0) return audienceLabel(item.audience);
   if (people.length === 1) {
