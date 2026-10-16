@@ -105,6 +105,7 @@ describe("the Login code mail", () => {
 
   it("uses a six-digit sample and renders the supplied code unchanged", async () => {
     const { meta, html } = await rendered("keycloak.login-code");
+    assert.ok(typeof meta.sample.code === "string");
     assert.match(meta.sample.code, /^[0-9]{6}$/);
     assert.equal(meta.sample.code, loginSample.code);
     assert.match(meta.trigger, /6 haneli/);
