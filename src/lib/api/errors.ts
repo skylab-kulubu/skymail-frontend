@@ -52,6 +52,10 @@ const BY_CODE: ReadonlyMap<string, string> = new Map([
     "Template key geçersiz: 3–64 karakter olmalı; küçük harf, rakam, nokta ve tire içerebilir, harf ya da rakamla başlayıp bitmeli.",
   ],
   ["mail.template_target_missing", "Gönderim için bir Mail template seçmelisin."],
+  ["form_source.expired", "Forms alıcı kaynağının süresi doldu. Formun yanıtlarından yeniden hazırla."],
+  ["form_source.changed", "Forms alıcı kaynağı artık kullanılamıyor. Formun yanıtlarından yeni bir istek hazırla."],
+  ["form_source.consumed", "Bu Forms alıcı kaynağı başka bir gönderim veya onay isteğinde kullanıldı. Yeni bir istek için Forms'tan yeniden hazırla."],
+  ["form_source.busy", "Bu Forms kaynağı şu anda kullanılıyor. Biraz sonra aynı içerikle tekrar dene."],
   // Drafts and publishing (ticket 07) and Required variables (ticket 08); the
   // editor spells out the details of the last two from their params.
   [
