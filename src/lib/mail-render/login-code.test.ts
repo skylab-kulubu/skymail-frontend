@@ -33,7 +33,7 @@ async function rendered(key: string) {
 const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/&#x27;|&apos;|&#39;/g, "'").replace(/\s+/g, " ");
 
 const loginSample = {
-  code: "73190452",
+  code: "731904",
   codeExpirationMinutes: "10",
   purpose: "login",
   firstName: "Ada",
@@ -73,17 +73,17 @@ describe("the Login code mail", () => {
   const cases: { purpose: string; says: string[]; not: string[] }[] = [
     {
       purpose: "login",
-      says: ["Giriş Kodun", "SKY LAB'e girmek için kodun aşağıda.", "73190452", "10 dakika", "kimseyle paylaşma", "kimse hesabına giremez"],
+      says: ["Giriş Kodun", "SKY LAB'e girmek için kodun aşağıda.", "731904", "10 dakika", "kimseyle paylaşma", "kimse hesabına giremez"],
       not: ["Hesap Açma", "Hesap Bağlama", "hesap açılmaz"],
     },
     {
       purpose: "signup",
-      says: ["Hesap Açma Kodun", "SKY LAB hesabını açmak için", "73190452", "hesap açılmaz"],
+      says: ["Hesap Açma Kodun", "SKY LAB hesabını açmak için", "731904", "hesap açılmaz"],
       not: ["Giriş Kodun", "Hesap Bağlama", "kimse hesabına giremez"],
     },
     {
       purpose: "link",
-      says: ["Hesap Bağlama Kodun", "YTÜ hesabını SKY LAB hesabına bağlamak için", "73190452"],
+      says: ["Hesap Bağlama Kodun", "YTÜ hesabını SKY LAB hesabına bağlamak için", "731904"],
       not: ["Giriş Kodun", "Hesap Açma"],
     },
   ];
@@ -103,13 +103,16 @@ describe("the Login code mail", () => {
     assert.ok(!text(fillSampleValues(html, { ...loginSample, firstName: "" })).includes("Merhaba"));
   });
 
-  it("shows an eight-digit code (security review K2)", async () => {
-    const { html } = await rendered("keycloak.login-code");
-    assert.match(loginSample.code, /^[0-9]{8}$/);
-    assert.ok(text(fillSampleValues(html, loginSample)).includes(loginSample.code));
-    const template = findTemplate("keycloak.login-code");
-    assert.match(template!.meta.trigger, /8 haneli/);
-    assert.doesNotMatch(template!.meta.trigger, /6 haneli/);
+  it("uses a six-digit sample and renders the supplied code unchanged", async () => {
+    const { meta, html } = await rendered("keycloak.login-code");
+    assert.ok(typeof meta.sample.code === "string");
+    assert.match(meta.sample.code, /^[0-9]{6}$/);
+    assert.equal(meta.sample.code, loginSample.code);
+    assert.match(meta.trigger, /6 haneli/);
+    assert.doesNotMatch(meta.trigger, /8 haneli/);
+    for (const code of ["008271", "73190452"]) {
+      assert.ok(text(fillSampleValues(html, { ...loginSample, code })).includes(code));
+    }
   });
 });
 
