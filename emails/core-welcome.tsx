@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Context, Cta, Label, Paragraph, RowItem, Rows, RowsEnd, Shell, Small, Strong, TextLink, Title, colors, fontStack } from "./theme";
-import { v } from "./go";
+import { end, ifNotSet, ifSet, v } from "./go";
 import type { TemplateMeta } from "./types";
 
 export const meta: TemplateMeta = {
@@ -11,17 +11,18 @@ export const meta: TemplateMeta = {
   contentSensitive: false,
   brand: "skylab",
   trigger: "core-backend, yeni bir User ilk kez göründüğünde (SKYMAIL_WELCOME_TEMPLATE_ID).",
-  // core-backend/internal/mail/mail.go gönderdiği set budur. Username YOK —
-  // eski şablon {{.Username}} kullandığı için canlıda "Selam ." yazıyordu.
-  variables: ["FirstName", "LastName", "Email", "SkyNumber", "CreatedAt"],
+  // core-backend/internal/mail/mail.go: kimlik alanları boş da olsa gönderilir.
+  variables: ["FirstName", "LastName", "Email", "Username", "SchoolEmail", "SkyNumber", "CreatedAt"],
   // Nothing: the mail welcomes without an action, and every fact in it is also in Account center.
   requiredVariables: [],
   sample: {
-    FirstName: "Yusuf",
-    LastName: "Durusoy",
-    Email: "yusuf@yildizskylab.com",
+    FirstName: "Örnek",
+    LastName: "Kullanıcı",
+    Email: "ornek@example.com",
+    Username: "ornek.kullanici",
+    SchoolEmail: "",
     SkyNumber: "SKY-0042",
-    CreatedAt: "22.09.2026",
+    CreatedAt: "2026-10-16T09:00:00Z",
   },
 };
 
@@ -67,7 +68,26 @@ export default function CoreWelcome() {
         <RowsEnd />
       </Rows>
 
+      {ifSet("Username")}
+      <Paragraph>
+        Kullanıcı adın: <Strong>{v("Username")}</Strong>. Kullanıcı adını Hesap Merkezi'nden değiştirebilirsin.
+      </Paragraph>
+      {end}
+
       <Paragraph style={{ marginTop: "24px" }}>
+        Girişte YTÜ hesabını, e-postana gelen kodu ya da passkey'ini kullanabilirsin. Parola zorunlu değil;
+        istersen <TextLink href="https://my.yildizskylab.com">my.yildizskylab.com</TextLink> adresinden ekleyebilirsin.
+      </Paragraph>
+
+      {ifNotSet("SchoolEmail")}
+      <Paragraph>
+        YTÜ öğrencisi ya da personeliysen okul hesabını bağla:{" "}
+        <TextLink href="https://my.yildizskylab.com">my.yildizskylab.com</TextLink> → Kimlik → “YTÜ hesabımı bağla”.
+        Bölümün otomatik gelir; okul şifreni yalnız Microsoft görür.
+      </Paragraph>
+      {end}
+
+      <Paragraph>
         Etkinliklerimizi, projelerimizi ve başvuruları <Strong>yildizskylab.com</Strong> üzerinden takip edebilirsin.
         Hesabınla ilgili her şeyi (parola, geçiş anahtarı, e-posta adreslerin) <Strong>my.yildizskylab.com</Strong>
         {" "}adresinden kendin yönetirsin.

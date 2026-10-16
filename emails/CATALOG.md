@@ -24,7 +24,7 @@ zaman verdiği değişkenler kullanılır.
 | Keycloak · Giriş Kodu 🔒 🙈 | `keycloak.login-code` | {{if eq .purpose `signup`}}SKY LAB hesap açma kodun{{else if eq .purpose `link`}}SKY LAB hesap bağlama kodun{{else}}SKY LAB giriş kodun{{end}} | `code`, `codeExpirationMinutes`, `purpose`, `firstName`, `username`, `realmDisplayName`, `subjectKey` |
 | Keycloak · E-posta Kodu Sınır Alarmı 🔒 | `keycloak.login-code-alarm` | {{if eq .subjectKey `skyLoginCodeAlarmFullSubject`}}SKY LAB: e-posta kodu gönderimi günlük sınıra ulaştı{{else if eq .subjectKey `skyLoginCodeAlarmCeilingSubject`}}SKY LAB: bir hesap e-posta kodunda günlük yanlış kod tavanına ulaştı{{else}}SKY LAB: e-posta kodu gönderimi günlük sınırın yarısında{{end}} | `realmDisplayName`, `subjectKey` |
 | Keycloak · Genel Sistem Postası 🔒 🙈 | `keycloak.generic` | SKY LAB hesap bildirimi | `link`, `linkExpirationMinutes`, `firstName`, `username`, `realmDisplayName`, `subjectKey` |
-| Hoş Geldin 🔒 | `core.welcome` | SKY LAB ekosistemine hoş geldin | `FirstName`, `LastName`, `Email`, `SkyNumber`, `CreatedAt` |
+| Hoş Geldin 🔒 | `core.welcome` | SKY LAB ekosistemine hoş geldin | `FirstName`, `LastName`, `Email`, `Username`, `SchoolEmail`, `SkyNumber`, `CreatedAt` |
 | Katılım Sertifikası 🔒 | `core.certificate` | Katılım sertifikan hazır | `FirstName`, `EventName`, `VerifyURL`, `Serial`, `OwnerTeam` |
 | Hesap Güvenlik Bildirimi 🔒 🙈 | `account.security-alert` | SKY LAB hesabında: {{.EventTitle}} | `EventTitle`, `EventDetail`, `OccurredAt`, `DeviceLabel`, `IpAddress`, `Location`, `SecureAccountUrl` |
 | Birincil E-posta Değişti (eski adrese) 🔒 🙈 | `account.primary-email-changed` | SKY LAB hesabının e-posta adresi değişti | `OldEmail`, `NewEmail`, `OccurredAt`, `SecureAccountUrl` |

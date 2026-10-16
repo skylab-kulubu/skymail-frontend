@@ -350,6 +350,8 @@
       "FirstName",
       "LastName",
       "Email",
+      "Username",
+      "SchoolEmail",
       "SkyNumber",
       "CreatedAt"
     ],
@@ -360,21 +362,28 @@
       "Email",
       "FirstName",
       "LastName",
-      "SkyNumber"
+      "SchoolEmail",
+      "SkyNumber",
+      "Username"
     ],
     "referenced": [
       "CreatedAt",
       "Email",
       "FirstName",
       "LastName",
-      "SkyNumber"
+      "SchoolEmail",
+      "SkyNumber",
+      "Username"
     ],
     "actions": [
       "{{.CreatedAt}}",
       "{{.Email}}",
       "{{.FirstName}}",
       "{{.LastName}}",
-      "{{.SkyNumber}}"
+      "{{.SkyNumber}}",
+      "{{.Username}}",
+      "{{if .Username}}",
+      "{{if not .SchoolEmail}}"
     ]
   },
   "core.certificate": {
