@@ -113,7 +113,7 @@ const LOGO_INK = `${ASSETS}/skylab-ink.png`;
 const LOGO_LILAC = `${ASSETS}/skylab-lilac.png`;
 
 const REPORT = "mailto:info@yildizskylab.com?subject=SKY%20LAB%20-%20Sorun%20Bildirimi";
-const KVKK = "https://skyl.app/kvkk-metni";
+const KVKK = "https://yildizskylab.com/kvkk-metni.pdf";
 
 // Comments inside this string ship in every message, so the reasoning lives out
 // here instead.
