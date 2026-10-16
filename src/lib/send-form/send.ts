@@ -21,6 +21,7 @@
  * takes a confirmation that names who may get the mail twice.
  */
 import type { ApiClient } from "../api/client";
+import type { FormSource } from "../form-mail-source";
 import { ApiError, apiErrorMessage, asApiError } from "../api/errors";
 import { fetchList, fetchRecipientPage, isInternal, toListRow, type ListRow, type MailingList } from "../mailing-lists";
 import { authorName, fetchTemplate, type MailTemplate } from "../templates";
@@ -34,6 +35,7 @@ export const FREE_TEMPLATE_KEY = "free.basic";
 export const FREE_BODY_VARIABLE = "BodyHtml";
 
 export type ListSendRequest = { template_id: string; mail_list_id: string; body_variables: Record<string, string> };
+export type FormSourceSendRequest = { template_id: string; form_source_id: string; body_variables: Record<string, string> };
 
 export type SingleSendRequest = {
   template_id: string;
@@ -52,12 +54,13 @@ export type SendDraft = Readonly<{
   /** The template chosen, or free.basic for a free announcement; null when there is none. */
   template: MailTemplate | null;
   fields: FieldInput;
-  audience: "list" | "people";
+  audience: "list" | "people" | "form";
+  formSource?: FormSource | null;
   list: ChosenList | null;
   people: readonly PersonRow[];
 }>;
 
-export type SendPlan = { kind: "list"; request: ListSendRequest } | { kind: "people"; requests: SingleSendRequest[] };
+export type SendPlan = { kind: "list"; request: ListSendRequest } | { kind: "people"; requests: SingleSendRequest[] } | { kind: "form"; request: FormSourceSendRequest; source: FormSource };
 
 /** What keeps a draft from going out, by part of the form. */
 export type SendProblems = Readonly<{
@@ -100,14 +103,18 @@ export function sendPlan(
     ],
   };
 
-  if (!template || !variables?.ok || listProblem || (people && !peopleReady(people))) {
+  const sourceProblem = draft.audience === "form" && !draft.formSource ? "Forms kaynağı kullanılamıyor. Forms'tan yeniden hazırla." : null;
+  if (!template || !variables?.ok || listProblem || sourceProblem || (people && !peopleReady(people))) {
     return {
       ok: false,
-      problems: { template: templateProblem, list: listProblem, people, fields: variables && !variables.ok ? variables.problems : {} },
+      problems: { template: templateProblem, list: listProblem ?? sourceProblem, people, fields: variables && !variables.ok ? variables.problems : {} },
       warnings,
     };
   }
   const body_variables = variables.variables;
+  if (draft.audience === "form") return {
+    ok: true, plan: { kind: "form", source: draft.formSource!, request: { template_id: template.id, form_source_id: draft.formSource!.id, body_variables } }, warnings,
+  };
   if (draft.audience === "list") {
     return {
       ok: true,
@@ -133,6 +140,12 @@ export function sendPlan(
 /** Sends to a list; the new send's id. */
 export async function sendToList(api: ApiClient, request: ListSendRequest): Promise<string> {
   const { id } = await api.post<{ id: string }>("/mail_tasks", request);
+  return id;
+}
+
+/** One bulk task using the server's immutable snapshot; an exact retry returns the same task. */
+export async function sendToFormSource(api: ApiClient, request: FormSourceSendRequest): Promise<string> {
+  const { id } = await api.post<{ id: string }>("/mail_tasks/form-source", request);
   return id;
 }
 

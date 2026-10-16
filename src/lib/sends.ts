@@ -30,13 +30,17 @@ export type RecipientCounts = Readonly<Record<RecipientStatus, number>>;
 /** Who a send went to. Fields that do not apply to the kind are null. */
 export type SendAudience = Readonly<{
   /** `people` only on a Mail onayı request to several (mail-approvals/approvals.ts): a send goes to one person or a list. */
-  kind: "mailing_list" | "single" | "people";
+  kind: "mailing_list" | "single" | "people" | "form";
   mail_list_id: string | null;
   /** A list's name; a Keycloak group's as Keycloak gave it, or null when it could not. */
   name: string | null;
-  source: "internal" | "keycloak" | null;
+  source: "internal" | "keycloak" | "forms" | null;
   recipient_full_name: string | null;
   recipient_email: string | null;
+  form_source_id?: string;
+  form_id?: string;
+  recipient_count?: number;
+  prepared_at?: string;
 }>;
 
 /** One send, as `GET /mail_tasks`, `GET /mail_tasks/:id` and the summary's recent sends all give it. */
@@ -459,13 +463,15 @@ export type AudienceLabel = Readonly<{
    * An internal mailing list, a Keycloak group (shown as Harici), the one
    * recipient of a single send, or the people of a Mail onayı request.
    */
-  kind: "list" | "group" | "person" | "people";
+  kind: "list" | "group" | "person" | "people" | "form";
   name: string;
   detail: string | null;
   /** The mailing list to link to, for a list or a group. */
   listId: string | null;
   /** People beyond the ones `name` names. */
   more?: number;
+  formId?: string;
+  preparedAt?: string;
 }>;
 
 const UNNAMED: Readonly<Record<AudienceLabel["kind"], string>> = {
@@ -473,10 +479,16 @@ const UNNAMED: Readonly<Record<AudienceLabel["kind"], string>> = {
   group: "Keycloak grubu",
   person: "Tek kişi",
   people: "Kişiler",
+  form: "Forms formu",
 };
 
 /** Who a send went to. A Keycloak group Keycloak could not name gets a label instead of its name. */
 export function audienceLabel(audience: SendAudience): AudienceLabel {
+  if (audience.kind === "form") return {
+    kind: "form", name: audience.name?.trim() || UNNAMED.form, listId: null,
+    detail: `${formatCount(audience.recipient_count ?? 0)} yanıtlayan`,
+    formId: audience.form_id, preparedAt: audience.prepared_at,
+  };
   // A request's people are its own to name (approvalAudience).
   if (audience.kind === "people") return { kind: "people", name: UNNAMED.people, detail: null, listId: null };
   if (audience.kind === "single") {

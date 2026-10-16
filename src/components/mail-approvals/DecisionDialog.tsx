@@ -14,6 +14,7 @@ import { EditComparison } from './EditComparison';
 
 /** Who it goes to, and how many, in words: several people as the send form's confirmation says them. */
 function audienceText(approval: MailApproval): string {
+  if (approval.audience.kind === 'form') return `“${approval.audience.name ?? 'Forms formu'}” formunun ${formatCount(approval.audience.recipient_count ?? 0)} yanıtlayanı (sabit alıcılar)`;
   const people = approval.recipients;
   if (people.length > 1) return peopleSentApart(people.length);
   const audience = approvalAudience(approval);
@@ -78,7 +79,7 @@ export function DecisionDialog({
           <div>
             <dt className="text-xs text-subtle-foreground">Kime</dt>
             <dd className="break-words text-foreground">{audienceText(approval)}</dd>
-            {people.length > 1 ? (
+            {people.length > 1 && approval.audience.kind !== 'form' ? (
               <dd className="mt-1 max-h-32 overflow-y-auto text-xs text-muted-foreground">
                 {people.map(recipientName).join(', ')}
               </dd>

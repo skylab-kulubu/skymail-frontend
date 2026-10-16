@@ -118,7 +118,8 @@ export function Compose({
   const fields = useMemo(() => (template ? variableFields(template) : []), [template]);
   const list = audience === 'list' ? (lists.find((candidate) => candidate.id === listId) ?? null) : null;
   const input = { values, rich };
-  const draft = { what, template, fields: input, audience, list, people };
+  const formSource = prefill?.formSource ?? null;
+  const draft = { what, template, fields: input, audience, list, people, formSource };
   const check = sendPlan(draft);
   const problems = attempts > 0 && !check.ok ? check.problems : null;
   const held = repeatsUncertainSend(draft, sending.uncertain);
@@ -169,6 +170,7 @@ export function Compose({
   /** Who it goes to, as the request's page says it. */
   function audienceWords(chosen: Extract<Confirming, { kind: 'submit' }>) {
     if (chosen.plan.kind === 'list') return `“${list?.name ?? ''}” listesine`;
+    if (chosen.plan.kind === 'form') return `“${chosen.plan.source.form_title}” formunun ${formatCount(chosen.plan.source.recipient_count)} yanıtlayanına`;
     const { requests } = chosen.plan;
     return requests.length === 1 ? `${requests[0].recipient_email} adresine` : `${formatCount(requests.length)} kişiye`;
   }
@@ -189,11 +191,16 @@ export function Compose({
     }
     if (chosen.kind === 'retryPeople') await sending.retryPeople(chosen.retry.requests);
     else if (chosen.plan.kind === 'list') await sending.toList(chosen.plan.request, list!, whatLabel);
+    else if (chosen.plan.kind === 'form') await sending.toFormSource(chosen.plan.request, chosen.plan.source.form_title, whatLabel);
     else await sending.toPeople(chosen.plan.requests, whatLabel);
     setConfirming(null);
   }
 
   function startOver() {
+    if (audience === 'form') {
+      window.location.assign(access.detail ? SEND_LIST_PATH : '/');
+      return;
+    }
     sending.reset();
     setPeople([personEntry()]);
     setAttempts(0);
@@ -254,7 +261,9 @@ export function Compose({
         title={resubmit ? 'İsteği yeniden sun' : SEND_FORM_TITLE}
         description={
           resubmit
-            ? "Değişkenleri, Mail template'i ya da kitleyi değiştirip yeniden onaya sun. Yeniden sunulan istek template'in şimdi yayımlanmış sürümüyle gider ve 7 günlük süre yeniden başlar."
+            ? audience === 'form'
+              ? "Mail template'ini ve içeriği düzenleyip aynı sabit Forms alıcılarıyla yeniden onaya sun. Alıcıları yenilemek için Forms'tan yeni bir istek hazırla."
+              : "Değişkenleri, Mail template'i ya da kitleyi değiştirip yeniden onaya sun. Yeniden sunulan istek template'in şimdi yayımlanmış sürümüyle gider ve 7 günlük süre yeniden başlar."
             : sendsAnything
               ? "Bir Mail template'i ya da serbest bir duyuruyu bir mail listesine ya da tek tek kişilere gönder; gönderemediğini onaya sun. Yalnız yayımlanmış sürüm gönderilir."
               : "Bir Mail template'i ya da serbest bir duyuruyu onaya sun: bir onaycı onaylayınca gönderilir. Yalnız yayımlanmış sürüm gönderilir."
@@ -303,6 +312,7 @@ export function Compose({
               peopleCheck={withRefusedRows(problems?.people ?? null, refusal?.rows ?? null)}
               peopleWarnings={check.warnings.people}
               onSend={submit}
+              formSource={formSource}
             />
             {audienceNote ? <Notice tone="info">{audienceNote}</Notice> : null}
           </Part>
@@ -352,6 +362,8 @@ export function Compose({
                 ) : null}
               </div>
             </Notice>
+          ) : failure && audience === 'form' && failure.kind === 'uncertain' ? (
+            <Notice tone="warning"><p className="font-medium">Gönderimin sonucu henüz bilinmiyor.</p><p className="mt-1">{failure.reason}</p></Notice>
           ) : failure && failure.kind !== 'uncertain' ? (
             <Notice tone={failure.kind === 'final' ? 'danger' : 'warning'}>
               <p className="font-medium">Gönderim açılmadı.</p>
