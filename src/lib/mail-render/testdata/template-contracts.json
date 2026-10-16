@@ -233,7 +233,7 @@
     ]
   },
   "keycloak.login-code": {
-    "subject": "{{if eq .purpose `signup`}}SKY LAB hesap açma kodun{{else if eq .purpose `link`}}SKY LAB hesap bağlama kodun{{else}}SKY LAB giriş kodun{{end}}",
+    "subject": "{{if eq .purpose `sudo`}}SKY LAB işlem onaylama kodun{{else if eq .purpose `signup`}}SKY LAB hesap açma kodun{{else if eq .purpose `link`}}SKY LAB hesap bağlama kodun{{else}}SKY LAB giriş kodun{{end}}",
     "system": true,
     "contentSensitive": true,
     "variables": [
@@ -271,9 +271,10 @@
       "{{.code}}",
       "{{.firstName}}",
       "{{else if eq .purpose `link`}}",
+      "{{else if eq .purpose `signup`}}",
       "{{if .codeExpirationMinutes}}",
       "{{if .firstName}}",
-      "{{if eq .purpose `signup`}}"
+      "{{if eq .purpose `sudo`}}"
     ]
   },
   "keycloak.login-code-alarm": {

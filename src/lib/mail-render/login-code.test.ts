@@ -72,6 +72,11 @@ describe("the Login code mail", () => {
 
   const cases: { purpose: string; says: string[]; not: string[] }[] = [
     {
+      purpose: "sudo",
+      says: ["İşlem Onaylama Kodun", "Hesap Merkezi’nde bir işlemi onaylamak için kodun", "731904", "doğrulama penceresine", "işlem onaylanmaz"],
+      not: ["Giriş Kodun", "Hesap Açma", "Hesap Bağlama", "giriş sayfasına", "kimse hesabına giremez"],
+    },
+    {
       purpose: "login",
       says: ["Giriş Kodun", "SKY LAB'e girmek için kodun aşağıda.", "731904", "10 dakika", "kimseyle paylaşma", "kimse hesabına giremez"],
       not: ["Hesap Açma", "Hesap Bağlama", "hesap açılmaz"],
