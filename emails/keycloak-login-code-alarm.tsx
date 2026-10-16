@@ -6,17 +6,19 @@ import type { TemplateMeta } from "./types";
 const FULL = "skyLoginCodeAlarmFullSubject";
 /** Security review K2: the first account of the day at its wrong-code ceiling. */
 const CEILING = "skyLoginCodeAlarmCeilingSubject";
+/** The persistent account counter, independent of the UTC day's budgets. */
+const CONSECUTIVE = "skyLoginCodeAlarmConsecutiveSubject";
 
 export const meta: TemplateMeta = {
   key: "keycloak.login-code-alarm",
   name: "Keycloak · E-posta Kodu Sınır Alarmı",
-  // Keycloak tells half, full and the wrong-code ceiling apart by subjectKey, which it always passes.
-  subject: `{{if eq .subjectKey \`${FULL}\`}}SKY LAB: e-posta kodu gönderimi günlük sınıra ulaştı{{else if eq .subjectKey \`${CEILING}\`}}SKY LAB: bir hesap e-posta kodunda günlük yanlış kod tavanına ulaştı{{else}}SKY LAB: e-posta kodu gönderimi günlük sınırın yarısında{{end}}`,
+  // Keycloak tells the daily budgets and the persistent counter apart by subjectKey.
+  subject: `{{if eq .subjectKey \`${FULL}\`}}SKY LAB: e-posta kodu gönderimi günlük sınıra ulaştı{{else if eq .subjectKey \`${CEILING}\`}}SKY LAB: bir hesap e-posta kodunda günlük yanlış kod tavanına ulaştı{{else if eq .subjectKey \`${CONSECUTIVE}\`}}SKY LAB: bir hesap ardışık 100 yanlış e-posta koduna ulaştı{{else}}SKY LAB: e-posta kodu gönderimi günlük sınırın yarısında{{end}}`,
   system: true,
   contentSensitive: false,
   brand: "account",
   trigger:
-    "Keycloak, realm'in gün içinde (UTC) gönderdiği e-posta kodları günlük genel sınırın yarısına ve sonuna ulaştığında ve günün ilk hesabı yanlış kod tavanına ulaştığında (güvenlik incelemesi K2), günde birer kez, /ADMIN grubunun her üyesine ayrı ayrı (SKY_EMAIL_CODE_ALARM_GROUP; eskylab-login-ux 08). Kod isteyen kişiyi, adresi ya da IP'yi taşımaz. SkyMail'e ulaşılamazsa Keycloak aynı uyarıyı sayılarla, düz metinle SMTP'den yollar.",
+    "Keycloak, realm'in gün içinde (UTC) gönderdiği e-posta kodları günlük genel sınırın yarısına ve sonuna ulaştığında ve günün ilk hesabı yanlış kod tavanına ulaştığında (güvenlik incelemesi K2), günde birer kez, /ADMIN grubunun her üyesine ayrı ayrı (SKY_EMAIL_CODE_ALARM_GROUP; eskylab-login-ux 08). Ayrıca bir hesabın kalıcı ardışık yanlış e-posta kodu sayacı 99'dan 100'e yükseldiğinde, işlem commit olduktan sonra bir kez aynı gruba uyarı gider (eskylab-login-ux 24). Kod isteyen kişiyi, adresi ya da IP'yi taşımaz. SkyMail'e ulaşılamazsa Keycloak aynı uyarıyı sayılarla, düz metinle SMTP'den yollar.",
   variables: ["realmDisplayName", "subjectKey"],
   requiredVariables: [],
   sample: {
@@ -35,9 +37,20 @@ export default function KeycloakLoginCodeAlarm() {
       <Context tone="bad">Operasyon uyarısı</Context>
       <Title>
         {ifEq("subjectKey", FULL)}E-posta Kodu Sınırı Doldu{elseIfEq("subjectKey", CEILING)}Yanlış Kod Tavanı
-        {elseBranch}E-posta Kodu Sınırının Yarısı{end}
+        {elseIfEq("subjectKey", CONSECUTIVE)}Ardışık 100 Yanlış Kod{elseBranch}E-posta Kodu Sınırının Yarısı{end}
       </Title>
-      {ifEq("subjectKey", CEILING)}
+      {ifEq("subjectKey", CONSECUTIVE)}
+      <Paragraph>
+        Keycloak&apos;ın {v("realmDisplayName")} realm&apos;inde bir hesap, ardışık 100 yanlış e-posta koduna ulaştı.
+        O hesaba giriş veya hesap bağlama için yeni e-posta kodu postalanmaz ve önceki kodlar doğrulanmaz;
+        kod isteyene ekran aynı görünür.
+      </Paragraph>
+      <Paragraph>
+        Bu sayaç gün değiştiğinde veya Keycloak yeniden başlatıldığında sıfırlanmaz. Parola, passkey ya da
+        YTÜ gibi mevcut başka bir yöntemle başarılı giriş veya belgelenmiş yönetici bakım sıfırlaması
+        gerekir. Bu uyarı yalnız sayacın 99&apos;dan 100&apos;e yükseldiği işlem commit olduktan sonra gider.
+      </Paragraph>
+      {elseIfEq("subjectKey", CEILING)}
       <Paragraph>
         Keycloak&apos;ın {v("realmDisplayName")} realm&apos;inde bugün (UTC günü) bir hesap, e-posta kodunda günlük
         yanlış kod tavanına ulaştı (SKY_EMAIL_CODE_WRONG_CODES_PER_ACCOUNT, varsayılan 10). O hesaba gün bitene

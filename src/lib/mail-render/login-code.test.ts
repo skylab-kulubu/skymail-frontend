@@ -144,6 +144,11 @@ describe("the Login code alarm", () => {
       says: ["Yanlış Kod Tavanı", "bir hesap", "SKY_EMAIL_CODE_WRONG_CODES_PER_ACCOUNT", "sky_email_code_wrong_ceiling"],
       not: ["Yarısı", "Sınırı Doldu"],
     },
+    {
+      subjectKey: "skyLoginCodeAlarmConsecutiveSubject",
+      says: ["Ardışık 100 Yanlış Kod", "bir hesap", "yeniden başlatıldığında", "başarılı giriş", "bakım sıfırlaması"],
+      not: ["Yarısı", "Sınırı Doldu", "bugün", "SKY_EMAIL_CODE_WRONG_CODES_PER_ACCOUNT", "günde bir"],
+    },
   ]) {
     it(`tells ${subjectKey} apart`, async () => {
       const { html } = await rendered("keycloak.login-code-alarm");
@@ -153,4 +158,12 @@ describe("the Login code alarm", () => {
       assert.ok(shown.includes("Keycloak'ın SKY LAB realm'inde"));
     });
   }
+
+  it("gives the persistent ceiling its own person-free subject", async () => {
+    const { meta } = await rendered("keycloak.login-code-alarm");
+    assert.equal(fillSampleValues(meta.subject, {
+      realmDisplayName: "SKY LAB",
+      subjectKey: "skyLoginCodeAlarmConsecutiveSubject",
+    }, { as: "text" }), "SKY LAB: bir hesap ardışık 100 yanlış e-posta koduna ulaştı");
+  });
 });
