@@ -16,29 +16,109 @@
 // template to send needs templates:read.
 
 import Link from 'next/link';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { getSession } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
 import { AlertTriangle, SearchX } from 'lucide-react';
 import { PrefillIntro } from '@/components/mail-approvals/PrefillIntro';
-import { Button, StateCard } from '@skylab-kulubu/skylcn-ui';
+import { Button, Notice, StateCard } from '@skylab-kulubu/skylcn-ui';
 import { useConsole } from '@/components/layout/ConsoleContext';
 import { RoleGate } from '@/components/layout/RoleGate';
 import { ROLE } from '@/lib/access';
 import { useApiLoad } from '@/lib/api/react';
 import { approvalViewer, viewerActions } from '@/lib/mail-approvals/actions';
-import { APPROVAL_LIST_PATH, APPROVAL_STATE_LABEL, approvalHref, fetchApproval } from '@/lib/mail-approvals/approvals';
+import { APPROVAL_LIST_PATH, APPROVAL_PEOPLE_LIMIT, APPROVAL_STATE_LABEL, approvalHref, fetchApproval } from '@/lib/mail-approvals/approvals';
 import { composePrefill, resubmission } from '@/lib/mail-approvals/edit';
 import type { ListRow } from '@/lib/mailing-lists';
 import { sendAccess } from '@/lib/send-form/access';
-import { fetchSendableLists, fetchSendableTemplates } from '@/lib/send-form/send';
+import { fetchSendableLists, fetchSendableTemplates, freeTemplate } from '@/lib/send-form/send';
+import { formsHandoffMatches, formsRecipients, parseFormsHandoff, type FormsRecipients } from '@/lib/forms-handoff';
 import { Compose } from './Compose';
 
 export function SendForm() {
-  const from = useSearchParams().get('from_approval');
+  const params = useSearchParams();
+  const from = params.get('from_approval');
+  const { user } = useConsole();
+  const handoff = params.has('forms_handoff') || params.get('source') === 'forms';
   return (
     <RoleGate role={ROLE.templatesRead}>
-      <ComposeCatalog from={from ? { kind: 'copy', id: from } : null} />
+      {handoff
+        ? <FormsCompose key={`${params.toString()}:${user.sub}`} query={params.toString()} />
+        : <ComposeCatalog from={from ? { kind: 'copy', id: from } : null} />}
     </RoleGate>
   );
+}
+
+/** Recipients arrive only after login, from the exact Forms window that opened this one. */
+function FormsCompose({ query }: { query: string }) {
+  const { config, user } = useConsole();
+  const binding = useMemo(() => parseFormsHandoff(new URLSearchParams(query)), [query]);
+  const formsUrl = config.consoles.find((console) => console.id === 'forms')?.href;
+  const origin = useMemo(() => {
+    try { return formsUrl ? new URL(formsUrl).origin : null; } catch { return null; }
+  }, [formsUrl]);
+  const [people, setPeople] = useState<FormsRecipients | null>(null);
+  const [problem, setProblem] = useState<string | null>(null);
+  const consumed = useRef(false);
+
+  useEffect(() => {
+    if (!binding || !origin || !user.sub) return;
+    const opener = window.opener as Window | null;
+    let active = true;
+    let ready = false;
+    const stop = () => {
+      active = false;
+      window.removeEventListener('message', receive);
+      window.removeEventListener('pagehide', stop);
+      window.clearTimeout(timer);
+    };
+    const fail = (message: string) => {
+      if (!active) return;
+      stop();
+      setProblem(message);
+    };
+    const receive = async (event: MessageEvent) => {
+      if (!active || !ready || consumed.current || event.origin !== origin || event.source !== opener
+          || !formsHandoffMatches(event.data, binding)) return;
+      const value = event.data;
+      if (value.type === 'skyforms:mail:error') {
+        fail(value.code === 'empty' ? 'Bu formda e-posta adresi kullanılabilen yanıtlayan yok.' : 'Aktarım tamamlanamadı. Forms sayfasından yeniden başlat.');
+        return;
+      }
+      const data = formsRecipients(value, binding, user.sub!);
+      if (!data) return;
+      consumed.current = true;
+      const session = await getSession().catch(() => null);
+      if (!active) return;
+      if (Date.now() >= binding.expires || session?.error || session?.subject !== user.sub) {
+        fail('Oturum değişti veya aktarımın süresi doldu. Forms sayfasından yeniden başlat.');
+        return;
+      }
+      opener!.postMessage({ type: 'skyforms:mail:accepted', ...binding, subject: user.sub }, origin);
+      stop();
+      window.opener = null;
+      setPeople(data);
+    };
+    const timer = window.setTimeout(() => fail('Aktarımın süresi doldu. Forms sayfasından yeniden başlat.'), binding.expires - Date.now());
+    window.addEventListener('message', receive);
+    window.addEventListener('pagehide', stop);
+    void getSession().then((session) => {
+      if (!active) return;
+      if (!opener || opener.closed || session?.error || session?.subject !== user.sub) {
+        fail('Forms sayfasındaki “Yanıtlayanlara mail gönder” düğmesinden, aynı hesapla yeniden başlat.');
+        return;
+      }
+      ready = true;
+      opener.postMessage({ type: 'skyforms:mail:ready', ...binding, subject: user.sub }, origin);
+    }).catch(() => fail('Oturum doğrulanamadı. Forms sayfasından yeniden başlat.'));
+    return stop;
+  }, [binding, origin, user.sub]);
+
+  if (!binding || !origin || !user.sub || problem) {
+    return <StateCard icon={AlertTriangle} tone="warning" title="Alıcılar aktarılamadı" description={problem ?? 'Aktarım adresi geçersiz veya süresi dolmuş. Forms sayfasından yeniden başlat.'} />;
+  }
+  if (!people) return <StateCard loading title="Forms alıcıları bekleniyor" description="Aktarım tamamlanana kadar Forms sayfasını açık tut." />;
+  return <ComposeCatalog from={null} forms={people} />;
 }
 
 /** A rejected or declined request, edited and submitted again. */
@@ -53,7 +133,7 @@ export function ResubmitForm({ id }: { id: string }) {
 type From = Readonly<{ kind: 'copy' | 'resubmit'; id: string }>;
 
 /** The templates and lists to pick from, and the request the form is filled from, loaded once. */
-function ComposeCatalog({ from }: { from: From | null }) {
+function ComposeCatalog({ from, forms }: { from: From | null; forms?: FormsRecipients }) {
   const { roles, user } = useConsole();
   const access = sendAccess(roles);
   const catalog = useApiLoad(
@@ -88,6 +168,19 @@ function ComposeCatalog({ from }: { from: From | null }) {
   }
 
   const { templates, lists, approval } = catalog.data;
+  if (forms) {
+    return (
+      <Compose access={access} templates={templates} lists={lists}
+        prefill={{ what: freeTemplate(templates) ? 'free' : 'template', templateId: null, audience: 'people', listId: null, people: forms.recipients, values: {}, rich: {}, notes: [] }}
+        intro={<Notice tone="info">
+          “{forms.formTitle}” formundan {forms.recipients.length} alıcı aktarıldı. Arşivlenen, geçici ve düzeltme istenen yanıtlar dahil değildir.
+          {forms.skippedCount > 0 && ` E-posta adresi alınamayan veya kullanılamayan ${forms.skippedCount} yanıt atlandı.`}
+          {forms.duplicateCount > 0 && ` Aynı adrese ait ${forms.duplicateCount} tekrar çıkarıldı.`}
+          {forms.recipients.length > APPROVAL_PEOPLE_LIMIT && ` Onaya en çok ${APPROVAL_PEOPLE_LIMIT} kişi sunulabilir; daha kalabalık bir gönderim için mevcut mail listesi yolunu kullan.`}
+        </Notice>}
+      />
+    );
+  }
   if (!from || !approval) return <Compose access={access} templates={templates} lists={lists} />;
 
   if (from.kind === 'resubmit') {
