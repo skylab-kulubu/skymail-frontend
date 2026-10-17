@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { formsHandoffMatches, formsRecipients, parseFormsHandoff } from "./forms-handoff";
+import { formsHandoffMatches, formsRecipients, formsSourceHandoff, parseFormsHandoff } from "./forms-handoff";
 
 const now = 1_800_000_000_000;
 const binding = { nonce: "d71a2392-1f97-4ffc-b9e4-2a89af4a38e9", formId: "a16bec36-7243-4bb7-82dd-c3c4a2315a78", expires: now + 300_000 };
@@ -32,6 +32,17 @@ describe("Forms compose handoff binding", () => {
     for (const key of ["nonce", "formId", "expires"]) assert.equal(formsHandoffMatches({ ...binding, [key]: "other" }, binding, now), false);
     assert.equal(formsHandoffMatches(binding, binding, binding.expires), false);
     for (const malformed of [null, [], "", 3]) assert.equal(formsHandoffMatches(malformed, binding, now), false);
+  });
+});
+
+describe("Forms source handoff names only an owner-bound backend candidate", () => {
+  const source = () => ({ type: "skyforms:mail:source", ...binding, sourceId: "3f0c1a52-7b7e-4c1d-9a55-0d6f3b2c1e10", preparedByUserId: subject });
+  it("accepts the source id without addresses", () => assert.deepEqual(formsSourceHandoff(source(), binding, subject, now), source()));
+  it("rejects foreign identity, binding, expiry, malformed id and mixed recipient payload", () => {
+    for (const changed of [{ preparedByUserId: "other" }, { formId: "other" }, { sourceId: "not-id" }, { recipients: [] }, { type: "skyforms:mail:recipients" }]) {
+      assert.equal(formsSourceHandoff({ ...source(), ...changed }, binding, subject, now), null);
+    }
+    assert.equal(formsSourceHandoff(source(), binding, subject, binding.expires), null);
   });
 });
 

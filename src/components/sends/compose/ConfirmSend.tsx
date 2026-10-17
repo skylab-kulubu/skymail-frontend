@@ -72,6 +72,7 @@ export function ConfirmSend({
       : [];
   const busy = progress !== null || submitting;
   const submission = confirming?.kind === 'submit';
+  const source = (confirming?.kind === 'send' || confirming?.kind === 'submit') && confirming.plan.kind === 'form' ? confirming.plan.source : null;
   return (
     <PanelDialog isOpen={confirming !== null} onClose={busy ? () => {} : onCancel} title={title}>
       {confirming?.kind === 'retryPeople' ? (
@@ -98,7 +99,7 @@ export function ConfirmSend({
             <div>
               <dt className="text-xs text-subtle-foreground">Kime</dt>
               <dd className="break-words text-foreground">
-                {submission && people.length === 1
+                {source ? `“${source.form_title}” formunun ${formatCount(source.recipient_count)} yanıtlayanı (sabit alıcılar)` : submission && people.length === 1
                   ? person(people[0])
                   : people.length > 0
                     ? peopleSentApart(people.length)

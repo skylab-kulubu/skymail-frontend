@@ -9,7 +9,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { asApiError } from '@/lib/api/errors';
+import { asApiError, apiErrorMessage } from '@/lib/api/errors';
 import { useApi } from '@/lib/api/react';
 import { flashNotice } from '@/lib/notice';
 import { sendHref } from '@/lib/sends';
@@ -18,12 +18,14 @@ import {
   sendFailure,
   sendToList,
   sendToPeople,
+  sendToFormSource,
   whyNotFound,
   type ChosenList,
   type ListSendRequest,
   type PersonOutcome,
   type SendFailure,
   type SingleSendRequest,
+  type FormSourceSendRequest,
   type UncertainListSend,
 } from '@/lib/send-form/send';
 
@@ -80,6 +82,30 @@ export function useSending({ canSeeSends }: { canSeeSends: boolean }) {
     setPeople({ what, requests, outcomes });
   }
 
+  async function toFormSource(request: FormSourceSendRequest, title: string, what: string) {
+    setProgress({ done: 0, total: 1 });
+    setListFailure(null);
+    try {
+      const id = await sendToFormSource(api, request);
+      const text = `Gönderim kuyruğa alındı: ${what}, “${title}” formunun sabit alıcılarına.`;
+      if (canSeeSends) {
+        flashNotice(sendHref(id), { tone: 'success', text });
+        router.push(sendHref(id));
+        return;
+      }
+      setQueued(text);
+    } catch (error) {
+      const refusal = asApiError(error);
+      const failure = refusal.code.startsWith('form_source.') || refusal.status === 404
+        ? { kind: 'final' as const, reason: refusal.status === 404 ? 'Forms kaynağı veya Mail template bulunamadı. Forms’tan yeniden hazırla.' : apiErrorMessage(refusal) }
+        : sendFailure(error, 'person', { canSeeSends });
+      setListFailure(failure.kind === 'uncertain'
+        ? { kind: 'uncertain', reason: 'Gönderim açılmış olabilir. Aynı içerikle yeniden denersen sunucu aynı gönderimi döndürür; alıcı kaynağı ikinci kez kullanılamaz.' }
+        : failure);
+    }
+    setProgress(null);
+  }
+
   /** Sends again to some of the people sent to; the sender has confirmed who. */
   async function retryPeople(requests: readonly SingleSendRequest[]) {
     if (!people) return;
@@ -99,5 +125,5 @@ export function useSending({ canSeeSends }: { canSeeSends: boolean }) {
     setUncertain(null);
   }
 
-  return { progress, listFailure, uncertain, queued, people, toList, toPeople, retryPeople, reset };
+  return { progress, listFailure, uncertain, queued, people, toList, toPeople, toFormSource, retryPeople, reset };
 }

@@ -34,12 +34,16 @@ import {
   sendPlan,
   sendToList,
   sendToPeople,
+  sendToFormSource,
   templateChoices,
   whyNotFound,
   type PersonOutcome,
   type SendDraft,
   type SingleSendRequest,
 } from "./send";
+import { approvalRequest } from "../mail-approvals/edit";
+import { directSend, sendAccess } from "./access";
+import { ROLE } from "../access";
 
 const LIST_ID = "3f0c1a52-7b7e-4c1d-9a55-0d6f3b2c1e10";
 const TASK_ID = "b1c2d3e4-0000-4000-8000-000000000001";
@@ -87,6 +91,36 @@ const draft = (overrides: Partial<SendDraft>): SendDraft => ({
   list: { id: LIST_ID, name: "GECEKODU katılımcıları", external: false },
   people: [],
   ...overrides,
+});
+
+describe("a persistent Forms audience", () => {
+  const source = { id: "a16bec36-7243-4bb7-82dd-c3c4a2315a78", form_id: LIST_ID, form_title: "Fixture form", recipient_count: 101, prepared_at: "2026-10-17T00:00:00Z" };
+  it("sends 101+ via one source reference, with no browser recipient rows or mailing-list id", async () => {
+    const checked = sendPlan(draft({ audience: "form", formSource: source, list: null }));
+    assert.ok(checked.ok);
+    assert.equal(checked.plan.kind, "form");
+    if (checked.plan.kind !== "form") return;
+    assert.equal(checked.plan.request.form_source_id, source.id);
+    assert.equal("recipients" in checked.plan.request, false);
+    assert.equal("mail_list_id" in checked.plan.request, false);
+    const { api, calls } = scriptedClient(json(201, { id: TASK_ID }));
+    assert.equal(await sendToFormSource(api, checked.plan.request), TASK_ID);
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].url, `${TEST_BASE_URL}/mail_tasks/form-source`);
+    assert.deepEqual(JSON.parse(calls[0].body!), checked.plan.request);
+    assert.deepEqual(approvalRequest(checked.plan, { lists: false }), { ok: true, request: checked.plan.request });
+  });
+  it("keeps the manual approval limit at 100 and refuses a missing source", () => {
+    const manual = sendPlan(draft({ audience: "people", list: null, people: Array.from({ length: 101 }, (_, i) => ({ name: "Fixture", email: `fixture${i}@example.test` })) }));
+    assert.ok(manual.ok);
+    assert.equal(approvalRequest(manual.plan, { lists: false }).ok, false);
+    assert.equal(sendPlan(draft({ audience: "form", list: null })).ok, false);
+  });
+  it("uses send|write and template-read, without requiring list-read", () => {
+    for (const role of [ROLE.mailsSend, ROLE.mailsWrite]) assert.equal(directSend(sendAccess([ROLE.access, ROLE.templatesRead, role]), "form"), true);
+    assert.equal(directSend(sendAccess([ROLE.access, ROLE.templatesRead]), "form"), false);
+    assert.equal(directSend(sendAccess([ROLE.access, ROLE.mailsSend]), "form"), false);
+  });
 });
 
 describe("a send's requests", () => {

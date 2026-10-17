@@ -35,6 +35,7 @@ import {
 import { FREE_BODY_VARIABLE, FREE_TEMPLATE_KEY, type SendPlan } from "../send-form/send";
 import { audienceLabel } from "../sends";
 import type { ApiClient } from "../api/client";
+import { audienceFormSource, type FormSource } from "../form-mail-source";
 import { isErasedAddress } from "../people";
 import { fetchTemplate, fetchVersion, type MailTemplate } from "../templates";
 import {
@@ -262,6 +263,7 @@ export function resubmission<T extends Pick<MailApproval, "state" | "body_variab
 /** `POST /mail_approvals` and `…/resubmit`: the send form's request, to a list or to people. */
 export type ApprovalRequest =
   | { template_id: string; mail_list_id: string; body_variables: Record<string, string> }
+  | { template_id: string; form_source_id: string; body_variables: Record<string, string> }
   | { template_id: string; recipients: ApprovalRecipient[]; body_variables: Record<string, string> };
 
 /**
@@ -270,7 +272,7 @@ export type ApprovalRequest =
  * are pointed to a list; `lists` says whether the viewer can pick one.
  */
 export function approvalRequest(plan: SendPlan, { lists }: { lists: boolean }): { ok: true; request: ApprovalRequest } | { ok: false; problem: string } {
-  if (plan.kind === "list") return { ok: true, request: plan.request };
+  if (plan.kind === "list" || plan.kind === "form") return { ok: true, request: plan.request };
   const count = plan.requests.length;
   if (count > APPROVAL_PEOPLE_LIMIT) {
     const crowd = lists
@@ -293,7 +295,8 @@ export function approvalRequest(plan: SendPlan, { lists }: { lists: boolean }): 
 export type ComposePrefill = Readonly<{
   what: "template" | "free";
   templateId: string | null;
-  audience: "list" | "people";
+  audience: "list" | "people" | "form";
+  formSource?: FormSource | null;
   listId: string | null;
   people: PersonRow[];
   values: Record<string, string>;
@@ -313,7 +316,11 @@ export function composePrefill(
   let audience: ComposePrefill["audience"] = "people";
   let listId: string | null = null;
   let people: PersonRow[] = [];
-  if (approval.audience.kind !== "mailing_list") {
+  const formSource = audienceFormSource(approval.audience);
+  if (approval.audience.kind === "form") {
+    audience = "form";
+    if (!formSource) notes.push("Forms kaynağı artık kullanılamıyor. Formun yanıtlarından yeni bir gönderim hazırla.");
+  } else if (approval.audience.kind !== "mailing_list") {
     // Silinmiş kullanıcı's place holds an address that never delivers: it is left out, not shown in the form.
     const everyone = approval.recipients;
     people = everyone.filter((person) => !isErasedAddress(person.email)).map((person) => ({ name: person.full_name, email: person.email }));
@@ -353,6 +360,7 @@ export function composePrefill(
     what: template?.key === FREE_TEMPLATE_KEY ? "free" : "template",
     templateId: template?.id ?? null,
     audience,
+    ...(approval.audience.kind === "form" ? { formSource } : {}),
     listId,
     people,
     values,

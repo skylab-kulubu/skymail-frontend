@@ -13,6 +13,19 @@ export type FormsRecipients = FormsHandoff & Readonly<{
   skippedCount: number;
   duplicateCount: number;
 }>;
+export type FormsSourceHandoff = FormsHandoff & Readonly<{
+  type: "skyforms:mail:source";
+  sourceId: string;
+  preparedByUserId: string;
+}>;
+
+/** No addresses or browser-supplied metadata become a trusted source. */
+export function formsSourceHandoff(value: unknown, binding: FormsHandoff, subject: string, now = Date.now()): FormsSourceHandoff | null {
+  if (!formsHandoffMatches(value, binding, now) || value.type !== "skyforms:mail:source"
+      || value.preparedByUserId !== subject || typeof value.sourceId !== "string" || !UUID.test(value.sourceId)
+      || "recipients" in value) return null;
+  return value as FormsSourceHandoff;
+}
 
 /** Only the Forms button's NEW compose request, never an approval copy or list. */
 export function parseFormsHandoff(params: URLSearchParams, now = Date.now()): FormsHandoff | null {
