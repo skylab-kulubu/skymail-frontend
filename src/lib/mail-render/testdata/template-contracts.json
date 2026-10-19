@@ -345,7 +345,7 @@
     ]
   },
   "core.welcome": {
-    "subject": "SKY LAB ekosistemine hoş geldin",
+    "subject": "SKY LAB'e hoş geldin",
     "system": true,
     "contentSensitive": false,
     "variables": [
@@ -1048,7 +1048,6 @@
       "{{if eq .AdminRole `yes`}}",
       "{{if eq .Change `member-added`}}",
       "{{if eq .Change `member-removed`}}",
-      "{{if eq .Change `roles-changed`}}",
       "{{if eq .Root `board`}}"
     ]
   }

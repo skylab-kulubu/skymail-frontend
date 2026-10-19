@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Img } from "@react-email/components";
-import { Context, Cta, Paragraph, RowItem, Rows, RowsEnd, Shell, Small, Strong, Title } from "./theme";
+import { Context, Cta, Paragraph, RowItem, Rows, RowsEnd, Shell, Strong, Title } from "./theme";
 import { end, ifSet, v } from "./go";
 import type { TemplateMeta } from "./types";
 
@@ -26,16 +26,12 @@ export const meta: TemplateMeta = {
 
 export default function EventReminder() {
   return (
-    <Shell
-      preview={`${v("EventName")} yarın başlıyor.`}
-      brand="skylab"
-      reason={<>Bu e-postayı {v("EventName")} etkinliğine kayıtlı olduğun için alıyorsun.</>}
-    >
+    <Shell preview={`${v("EventName")} yarın başlıyor.`} brand="skylab" reason={null}>
       <Context tone="wait">{v("EventName")}</Context>
-      <Title>Yarın Görüşüyoruz</Title>
+      <Title>Etkinlik Yarın</Title>
 
       <Paragraph>
-        <Strong>{v("EventName")}</Strong> yarın başlıyor. Biletin hazır; kapıda QR kodunu okutman yeterli.
+        <Strong>{v("EventName")}</Strong> yarın başlıyor. Kapıda QR kodunu okut.
       </Paragraph>
 
       <Rows>
@@ -60,7 +56,6 @@ export default function EventReminder() {
       <Cta href={v("MapUrl")}>Yol Tarifi</Cta>
       {end}
 
-      <Small style={{ marginTop: "24px" }}>Gelemeyeceksen haber vermen yeter — yerini bekleyen birine açarız.</Small>
     </Shell>
   );
 }

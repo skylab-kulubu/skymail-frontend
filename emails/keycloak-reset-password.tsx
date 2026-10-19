@@ -27,13 +27,11 @@ export const meta: TemplateMeta = {
 export default function KeycloakResetPassword() {
   return (
     <ActionMail
-      preview="SKY LAB parolanı sıfırlamak için bir bağlantı istendi."
+      preview="SKY LAB parolanı sıfırlama bağlantın."
       heading="Parolanı Sıfırla"
-      intro="SKY LAB hesabının parolasını sıfırlamak için bir istek aldık. Yeni parolanı belirlemek için aşağıdaki bağlantıyı kullan."
+      intro="Yeni parolanı belirlemek için aşağıdaki bağlantıyı kullan."
       ctaLabel="Yeni Parola Belirle"
-      disclaimer="Bu isteği sen yapmadıysan parolan değişmedi; bu e-postayı yok sayman yeterli. Hesabına birinin eriştiğinden şüpheleniyorsan info@yildizskylab.com adresinden bize yaz."
       context="Parola sıfırlama"
-      reason="Bu e-postayı, bu adrese bağlı SKY LAB hesabı için parola sıfırlama istendiği için alıyorsun."
     />
   );
 }

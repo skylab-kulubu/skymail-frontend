@@ -44,18 +44,10 @@ export default function KeycloakLoginCode() {
         <>
           {ifEq("purpose", "sudo")}Hesap Merkezi’nde bir işlemi onaylamak için kodun aşağıda.{elseIfEq("purpose", "signup")}SKY LAB hesabını açmak için kodun aşağıda.{elseIfEq("purpose", "link")}YTÜ
           hesabını SKY LAB hesabına bağlamak için kodun aşağıda.{elseBranch}SKY LAB&apos;e girmek için kodun aşağıda.
-          {end} {ifEq("purpose", "sudo")}Açık olan doğrulama penceresine yaz; kod yalnız onu istediğin Hesap Merkezi oturumunda çalışır.{elseBranch}Açık olan giriş sayfasına yaz; kod yalnız onu istediğin tarayıcıda çalışır.{end}
-        </>
-      }
-      disclaimer={
-        <>
-          Bu isteği sen yapmadıysan bu e-postayı yok say:{" "}
-          {ifEq("purpose", "sudo")}kod yazılmadan işlem onaylanmaz.{elseIfEq("purpose", "signup")}kod yazılmadan hesap açılmaz.{elseBranch}kod yazılmadan kimse hesabına giremez.
           {end}
         </>
       }
       context={<>{ifEq("purpose", "sudo")}Hesap Merkezi işlemi{elseBranch}SKY LAB girişi{end}</>}
-      reason={<>{ifEq("purpose", "sudo")}Bu e-postayı, Hesap Merkezi’nde bir işlemi onaylamak için kod istendiğinden alıyorsun.{elseBranch}Bu e-postayı, bu adresle SKY LAB&apos;e e-postayla giriş ya da hesap açma kodu istendiği için alıyorsun.{end}</>}
     />
   );
 }

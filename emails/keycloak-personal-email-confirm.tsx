@@ -28,12 +28,10 @@ export const meta: TemplateMeta = {
 export default function KeycloakPersonalEmailConfirm() {
   return (
     <CodeMail
-      preview="Kişisel e-posta adresini SKY LAB hesabına eklemek için doğrulama kodun."
+      preview="Kişisel e-posta adresin için doğrulama kodun."
       heading="Kişisel E-postanı Doğrula"
-      intro="SKY LAB hesabına bu adresi kişisel e-posta olarak eklemek istedin. Aşağıdaki kodu açık olan sayfaya (Hesap Merkezi ya da giriş sayfası) gir. Doğruladıktan sonra bu adresle de giriş yapabilir, istersen birincil adresin olarak seçebilirsin."
-      disclaimer="Bu isteği sen yapmadıysan bu e-postayı yok say: kod girilmeden adres hesabına eklenmez."
+      intro="Bu adresi SKY LAB hesabına kişisel e-posta olarak eklemek için kodun aşağıda."
       context="Kişisel e-posta"
-      reason="Bu e-postayı, bu adres bir SKY LAB hesabına kişisel e-posta olarak eklenmek istendiği için alıyorsun."
     />
   );
 }
