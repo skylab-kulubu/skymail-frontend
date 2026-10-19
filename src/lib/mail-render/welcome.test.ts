@@ -35,14 +35,17 @@ describe("the welcome mail", () => {
   });
 
   for (const SchoolEmail of ["", "ornek@std.yildiz.edu.tr"]) {
-    it(`explains sign-in and ${SchoolEmail ? "omits" : "offers"} school linking`, async () => {
+    it(`names the sign-in ways and ${SchoolEmail ? "omits" : "offers"} school linking`, async () => {
       const { html, plainText } = await rendered();
       for (const body of [text(fillSampleValues(html, { ...sample, SchoolEmail })), fillSampleValues(plainText, { ...sample, SchoolEmail }, { as: "text" })]) {
-        for (const phrase of ["YTÜ hesabını", "e-postana gelen kodu", "passkey", "Parola zorunlu değil", "ornek.kullanici2", "Hesap Merkezi'nden değiştirebilirsin", "my.yildizskylab.com/email"]) {
+        for (const phrase of ["YTÜ hesabı", "e-posta kodu", "passkey", "Parola isteğe bağlı.", "ornek.kullanici2", "Kişisel e-posta ekle", "my.yildizskylab.com/email"]) {
           assert.ok(body.includes(phrase), `missing ${phrase}`);
         }
-        assert.equal(body.includes("YTÜ hesabımı bağla"), SchoolEmail === "");
-        assert.equal(body.includes("okul şifreni yalnız Microsoft görür"), SchoolEmail === "");
+        assert.equal(body.includes("YTÜ hesabını bağla"), SchoolEmail === "");
+        // Only what the member needs (Yusuf, 2026-10-19): no reassurance, no promotion, no "why you got this".
+        for (const phrase of ["Microsoft görür", "ekosistem", "alıyorsun", "Bölümün otomatik gelir"]) {
+          assert.ok(!body.includes(phrase), `still says ${phrase}`);
+        }
         assert.ok(!body.includes("{{") && !body.includes("«"), "unresolved template action or sample value");
       }
     });
@@ -56,7 +59,7 @@ describe("the welcome mail", () => {
     for (const body of [text(fillSampleValues(html, olderSample)), fillSampleValues(plainText, olderSample, { as: "text" })]) {
       assert.ok(!body.includes("Kullanıcı adı"));
       assert.ok(!body.includes("«Username»"));
-      assert.ok(body.includes("YTÜ hesabımı bağla"));
+      assert.ok(body.includes("YTÜ hesabını bağla"));
     }
   });
 

@@ -1,12 +1,12 @@
 import * as React from "react";
-import { Context, Cta, Label, Paragraph, RowItem, Rows, RowsEnd, Shell, Small, Strong, TextLink, Title, colors, fontStack } from "./theme";
+import { Context, Cta, Label, Paragraph, RowItem, Rows, RowsEnd, Shell, TextLink, Title, colors, fontStack } from "./theme";
 import { end, ifNotSet, ifSet, v } from "./go";
 import type { TemplateMeta } from "./types";
 
 export const meta: TemplateMeta = {
   key: "core.welcome",
   name: "Hoş Geldin",
-  subject: "SKY LAB ekosistemine hoş geldin",
+  subject: "SKY LAB'e hoş geldin",
   system: true,
   contentSensitive: false,
   brand: "skylab",
@@ -26,19 +26,18 @@ export const meta: TemplateMeta = {
   },
 };
 
+/**
+ * Only what the new member needs (Yusuf, 2026-10-19): the Sky Number, the
+ * account's facts, how to sign in (Y1: the welcome says it) and the two links
+ * to act on, school linking only while no school account is linked.
+ */
 export default function CoreWelcome() {
   return (
-    <Shell
-      preview="SKY LAB ekosistemine kaydın tamamlandı — Sky Number'ın hazır."
-      brand="skylab"
-      reason="Bu e-postayı, bu adresle bir SKY LAB hesabı açıldığı için alıyorsun."
-    >
-      <Context tone="ok">SKY LAB ekosistemi</Context>
-      <Title>Aramıza Hoş Geldin</Title>
+    <Shell preview="SKY LAB hesabın açıldı." brand="skylab" reason={null}>
+      <Context tone="ok">SKY LAB</Context>
+      <Title>Hoş Geldin</Title>
 
-      <Paragraph>
-        Merhaba {v("FirstName")}, SKY LAB ekosistemine kaydın tamamlandı. Aşağıda kimliğin ve atabileceğin ilk adımlar var.
-      </Paragraph>
+      <Paragraph>Merhaba {v("FirstName")}, SKY LAB hesabın açıldı.</Paragraph>
 
       <div style={{ marginTop: "28px" }}>
         <Label>Sky Number</Label>
@@ -56,51 +55,32 @@ export default function CoreWelcome() {
         >
           {v("SkyNumber")}
         </p>
-        <p className="t-muted" style={{ margin: "4px 0 0", fontSize: "12px", lineHeight: "18px", color: colors.muted, fontFamily: fontStack }}>
-          Kalıcı · değişmez · sana ait
-        </p>
       </div>
 
       <Rows>
         <RowItem label="Ad Soyad">{`${v("FirstName")} ${v("LastName")}`}</RowItem>
         <RowItem label="E-posta">{v("Email")}</RowItem>
+        {ifSet("Username")}
+        <RowItem label="Kullanıcı adı">{v("Username")}</RowItem>
+        {end}
         <RowItem label="Katılım">{v("CreatedAt")}</RowItem>
         <RowsEnd />
       </Rows>
 
-      {ifSet("Username")}
-      <Paragraph>
-        Kullanıcı adın: <Strong>{v("Username")}</Strong>. Kullanıcı adını Hesap Merkezi'nden değiştirebilirsin.
-      </Paragraph>
-      {end}
-
-      <Paragraph style={{ marginTop: "24px" }}>
-        Girişte YTÜ hesabını, e-postana gelen kodu ya da passkey'ini kullanabilirsin. Parola zorunlu değil;
-        istersen <TextLink href="https://my.yildizskylab.com">my.yildizskylab.com</TextLink> adresinden ekleyebilirsin.
-      </Paragraph>
+      <Paragraph style={{ marginTop: "24px" }}>Giriş: YTÜ hesabı, e-posta kodu ya da passkey. Parola isteğe bağlı.</Paragraph>
 
       {ifNotSet("SchoolEmail")}
       <Paragraph>
-        YTÜ öğrencisi ya da personeliysen okul hesabını bağla:{" "}
-        <TextLink href="https://my.yildizskylab.com">my.yildizskylab.com</TextLink> → Kimlik → “YTÜ hesabımı bağla”.
-        Bölümün otomatik gelir; okul şifreni yalnız Microsoft görür.
+        YTÜ hesabını bağla: <TextLink href="https://my.yildizskylab.com">my.yildizskylab.com</TextLink> → Kimlik
       </Paragraph>
       {end}
 
       <Paragraph>
-        Etkinliklerimizi, projelerimizi ve başvuruları <Strong>yildizskylab.com</Strong> üzerinden takip edebilirsin.
-        Hesabınla ilgili her şeyi (parola, geçiş anahtarı, e-posta adreslerin) <Strong>my.yildizskylab.com</Strong>
-        {" "}adresinden kendin yönetirsin.
-      </Paragraph>
-
-      <Paragraph>
-        Okul e-postanla katıldıysan: mezun olunca okul adresin kapanabilir. Kişisel e-postanı eklemek için:{" "}
+        Kişisel e-posta ekle:{" "}
         <TextLink href="https://my.yildizskylab.com/email?intent=add-personal">my.yildizskylab.com/email</TextLink>
       </Paragraph>
 
-      <Cta href="https://yildizskylab.com">Ekosisteme Göz At</Cta>
-
-      <Small style={{ marginTop: "24px" }}>Bu hesabı sen oluşturmadıysan bu e-postayı yok sayabilirsin.</Small>
+      <Cta href="https://my.yildizskylab.com">Hesap Merkezi</Cta>
     </Shell>
   );
 }

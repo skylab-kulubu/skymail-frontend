@@ -29,20 +29,13 @@ export const meta: TemplateMeta = {
  */
 export default function OpsSendFailed() {
   return (
-    <Shell
-      preview="Bir SkyMail gönderiminde başarısız olan alıcılar var."
-      brand="mail"
-      reason="Bu e-postayı, bu gönderimi sen başlattığın için alıyorsun."
-    >
+    <Shell preview="SkyMail gönderiminde iletilemeyen mailler var." brand="mail" reason={null}>
       <Context tone="bad">
         {v("FailedCount")} / {v("TotalCount")} başarısız
       </Context>
       <Title>Gönderimde Hata</Title>
 
-      <Paragraph>
-        Başlattığın gönderimde bazı mailler yeniden denemelerden sonra da iletilemedi. Başarılı olanlar gitti;
-        aşağıdaki sayı yalnızca iletilemeyenleri gösteriyor.
-      </Paragraph>
+      <Paragraph>Başlattığın gönderimde bazı mailler yeniden denemelerden sonra da iletilemedi; diğerleri gitti.</Paragraph>
 
       <Rows>
         <RowItem label="Şablon">{v("TemplateName")}</RowItem>

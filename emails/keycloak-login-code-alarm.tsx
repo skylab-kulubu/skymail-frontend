@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Context, Paragraph, Shell, Small, Title } from "./theme";
+import { Context, Paragraph, Shell, Title } from "./theme";
 import { elseBranch, elseIfEq, end, ifEq, v } from "./go";
 import type { TemplateMeta } from "./types";
 
@@ -29,11 +29,7 @@ export const meta: TemplateMeta = {
 
 export default function KeycloakLoginCodeAlarm() {
   return (
-    <Shell
-      preview="E-posta kodu girişinde bir sınıra ulaşıldı."
-      brand="account"
-      reason="Bu e-postayı, SKY LAB'in yönetici grubunda (ADMIN) olduğun ve Keycloak'ın e-posta kodu alarmı sana gittiği için alıyorsun."
-    >
+    <Shell preview="E-posta kodu girişinde bir sınıra ulaşıldı." brand="account" reason={null}>
       <Context tone="bad">Operasyon uyarısı</Context>
       <Title>
         {ifEq("subjectKey", FULL)}E-posta Kodu Sınırı Doldu{elseIfEq("subjectKey", CEILING)}Yanlış Kod Tavanı
@@ -48,7 +44,7 @@ export default function KeycloakLoginCodeAlarm() {
       <Paragraph>
         Bu sayaç gün değiştiğinde veya Keycloak yeniden başlatıldığında sıfırlanmaz. Parola, passkey ya da
         YTÜ gibi mevcut başka bir yöntemle başarılı giriş veya belgelenmiş yönetici bakım sıfırlaması
-        gerekir. Bu uyarı yalnız sayacın 99&apos;dan 100&apos;e yükseldiği işlem commit olduktan sonra gider.
+        gerekir.
       </Paragraph>
       {elseIfEq("subjectKey", CEILING)}
       <Paragraph>
@@ -65,14 +61,13 @@ export default function KeycloakLoginCodeAlarm() {
       <Paragraph>
         Keycloak&apos;ın {v("realmDisplayName")} realm&apos;inde bugün (UTC günü) gönderilen e-posta kodları{" "}
         {ifEq("subjectKey", FULL)}günlük genel sınıra ulaştı.{elseBranch}günlük genel sınırın yarısına ulaştı.{end}{" "}
-        Giriş kodları sınırdan sonra da gider; açıldığında kayıt kodları sınırda durur.
+        Giriş kodları sınırdan sonra da gider; kayıt kodları sınırda durur.
       </Paragraph>
       <Paragraph>
         Beklenmedik bir artışsa Keycloak olaylarına (LOGIN_ERROR, ayrıntı sky_email_code) ve SkyMail&apos;deki
         keycloak.login-code gönderimlerine bak.
       </Paragraph>
       {end}
-      <Small>Bu posta Keycloak&apos;ın e-postayla giriş adımından (sky-email-code) otomatik gelir.</Small>
     </Shell>
   );
 }

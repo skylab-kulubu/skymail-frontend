@@ -28,11 +28,7 @@ export default function ClubGroupMembership() {
   const added = ifEq("Action", "added");
 
   return (
-    <Shell
-      preview="SKY LAB grup üyeliğinde bir değişiklik oldu."
-      brand="account"
-      reason="Bu e-postayı, bir SKY LAB grubundaki üyeliğin değiştiği için alıyorsun."
-    >
+    <Shell preview="SKY LAB grup üyeliğinde değişiklik." brand="account" reason={null}>
       {added}
       <Context tone="ok">{v("GroupName")}</Context>
       {elseBranch}
@@ -58,10 +54,6 @@ export default function ClubGroupMembership() {
         {end}
         <RowsEnd />
       </Rows>
-
-      <Paragraph style={{ marginTop: "24px" }}>
-        Hesabındaki güncel yetkileri her zaman Hesap Merkezi&apos;ndeki İzinler ekranından görebilirsin.
-      </Paragraph>
 
       <Cta href="https://my.yildizskylab.com/izinler">İzinlerimi Gör</Cta>
     </Shell>

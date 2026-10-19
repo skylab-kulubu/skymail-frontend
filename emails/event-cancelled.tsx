@@ -25,26 +25,20 @@ export const meta: TemplateMeta = {
  */
 export default function EventCancelled() {
   return (
-    <Shell
-      preview={`${v("EventName")} iptal edildi.`}
-      brand="skylab"
-      reason={<>Bu e-postayı {v("EventName")} etkinliğine kayıtlı olduğun için alıyorsun.</>}
-    >
+    <Shell preview={`${v("EventName")} iptal edildi.`} brand="skylab" reason={null}>
       <Context tone="bad">İptal</Context>
       <Title>Etkinlik İptal Edildi</Title>
 
       <Paragraph>
-        <Strong>{v("EventName")}</Strong> etkinliği iptal edildi. Biletin geçersiz; gelmene gerek yok.
+        <Strong>{v("EventName")}</Strong> etkinliği iptal edildi. Biletin geçersiz.
       </Paragraph>
 
       {ifSet("CancelReason")}
       <Note tone="alert">{v("CancelReason")}</Note>
       {end}
 
-      <Paragraph style={{ marginTop: "24px" }}>Bu kadar geç haber verdiğimiz için kusura bakma.</Paragraph>
-
       {ifSet("ContactEmail")}
-      <Small style={{ marginTop: "24px" }}>Sorun olursa {v("ContactEmail")} adresinden bize ulaşabilirsin.</Small>
+      <Small style={{ marginTop: "24px" }}>İletişim: {v("ContactEmail")}</Small>
       {end}
     </Shell>
   );

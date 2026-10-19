@@ -1,8 +1,13 @@
 /**
  * The shape every "click this link" mail shares: Keycloak's verification and
- * password-reset mails. They differ only in wording, so the reassurance, the
- * expiry line and the copy-paste fallback live here and stay consistent across
- * all of them. (Account center's personal e-mail proof is a code, see code-mail.)
+ * password-reset mails. They differ only in wording, so the expiry line, the
+ * copy-paste fallback and the closing line live here and stay consistent
+ * across all of them. (Account center's personal e-mail proof is a code, see
+ * code-mail.)
+ *
+ * Only what the reader needs (Yusuf, 2026-10-19): a title, one sentence saying
+ * what the link does, the link, its expiry, and "ignore the mail if you did not
+ * ask". No footer sentence about why the mail came.
  */
 import * as React from "react";
 import { Context, Cta, LinkFallback, Paragraph, Shell, Small, Title, type Tone } from "./theme";
@@ -13,27 +18,22 @@ export function ActionMail({
   heading,
   intro,
   ctaLabel,
-  /** What the reader should do if they did not ask for this. */
-  disclaimer,
   /** The line above the heading: what the mail is about. */
   context = "SKY LAB hesabı",
   tone = "wait",
-  /** Why the reader got it, for the footer. */
-  reason = "Bu e-postayı, bu adrese bağlı SKY LAB hesabı için bir işlem istendiği için alıyorsun.",
 }: {
   preview: string;
   heading: React.ReactNode;
+  /** One short sentence: what the link does. */
   intro: React.ReactNode;
   ctaLabel: string;
-  disclaimer: React.ReactNode;
   context?: React.ReactNode;
   tone?: Tone;
-  reason?: React.ReactNode;
 }) {
   const link = v("link");
 
   return (
-    <Shell preview={preview} brand="account" reason={reason}>
+    <Shell preview={preview} brand="account" reason={null}>
       <Context tone={tone}>{context}</Context>
       <Title>{heading}</Title>
 
@@ -52,7 +52,7 @@ export function ActionMail({
 
       <LinkFallback href={link} />
 
-      <Small style={{ marginTop: "24px" }}>{disclaimer}</Small>
+      <Small style={{ marginTop: "24px" }}>Bu isteği sen yapmadıysan bu e-postayı yok say.</Small>
     </Shell>
   );
 }

@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Context, Cta, Note, Paragraph, RowItem, Rows, RowsEnd, Shell, Small, Title } from "./theme";
+import { Context, Cta, Note, Paragraph, RowItem, Rows, RowsEnd, Shell, Title } from "./theme";
 import { end, ifSet, v } from "./go";
 import type { TemplateMeta } from "./types";
 
@@ -20,7 +20,7 @@ export const meta: TemplateMeta = {
   requiredVariables: [],
   sample: {
     EventTitle: "Yeni geçiş anahtarı eklendi",
-    EventDetail: "Hesabına \"MacBook Pro\" adlı yeni bir geçiş anahtarı (passkey) eklendi. Artık bu cihazla parolasız giriş yapabilirsin.",
+    EventDetail: "Hesabına \"MacBook Pro\" adlı yeni bir geçiş anahtarı (passkey) eklendi.",
     OccurredAt: "22.09.2026 16:04",
     DeviceLabel: "macOS · Safari",
     IpAddress: "88.230.14.7",
@@ -38,11 +38,7 @@ export const meta: TemplateMeta = {
  */
 export default function AccountSecurityAlert() {
   return (
-    <Shell
-      preview={`SKY LAB hesabında: ${v("EventTitle")}`}
-      brand="account"
-      reason="Bu bildirimi, hesabında güvenlikle ilgili bir değişiklik olduğu için alıyorsun; bu postaların gönderimi kapatılamaz."
-    >
+    <Shell preview={`SKY LAB hesabında: ${v("EventTitle")}`} brand="account" reason={null}>
       <Context tone="wait">
         Hesap güvenliği{ifSet("OccurredAt")} · {v("OccurredAt")}{end}
       </Context>
@@ -63,14 +59,9 @@ export default function AccountSecurityAlert() {
       </Rows>
       {end}
 
-      <Note tone="alert">
-        Bu işlemi sen yapmadıysan hesabın risk altında olabilir. Hemen parolanı değiştir ve açık oturumları kapat.
-      </Note>
+      <Note tone="alert">Bu işlemi sen yapmadıysan hesabını güvene al.</Note>
 
       <Cta href={v("SecureAccountUrl")}>Hesabımı Güvene Al</Cta>
-
-      {/* About the rows above, so it stays in the body rather than the footer. */}
-      <Small style={{ marginTop: "24px" }}>Konum ve IP bilgisi yaklaşıktır.</Small>
     </Shell>
   );
 }

@@ -34,11 +34,7 @@ export default function ClubTeamMembership() {
   const coordinator = elseIfEq("Role", "coordinator");
 
   return (
-    <Shell
-      preview="SKY LAB takım üyeliğinde bir değişiklik oldu."
-      brand="account"
-      reason="Bu e-postayı, SKY LAB'de bir takımdaki yerin değiştiği için alıyorsun."
-    >
+    <Shell preview="SKY LAB takım üyeliğinde değişiklik." brand="account" reason={null}>
       {added}
       <Context tone="ok">{v("TeamName")}</Context>
       {elseBranch}
@@ -56,24 +52,24 @@ export default function ClubTeamMembership() {
       <Paragraph>
         {added}
         {leader}
-        <Strong>{v("TeamName")}</Strong> takımına lider olarak eklendin. Takımın etkinliklerini ve içeriklerini
-        yönetme yetkilerin hesabına tanımlandı.
+        <Strong>{v("TeamName")}</Strong> takımına lider olarak eklendin; takımın yönetim yetkileri hesabına
+        tanımlandı.
         {coordinator}
-        <Strong>{v("TeamName")}</Strong> takımına koordinatör olarak eklendin. Takımın etkinliklerini ve içeriklerini
-        yönetme yetkilerin hesabına tanımlandı.
+        <Strong>{v("TeamName")}</Strong> takımına koordinatör olarak eklendin; takımın yönetim yetkileri hesabına
+        tanımlandı.
         {elseBranch}
-        <Strong>{v("TeamName")}</Strong> takımına üye olarak eklendin. Aramıza hoş geldin!
+        <Strong>{v("TeamName")}</Strong> takımına üye olarak eklendin.
         {end}
         {elseBranch}
         {leader}
         <Strong>{v("TeamName")}</Strong> takımındaki liderlik görevin ve ona bağlı yönetim yetkilerin sona erdi.
-        Değişiklik yalnız bu görevi kapsar: takıma ayrıca üyeysen o üyeliğin sürüyor, SKY LAB üyeliğin de devam ediyor.
+        Diğer üyeliklerin sürüyor.
         {coordinator}
         <Strong>{v("TeamName")}</Strong> takımındaki koordinatörlük görevin ve ona bağlı yönetim yetkilerin sona erdi.
-        Değişiklik yalnız bu görevi kapsar: takıma ayrıca üyeysen o üyeliğin sürüyor, SKY LAB üyeliğin de devam ediyor.
+        Diğer üyeliklerin sürüyor.
         {elseBranch}
-        <Strong>{v("TeamName")}</Strong> takımındaki üyeliğin sona erdi. Takıma özel izinlerin hesabından kaldırıldı;
-        SKY LAB üyeliğin devam ediyor.
+        <Strong>{v("TeamName")}</Strong> takımındaki üyeliğin sona erdi; takıma özel izinlerin kaldırıldı. SKY LAB
+        üyeliğin sürüyor.
         {end}
         {end}
       </Paragraph>
@@ -86,10 +82,6 @@ export default function ClubTeamMembership() {
         {end}
         <RowsEnd />
       </Rows>
-
-      <Paragraph style={{ marginTop: "24px" }}>
-        Hesabındaki güncel yetkileri her zaman Hesap Merkezi&apos;ndeki İzinler ekranından görebilirsin.
-      </Paragraph>
 
       <Cta href="https://my.yildizskylab.com/izinler">İzinlerimi Gör</Cta>
     </Shell>

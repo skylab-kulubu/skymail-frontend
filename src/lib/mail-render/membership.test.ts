@@ -57,7 +57,7 @@ describe("the membership mails", () => {
         "Bir Yönetim Grubundan Çıkarıldın",
         "BASKAN grubundan çıkarıldın",
         "Yönetim Kurulu'na bağlı",
-        "Bu grup üzerinden gelen yetkiler hesabından kaldırıldı; başka gruplardan gelen yetkilerin varsa onlar sürüyor.",
+        "Bu grup üzerinden gelen yetkiler hesabından kaldırıldı.",
         "İşlemi yapan",
         "beklemiyorsan",
       ],

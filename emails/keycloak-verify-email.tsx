@@ -29,11 +29,9 @@ export default function KeycloakVerifyEmail() {
     <ActionMail
       preview="SKY LAB hesabın için e-posta adresini doğrula."
       heading="E-posta Adresini Doğrula"
-      intro="SKY LAB hesabını kullanmaya başlamak için e-posta adresinin sana ait olduğunu doğrulaman gerekiyor."
+      intro="SKY LAB hesabın için bu adresi doğrula."
       ctaLabel="E-postamı Doğrula"
-      disclaimer="Bu hesabı sen oluşturmadıysan bu e-postayı yok sayabilirsin; doğrulanmayan adresle hesap açılmaz."
       context="E-posta doğrulama"
-      reason="Bu e-postayı, bu adres bir SKY LAB hesabına yazıldığı ve henüz doğrulanmadığı için alıyorsun."
     />
   );
 }
