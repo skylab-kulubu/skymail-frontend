@@ -55,7 +55,6 @@ export default function EventReminder() {
       {ifSet("MapUrl")}
       <Cta href={v("MapUrl")}>Yol Tarifi</Cta>
       {end}
-
     </Shell>
   );
 }

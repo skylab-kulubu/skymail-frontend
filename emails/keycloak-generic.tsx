@@ -30,9 +30,11 @@ export const meta: TemplateMeta = {
 /**
  * Deliberately vague: this renders for a mail nobody has written wording for
  * yet. It must stay useful without knowing what happened, so it says only that
- * the account has an action and shows the link. The subjectKey is printed so
- * whoever receives a report of a confusing mail can tell which one it was and
- * give it a proper template.
+ * the account has an action, and shows the link when there is one. The mail
+ * asks nothing of the reader beyond the usual "yok say" line (Yusuf,
+ * 2026-10-19); the subjectKey is printed as the İşlem Kodu so that a confusing
+ * mail someone reports through the footer's "Sorun bildir" can be told apart
+ * and given a proper template.
  */
 export default function KeycloakGeneric() {
   const link = v("link");

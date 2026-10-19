@@ -39,7 +39,7 @@ export default function CoreCertificate() {
       <Title>Sertifikan Hazır</Title>
 
       <Paragraph>
-        Merhaba {v("FirstName")}, <Strong>{v("EventName")}</Strong> katılım sertifikan hazır.
+        Merhaba {v("FirstName")}, <Strong>{v("EventName")}</Strong> etkinliği için katılım sertifikan hazır.
       </Paragraph>
 
       <Rows>
