@@ -394,6 +394,11 @@ const NOTIFICATION_PROBLEM: ReadonlyMap<string, (notification: ApprovalNotificat
 ]);
 
 /** Who an action's notification did not reach, and why; null when it reached everyone it was for. */
+/** What the request's page says of its tracking; null when the backend does not say (before tracking). */
+export function approvalTracking(approval: Pick<ApprovalItem, "tracking">): "Açık" | "Kapalı" | null {
+  return approval.tracking === undefined ? null : approval.tracking ? "Açık" : "Kapalı";
+}
+
 export function notificationNote(notification: ApprovalNotification | undefined | null): string | null {
   if (!notification?.problem) return null;
   const say = NOTIFICATION_PROBLEM.get(notification.problem);

@@ -33,6 +33,7 @@ import {
   deadlineHint,
   eventActorName,
   fetchApproval,
+  approvalTracking,
   notificationNote,
   previewFailureNote,
   previewNote,
@@ -188,6 +189,7 @@ function ApprovalView({
   }
 
   const audience = approvalAudience(approval, PEOPLE_NAMED);
+  const tracking = approvalTracking(approval);
   const warnings = editing && edit?.ok ? fieldWarnings(fields.filter((field) => edit.changed.includes(field.name)), editing.current) : {};
 
   return (
@@ -257,6 +259,7 @@ function ApprovalView({
             {approval.template.republished ? 'Sunulduktan sonra yeni sürümü yayımlandı' : 'Sunulduğu andaki yayımlanmış sürümü'}
           </span>
         </Fact>
+        {tracking ? <Fact term="Takip">{tracking}</Fact> : null}
       </dl>
 
       <Recipients approval={approval} />

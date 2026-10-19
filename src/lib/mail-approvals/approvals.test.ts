@@ -12,6 +12,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { TEST_BASE_URL, json, scriptedClient } from "../api/testing";
 import {
+  approvalTracking,
   APPROVAL_FILTERS,
   APPROVAL_PAGE_SIZE,
   APPROVAL_STATE_LABEL,
@@ -356,5 +357,13 @@ describe("who a request goes to", () => {
       previewFailureNote({ ...failed, preview_error: null, preview_recipient: PEOPLE[1] }),
       "Önizleme zeynep@ornek.com için hazırlanamadı. Mail template bu değerlerle işlenemiyor olabilir.",
     );
+  });
+});
+
+describe("whether a request asks for tracking", () => {
+  it("says Açık or Kapalı from the request's tracking, and nothing for a backend that does not give it", () => {
+    assert.equal(approvalTracking({ tracking: true }), "Açık");
+    assert.equal(approvalTracking({ tracking: false }), "Kapalı");
+    assert.equal(approvalTracking({}), null);
   });
 });
