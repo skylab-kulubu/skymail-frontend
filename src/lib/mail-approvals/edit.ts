@@ -262,7 +262,7 @@ export function resubmission<T extends Pick<MailApproval, "state" | "body_variab
 
 /** `POST /mail_approvals` and `…/resubmit`: the send form's request, to a list or to people. */
 export type ApprovalRequest =
-  | { template_id: string; mail_list_id: string; body_variables: Record<string, string> }
+  | { template_id: string; mail_list_id: string; body_variables: Record<string, string>; tracking?: boolean }
   | { template_id: string; form_source_id: string; body_variables: Record<string, string> }
   | { template_id: string; recipients: ApprovalRecipient[]; body_variables: Record<string, string> };
 
@@ -303,10 +303,12 @@ export type ComposePrefill = Readonly<{
   rich: Record<string, string>;
   /** What could not be filled as the request had it, in words. */
   notes: string[];
+  /** The request asked for open and click tracking: the box starts ticked, where the form offers it. */
+  tracking?: boolean;
 }>;
 
 export function composePrefill(
-  approval: Pick<MailApproval, "template" | "audience" | "recipients" | "body_variables">,
+  approval: Pick<MailApproval, "template" | "audience" | "recipients" | "body_variables" | "tracking">,
   { templates, lists, access }: { templates: readonly MailTemplate[]; lists: readonly ListRow[]; access: SendAccess },
 ): ComposePrefill {
   const notes: string[] = [];
@@ -366,5 +368,6 @@ export function composePrefill(
     values,
     rich,
     notes,
+    tracking: approval.tracking === true,
   };
 }

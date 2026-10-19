@@ -36,6 +36,7 @@ import {
   sendPlan,
   templateChoices,
 } from '@/lib/send-form/send';
+import { TRACKING_LABEL, fetchTrackingAvailable, templateTrackable, trackingOffered } from '@/lib/send-form/tracking';
 import type { MailTemplate } from '@/lib/templates';
 import { AudiencePart, type Audience } from './AudiencePart';
 import { ConfirmSend, type Confirming } from './ConfirmSend';
@@ -105,6 +106,8 @@ export function Compose({
   const [people, setPeople] = useState<PersonEntry[]>(() =>
     prefill && prefill.people.length > 0 ? prefill.people.map((person) => personEntry(person)) : [personEntry()],
   );
+  /** The tracking box; it counts only while the form offers it. */
+  const [trackingTicked, setTrackingTicked] = useState(prefill?.tracking ?? false);
   const [attempts, setAttempts] = useState(0);
   /** Whether the sender last asked to send, or to submit for approval. */
   const [intent, setIntent] = useState<'send' | 'submit'>('send');
@@ -119,7 +122,23 @@ export function Compose({
   const list = audience === 'list' ? (lists.find((candidate) => candidate.id === listId) ?? null) : null;
   const input = { values, rich };
   const formSource = prefill?.formSource ?? null;
-  const draft = { what, template, fields: input, audience, list, people, formSource };
+  // The summary needs mails:read; without it, or while it loads or fails, the box stays hidden.
+  const trackingState = useApiLoad(
+    (loader, signal) => (access.detail ? fetchTrackingAvailable(loader, signal) : Promise.resolve(false)),
+    `tracking-available:${access.detail}`,
+  );
+  const trackingShown = trackingOffered({
+    available: trackingState.status === 'success' && trackingState.data,
+    audience,
+    template,
+  });
+  const tracking = trackingShown && trackingTicked;
+  // A template that may not be tracked clears the box: going back to one that may does not tick it again.
+  const untrackable = template !== null && !templateTrackable(template);
+  useEffect(() => {
+    if (untrackable) setTrackingTicked(false);
+  }, [untrackable]);
+  const draft = { what, template, fields: input, audience, list, people, formSource, tracking };
   const check = sendPlan(draft);
   const problems = attempts > 0 && !check.ok ? check.problems : null;
   const held = repeatsUncertainSend(draft, sending.uncertain);
@@ -315,6 +334,18 @@ export function Compose({
               formSource={formSource}
             />
             {audienceNote ? <Notice tone="info">{audienceNote}</Notice> : null}
+            {trackingShown ? (
+              <label className="flex w-fit cursor-pointer items-center gap-2 text-sm text-foreground">
+                <input
+                  type="checkbox"
+                  checked={trackingTicked}
+                  onChange={(event) => setTrackingTicked(event.target.checked)}
+                  disabled={busy}
+                  className="accent-skylab-500 h-4 w-4 shrink-0 cursor-pointer"
+                />
+                {TRACKING_LABEL}
+              </label>
+            ) : null}
           </Part>
 
           {template ? (
