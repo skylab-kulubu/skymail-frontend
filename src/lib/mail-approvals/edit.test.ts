@@ -364,6 +364,12 @@ describe("the send form filled from a request", () => {
   });
   const member = sendAccess([ROLE.access, ROLE.templatesRead, ROLE.listsRead]);
 
+  it("keeps the request's tracking for the box, unticked when it had none", () => {
+    assert.equal(composePrefill(approval({ tracking: true }), { templates: [FREE, template()], lists, access: member }).tracking, true);
+    assert.equal(composePrefill(approval({ tracking: false }), { templates: [FREE, template()], lists, access: member }).tracking, false);
+    assert.equal(composePrefill(approval(), { templates: [FREE, template()], lists, access: member }).tracking, false);
+  });
+
   it("picks the free announcement, the list and the values again", () => {
     const prefill = composePrefill(approval(), { templates: [FREE, template()], lists, access: member });
     assert.equal(prefill.what, "free");

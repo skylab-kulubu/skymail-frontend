@@ -73,6 +73,10 @@ export function ConfirmSend({
   const busy = progress !== null || submitting;
   const submission = confirming?.kind === 'submit';
   const source = (confirming?.kind === 'send' || confirming?.kind === 'submit') && confirming.plan.kind === 'form' ? confirming.plan.source : null;
+  const tracked =
+    (confirming?.kind === 'send' || confirming?.kind === 'submit' || confirming?.kind === 'resendList') &&
+    confirming.plan.kind === 'list' &&
+    confirming.plan.request.tracking === true;
   return (
     <PanelDialog isOpen={confirming !== null} onClose={busy ? () => {} : onCancel} title={title}>
       {confirming?.kind === 'retryPeople' ? (
@@ -109,6 +113,12 @@ export function ConfirmSend({
                 <dd className="mt-1 max-h-32 overflow-y-auto text-xs text-muted-foreground">{people.map(({ name, email }) => name || email).join(', ')}</dd>
               ) : null}
             </div>
+            {tracked ? (
+              <div>
+                <dt className="text-xs text-subtle-foreground">Takip</dt>
+                <dd className="text-foreground">Açık</dd>
+              </div>
+            ) : null}
           </dl>
           {confirming?.kind === 'resendList' ? (
             <div className="mt-3">

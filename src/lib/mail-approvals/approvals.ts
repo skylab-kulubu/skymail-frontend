@@ -117,6 +117,8 @@ export type ApprovalItem = Readonly<{
   /** Once approved: a list's one send, or each person's, `task_ids[i]` to `recipients[i]`; empty until then. */
   task_ids: readonly string[];
   last_event: ApprovalEvent | null;
+  /** It asked for open and click tracking and may get it. Absent from a backend before tracking. */
+  tracking?: boolean;
 }>;
 
 /** The mail an action sent about itself. */
