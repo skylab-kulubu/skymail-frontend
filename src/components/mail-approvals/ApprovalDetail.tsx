@@ -25,6 +25,7 @@ import { ROLE } from '@/lib/access';
 import { useApi, useApiLoad } from '@/lib/api/react';
 import { approvalViewer, viewerActions, type ViewerActions } from '@/lib/mail-approvals/actions';
 import { formatClubTime } from '@/lib/format';
+import { fetchTemplate } from '@/lib/templates';
 import {
   APPROVAL_LIST_PATH,
   approvalAudience,
@@ -126,6 +127,12 @@ function ApprovalView({
         : { status: 'unreadable' };
   const source = pinnedSource.status === 'ready' ? pinnedSource.source : null;
   const fields = useMemo(() => approvalFields(source, approval.body_variables, approval.template.key), [source, approval]);
+  // "Takip: Kapalı" only where tracking could be on: a list request of a trackable template, read when it is needed.
+  const asksTemplate = canReadTemplates && approval.tracking === false && approval.audience.kind === 'mailing_list';
+  const trackingTemplate = useApiLoad(
+    (client, signal) => (asksTemplate ? fetchTemplate(client, approval.template.id, signal) : Promise.resolve(null)),
+    `tracking:${asksTemplate}:${approval.template.id}`,
+  );
 
   const [started, setEditing] = useState<Editing | null>(null);
   // An edit shows only while the request can still be edited: one that moved on under it (reloaded after a refusal) drops it.
@@ -189,7 +196,7 @@ function ApprovalView({
   }
 
   const audience = approvalAudience(approval, PEOPLE_NAMED);
-  const tracking = approvalTracking(approval);
+  const tracking = approvalTracking(approval, trackingTemplate.status === 'success' ? trackingTemplate.data : null);
   const warnings = editing && edit?.ok ? fieldWarnings(fields.filter((field) => edit.changed.includes(field.name)), editing.current) : {};
 
   return (

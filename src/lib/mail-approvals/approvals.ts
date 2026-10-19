@@ -30,6 +30,7 @@ import type { ApiClient, ApiPage } from "../api/client";
 import { pageRange, readPage, viewHref } from "../list-view";
 import { isErasedSubject, personLabel, recipientLabel, samePerson } from "../people";
 import { SEND_LIST_PATH, audienceLabel, type AudienceLabel, type SendAudience } from "../sends";
+import { templateTrackable, type TrackableTemplate } from "../send-form/tracking";
 
 export const APPROVAL_PAGE_SIZE = 25;
 
@@ -393,12 +394,23 @@ const NOTIFICATION_PROBLEM: ReadonlyMap<string, (notification: ApprovalNotificat
   ["enqueue_failed", () => "Bildirim maili kuyruğa yazılamadı; kimseye haber gitmedi."],
 ]);
 
-/** Who an action's notification did not reach, and why; null when it reached everyone it was for. */
-/** What the request's page says of its tracking; null when the backend does not say (before tracking). */
-export function approvalTracking(approval: Pick<ApprovalItem, "tracking">): "Açık" | "Kapalı" | null {
-  return approval.tracking === undefined ? null : approval.tracking ? "Açık" : "Kapalı";
+/**
+ * What the request's page says of its tracking, only where it could have
+ * any: Açık for one that got it (skymail-backend keeps it only for a
+ * trackable one); Kapalı for a list request of a template that may be
+ * tracked (`template` null when it cannot be read). Null otherwise, and
+ * for a backend that does not say (before tracking).
+ */
+export function approvalTracking(
+  approval: Pick<ApprovalItem, "tracking"> & Readonly<{ audience: Pick<SendAudience, "kind"> }>,
+  template: TrackableTemplate | null,
+): "Açık" | "Kapalı" | null {
+  if (approval.tracking === true) return "Açık";
+  if (approval.tracking === false && approval.audience.kind === "mailing_list" && template && templateTrackable(template)) return "Kapalı";
+  return null;
 }
 
+/** Who an action's notification did not reach, and why; null when it reached everyone it was for. */
 export function notificationNote(notification: ApprovalNotification | undefined | null): string | null {
   if (!notification?.problem) return null;
   const say = NOTIFICATION_PROBLEM.get(notification.problem);

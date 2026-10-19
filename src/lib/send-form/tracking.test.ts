@@ -18,6 +18,7 @@ import {
   fetchTrackingAvailable,
   trackingAvailable,
   trackingDropped,
+  templateTrackable,
   trackingOffered,
 } from "./tracking";
 
@@ -64,6 +65,13 @@ describe("the tracking box", () => {
     assert.equal(offered({ template: template({ content_sensitive: true }) }), false);
     assert.equal(offered({ template: template({ content_sensitive_locked: true }) }), false);
     assert.equal(offered({ template: null }), false);
+  });
+
+  it("reads a template's trackability as the backend does", () => {
+    assert.equal(templateTrackable(template()), true);
+    assert.equal(templateTrackable(template({ system: true })), false);
+    assert.equal(templateTrackable(template({ content_sensitive: true })), false);
+    assert.equal(templateTrackable(template({ content_sensitive_locked: true })), false);
   });
 
   it("is labelled shortly, without the word for reading", () => {

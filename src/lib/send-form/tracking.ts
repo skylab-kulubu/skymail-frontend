@@ -28,6 +28,13 @@ export async function fetchTrackingAvailable(api: ApiClient, signal?: AbortSigna
   return trackingAvailable(summary);
 }
 
+/** A template's sends may be tracked: neither a System template nor sensitive (skymail-backend GetTemplateTrackingExclusion, for a send to many). */
+export type TrackableTemplate = Pick<MailTemplate, "system" | "content_sensitive" | "content_sensitive_locked">;
+
+export function templateTrackable(template: TrackableTemplate): boolean {
+  return !template.system && template.content_sensitive !== true && template.content_sensitive_locked !== true;
+}
+
 /** Whether the form offers the tracking box for this send. */
 export function trackingOffered({
   available,
@@ -36,10 +43,9 @@ export function trackingOffered({
 }: {
   available: boolean;
   audience: "list" | "people" | "form";
-  template: Pick<MailTemplate, "system" | "content_sensitive" | "content_sensitive_locked"> | null;
+  template: TrackableTemplate | null;
 }): boolean {
-  if (!available || audience !== "list" || !template) return false;
-  return !template.system && template.content_sensitive !== true && template.content_sensitive_locked !== true;
+  return available && audience === "list" && template !== null && templateTrackable(template);
 }
 
 /** What to say of a send that asked for tracking and was answered untracked; null otherwise, or when the answer has no field. */

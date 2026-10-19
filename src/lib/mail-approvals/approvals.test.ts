@@ -361,9 +361,20 @@ describe("who a request goes to", () => {
 });
 
 describe("whether a request asks for tracking", () => {
-  it("says Açık or Kapalı from the request's tracking, and nothing for a backend that does not give it", () => {
-    assert.equal(approvalTracking({ tracking: true }), "Açık");
-    assert.equal(approvalTracking({ tracking: false }), "Kapalı");
-    assert.equal(approvalTracking({}), null);
+  const list = { kind: "mailing_list" } as const;
+  const ordinary = { system: false, content_sensitive: null };
+  it("says Açık for a request that got it: only a trackable one does", () => {
+    assert.equal(approvalTracking({ tracking: true, audience: list }, null), "Açık");
+  });
+  it("says Kapalı only for a list request of a template that may be tracked", () => {
+    assert.equal(approvalTracking({ tracking: false, audience: list }, ordinary), "Kapalı");
+    assert.equal(approvalTracking({ tracking: false, audience: list }, { ...ordinary, system: true }), null);
+    assert.equal(approvalTracking({ tracking: false, audience: list }, { ...ordinary, content_sensitive: true }), null);
+    assert.equal(approvalTracking({ tracking: false, audience: list }, { ...ordinary, content_sensitive_locked: true }), null);
+    assert.equal(approvalTracking({ tracking: false, audience: list }, null), null);
+    for (const kind of ["single", "people", "form"] as const) assert.equal(approvalTracking({ tracking: false, audience: { kind } }, ordinary), null);
+  });
+  it("says nothing for a backend that does not give it", () => {
+    assert.equal(approvalTracking({ audience: list }, ordinary), null);
   });
 });

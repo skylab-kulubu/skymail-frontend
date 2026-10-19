@@ -36,7 +36,7 @@ import {
   sendPlan,
   templateChoices,
 } from '@/lib/send-form/send';
-import { TRACKING_LABEL, fetchTrackingAvailable, trackingOffered } from '@/lib/send-form/tracking';
+import { TRACKING_LABEL, fetchTrackingAvailable, templateTrackable, trackingOffered } from '@/lib/send-form/tracking';
 import type { MailTemplate } from '@/lib/templates';
 import { AudiencePart, type Audience } from './AudiencePart';
 import { ConfirmSend, type Confirming } from './ConfirmSend';
@@ -133,6 +133,11 @@ export function Compose({
     template,
   });
   const tracking = trackingShown && trackingTicked;
+  // A template that may not be tracked clears the box: going back to one that may does not tick it again.
+  const untrackable = template !== null && !templateTrackable(template);
+  useEffect(() => {
+    if (untrackable) setTrackingTicked(false);
+  }, [untrackable]);
   const draft = { what, template, fields: input, audience, list, people, formSource, tracking };
   const check = sendPlan(draft);
   const problems = attempts > 0 && !check.ok ? check.problems : null;
