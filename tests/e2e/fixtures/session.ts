@@ -41,6 +41,8 @@ export const ROLES = {
   personSender: ["skymail:access", "skymail:templates:read", "skymail:lists:read", "skymail:mails:send"],
   /** Reads sends, sends nothing. */
   watcher: ["skymail:access", "skymail:templates:read", "skymail:mails:read"],
+  /** Reads sends and every tracked send's recipients one by one (YK, DK, ADMIN; hub ticket 15b). */
+  trackingReader: ["skymail:access", "skymail:templates:read", "skymail:mails:read", "skymail:mails:tracking:read"],
   /** Reads templates and lists and sends nothing: submits for approval (ticket 20). */
   member: ["skymail:access", "skymail:templates:read", "skymail:lists:read"],
   /** SkyMail's administrator: reads every send's content but a sensitive one's, single mail included (skymail:system-mails:read). */

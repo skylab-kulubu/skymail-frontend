@@ -17,6 +17,8 @@ export const ROLE = {
   mailsSend: "skymail:mails:send",
   /** Mail onayı (ticket 18): decides sends submitted for approval; apart from sending. */
   mailsApprove: "skymail:mails:approve",
+  /** A tracked send's recipients one by one (hub ticket 15b; YK, DK, ADMIN). A send's own sender needs no role for its own. */
+  mailsTrackingRead: "skymail:mails:tracking:read",
 } as const;
 
 export type Role = (typeof ROLE)[keyof typeof ROLE];

@@ -26,6 +26,8 @@ zaman verdiği değişkenler kullanılır.
 | Keycloak · Genel Sistem Postası 🔒 🙈 | `keycloak.generic` | SKY LAB hesap bildirimi | `link`, `linkExpirationMinutes`, `firstName`, `username`, `realmDisplayName`, `subjectKey` |
 | Hoş Geldin 🔒 | `core.welcome` | SKY LAB'e hoş geldin | `FirstName`, `LastName`, `Email`, `Username`, `SchoolEmail`, `SkyNumber`, `CreatedAt` |
 | Katılım Sertifikası 🔒 | `core.certificate` | Katılım sertifikan hazır | `FirstName`, `EventName`, `VerifyURL`, `Serial`, `OwnerTeam` |
+| Etkinlik İptali 🔒 | `core.event-cancelled` | {{.EventName}} iptal edildi | `EventName`, `EventStart`, `CancelReason`, `FirstName` |
+| Etkinlik Yeniden Yayında 🔒 | `core.event-reinstated` | {{.EventName}} yeniden yayında | `EventName`, `EventStart`, `FirstName` |
 | Hesap Güvenlik Bildirimi 🔒 🙈 | `account.security-alert` | SKY LAB hesabında: {{.EventTitle}} | `EventTitle`, `EventDetail`, `OccurredAt`, `DeviceLabel`, `IpAddress`, `Location`, `SecureAccountUrl` |
 | Birincil E-posta Değişti (eski adrese) 🔒 🙈 | `account.primary-email-changed` | SKY LAB hesabının e-posta adresi değişti | `OldEmail`, `NewEmail`, `OccurredAt`, `SecureAccountUrl` |
 | Hesap Silme Talebi Alındı 🔒 🙈 | `account.deletion-requested` | Hesap silme talebini aldık | `RequestedAt`, `CompletesAt`, `CancelUrl` |
@@ -33,7 +35,6 @@ zaman verdiği değişkenler kullanılır.
 | Etkinlik · Bilet Oluşturuldu 🙈 | `event.ticket-created` | {{.EventName}} biletin hazır | `EventName`, `EventDate`, `Venue`, `TicketQrUrl`, `TicketCode`, `OwnerTeam`, `EventUrl` |
 | Etkinlik · Hatırlatma 🙈 | `event.reminder` | Yarın: {{.EventName}} | `EventName`, `StartsAt`, `Venue`, `TicketQrUrl`, `MapUrl` |
 | Etkinlik · Güncellendi | `event.updated` | {{.EventName}} etkinliğinde değişiklik var | `EventName`, `ChangeSummary`, `NewStartsAt`, `NewVenue`, `EventUrl` |
-| Etkinlik · İptal Edildi | `event.cancelled` | {{.EventName}} iptal edildi | `EventName`, `CancelReason`, `ContactEmail` |
 | Mail Onayı · Onayını Bekliyor | `mail.approval-requested` | Onayını bekleyen bir gönderim var | `RequesterName`, `TemplateName`, `AudienceName`, `AudienceKind`, `RecipientCount`, `PreviewUrl`, `ApproveUrl` |
 | Mail Onayı · Sonuçlandı | `mail.approval-resolved` | {{if eq .Decision `approved`}}Gönderimin onaylandı ve gitti{{else if eq .Decision `rejected`}}Gönderimin reddedildi{{else if eq .Decision `returned`}}Gönderimin sana geri döndü{{else if eq .Decision `expired`}}Gönderimin süresi doldu{{else if eq .Decision `declined`}}Gönderimdeki düzenleme kabul edilmedi{{else}}Gönderim isteğin sonuçlandı{{end}} | `TemplateName`, `AudienceName`, `AudienceKind`, `RecipientCount`, `Decision`, `DecidedBy`, `DecisionNote`, `RequestUrl`, `DeadlineAt` |
 | Operasyon · Gönderim Hatası | `ops.send-failed` | SkyMail gönderiminde hata | `TaskId`, `TemplateName`, `FailedCount`, `TotalCount`, `FirstError`, `TaskUrl` |
@@ -58,6 +59,8 @@ zaman verdiği değişkenler kullanılır.
 - **Keycloak · Genel Sistem Postası** (`keycloak.generic`) — Keycloak gönderici SPI'ın yedeği: eşlenmemiş bir sistem postası (ileride eklenecek bir required action gibi) bu anahtara düşer. subjectKey hangi posta olduğunu söyler.
 - **Hoş Geldin** (`core.welcome`) — core-backend, yeni bir User ilk kez göründüğünde (SKYMAIL_WELCOME_TEMPLATE_ID).
 - **Katılım Sertifikası** (`core.certificate`) — core-backend, yoklama kesinleştikten sonra sertifika üretildiğinde (SKYMAIL_CERTIFICATE_TEMPLATE_ID, certificate/service.go).
+- **Etkinlik İptali** (`core.event-cancelled`) — core-backend, etkinlik iptal edilirken "Bilet sahiplerine bildir" seçiliyse, bilet sahiplerinin her birine bir kez (internal/eventstatusmail).
+- **Etkinlik Yeniden Yayında** (`core.event-reinstated`) — core-backend, iptal geri alınırken "Katılımcılara tekrar bildir" seçiliyse, iptal postası ulaşan her bilet sahibine bir kez (internal/eventstatusmail).
 - **Hesap Güvenlik Bildirimi** (`account.security-alert`) — Account center / sky-account SPI, hesapta güvenlikle ilgili bir şey değiştiğinde: parola değişti, geçiş anahtarı eklendi/silindi, doğrulama uygulaması eklendi/kaldırıldı, yeni cihazdan giriş, tüm oturumlar kapatıldı, kullanıcı adı değişti, kişisel e-posta eklendi/kaldırıldı.
 - **Birincil E-posta Değişti (eski adrese)** (`account.primary-email-changed`) — Account center, birincil e-posta değiştiğinde — ESKİ adrese gider. Yeni adres zaten doğrulama postası aldığı için bu, değişikliği kaçıran kişiye tek uyarıdır.
 - **Hesap Silme Talebi Alındı** (`account.deletion-requested`) — Account center, kişi hesabını sildiğinde. Erişim anında kapanır, kişisel veriler sonra anonimleştirilir (ADR-0042). ACCOUNT_ERASURE_MODE açıldığında devreye girer.
@@ -65,7 +68,6 @@ zaman verdiği değişkenler kullanılır.
 - **Etkinlik · Bilet Oluşturuldu** (`event.ticket-created`) — core-backend, Member apply / Guest apply / Apply-for-other bir Ticket yazdığında. NOT: bu gönderimi yapan kod henüz yazılmadı.
 - **Etkinlik · Hatırlatma** (`event.reminder`) — Etkinlikten bir gün önce, bileti olan herkese. NOT: zamanlayıcı ve gönderim kodu henüz yazılmadı; konu satırı T-1 varsayıyor.
 - **Etkinlik · Güncellendi** (`event.updated`) — Etkinliğin saati veya yeri değiştiğinde, bileti olan herkese. NOT: gönderim kodu henüz yazılmadı.
-- **Etkinlik · İptal Edildi** (`event.cancelled`) — Etkinlik iptal edildiğinde, bileti olan herkese. NOT: gönderim kodu henüz yazılmadı.
 - **Mail Onayı · Onayını Bekliyor** (`mail.approval-requested`) — SkyMail, gönderme yetkisi olmayan biri taslak gönderdiğinde onaycılara (ADR-0031, CONTEXT.md "Mail onayı", ticket 19).
 - **Mail Onayı · Sonuçlandı** (`mail.approval-resolved`) — SkyMail, bir onay isteği sonuçlandığında. approved/rejected/returned/expired talebi açana, declined onaycılara gider (ADR-0031, ticket 19).
 - **Operasyon · Gönderim Hatası** (`ops.send-failed`) — SkyMail, bir görevdeki mailler yeniden denemeler bittikten sonra da gönderilemediğinde, gönderimi başlatan kişiye. NOT: bu uyarıyı gönderen kod henüz yazılmadı.
