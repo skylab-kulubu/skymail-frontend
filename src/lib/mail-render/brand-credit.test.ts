@@ -39,6 +39,8 @@ const BRAND_OF: Record<string, Brand> = {
   "club.role-membership": "account",
   "club.group-membership": "account",
   "club.privilege-change": "account",
+  "forms.status-changed": "forms",
+  "forms.attempt-update": "forms",
 };
 
 /** The name beside the logo, and the footer's credit lines, last one last. */

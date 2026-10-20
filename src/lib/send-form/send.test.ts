@@ -211,13 +211,22 @@ describe("a send's requests", () => {
     assert.ok(untracked.ok && untracked.plan.kind === "list");
     assert.equal("tracking" in untracked.plan.request, false);
   });
-  it("never ask for tracking to people or a Forms source", () => {
-    const people = sendPlan(draft({ tracking: true, audience: "people", list: null, people: [{ name: "Ayşe", email: "ayse@ornek.com" }] }));
-    assert.ok(people.ok && people.plan.kind === "people");
-    assert.equal(people.plan.requests.some((request) => "tracking" in request), false);
-    const approval = approvalRequest(people.plan, { lists: true });
-    assert.ok(approval.ok);
-    assert.equal("tracking" in approval.request, false);
+  it("to people asks for tracking for each person only when the form passes it, and the request for approval carries it", () => {
+    const people = [{ name: "Ayşe", email: "ayse@ornek.com" }, { name: "Ali", email: "ali@ornek.com" }];
+    const tracked = sendPlan(draft({ tracking: true, audience: "people", list: null, people }));
+    assert.ok(tracked.ok && tracked.plan.kind === "people");
+    assert.deepEqual(tracked.plan.requests.map((request) => request.tracking), [true, true]);
+    const approval = approvalRequest(tracked.plan, { lists: true });
+    assert.ok(approval.ok && "recipients" in approval.request);
+    assert.equal(approval.request.tracking, true);
+    const untracked = sendPlan(draft({ tracking: false, audience: "people", list: null, people }));
+    assert.ok(untracked.ok && untracked.plan.kind === "people");
+    assert.equal(untracked.plan.requests.some((request) => "tracking" in request), false);
+    const untrackedApproval = approvalRequest(untracked.plan, { lists: true });
+    assert.ok(untrackedApproval.ok);
+    assert.equal("tracking" in untrackedApproval.request, false);
+  });
+  it("never ask for tracking to a Forms source", () => {
     const source = { id: "a16bec36-7243-4bb7-82dd-c3c4a2315a78", form_id: LIST_ID, form_title: "Fixture form", recipient_count: 3, prepared_at: "2026-10-17T00:00:00Z" };
     const form = sendPlan(draft({ tracking: true, audience: "form", formSource: source, list: null }));
     assert.ok(form.ok && form.plan.kind === "form");
@@ -243,6 +252,17 @@ describe("sending", () => {
     assert.equal(calls[0].url, `${TEST_BASE_URL}/mail_tasks`);
     assert.equal(calls[0].method, "POST");
     assert.deepEqual(JSON.parse(calls[0].body!), plan.plan.request);
+  });
+
+  it("to people says, for each one sent, whether it got the tracking it asked for", async () => {
+    const { api, calls } = scriptedClient(json(201, { id: TASK_ID, tracking: true }), json(201, { id: "b1c2d3e4-0000-4000-8000-000000000004" }));
+    const requests = REQUESTS.slice(0, 2).map((request) => ({ ...request, tracking: true }));
+    const outcomes = await sendToPeople(api, requests, { canSeeSends: true });
+    assert.deepEqual(JSON.parse(calls[0].body!).tracking, true);
+    assert.equal(calls[0].url, `${TEST_BASE_URL}/mail_tasks/single`);
+    assert.equal(outcomes[0].status === "sent" && outcomes[0].tracking, true);
+    // A backend before tracking does not answer the field: nothing is made up.
+    assert.equal(outcomes[1].status === "sent" && "tracking" in outcomes[1], false);
   });
 
   it("to people goes on past a failure, and tells a refusal from a send that may have opened", async () => {

@@ -40,6 +40,7 @@ export function PeopleSummary({
   canOpen,
   canRetry,
   busy,
+  trackingNote = null,
   onRetry,
   onNew,
 }: {
@@ -51,6 +52,8 @@ export function PeopleSummary({
   /** Someone has not got the mail for sure. */
   canRetry: boolean;
   busy: boolean;
+  /** A send that asked for tracking and came back untracked. */
+  trackingNote?: string | null;
   onRetry: () => void;
   onNew: () => void;
 }) {
@@ -63,7 +66,10 @@ export function PeopleSummary({
         </h2>
         <p className="text-xs text-subtle-foreground">{what}</p>
       </div>
-      <Notice tone={allSent ? 'success' : 'warning'}>{summaryOf(outcomes)}</Notice>
+      <Notice tone={allSent && !trackingNote ? 'success' : 'warning'}>
+        {summaryOf(outcomes)}
+        {trackingNote ? ` ${trackingNote}` : ''}
+      </Notice>
       <ul className="divide-y divide-border-subtle rounded-lg border border-border" aria-label="Kişiler">
         {outcomes.map((outcome) => (
           <li key={outcome.email} className="flex flex-col gap-1.5 px-4 py-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">

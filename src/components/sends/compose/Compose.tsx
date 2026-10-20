@@ -36,7 +36,7 @@ import {
   sendPlan,
   templateChoices,
 } from '@/lib/send-form/send';
-import { TRACKING_LABEL, fetchTrackingAvailable, templateTrackable, trackingOffered } from '@/lib/send-form/tracking';
+import { TRACKING_LABEL, fetchTrackingAvailable, peopleTrackingDropped, templateTrackable, trackingOffered } from '@/lib/send-form/tracking';
 import type { MailTemplate } from '@/lib/templates';
 import { AudiencePart, type Audience } from './AudiencePart';
 import { ConfirmSend, type Confirming } from './ConfirmSend';
@@ -133,8 +133,8 @@ export function Compose({
     template,
   });
   const tracking = trackingShown && trackingTicked;
-  // A template that may not be tracked clears the box: going back to one that may does not tick it again.
-  const untrackable = template !== null && !templateTrackable(template);
+  // A template that may not be tracked to this audience clears the box: going back to one that may does not tick it again.
+  const untrackable = template !== null && audience !== 'form' && !templateTrackable(template, audience);
   useEffect(() => {
     if (untrackable) setTrackingTicked(false);
   }, [untrackable]);
@@ -251,6 +251,7 @@ export function Compose({
           canOpen={access.detail}
           canRetry={retry.requests.length > 0}
           busy={busy}
+          trackingNote={peopleTrackingDropped(sending.people.requests, sending.people.outcomes)}
           onRetry={() => setConfirming({ kind: 'retryPeople', retry })}
           onNew={startOver}
         />
