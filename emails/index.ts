@@ -33,7 +33,6 @@ import AccountDeletionCompleted, { meta as accountDeletionCompleted } from "./ac
 import EventTicketCreated, { meta as eventTicketCreated } from "./event-ticket-created";
 import EventReminder, { meta as eventReminder } from "./event-reminder";
 import EventUpdated, { meta as eventUpdated } from "./event-updated";
-import EventCancelled, { meta as eventCancelled } from "./event-cancelled";
 
 import MailApprovalRequested, { meta as mailApprovalRequested } from "./mail-approval-requested";
 import MailApprovalResolved, { meta as mailApprovalResolved } from "./mail-approval-resolved";
@@ -73,7 +72,6 @@ export const templates: EmailTemplate[] = [
   { meta: eventTicketCreated, Component: EventTicketCreated },
   { meta: eventReminder, Component: EventReminder },
   { meta: eventUpdated, Component: EventUpdated },
-  { meta: eventCancelled, Component: EventCancelled },
 
   { meta: mailApprovalRequested, Component: MailApprovalRequested },
   { meta: mailApprovalResolved, Component: MailApprovalResolved },
