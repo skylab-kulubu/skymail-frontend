@@ -7,9 +7,10 @@
  * tracking_available) and never a System template (account and transaction
  * mails) or a sensitive one; to people, a template that says nothing of its
  * content counts as sensitive. Each recipient is then decided on their own:
- * one known by address only — an internal list's, a person typed in — is not
- * tracked (no_account). A Forms source's respondents are known by address
- * only, so a Forms send is not offered the box. The box starts unticked.
+ * a person typed in is tracked only if Keycloak has one enabled account with
+ * that verified primary e-mail (the backend looks it up when the send is
+ * queued); an internal list's addresses are not looked up (no_account). A
+ * Forms send is not offered the box. The box starts unticked.
  */
 import type { ApiClient } from "../api/client";
 import { formatCount, type SendSummary } from "../sends";
@@ -63,25 +64,26 @@ export function trackingOffered({
 }
 
 /**
- * How many of a tracked send's recipients are known by address only, and so
- * not tracked: every person typed in (the form never links one to an
- * account), every member of an internal list (null while its size is
- * unknown); a Keycloak group's members all have an account.
+ * How many of a tracked send's recipients have no account, and so are not
+ * tracked, as far as the form knows before it goes: every member of an
+ * internal list (null while its size is unknown), none of a Keycloak group's;
+ * of people typed in it cannot know — the backend finds their accounts when
+ * the send is queued — so null.
  */
 export function untrackedCount(plan: SendPlan, list: Pick<ListRow, "external"> | null, size: number | null): number | null {
-  if (plan.kind === "people") return plan.requests.length;
+  if (plan.kind === "people") return null;
   if (plan.kind === "list") return list?.external ? 0 : size;
   return 0;
 }
 
 /**
  * What the confirmation says of the recipients a tracked send will not
- * track because their account is not known: `count` of them, or null when
- * the count is not known. A Keycloak group's members all have one.
+ * track for want of an account: `count` of them, or the rule alone when the
+ * count is not known before the send. A Keycloak group's members all have one.
  */
 export function untrackedRecipientsNote(count: number | null): string | null {
   if (count === 0) return null;
-  return count === null ? "Hesabı bilinmeyen alıcılar takip edilmez." : `Hesabı bilinmeyen ${formatCount(count)} alıcı takip edilmez.`;
+  return count === null ? "Hesabı olmayan alıcılar takip edilmez." : `Hesabı bilinmeyen ${formatCount(count)} alıcı takip edilmez.`;
 }
 
 /** What to say of a send that asked for tracking and was answered untracked; null otherwise, or when the answer has no field. */

@@ -155,8 +155,9 @@ describe("who a tracked send will not track", () => {
   const person = (email: string) => ({ template_id: "t", recipient_email: email, recipient_full_name: "", body_variables: {}, tracking: true });
   const people: SendPlan = { kind: "people", requests: [person("a@ornek.com"), person("b@ornek.com"), person("c@ornek.com")] };
   const listPlan: SendPlan = { kind: "list", request: { template_id: "t", mail_list_id: "l", body_variables: {}, tracking: true } };
-  it("counts every person typed in: none is linked to an account", () => {
-    assert.equal(untrackedCount(people, null, null), 3);
+  it("cannot count people typed in: their accounts are found when the send is queued", () => {
+    assert.equal(untrackedCount(people, null, null), null);
+    assert.equal(untrackedRecipientsNote(untrackedCount(people, null, null)), "Hesabı olmayan alıcılar takip edilmez.");
   });
   it("counts an internal list's members, unknown while its size is; a Keycloak group's members all have an account", () => {
     assert.equal(untrackedCount(listPlan, { external: false }, 12), 12);
@@ -166,7 +167,7 @@ describe("who a tracked send will not track", () => {
   it("says it in one short sentence, without a number when it is not known, and nothing when there are none", () => {
     assert.equal(untrackedRecipientsNote(3), "Hesabı bilinmeyen 3 alıcı takip edilmez.");
     assert.equal(untrackedRecipientsNote(1532), "Hesabı bilinmeyen 1.532 alıcı takip edilmez.");
-    assert.equal(untrackedRecipientsNote(null), "Hesabı bilinmeyen alıcılar takip edilmez.");
+    assert.equal(untrackedRecipientsNote(null), "Hesabı olmayan alıcılar takip edilmez.");
     assert.equal(untrackedRecipientsNote(0), null);
   });
 });
