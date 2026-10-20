@@ -30,7 +30,6 @@ const BRAND_OF: Record<string, Brand> = {
   "event.ticket-created": "skylab",
   "event.reminder": "skylab",
   "event.updated": "skylab",
-  "event.cancelled": "skylab",
   "mail.approval-requested": "mail",
   "mail.approval-resolved": "mail",
   "ops.send-failed": "mail",
