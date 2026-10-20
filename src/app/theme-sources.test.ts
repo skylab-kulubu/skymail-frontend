@@ -65,6 +65,13 @@ describe("skylcn-ui stylesheets", () => {
     assert.deepEqual(missing, []);
   });
 
+  it("has the charts' one when the panel draws a skylcn chart", () => {
+    const drawsCharts = files(SRC).some((file) =>
+      /from\s*['"]@skylab-kulubu\/skylcn-ui\/charts['"]/.test(readFileSync(file, "utf8")),
+    );
+    if (drawsCharts) assert.ok(imported.has("charts"), "@skylab-kulubu/skylcn-ui/charts → sources/charts.css");
+  });
+
   it("imports only stylesheets the package has", () => {
     const shipped = new Set(readdirSync(join(DIST, "styles/sources")).map((file) => file.replace(/\.css$/, "")));
     for (const file of imported) assert.ok(shipped.has(file), file);

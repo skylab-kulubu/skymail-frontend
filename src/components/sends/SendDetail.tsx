@@ -44,6 +44,8 @@ import { SectionTitle } from './SectionTitle';
 import { RecipientStatusBadge, SendStatusBadge } from './StatusBadge';
 import { OutcomeNotice } from '@/components/common/OutcomeNotice';
 import { SentContentDialog } from './SentContentDialog';
+import { TrackingSection } from './TrackingReport';
+import { sendTracked } from '@/lib/tracking-report';
 
 export function SendDetail({ id }: { id: string }) {
   const send = useApiLoad((api, signal) => fetchSend(api, id, signal), id);
@@ -105,6 +107,8 @@ function SendView({ send, notice, onDismiss }: { send: Send; notice: NoticeData 
       </dl>
 
       <ContentNotice send={send} />
+
+      {sendTracked(send) ? <TrackingSection send={send} /> : null}
 
       <section aria-labelledby="recipients-title">
         <SectionTitle id="recipients-title">Alıcılar</SectionTitle>
