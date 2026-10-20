@@ -16,6 +16,7 @@ import type { ApprovalRequest } from '@/lib/mail-approvals/edit';
 import { submissionRefusal, type SubmissionRefusal } from '@/lib/mail-approvals/refusals';
 import { flashNotice } from '@/lib/notice';
 import type { PersonRow } from '@/lib/send-form/audience';
+import { trackingDropped } from '@/lib/send-form/tracking';
 
 export function useSubmitting() {
   const api = useApi();
@@ -39,8 +40,10 @@ export function useSubmitting() {
       const approval = resubmitId
         ? await api.post<MailApproval>(`/mail_approvals/${encodeURIComponent(resubmitId)}/resubmit`, request)
         : await api.post<MailApproval>('/mail_approvals', request);
-      const problem = notificationNote(approval.notification);
-      flashNotice(approvalHref(approval.id), { tone: problem ? 'warning' : 'success', text: problem ? `${said} ${problem}` : said });
+      const problems = [notificationNote(approval.notification), trackingDropped('tracking' in request ? request.tracking : undefined, approval.tracking)].filter(
+        (problem): problem is string => problem !== null,
+      );
+      flashNotice(approvalHref(approval.id), { tone: problems.length > 0 ? 'warning' : 'success', text: [said, ...problems].join(' ') });
       approvalsChanged();
       // Busy until the request's page takes over.
       router.push(approvalHref(approval.id));

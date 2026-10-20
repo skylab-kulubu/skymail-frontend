@@ -14,6 +14,7 @@ export const meta: TemplateMeta = {
   trigger:
     "core-backend, Member apply / Guest apply / Apply-for-other bir Ticket yazdığında. NOT: bu gönderimi yapan kod henüz yazılmadı.",
   variables: ["EventName", "EventDate", "Venue", "TicketQrUrl", "TicketCode", "OwnerTeam", "EventUrl"],
+  sensitiveVariables: ["TicketCode", "TicketQrUrl"],
   sample: {
     EventName: "GECEKODU 2026",
     EventDate: "12–13 Nisan 2026, 10:00",
@@ -31,16 +32,12 @@ export const meta: TemplateMeta = {
  */
 export default function EventTicketCreated() {
   return (
-    <Shell
-      preview={`${v("EventName")} için biletin hazır — kapıda bu QR okutulacak.`}
-      brand="skylab"
-      reason={<>Bu e-postayı {v("EventName")} etkinliğine kaydolduğun için alıyorsun.</>}
-    >
+    <Shell preview={`${v("EventName")} biletin hazır.`} brand="skylab" reason={null}>
       <Context tone="ok">{v("EventName")}</Context>
       <Title>Biletin Hazır</Title>
 
       <Paragraph>
-        <Strong>{v("EventName")}</Strong> için kaydın alındı. Kapıda aşağıdaki QR kodu okutman yeterli.
+        <Strong>{v("EventName")}</Strong> biletin hazır. Kapıda QR kodunu okut.
       </Paragraph>
 
       <Rows>
@@ -83,9 +80,7 @@ export default function EventTicketCreated() {
       <Cta href={v("EventUrl")}>Etkinlik Sayfası</Cta>
       {end}
 
-      <Small style={{ marginTop: "24px" }}>
-        Görseller görünmüyorsa bilet kodunu kapıdaki görevliye söylemen yeterli. Bu bilet sana ait; başkasına devredilemez.
-      </Small>
+      <Small style={{ marginTop: "24px" }}>QR görünmüyorsa bilet kodunu görevliye söyle.</Small>
     </Shell>
   );
 }

@@ -28,6 +28,7 @@ import {
   type FormSourceSendRequest,
   type UncertainListSend,
 } from '@/lib/send-form/send';
+import { trackingDropped } from '@/lib/send-form/tracking';
 
 export type Progress = Readonly<{ done: number; total: number }>;
 
@@ -50,11 +51,12 @@ export function useSending({ canSeeSends }: { canSeeSends: boolean }) {
     setProgress({ done: 0, total: 1 });
     setListFailure(null);
     try {
-      const id = await sendToList(api, request);
-      const text = `Gönderim kuyruğa alındı: ${what}, “${list.name}” listesine.`;
+      const { id, tracking } = await sendToList(api, request);
+      const dropped = trackingDropped(request.tracking, tracking);
+      const text = `Gönderim kuyruğa alındı: ${what}, “${list.name}” listesine.${dropped ? ` ${dropped}` : ''}`;
       setUncertain(null);
       if (canSeeSends) {
-        flashNotice(sendHref(id), { tone: 'success', text });
+        flashNotice(sendHref(id), { tone: dropped ? 'warning' : 'success', text });
         router.push(sendHref(id));
         return;
       }

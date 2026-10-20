@@ -24,16 +24,12 @@ export const meta: TemplateMeta = {
 
 export default function EventUpdated() {
   return (
-    <Shell
-      preview={`${v("EventName")} etkinliğinde bir değişiklik var.`}
-      brand="skylab"
-      reason={<>Bu e-postayı {v("EventName")} etkinliğine kayıtlı olduğun için alıyorsun.</>}
-    >
+    <Shell preview={`${v("EventName")} etkinliğinde değişiklik var.`} brand="skylab" reason={null}>
       <Context tone="wait">{v("EventName")}</Context>
       <Title>Etkinlikte Değişiklik Var</Title>
 
       <Paragraph>
-        <Strong>{v("EventName")}</Strong> etkinliğinde bir değişiklik oldu. Biletin geçerli; sadece aşağıdaki bilgiler güncellendi.
+        <Strong>{v("EventName")}</Strong> etkinliğinde değişiklik var. Biletin geçerli.
       </Paragraph>
 
       {ifSet("ChangeSummary")}

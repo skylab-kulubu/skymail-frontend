@@ -1,43 +1,43 @@
 import * as React from "react";
-import { Context, Cta, Label, Paragraph, RowItem, Rows, RowsEnd, Shell, Small, Strong, TextLink, Title, colors, fontStack } from "./theme";
-import { v } from "./go";
+import { Context, Cta, Label, Paragraph, RowItem, Rows, RowsEnd, Shell, TextLink, Title, colors, fontStack } from "./theme";
+import { end, ifNotSet, ifSet, v } from "./go";
 import type { TemplateMeta } from "./types";
 
 export const meta: TemplateMeta = {
   key: "core.welcome",
   name: "Hoş Geldin",
-  subject: "SKY LAB ekosistemine hoş geldin",
+  subject: "SKY LAB'e hoş geldin",
   system: true,
   contentSensitive: false,
   brand: "skylab",
   trigger: "core-backend, yeni bir User ilk kez göründüğünde (SKYMAIL_WELCOME_TEMPLATE_ID).",
-  // core-backend/internal/mail/mail.go gönderdiği set budur. Username YOK —
-  // eski şablon {{.Username}} kullandığı için canlıda "Selam ." yazıyordu.
-  variables: ["FirstName", "LastName", "Email", "SkyNumber", "CreatedAt"],
+  // core-backend/internal/mail/mail.go: kimlik alanları boş da olsa gönderilir.
+  variables: ["FirstName", "LastName", "Email", "Username", "SchoolEmail", "SkyNumber", "CreatedAt"],
   // Nothing: the mail welcomes without an action, and every fact in it is also in Account center.
   requiredVariables: [],
   sample: {
-    FirstName: "Yusuf",
-    LastName: "Durusoy",
-    Email: "yusuf@yildizskylab.com",
+    FirstName: "Örnek",
+    LastName: "Kullanıcı",
+    Email: "ornek@example.com",
+    Username: "ornek.kullanici",
+    SchoolEmail: "",
     SkyNumber: "SKY-0042",
-    CreatedAt: "22.09.2026",
+    CreatedAt: "2026-10-16T09:00:00Z",
   },
 };
 
+/**
+ * Only what the new member needs (Yusuf, 2026-10-19): the Sky Number, the
+ * account's facts, how to sign in (Y1: the welcome says it) and the two links
+ * to act on, school linking only while no school account is linked.
+ */
 export default function CoreWelcome() {
   return (
-    <Shell
-      preview="SKY LAB ekosistemine kaydın tamamlandı — Sky Number'ın hazır."
-      brand="skylab"
-      reason="Bu e-postayı, bu adresle bir SKY LAB hesabı açıldığı için alıyorsun."
-    >
-      <Context tone="ok">SKY LAB ekosistemi</Context>
-      <Title>Aramıza Hoş Geldin</Title>
+    <Shell preview="SKY LAB hesabın açıldı." brand="skylab" reason={null}>
+      <Context tone="ok">SKY LAB</Context>
+      <Title>Hoş Geldin</Title>
 
-      <Paragraph>
-        Merhaba {v("FirstName")}, SKY LAB ekosistemine kaydın tamamlandı. Aşağıda kimliğin ve atabileceğin ilk adımlar var.
-      </Paragraph>
+      <Paragraph>Merhaba {v("FirstName")}, SKY LAB hesabın açıldı.</Paragraph>
 
       <div style={{ marginTop: "28px" }}>
         <Label>Sky Number</Label>
@@ -55,32 +55,32 @@ export default function CoreWelcome() {
         >
           {v("SkyNumber")}
         </p>
-        <p className="t-muted" style={{ margin: "4px 0 0", fontSize: "12px", lineHeight: "18px", color: colors.muted, fontFamily: fontStack }}>
-          Kalıcı · değişmez · sana ait
-        </p>
       </div>
 
       <Rows>
         <RowItem label="Ad Soyad">{`${v("FirstName")} ${v("LastName")}`}</RowItem>
         <RowItem label="E-posta">{v("Email")}</RowItem>
+        {ifSet("Username")}
+        <RowItem label="Kullanıcı adı">{v("Username")}</RowItem>
+        {end}
         <RowItem label="Katılım">{v("CreatedAt")}</RowItem>
         <RowsEnd />
       </Rows>
 
-      <Paragraph style={{ marginTop: "24px" }}>
-        Etkinliklerimizi, projelerimizi ve başvuruları <Strong>yildizskylab.com</Strong> üzerinden takip edebilirsin.
-        Hesabınla ilgili her şeyi (parola, geçiş anahtarı, e-posta adreslerin) <Strong>my.yildizskylab.com</Strong>
-        {" "}adresinden kendin yönetirsin.
+      <Paragraph style={{ marginTop: "24px" }}>Giriş: YTÜ hesabı, e-posta kodu ya da passkey. Parola isteğe bağlı.</Paragraph>
+
+      {ifNotSet("SchoolEmail")}
+      <Paragraph>
+        YTÜ hesabını bağla: <TextLink href="https://my.yildizskylab.com">my.yildizskylab.com</TextLink> → Kimlik
       </Paragraph>
+      {end}
 
       <Paragraph>
-        Okul e-postanla katıldıysan: mezun olunca okul adresin kapanabilir. Kişisel e-postanı eklemek için:{" "}
+        Kişisel e-posta ekle:{" "}
         <TextLink href="https://my.yildizskylab.com/email?intent=add-personal">my.yildizskylab.com/email</TextLink>
       </Paragraph>
 
-      <Cta href="https://yildizskylab.com">Ekosisteme Göz At</Cta>
-
-      <Small style={{ marginTop: "24px" }}>Bu hesabı sen oluşturmadıysan bu e-postayı yok sayabilirsin.</Small>
+      <Cta href="https://my.yildizskylab.com">Hesap Merkezi</Cta>
     </Shell>
   );
 }

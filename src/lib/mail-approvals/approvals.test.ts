@@ -12,6 +12,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { TEST_BASE_URL, json, scriptedClient } from "../api/testing";
 import {
+  approvalTracking,
   APPROVAL_FILTERS,
   APPROVAL_PAGE_SIZE,
   APPROVAL_STATE_LABEL,
@@ -356,5 +357,24 @@ describe("who a request goes to", () => {
       previewFailureNote({ ...failed, preview_error: null, preview_recipient: PEOPLE[1] }),
       "Önizleme zeynep@ornek.com için hazırlanamadı. Mail template bu değerlerle işlenemiyor olabilir.",
     );
+  });
+});
+
+describe("whether a request asks for tracking", () => {
+  const list = { kind: "mailing_list" } as const;
+  const ordinary = { system: false, content_sensitive: null };
+  it("says Açık for a request that got it: only a trackable one does", () => {
+    assert.equal(approvalTracking({ tracking: true, audience: list }, null), "Açık");
+  });
+  it("says Kapalı only for a list request of a template that may be tracked", () => {
+    assert.equal(approvalTracking({ tracking: false, audience: list }, ordinary), "Kapalı");
+    assert.equal(approvalTracking({ tracking: false, audience: list }, { ...ordinary, system: true }), null);
+    assert.equal(approvalTracking({ tracking: false, audience: list }, { ...ordinary, content_sensitive: true }), null);
+    assert.equal(approvalTracking({ tracking: false, audience: list }, { ...ordinary, content_sensitive_locked: true }), null);
+    assert.equal(approvalTracking({ tracking: false, audience: list }, null), null);
+    for (const kind of ["single", "people", "form"] as const) assert.equal(approvalTracking({ tracking: false, audience: { kind } }, ordinary), null);
+  });
+  it("says nothing for a backend that does not give it", () => {
+    assert.equal(approvalTracking({ audience: list }, ordinary), null);
   });
 });

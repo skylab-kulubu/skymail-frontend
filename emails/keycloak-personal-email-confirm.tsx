@@ -12,6 +12,7 @@ export const meta: TemplateMeta = {
   trigger:
     "Account center'da ya da ilk YTÜ girişinin sonundaki öneride kişisel e-posta eklendiğinde; 6 haneli kod, 10 dakika geçerli, yalnız isteyen kişinin açık oturumunda çalışır (K3c, ADR-0044 güncellemesi). Keycloak'tan K5 ile gelir.",
   variables: ["code", "codeExpirationMinutes", "firstName", "username", "realmDisplayName", "subjectKey"],
+  sensitiveVariables: ["code"],
   // The code the member types into Account center or the sign-in page; Keycloak's SkyMail provider always passes it.
   requiredVariables: [{ name: "code", reason: "Account center'a ya da giriş sayfasına girilecek doğrulama kodu; kaldırılırsa kişisel e-posta onaylanamaz." }],
   sample: {
@@ -27,12 +28,10 @@ export const meta: TemplateMeta = {
 export default function KeycloakPersonalEmailConfirm() {
   return (
     <CodeMail
-      preview="Kişisel e-posta adresini SKY LAB hesabına eklemek için doğrulama kodun."
+      preview="Kişisel e-posta adresin için doğrulama kodun."
       heading="Kişisel E-postanı Doğrula"
-      intro="SKY LAB hesabına bu adresi kişisel e-posta olarak eklemek istedin. Aşağıdaki kodu açık olan sayfaya (Hesap Merkezi ya da giriş sayfası) gir. Doğruladıktan sonra bu adresle de giriş yapabilir, istersen birincil adresin olarak seçebilirsin."
-      disclaimer="Bu isteği sen yapmadıysan bu e-postayı yok say: kod girilmeden adres hesabına eklenmez."
+      intro="Bu adresi SKY LAB hesabına kişisel e-posta olarak eklemek için kodun aşağıda."
       context="Kişisel e-posta"
-      reason="Bu e-postayı, bu adres bir SKY LAB hesabına kişisel e-posta olarak eklenmek istendiği için alıyorsun."
     />
   );
 }

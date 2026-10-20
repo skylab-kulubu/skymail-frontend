@@ -13,6 +13,7 @@ export const meta: TemplateMeta = {
   trigger:
     "Keycloak gönderici SPI'ın yedeği: eşlenmemiş bir sistem postası (ileride eklenecek bir required action gibi) bu anahtara düşer. subjectKey hangi posta olduğunu söyler.",
   variables: ["link", "linkExpirationMinutes", "firstName", "username", "realmDisplayName", "subjectKey"],
+  sensitiveVariables: ["link"],
   // Nothing: Keycloak's SkyMail provider sends link as "" for the event mails
   // that fall back here (sendEvent), so the mail cannot count on one.
   requiredVariables: [],
@@ -29,33 +30,29 @@ export const meta: TemplateMeta = {
 /**
  * Deliberately vague: this renders for a mail nobody has written wording for
  * yet. It must stay useful without knowing what happened, so it says only that
- * the account needs an action and shows the link. The subjectKey is printed so
- * whoever receives a report of a confusing mail can tell which one it was and
- * give it a proper template.
+ * the account has an action, and shows the link when there is one. The mail
+ * asks nothing of the reader beyond the usual "yok say" line (Yusuf,
+ * 2026-10-19); the subjectKey is printed as the İşlem Kodu so that a confusing
+ * mail someone reports through the footer's "Sorun bildir" can be told apart
+ * and given a proper template.
  */
 export default function KeycloakGeneric() {
   const link = v("link");
 
   return (
-    <Shell
-      preview="SKY LAB hesabınla ilgili bir işlem bekliyor."
-      brand="account"
-      reason="Bu e-postayı, SKY LAB hesabınla ilgili bir işlem olduğu için alıyorsun."
-    >
+    <Shell preview="SKY LAB hesabınla ilgili bir işlem var." brand="account" reason={null}>
       <Context>Hesap bildirimi</Context>
       <Title>Hesabınla İlgili Bir İşlem Var</Title>
 
       <Paragraph>
         {ifSet("firstName")}Merhaba {v("firstName")}, {end}
-        SKY LAB hesabınla ilgili bir işlem gerçekleşti.
-        {ifSet("link")} Devam etmek için aşağıdaki bağlantıyı kullan.{end}
+        SKY LAB hesabınla ilgili bir işlem var.
       </Paragraph>
 
       {/*
         Unlike the other Keycloak templates, this one runs for mails that have no
         action to take — the sender passes an empty link for those. An
-        unconditional button would render with href="" and the sentence above
-        would promise a link that is not there.
+        unconditional button would render with href="".
       */}
       {ifSet("link")}
       <Cta href={link}>Devam Et</Cta>
@@ -76,10 +73,7 @@ export default function KeycloakGeneric() {
       </div>
       {end}
 
-      <Small style={{ marginTop: "24px" }}>
-        Bu isteği sen yapmadıysan bu e-postayı yok sayabilirsin. Bu posta sana anlamsız geldiyse yukarıdaki işlem koduyla birlikte
-        info@yildizskylab.com adresine yaz — o postanın kendi şablonunu yazalım.
-      </Small>
+      <Small style={{ marginTop: "24px" }}>Bu isteği sen yapmadıysan bu e-postayı yok say.</Small>
     </Shell>
   );
 }

@@ -202,6 +202,27 @@ describe("a send's requests", () => {
     assert.equal(freeWithoutTemplate.ok ? null : freeWithoutTemplate.problems.template, "Serbest duyuru template'i (free.basic) SkyMail'de yok ya da arşivlenmiş; serbest duyuru gönderilemez.");
   });
 
+  it("to a list asks for tracking only when the form passes it, and the request for approval carries it", () => {
+    const tracked = sendPlan(draft({ tracking: true }));
+    assert.ok(tracked.ok && tracked.plan.kind === "list");
+    assert.equal(tracked.plan.request.tracking, true);
+    assert.deepEqual(approvalRequest(tracked.plan, { lists: true }), { ok: true, request: tracked.plan.request });
+    const untracked = sendPlan(draft({ tracking: false }));
+    assert.ok(untracked.ok && untracked.plan.kind === "list");
+    assert.equal("tracking" in untracked.plan.request, false);
+  });
+  it("never ask for tracking to people or a Forms source", () => {
+    const people = sendPlan(draft({ tracking: true, audience: "people", list: null, people: [{ name: "Ayşe", email: "ayse@ornek.com" }] }));
+    assert.ok(people.ok && people.plan.kind === "people");
+    assert.equal(people.plan.requests.some((request) => "tracking" in request), false);
+    const approval = approvalRequest(people.plan, { lists: true });
+    assert.ok(approval.ok);
+    assert.equal("tracking" in approval.request, false);
+    const source = { id: "a16bec36-7243-4bb7-82dd-c3c4a2315a78", form_id: LIST_ID, form_title: "Fixture form", recipient_count: 3, prepared_at: "2026-10-17T00:00:00Z" };
+    const form = sendPlan(draft({ tracking: true, audience: "form", formSource: source, list: null }));
+    assert.ok(form.ok && form.plan.kind === "form");
+    assert.equal("tracking" in form.plan.request, false);
+  });
   it("go with what may be a slip said, as the old form let them: an empty subject field, an empty announcement, a nameless person", () => {
     const free = sendPlan(draft({ what: "free", template: FREE, fields: { values: {}, rich: {} } }));
     assert.ok(free.ok);
@@ -214,11 +235,11 @@ describe("a send's requests", () => {
 });
 
 describe("sending", () => {
-  it("to a list answers with the new send's id", async () => {
-    const { api, calls } = scriptedClient(json(201, { id: TASK_ID }));
+  it("to a list answers with the new send's id and whether it is tracked", async () => {
+    const { api, calls } = scriptedClient(json(201, { id: TASK_ID, tracking: false }));
     const plan = sendPlan(draft({}));
     assert.ok(plan.ok && plan.plan.kind === "list");
-    assert.equal(await sendToList(api, plan.plan.request), TASK_ID);
+    assert.deepEqual(await sendToList(api, plan.plan.request), { id: TASK_ID, tracking: false });
     assert.equal(calls[0].url, `${TEST_BASE_URL}/mail_tasks`);
     assert.equal(calls[0].method, "POST");
     assert.deepEqual(JSON.parse(calls[0].body!), plan.plan.request);

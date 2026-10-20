@@ -11,6 +11,7 @@
       "CtaUrl"
     ],
     "requiredVariables": [],
+    "sensitiveVariables": null,
     "sampleKeys": [
       "BodyHtml",
       "CtaLabel",
@@ -51,6 +52,9 @@
     "requiredVariables": [
       "link"
     ],
+    "sensitiveVariables": [
+      "link"
+    ],
     "sampleKeys": [
       "firstName",
       "link",
@@ -85,6 +89,9 @@
       "subjectKey"
     ],
     "requiredVariables": [
+      "link"
+    ],
+    "sensitiveVariables": [
       "link"
     ],
     "sampleKeys": [
@@ -123,6 +130,9 @@
     "requiredVariables": [
       "link"
     ],
+    "sensitiveVariables": [
+      "link"
+    ],
     "sampleKeys": [
       "firstName",
       "link",
@@ -157,6 +167,9 @@
       "subjectKey"
     ],
     "requiredVariables": [
+      "link"
+    ],
+    "sensitiveVariables": [
       "link"
     ],
     "sampleKeys": [
@@ -195,6 +208,9 @@
     "requiredVariables": [
       "code"
     ],
+    "sensitiveVariables": [
+      "code"
+    ],
     "sampleKeys": [
       "code",
       "codeExpirationMinutes",
@@ -216,6 +232,77 @@
       "{{if .firstName}}"
     ]
   },
+  "keycloak.login-code": {
+    "subject": "{{if eq .purpose `sudo`}}SKY LAB işlem onaylama kodun{{else if eq .purpose `signup`}}SKY LAB hesap açma kodun{{else if eq .purpose `link`}}SKY LAB hesap bağlama kodun{{else}}SKY LAB giriş kodun{{end}}",
+    "system": true,
+    "contentSensitive": true,
+    "variables": [
+      "code",
+      "codeExpirationMinutes",
+      "purpose",
+      "firstName",
+      "username",
+      "realmDisplayName",
+      "subjectKey"
+    ],
+    "requiredVariables": [
+      "code"
+    ],
+    "sensitiveVariables": [
+      "code"
+    ],
+    "sampleKeys": [
+      "code",
+      "codeExpirationMinutes",
+      "firstName",
+      "purpose",
+      "realmDisplayName",
+      "subjectKey",
+      "username"
+    ],
+    "referenced": [
+      "code",
+      "codeExpirationMinutes",
+      "firstName",
+      "purpose"
+    ],
+    "actions": [
+      "{{.codeExpirationMinutes}}",
+      "{{.code}}",
+      "{{.firstName}}",
+      "{{else if eq .purpose `link`}}",
+      "{{else if eq .purpose `signup`}}",
+      "{{if .codeExpirationMinutes}}",
+      "{{if .firstName}}",
+      "{{if eq .purpose `sudo`}}"
+    ]
+  },
+  "keycloak.login-code-alarm": {
+    "subject": "{{if eq .subjectKey `skyLoginCodeAlarmFullSubject`}}SKY LAB: e-posta kodu gönderimi günlük sınıra ulaştı{{else if eq .subjectKey `skyLoginCodeAlarmCeilingSubject`}}SKY LAB: bir hesap e-posta kodunda günlük yanlış kod tavanına ulaştı{{else if eq .subjectKey `skyLoginCodeAlarmConsecutiveSubject`}}SKY LAB: bir hesap ardışık 100 yanlış e-posta koduna ulaştı{{else}}SKY LAB: e-posta kodu gönderimi günlük sınırın yarısında{{end}}",
+    "system": true,
+    "contentSensitive": false,
+    "variables": [
+      "realmDisplayName",
+      "subjectKey"
+    ],
+    "requiredVariables": [],
+    "sensitiveVariables": null,
+    "sampleKeys": [
+      "realmDisplayName",
+      "subjectKey"
+    ],
+    "referenced": [
+      "realmDisplayName",
+      "subjectKey"
+    ],
+    "actions": [
+      "{{.realmDisplayName}}",
+      "{{else if eq .subjectKey `skyLoginCodeAlarmCeilingSubject`}}",
+      "{{else if eq .subjectKey `skyLoginCodeAlarmConsecutiveSubject`}}",
+      "{{if eq .subjectKey `skyLoginCodeAlarmConsecutiveSubject`}}",
+      "{{if eq .subjectKey `skyLoginCodeAlarmFullSubject`}}"
+    ]
+  },
   "keycloak.generic": {
     "subject": "SKY LAB hesap bildirimi",
     "system": true,
@@ -229,6 +316,9 @@
       "subjectKey"
     ],
     "requiredVariables": [],
+    "sensitiveVariables": [
+      "link"
+    ],
     "sampleKeys": [
       "firstName",
       "link",
@@ -255,37 +345,47 @@
     ]
   },
   "core.welcome": {
-    "subject": "SKY LAB ekosistemine hoş geldin",
+    "subject": "SKY LAB'e hoş geldin",
     "system": true,
     "contentSensitive": false,
     "variables": [
       "FirstName",
       "LastName",
       "Email",
+      "Username",
+      "SchoolEmail",
       "SkyNumber",
       "CreatedAt"
     ],
     "requiredVariables": [],
+    "sensitiveVariables": null,
     "sampleKeys": [
       "CreatedAt",
       "Email",
       "FirstName",
       "LastName",
-      "SkyNumber"
+      "SchoolEmail",
+      "SkyNumber",
+      "Username"
     ],
     "referenced": [
       "CreatedAt",
       "Email",
       "FirstName",
       "LastName",
-      "SkyNumber"
+      "SchoolEmail",
+      "SkyNumber",
+      "Username"
     ],
     "actions": [
       "{{.CreatedAt}}",
       "{{.Email}}",
       "{{.FirstName}}",
       "{{.LastName}}",
-      "{{.SkyNumber}}"
+      "{{.SkyNumber}}",
+      "{{.Username}}",
+      "{{if .Username}}",
+      "{{if not .SchoolEmail}}"
     ]
   },
   "core.certificate": {
@@ -302,6 +402,7 @@
     "requiredVariables": [
       "VerifyURL"
     ],
+    "sensitiveVariables": null,
     "sampleKeys": [
       "EventName",
       "FirstName",
@@ -338,6 +439,9 @@
       "SecureAccountUrl"
     ],
     "requiredVariables": [],
+    "sensitiveVariables": [
+      "SecureAccountUrl"
+    ],
     "sampleKeys": [
       "DeviceLabel",
       "EventDetail",
@@ -381,6 +485,9 @@
       "SecureAccountUrl"
     ],
     "requiredVariables": [],
+    "sensitiveVariables": [
+      "SecureAccountUrl"
+    ],
     "sampleKeys": [
       "NewEmail",
       "OccurredAt",
@@ -410,6 +517,9 @@
       "CancelUrl"
     ],
     "requiredVariables": [],
+    "sensitiveVariables": [
+      "CancelUrl"
+    ],
     "sampleKeys": [
       "CancelUrl",
       "CompletesAt",
@@ -438,6 +548,7 @@
       "RetainedDataNote"
     ],
     "requiredVariables": [],
+    "sensitiveVariables": [],
     "sampleKeys": [
       "CompletedAt",
       "RetainedDataNote"
@@ -467,6 +578,10 @@
       "EventUrl"
     ],
     "requiredVariables": [],
+    "sensitiveVariables": [
+      "TicketCode",
+      "TicketQrUrl"
+    ],
     "sampleKeys": [
       "EventDate",
       "EventName",
@@ -513,6 +628,9 @@
       "MapUrl"
     ],
     "requiredVariables": [],
+    "sensitiveVariables": [
+      "TicketQrUrl"
+    ],
     "sampleKeys": [
       "EventName",
       "MapUrl",
@@ -549,6 +667,7 @@
       "EventUrl"
     ],
     "requiredVariables": [],
+    "sensitiveVariables": null,
     "sampleKeys": [
       "ChangeSummary",
       "EventName",
@@ -585,6 +704,7 @@
       "ContactEmail"
     ],
     "requiredVariables": [],
+    "sensitiveVariables": null,
     "sampleKeys": [
       "CancelReason",
       "ContactEmail",
@@ -617,6 +737,7 @@
       "ApproveUrl"
     ],
     "requiredVariables": [],
+    "sensitiveVariables": null,
     "sampleKeys": [
       "ApproveUrl",
       "AudienceKind",
@@ -665,6 +786,7 @@
       "DeadlineAt"
     ],
     "requiredVariables": [],
+    "sensitiveVariables": null,
     "sampleKeys": [
       "AudienceKind",
       "AudienceName",
@@ -725,6 +847,7 @@
       "TaskUrl"
     ],
     "requiredVariables": [],
+    "sensitiveVariables": null,
     "sampleKeys": [
       "FailedCount",
       "FirstError",
@@ -764,6 +887,7 @@
       "LeaderName"
     ],
     "requiredVariables": [],
+    "sensitiveVariables": null,
     "sampleKeys": [
       "Action",
       "EffectiveAt",
@@ -800,6 +924,7 @@
       "ActorName"
     ],
     "requiredVariables": [],
+    "sensitiveVariables": null,
     "sampleKeys": [
       "Action",
       "ActorName",
@@ -836,6 +961,7 @@
       "ActorName"
     ],
     "requiredVariables": [],
+    "sensitiveVariables": null,
     "sampleKeys": [
       "Action",
       "ActorName",
@@ -874,6 +1000,7 @@
       "MemberCount"
     ],
     "requiredVariables": [],
+    "sensitiveVariables": null,
     "sampleKeys": [
       "ActorName",
       "AdminRole",
@@ -921,7 +1048,6 @@
       "{{if eq .AdminRole `yes`}}",
       "{{if eq .Change `member-added`}}",
       "{{if eq .Change `member-removed`}}",
-      "{{if eq .Change `roles-changed`}}",
       "{{if eq .Root `board`}}"
     ]
   }

@@ -113,7 +113,7 @@ const LOGO_INK = `${ASSETS}/skylab-ink.png`;
 const LOGO_LILAC = `${ASSETS}/skylab-lilac.png`;
 
 const REPORT = "mailto:info@yildizskylab.com?subject=SKY%20LAB%20-%20Sorun%20Bildirimi";
-const KVKK = "https://skyl.app/kvkk-metni";
+const KVKK = "https://yildizskylab.com/kvkk-metni.pdf";
 
 // Comments inside this string ship in every message, so the reasoning lives out
 // here instead.
@@ -304,12 +304,15 @@ function Footer({ brand, reason }: { brand: Brand; reason: React.ReactNode }) {
   // faint is 2.5:1 on white (WCAG AA asks 4.5:1); muted is 4.7:1, 5.7:1 dark.
   const small = { margin: 0, fontSize: "12px", lineHeight: "18px", color: ink.muted, fontFamily: fontStack };
   const quiet = { color: ink.muted, textDecoration: "none" };
+  const hasReason = reason !== null && reason !== false && reason !== "";
   return (
     <div style={{ marginTop: "48px" }}>
-      <p className="t-muted" style={small}>
-        {reason}
-      </p>
-      <p className="t-muted" style={{ ...small, margin: "8px 0 0" }}>
+      {hasReason ? (
+        <p className="t-muted" style={small}>
+          {reason}
+        </p>
+      ) : null}
+      <p className="t-muted" style={hasReason ? { ...small, margin: "8px 0 0" } : small}>
         <a href={REPORT} className="t-muted" style={quiet}>
           Sorun bildir
         </a>
@@ -369,8 +372,13 @@ export function Shell({
 }: {
   preview: string;
   brand?: Brand;
-  /** Why the reader got this mail, in one sentence; the footer opens with it. */
-  reason?: React.ReactNode;
+  /**
+   * Why the reader got this mail, in one sentence; the footer opens with it.
+   * Left out, the footer says the neutral sentence (operator-written mails);
+   * null leaves the line out, as the account and notice mails do (Yusuf,
+   * 2026-10-19: no explanatory sentences in those mails).
+   */
+  reason?: React.ReactNode | null;
   children: React.ReactNode;
 }) {
   return (
@@ -394,7 +402,7 @@ export function Shell({
                   <td className="shell" style={{ padding: "40px 24px 32px", fontFamily: fontStack, textAlign: "left" }}>
                     <BrandMark brand={brand} />
                     <div style={{ paddingTop: "32px" }}>{children}</div>
-                    <Footer brand={brand} reason={reason ?? defaultReason()} />
+                    <Footer brand={brand} reason={reason === undefined ? defaultReason() : reason} />
                   </td>
                 </tr>
               </Table>

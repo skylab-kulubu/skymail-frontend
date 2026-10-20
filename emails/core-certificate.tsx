@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Context, Cta, LinkFallback, Paragraph, RowItem, Rows, RowsEnd, Shell, Small, Strong, Title } from "./theme";
+import { Context, Cta, LinkFallback, Paragraph, RowItem, Rows, RowsEnd, Shell, Strong, Title } from "./theme";
 import { v } from "./go";
 import type { TemplateMeta } from "./types";
 
@@ -34,17 +34,12 @@ export default function CoreCertificate() {
   const verifyUrl = v("VerifyURL");
 
   return (
-    <Shell
-      preview="Katılım sertifikan hazır — doğrulama bağlantısı içinde."
-      brand="skylab"
-      reason={<>Bu e-postayı {v("EventName")} etkinliğine katıldığın için alıyorsun.</>}
-    >
+    <Shell preview="Katılım sertifikan hazır." brand="skylab" reason={null}>
       <Context tone="ok">{v("EventName")}</Context>
       <Title>Sertifikan Hazır</Title>
 
       <Paragraph>
-        Merhaba {v("FirstName")}, <Strong>{v("EventName")}</Strong> etkinliğine katılımın kayda geçti ve katılım
-        sertifikan oluşturuldu. Aşağıdaki bağlantı sertifikanı hem görüntüler hem de doğrular.
+        Merhaba {v("FirstName")}, <Strong>{v("EventName")}</Strong> etkinliği için katılım sertifikan hazır.
       </Paragraph>
 
       <Rows>
@@ -57,11 +52,6 @@ export default function CoreCertificate() {
       <Cta href={verifyUrl}>Sertifikamı Görüntüle</Cta>
 
       <LinkFallback href={verifyUrl} />
-
-      <Small style={{ marginTop: "24px" }}>
-        Bu bağlantıyı paylaştığın herkes sertifikanın gerçekliğini kendisi doğrulayabilir; sertifikanın geçerliliği
-        için ayrıca bir belge göndermene gerek yok.
-      </Small>
     </Shell>
   );
 }

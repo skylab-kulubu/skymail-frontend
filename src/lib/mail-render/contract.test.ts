@@ -31,6 +31,8 @@ const CONTRACTS: Record<string, string[]> = {
   "keycloak.update-email": ["link"],
   "keycloak.idp-link": ["link"],
   "keycloak.personal-email-confirm": ["code"],
+  "keycloak.login-code": ["code"],
+  "keycloak.login-code-alarm": [],
   "keycloak.generic": [],
   "core.welcome": [],
   "core.certificate": ["VerifyURL"],
