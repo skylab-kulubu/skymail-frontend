@@ -91,6 +91,19 @@ describe("the Forms mails", () => {
     assert.ok(html.includes("white-space:pre-wrap"), "the review note loses its line breaks");
   });
 
+  // pre-wrap shows every space and line break the formatter would put around
+  // the note: an empty first line, an indent of forty spaces, an empty last line.
+  it("forms.status-changed keeps the review note against its tags", async () => {
+    const { html } = await rendered("forms.status-changed");
+    assert.ok(html.includes('pre-wrap">{{.reviewNote}}</p>'), "the review note is not against its tags");
+    assert.ok(html.includes('pre-wrap">Not bırakılmadı.</p>'), "the empty note is not against its tags");
+    for (const key of Object.keys(FORMS_SENDS)) {
+      const notes = [...(await rendered(key)).html.matchAll(/white-space:pre-wrap">([^<]*)</g)].map((match) => match[1]);
+      assert.equal(notes.length, key === "forms.status-changed" ? 2 : 0, `${key}: pre-wrap notes`);
+      for (const note of notes) assert.equal(note, note.trim(), `${key}: "${note}" has whitespace around it`);
+    }
+  });
+
   const kinds: { kind: string; title: string }[] = [
     { kind: "reminder", title: "Görevi henüz başlatmadınız" },
     { kind: "extended", title: "Sürenizi uzattık" },

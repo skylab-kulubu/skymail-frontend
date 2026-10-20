@@ -88,7 +88,7 @@ export function findActions(text: string): Action[] {
 }
 
 /** Two private-use characters the text does not already contain. */
-function tokenMarks(text: string): [string, string] {
+export function tokenMarks(text: string): [string, string] {
   for (let code = 0xe000; code < 0xf8ff; code += 2) {
     const open = String.fromCharCode(code);
     const close = String.fromCharCode(code + 1);
