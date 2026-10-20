@@ -264,7 +264,7 @@ export function resubmission<T extends Pick<MailApproval, "state" | "body_variab
 export type ApprovalRequest =
   | { template_id: string; mail_list_id: string; body_variables: Record<string, string>; tracking?: boolean }
   | { template_id: string; form_source_id: string; body_variables: Record<string, string> }
-  | { template_id: string; recipients: ApprovalRecipient[]; body_variables: Record<string, string> };
+  | { template_id: string; recipients: ApprovalRecipient[]; body_variables: Record<string, string>; tracking?: boolean };
 
 /**
  * A send plan as one request for approval: its people — each of the form's
@@ -287,6 +287,7 @@ export function approvalRequest(plan: SendPlan, { lists }: { lists: boolean }): 
       template_id: first.template_id,
       recipients: plan.requests.map((request) => ({ email: request.recipient_email, full_name: request.recipient_full_name })),
       body_variables: first.body_variables,
+      ...(first.tracking ? { tracking: true } : {}),
     },
   };
 }

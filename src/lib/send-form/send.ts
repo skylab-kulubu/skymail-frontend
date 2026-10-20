@@ -5,7 +5,7 @@
  *  - to a mailing list — an internal list or a Keycloak group —
  *    `POST /mail_tasks {template_id, mail_list_id, body_variables}`, one send;
  *  - to people, `POST /mail_tasks/single {template_id, recipient_email,
- *    recipient_full_name, body_variables}` once per person: there is no
+ *    recipient_full_name, body_variables, tracking?}` once per person: there is no
  *    route for a set of people, so each is a send of its own, and one that
  *    fails does not stop the others.
  *
@@ -51,6 +51,8 @@ export type SingleSendRequest = {
   recipient_email: string;
   recipient_full_name: string;
   body_variables: Record<string, string>;
+  /** Open and click tracking (tracking.ts); present only when asked for. */
+  tracking?: boolean;
 };
 
 /** The list a send goes to, as the form knows it. */
@@ -67,7 +69,7 @@ export type SendDraft = Readonly<{
   formSource?: FormSource | null;
   list: ChosenList | null;
   people: readonly PersonRow[];
-  /** Open and click tracking: true only when the form offered its box (tracking.ts trackingOffered) and it is ticked. Only a list send asks for it. */
+  /** Open and click tracking: true only when the form offered its box (tracking.ts trackingOffered) and it is ticked. A list or people send asks for it. */
   tracking?: boolean;
 }>;
 
@@ -145,6 +147,7 @@ export function sendPlan(
         recipient_email: person.email,
         recipient_full_name: person.name,
         body_variables,
+        ...(draft.tracking ? { tracking: true } : {}),
       })),
     },
     warnings,
@@ -172,9 +175,9 @@ export type FailureKind = "final" | "notSent" | "uncertain";
 
 export type SendFailure = Readonly<{ kind: FailureKind; reason: string }>;
 
-/** How a send to one person went. */
+/** How a send to one person went; a sent one says whether it got the tracking it asked for (absent from a backend before tracking). */
 export type PersonOutcome = Readonly<
-  { name: string; email: string } & ({ status: "sent"; sendId: string } | { status: FailureKind; reason: string })
+  { name: string; email: string } & ({ status: "sent"; sendId: string; tracking?: boolean } | { status: FailureKind; reason: string })
 >;
 
 /** Who the send's outcome can be checked by: the viewer, if they read sends (`mails:read`). */
@@ -194,8 +197,8 @@ export async function sendToPeople(
   for (const request of requests) {
     const person = { name: request.recipient_full_name, email: request.recipient_email };
     try {
-      const { id } = await api.post<{ id: string }>("/mail_tasks/single", request);
-      outcomes.push({ ...person, status: "sent", sendId: id });
+      const { id, tracking } = await api.post<CreatedSend>("/mail_tasks/single", request);
+      outcomes.push({ ...person, status: "sent", sendId: id, ...(tracking === undefined ? {} : { tracking }) });
     } catch (error) {
       const failure = sendFailure(error, "person", { canSeeSends });
       outcomes.push({ ...person, status: failure.kind, reason: failure.reason });

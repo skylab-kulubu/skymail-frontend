@@ -7,6 +7,7 @@ import type { ListRow } from '@/lib/mailing-lists';
 import { formatCount } from '@/lib/sends';
 import { peopleSentApart, type PersonRow } from '@/lib/send-form/audience';
 import type { Retry, SendPlan } from '@/lib/send-form/send';
+import { untrackedCount, untrackedRecipientsNote } from '@/lib/send-form/tracking';
 import type { Progress } from './use-sending';
 import { Notice } from '@skylab-kulubu/skylcn-ui';
 
@@ -73,10 +74,11 @@ export function ConfirmSend({
   const busy = progress !== null || submitting;
   const submission = confirming?.kind === 'submit';
   const source = (confirming?.kind === 'send' || confirming?.kind === 'submit') && confirming.plan.kind === 'form' ? confirming.plan.source : null;
+  const plan = confirming?.kind === 'send' || confirming?.kind === 'submit' || confirming?.kind === 'resendList' ? confirming.plan : null;
   const tracked =
-    (confirming?.kind === 'send' || confirming?.kind === 'submit' || confirming?.kind === 'resendList') &&
-    confirming.plan.kind === 'list' &&
-    confirming.plan.request.tracking === true;
+    plan !== null &&
+    (plan.kind === 'list' ? plan.request.tracking === true : plan.kind === 'people' && plan.requests.some((request) => request.tracking === true));
+  const untrackedNote = plan && tracked ? untrackedRecipientsNote(untrackedCount(plan, list, size)) : null;
   return (
     <PanelDialog isOpen={confirming !== null} onClose={busy ? () => {} : onCancel} title={title}>
       {confirming?.kind === 'retryPeople' ? (
@@ -117,6 +119,7 @@ export function ConfirmSend({
               <div>
                 <dt className="text-xs text-subtle-foreground">Takip</dt>
                 <dd className="text-foreground">Açık</dd>
+                {untrackedNote ? <dd className="mt-1 text-xs text-muted-foreground">{untrackedNote}</dd> : null}
               </div>
             ) : null}
           </dl>
