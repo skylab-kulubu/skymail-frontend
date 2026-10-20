@@ -364,6 +364,34 @@ function CreditLine({ credit: { product, href, developer } }: { credit: Credit }
   );
 }
 
+/** React Email's Preview cuts its text at this many characters. */
+const PREVIEW_LIMIT = 150;
+
+/** What Preview pads a short text with, so the inbox line does not run on into the body. */
+const PREVIEW_FILL = "\xa0\u200c".repeat(90);
+
+/**
+ * The inbox line. React Email's Preview cuts its text at 150 characters, which
+ * is right for a written sentence but cuts a Go-templated one (Forms' previews
+ * branch on a status) in the middle of an action, leaving an {{if}} without
+ * its {{end}}. A longer text goes whole, in the same hidden block, padded as
+ * Forms pads it: the sentence it renders to is short again.
+ */
+function InboxPreview({ text }: { text: string }) {
+  if (text.length <= PREVIEW_LIMIT) {
+    return <Preview>{text}</Preview>;
+  }
+  return (
+    <div
+      data-skip-in-text="true"
+      style={{ display: "none", overflow: "hidden", lineHeight: "1px", opacity: 0, maxHeight: 0, maxWidth: 0 }}
+    >
+      {text}
+      <div>{PREVIEW_FILL}</div>
+    </div>
+  );
+}
+
 export function Shell({
   preview,
   brand = "skylab",
@@ -389,7 +417,7 @@ export function Shell({
         <meta name="x-apple-disable-message-reformatting" />
         <style>{css}</style>
       </Head>
-      <Preview>{preview}</Preview>
+      <InboxPreview text={preview} />
       <Body className="email-bg" style={{ margin: 0, padding: 0, fontFamily: fontStack }}>
         <Table className="email-bg" {...legacy({ bgcolor: ink.page })} style={{ backgroundColor: ink.page }}>
           <tr>
@@ -699,18 +727,21 @@ export function DetailRow({ label, value, last }: { label: React.ReactNode; valu
 
 /**
  * A quoted note: someone's words, or the one warning a mail carries. `label`
- * names it; `empty` greys the text when there was nothing to quote.
+ * names it; `empty` greys the text when there was nothing to quote;
+ * `keepLines` keeps the line breaks of a note someone typed in several lines.
  */
 export function Note({
   children,
   tone = "brand",
   label,
   empty = false,
+  keepLines = false,
 }: {
   children: React.ReactNode;
   tone?: "brand" | "alert";
   label?: React.ReactNode;
   empty?: boolean;
+  keepLines?: boolean;
 }) {
   const alert = tone === "alert";
   return (
@@ -727,7 +758,7 @@ export function Note({
           ) : null}
           <p
             className={empty ? "t-faint" : "t-primary"}
-            style={{ margin: 0, fontSize: "14px", lineHeight: "22px", color: empty ? ink.faint : ink.primary }}
+            style={{ margin: 0, fontSize: "14px", lineHeight: "22px", color: empty ? ink.faint : ink.primary, ...(keepLines ? { whiteSpace: "pre-wrap" } : {}) }}
           >
             {children}
           </p>

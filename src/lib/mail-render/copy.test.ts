@@ -12,6 +12,12 @@ import { fillSampleValues, renderComponent } from ".";
 /** The one mail a person writes; its footer still says who it is for. */
 const OPERATOR_WRITTEN = new Set(["free.basic"]);
 
+/**
+ * Forms' own mails: their words are Fatih's (forms-frontend mail-templates/),
+ * taken as he writes them, footer sentence included. They keep the footer links.
+ */
+const FORMS_WRITTEN = new Set(["forms.status-changed", "forms.attempt-update"]);
+
 const CODE_MAILS = ["keycloak.login-code", "keycloak.personal-email-confirm"];
 const LINK_MAILS = ["keycloak.verify-email", "keycloak.reset-password", "keycloak.update-email", "keycloak.idp-link"];
 
@@ -22,11 +28,14 @@ const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/&#x27;|&ap
 describe("the account and notice mails", () => {
   for (const { meta, Component } of templates) {
     if (OPERATOR_WRITTEN.has(meta.key)) continue;
-    it(`${meta.key} says nothing about why it came and keeps the footer links`, async () => {
+    const ourWords = !FORMS_WRITTEN.has(meta.key);
+    it(`${meta.key} ${ourWords ? "says nothing about why it came and " : ""}keeps the footer links`, async () => {
       const rendered = await renderComponent(Component);
       assert.ok(rendered.ok);
       for (const body of [text(fillSampleValues(rendered.html, meta.sample)), rendered.plainText]) {
-        for (const phrase of NOT_SAID) assert.ok(!body.includes(phrase), `${meta.key} still says "${phrase}"`);
+        if (ourWords) {
+          for (const phrase of NOT_SAID) assert.ok(!body.includes(phrase), `${meta.key} still says "${phrase}"`);
+        }
         assert.ok(body.includes("Sorun bildir") && body.includes("KVKK metni"), `${meta.key}: footer links`);
       }
     });

@@ -10,22 +10,34 @@ import { createElement } from "react";
 import { render } from "@react-email/render";
 import { templates } from "../../../emails";
 import { templateSources } from "../template-seed";
-import { renderSource } from ".";
+import { renderComponent, renderSource } from ".";
+
+/**
+ * react-email's formatted HTML with the content of each element that keeps its
+ * whitespace pulled back against its tags, which is all the render module
+ * does differently (render.ts keepWhitespace).
+ */
+const againstTags = (html: string) =>
+  html.replace(/(white-space:(?:pre|pre-wrap|pre-line|break-spaces)\b[^"]*"[^>]*>)\s*([^<]*?)\s*(<\/)/g, "$1$2$3");
 
 // The Template seed sends each template's file as its JSX source, and the
 // render of that text as its body (lib/template-seed). Compiled here as the
 // panel's JSX mode compiles it, the text must give the mail the component
 // gives — what the seed wrote before it sent the source, and what
-// emails:render shows.
+// emails:render shows. A template with no element that keeps its whitespace
+// comes out as react-email's own render, byte for byte.
 describe("a template from the repo, compiled from its file as it is", async () => {
   const sources = await templateSources(templates);
 
   for (const [index, { meta, Component }] of templates.entries()) {
     it(`${meta.key} comes out as the Template seed has always written it`, async () => {
       const result = await renderSource({ mode: "jsx", source: sources[index].source });
+      const seeded = await renderComponent(Component);
 
       assert.equal(result.ok, true, result.ok ? "" : result.message);
-      assert.equal(result.html, await render(createElement(Component), { pretty: true }));
+      assert.ok(result.ok && seeded.ok);
+      assert.equal(result.html, seeded.html);
+      assert.equal(result.html, againstTags(await render(createElement(Component), { pretty: true })));
       assert.equal(result.plainText, await render(createElement(Component), { plainText: true }));
     });
   }
