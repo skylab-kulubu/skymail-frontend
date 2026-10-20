@@ -26,6 +26,8 @@ zaman verdiği değişkenler kullanılır.
 | Keycloak · Genel Sistem Postası 🔒 🙈 | `keycloak.generic` | SKY LAB hesap bildirimi | `link`, `linkExpirationMinutes`, `firstName`, `username`, `realmDisplayName`, `subjectKey` |
 | Hoş Geldin 🔒 | `core.welcome` | SKY LAB'e hoş geldin | `FirstName`, `LastName`, `Email`, `Username`, `SchoolEmail`, `SkyNumber`, `CreatedAt` |
 | Katılım Sertifikası 🔒 | `core.certificate` | Katılım sertifikan hazır | `FirstName`, `EventName`, `VerifyURL`, `Serial`, `OwnerTeam` |
+| Etkinlik İptali 🔒 | `core.event-cancelled` | {{.EventName}} iptal edildi | `EventName`, `EventStart`, `CancelReason`, `FirstName` |
+| Etkinlik Yeniden Yayında 🔒 | `core.event-reinstated` | {{.EventName}} yeniden yayında | `EventName`, `EventStart`, `FirstName` |
 | Hesap Güvenlik Bildirimi 🔒 🙈 | `account.security-alert` | SKY LAB hesabında: {{.EventTitle}} | `EventTitle`, `EventDetail`, `OccurredAt`, `DeviceLabel`, `IpAddress`, `Location`, `SecureAccountUrl` |
 | Birincil E-posta Değişti (eski adrese) 🔒 🙈 | `account.primary-email-changed` | SKY LAB hesabının e-posta adresi değişti | `OldEmail`, `NewEmail`, `OccurredAt`, `SecureAccountUrl` |
 | Hesap Silme Talebi Alındı 🔒 🙈 | `account.deletion-requested` | Hesap silme talebini aldık | `RequestedAt`, `CompletesAt`, `CancelUrl` |
@@ -58,6 +60,8 @@ zaman verdiği değişkenler kullanılır.
 - **Keycloak · Genel Sistem Postası** (`keycloak.generic`) — Keycloak gönderici SPI'ın yedeği: eşlenmemiş bir sistem postası (ileride eklenecek bir required action gibi) bu anahtara düşer. subjectKey hangi posta olduğunu söyler.
 - **Hoş Geldin** (`core.welcome`) — core-backend, yeni bir User ilk kez göründüğünde (SKYMAIL_WELCOME_TEMPLATE_ID).
 - **Katılım Sertifikası** (`core.certificate`) — core-backend, yoklama kesinleştikten sonra sertifika üretildiğinde (SKYMAIL_CERTIFICATE_TEMPLATE_ID, certificate/service.go).
+- **Etkinlik İptali** (`core.event-cancelled`) — core-backend, etkinlik iptal edilirken "Bilet sahiplerine bildir" seçiliyse, bilet sahiplerinin her birine bir kez (internal/eventstatusmail).
+- **Etkinlik Yeniden Yayında** (`core.event-reinstated`) — core-backend, iptal geri alınırken "Katılımcılara tekrar bildir" seçiliyse, iptal postası ulaşan her bilet sahibine bir kez (internal/eventstatusmail).
 - **Hesap Güvenlik Bildirimi** (`account.security-alert`) — Account center / sky-account SPI, hesapta güvenlikle ilgili bir şey değiştiğinde: parola değişti, geçiş anahtarı eklendi/silindi, doğrulama uygulaması eklendi/kaldırıldı, yeni cihazdan giriş, tüm oturumlar kapatıldı, kullanıcı adı değişti, kişisel e-posta eklendi/kaldırıldı.
 - **Birincil E-posta Değişti (eski adrese)** (`account.primary-email-changed`) — Account center, birincil e-posta değiştiğinde — ESKİ adrese gider. Yeni adres zaten doğrulama postası aldığı için bu, değişikliği kaçıran kişiye tek uyarıdır.
 - **Hesap Silme Talebi Alındı** (`account.deletion-requested`) — Account center, kişi hesabını sildiğinde. Erişim anında kapanır, kişisel veriler sonra anonimleştirilir (ADR-0042). ACCOUNT_ERASURE_MODE açıldığında devreye girer.
