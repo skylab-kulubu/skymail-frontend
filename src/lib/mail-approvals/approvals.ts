@@ -30,6 +30,7 @@ import type { ApiClient, ApiPage } from "../api/client";
 import { pageRange, readPage, viewHref } from "../list-view";
 import { isErasedSubject, personLabel, recipientLabel, samePerson } from "../people";
 import { SEND_LIST_PATH, audienceLabel, type AudienceLabel, type SendAudience } from "../sends";
+import { templateTrackable, type TrackableTemplate } from "../send-form/tracking";
 
 export const APPROVAL_PAGE_SIZE = 25;
 
@@ -117,6 +118,8 @@ export type ApprovalItem = Readonly<{
   /** Once approved: a list's one send, or each person's, `task_ids[i]` to `recipients[i]`; empty until then. */
   task_ids: readonly string[];
   last_event: ApprovalEvent | null;
+  /** It asked for open and click tracking and may get it. Absent from a backend before tracking. */
+  tracking?: boolean;
 }>;
 
 /** The mail an action sent about itself. */
@@ -390,6 +393,22 @@ const NOTIFICATION_PROBLEM: ReadonlyMap<string, (notification: ApprovalNotificat
   ["template_unavailable", (notification) => `Bildirim maili gönderilemedi: ${notification.template_key} System template'i SkyMail'de yok.`],
   ["enqueue_failed", () => "Bildirim maili kuyruğa yazılamadı; kimseye haber gitmedi."],
 ]);
+
+/**
+ * What the request's page says of its tracking, only where it could have
+ * any: Açık for one that got it (skymail-backend keeps it only for a
+ * trackable one); Kapalı for a list request of a template that may be
+ * tracked (`template` null when it cannot be read). Null otherwise, and
+ * for a backend that does not say (before tracking).
+ */
+export function approvalTracking(
+  approval: Pick<ApprovalItem, "tracking"> & Readonly<{ audience: Pick<SendAudience, "kind"> }>,
+  template: TrackableTemplate | null,
+): "Açık" | "Kapalı" | null {
+  if (approval.tracking === true) return "Açık";
+  if (approval.tracking === false && approval.audience.kind === "mailing_list" && template && templateTrackable(template)) return "Kapalı";
+  return null;
+}
 
 /** Who an action's notification did not reach, and why; null when it reached everyone it was for. */
 export function notificationNote(notification: ApprovalNotification | undefined | null): string | null {

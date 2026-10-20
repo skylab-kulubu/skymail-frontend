@@ -39,20 +39,16 @@ export default function MailApprovalRequested() {
   const toOne = elseIfEq("AudienceKind", "single");
 
   return (
-    <Shell
-      preview="SkyMail'de onayını bekleyen bir gönderim var."
-      brand="mail"
-      reason="Bu e-postayı, SkyMail'de gönderimleri onaylayabilen kişilerden biri olduğun için alıyorsun."
-    >
+    <Shell preview="SkyMail'de onayını bekleyen bir gönderim var." brand="mail" reason={null}>
       <Context tone="wait">Mail onayı</Context>
       <Title>Onayını Bekleyen Gönderim</Title>
 
       <Paragraph>
         <Strong>{v("RequesterName")}</Strong> bir gönderim hazırladı ve senin onayını bekliyor.
         {toList} Gönderim <Strong>{v("AudienceName")}</Strong> listesine gidecek.
-        {toPeople} Gönderim <Strong>{v("RecipientCount")} kişiye</Strong> gidecek; her biri kendi mailini ayrı alır.
+        {toPeople} Gönderim <Strong>{v("RecipientCount")} kişiye</Strong> gidecek.
         {toOne} Gönderim <Strong>{v("RecipientCount")} kişiye</Strong> gidecek.
-        {end} Onaylarsan mail olduğu gibi gider; onaylamazsan hiçbir şey gönderilmez.
+        {end}
       </Paragraph>
 
       <Rows>
@@ -71,12 +67,12 @@ export default function MailApprovalRequested() {
         <RowsEnd />
       </Rows>
 
-      <Note>Onaylamadan önce gönderimi önizle — onaydan sonra geri alınamaz.</Note>
+      <Note>Onaydan sonra gönderim geri alınamaz.</Note>
 
       <Cta href={v("ApproveUrl")}>Gönderimi İncele</Cta>
 
       {ifSet("PreviewUrl")}
-      <Small style={{ wordBreak: "break-all" }}>Sadece önizlemek istersen: {v("PreviewUrl")}</Small>
+      <Small style={{ wordBreak: "break-all" }}>Önizleme: {v("PreviewUrl")}</Small>
       {end}
     </Shell>
   );

@@ -41,11 +41,7 @@ export default function ClubRoleMembership() {
   const admin = elseIfEq("Role", "admin");
 
   return (
-    <Shell
-      preview="SKY LAB yönetim yetkilerinde bir değişiklik oldu."
-      brand="account"
-      reason="Bu e-postayı, bir SKY LAB yönetim grubundaki üyeliğin değiştiği için alıyorsun."
-    >
+    <Shell preview="SKY LAB yönetim yetkilerinde değişiklik." brand="account" reason={null}>
       {added}
       <Context tone="ok">{v("GroupName")}</Context>
       {elseBranch}
@@ -61,14 +57,13 @@ export default function ClubRoleMembership() {
         {board}Bu grup SKY LAB Yönetim Kurulu&apos;na bağlı.{audit}Bu grup SKY LAB Denetim Kurulu&apos;na bağlı.
         {admin}Bu grup SKY LAB&apos;in yönetici grubuna bağlı.{elseBranch}Bu grup SKY LAB&apos;in yönetim gruplarından biri.
         {end}{" "}
-        Bu grubun yönetim yetkileri hesabına tanımlandı: yönetim panelinde kulübün üyeleri, grupları ve içerikleri
-        üzerinde işlem yapabilirsin.
+        Bu grubun yönetim yetkileri hesabına tanımlandı.
         {elseBranch}
         <Strong>{v("GroupName")}</Strong> grubundan çıkarıldın.{" "}
         {board}Bu grup SKY LAB Yönetim Kurulu&apos;na bağlı.{audit}Bu grup SKY LAB Denetim Kurulu&apos;na bağlı.
         {admin}Bu grup SKY LAB&apos;in yönetici grubuna bağlı.{elseBranch}Bu grup SKY LAB&apos;in yönetim gruplarından biri.
         {end}{" "}
-        Bu grup üzerinden gelen yetkiler hesabından kaldırıldı; başka gruplardan gelen yetkilerin varsa onlar sürüyor.
+        Bu grup üzerinden gelen yetkiler hesabından kaldırıldı.
         {end}
       </Paragraph>
 
@@ -82,10 +77,6 @@ export default function ClubRoleMembership() {
       </Rows>
 
       <Note tone="alert">Bu değişikliği beklemiyorsan hemen kulüp yöneticilerine haber ver.</Note>
-
-      <Paragraph style={{ marginTop: "24px" }}>
-        Hesabındaki güncel yetkileri her zaman Hesap Merkezi&apos;ndeki İzinler ekranından görebilirsin.
-      </Paragraph>
 
       <Cta href="https://my.yildizskylab.com/izinler">İzinlerimi Gör</Cta>
     </Shell>

@@ -34,7 +34,16 @@ export const FREE_TEMPLATE_KEY = "free.basic";
 /** free.basic's body: a free announcement without one is warned about. */
 export const FREE_BODY_VARIABLE = "BodyHtml";
 
-export type ListSendRequest = { template_id: string; mail_list_id: string; body_variables: Record<string, string> };
+export type ListSendRequest = {
+  template_id: string;
+  mail_list_id: string;
+  body_variables: Record<string, string>;
+  /** Open and click tracking (tracking.ts); present only when asked for. */
+  tracking?: boolean;
+};
+
+/** `POST /mail_tasks`'s answer: the new send, and whether it got the tracking it asked for (absent from a backend before tracking). */
+export type CreatedSend = Readonly<{ id: string; tracking?: boolean }>;
 export type FormSourceSendRequest = { template_id: string; form_source_id: string; body_variables: Record<string, string> };
 
 export type SingleSendRequest = {
@@ -58,6 +67,8 @@ export type SendDraft = Readonly<{
   formSource?: FormSource | null;
   list: ChosenList | null;
   people: readonly PersonRow[];
+  /** Open and click tracking: true only when the form offered its box (tracking.ts trackingOffered) and it is ticked. Only a list send asks for it. */
+  tracking?: boolean;
 }>;
 
 export type SendPlan = { kind: "list"; request: ListSendRequest } | { kind: "people"; requests: SingleSendRequest[] } | { kind: "form"; request: FormSourceSendRequest; source: FormSource };
@@ -118,7 +129,10 @@ export function sendPlan(
   if (draft.audience === "list") {
     return {
       ok: true,
-      plan: { kind: "list", request: { template_id: template.id, mail_list_id: draft.list!.id, body_variables } },
+      plan: {
+        kind: "list",
+        request: { template_id: template.id, mail_list_id: draft.list!.id, body_variables, ...(draft.tracking ? { tracking: true } : {}) },
+      },
       warnings,
     };
   }
@@ -137,10 +151,10 @@ export function sendPlan(
   };
 }
 
-/** Sends to a list; the new send's id. */
-export async function sendToList(api: ApiClient, request: ListSendRequest): Promise<string> {
-  const { id } = await api.post<{ id: string }>("/mail_tasks", request);
-  return id;
+/** Sends to a list; the new send's id, and whether it is tracked. */
+export async function sendToList(api: ApiClient, request: ListSendRequest): Promise<CreatedSend> {
+  const { id, tracking } = await api.post<CreatedSend>("/mail_tasks", request);
+  return { id, tracking };
 }
 
 /** One bulk task using the server's immutable snapshot; an exact retry returns the same task. */

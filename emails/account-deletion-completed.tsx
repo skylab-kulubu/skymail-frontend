@@ -12,6 +12,7 @@ export const meta: TemplateMeta = {
   brand: "account",
   trigger: "Account center, anonimleştirme tamamlandığında. Bu, bu adrese gönderdiğimiz son postadır.",
   variables: ["CompletedAt", "RetainedDataNote"],
+  sensitiveVariables: [],
   // Nothing yet: no service sends it.
   requiredVariables: [],
   sample: {
@@ -28,11 +29,7 @@ export const meta: TemplateMeta = {
  */
 export default function AccountDeletionCompleted() {
   return (
-    <Shell
-      preview="SKY LAB hesabın ve kişisel bilgilerin silindi."
-      brand="account"
-      reason="Bu e-postayı, SKY LAB hesabının silindiğini haber vermek için gönderdik."
-    >
+    <Shell preview="SKY LAB hesabın silindi." brand="account" reason={null}>
       <Context tone="neutral">Hesap silme</Context>
       <Title>Hesabın Silindi</Title>
 
@@ -45,13 +42,7 @@ export default function AccountDeletionCompleted() {
       <Paragraph>{v("RetainedDataNote")}</Paragraph>
       {end}
 
-      <Paragraph>
-        Aramıza tekrar katılmak istersen yeni bir hesap açman yeterli; eski Sky Number'ın geri gelmez, yeni bir tane alırsın.
-      </Paragraph>
-
-      <Small style={{ marginTop: "24px" }}>
-        Bu silme işlemini sen talep etmediysen info@yildizskylab.com adresine yaz. Seninle birlikteydik, iyi ki geldin.
-      </Small>
+      <Small style={{ marginTop: "24px" }}>Bu işlemi sen istemediysen info@yildizskylab.com adresine yaz.</Small>
     </Shell>
   );
 }

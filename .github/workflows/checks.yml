@@ -1,23 +1,108 @@
 name: Checks
 
-# Every check the repo has, on every PR into main, into production (the release
-# squash), and into rewrite (the Next.js rewrite until its cutover). The image is
-# built by release.yml; nothing here publishes or needs a secret.
+# Every check the repo has. The image is built by release.yml; nothing here publishes or needs a
+# secret. The scope job picks one of three modes:
+# - full: pushes to main, a manual run (gh workflow run checks.yml --ref <branch>), pull requests
+#   into production or rewrite whose tree main has not tested, and pull requests into main
+#   labelled full-ci.
+# - fast: pull requests into main. verify runs unless only documentation changed.
+# - tested: pull requests into production (the release squash) whose tree a push to main has
+#   already tested green. Nothing runs again; release.yml promotes that tree's main image.
+# The required check is the job named checks (the gate), as the branch protection rules ask.
 on:
   pull_request:
     branches: [main, production, rewrite]
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
 
+# A new push to a PR cancels that PR's older run; pushes and manual runs are never cancelled (every
+# main commit keeps its own run, which release.yml reads).
 concurrency:
-  group: checks-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: checks-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  checks:
-    name: checks
+  scope:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      mode: ${{ steps.scope.outputs.mode }}
+      code: ${{ steps.scope.outputs.code }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # A pull request checks out GitHub's merge commit: HEAD^1 is the base it merges into.
+          fetch-depth: 2
+
+      - name: Choose the mode and the jobs
+        id: scope
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          FULL_CI_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+        run: |
+          set -euo pipefail
+          select_all() {
+            printf 'mode=%s\ncode=true\n' "$1" >> "$GITHUB_OUTPUT"
+            echo "mode $1: every job" | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          }
+          # A push to main whose gate (checks) passed tested this tree in full.
+          tested_on_main() {
+            local tree run_id head_sha
+            tree=$(git rev-parse 'HEAD^{tree}')
+            while read -r run_id head_sha; do
+              [[ $run_id =~ ^[0-9]+$ && $head_sha =~ ^[0-9a-f]{40}$ ]] || continue
+              [[ $(gh api "repos/$GITHUB_REPOSITORY/git/commits/$head_sha" --jq .tree.sha) == "$tree" ]] || continue
+              if gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/jobs?per_page=100" \
+                --jq '.jobs[] | "\(.conclusion) \(.name)"' | grep -qxF 'success checks'; then
+                echo "$head_sha"
+                return 0
+              fi
+            done < <(gh api -X GET "repos/$GITHUB_REPOSITORY/actions/workflows/checks.yml/runs" \
+              -f branch=main -f event=push -f status=success -f per_page=50 \
+              --jq '.workflow_runs[] | "\(.id) \(.head_sha)"')
+            return 1
+          }
+
+          if [[ $EVENT != pull_request ]]; then
+            select_all full
+          elif [[ $BASE_REF != main ]]; then
+            if tested_sha=$(tested_on_main); then
+              printf 'mode=tested\ncode=false\n' >> "$GITHUB_OUTPUT"
+              echo "mode tested: main $tested_sha already tested this tree; nothing runs again" | tee -a "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            select_all full
+          fi
+          [[ $FULL_CI_LABEL == true ]] && select_all full
+
+          # fast: a pull request into main. A diff that cannot be read selects every job.
+          if ! changed=$(git diff --name-only --no-renames HEAD^1 HEAD) || [[ -z $changed ]]; then
+            echo 'the PR diff could not be read' >&2
+            select_all fast
+          fi
+          code=false
+          while IFS= read -r path; do
+            case $path in
+              docs/* | *.md | LICENSE) ;;
+              *) code=true ;;
+            esac
+          done <<<"$changed"
+          printf 'mode=fast\ncode=%s\n' "$code" >> "$GITHUB_OUTPUT"
+          echo "mode fast: verify=$code" | tee -a "$GITHUB_STEP_SUMMARY"
+
+  verify:
+    needs: scope
+    if: needs.scope.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -43,6 +128,13 @@ jobs:
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: yarn typecheck
 
+      # Next.js's own build cache: the build reuses unchanged modules of the previous build.
+      - uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('yarn.lock') }}-${{ hashFiles('src/**', 'emails/**', 'public/**', 'next.config.ts', 'tsconfig.json', 'postcss.config.mjs') }}
+          restore-keys: nextjs-${{ runner.os }}-${{ hashFiles('yarn.lock') }}-
+
       - name: yarn build
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: yarn build
@@ -64,3 +156,31 @@ jobs:
       - name: yarn templates:check (never save a body that did not render)
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: yarn templates:check
+
+  # The gate, under the name the branch protection rules require. Fails when a job failed or was
+  # cancelled; in full mode verify must have passed.
+  checks:
+    name: checks
+    if: always()
+    needs: [scope, verify]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every selected job passed
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+          MODE: ${{ needs.scope.outputs.mode }}
+        run: |
+          set -euo pipefail
+          jq -r 'to_entries[] | "\(.key)=\(.value.result)"' <<<"$NEEDS"
+          test "$(jq -r '.scope.result' <<<"$NEEDS")" = success
+          bad=$(jq -r 'to_entries[] | select(.value.result == "failure" or .value.result == "cancelled") | .key' <<<"$NEEDS")
+          if [[ -n $bad ]]; then
+            echo "failed or cancelled: $bad" >&2
+            exit 1
+          fi
+          case $MODE in
+            full) test "$(jq -r '.verify.result' <<<"$NEEDS")" = success || { echo 'full mode: verify did not pass' >&2; exit 1; } ;;
+            fast | tested) ;;
+            *) echo "unknown mode: $MODE" >&2; exit 1 ;;
+          esac

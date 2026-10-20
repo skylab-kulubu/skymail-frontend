@@ -47,6 +47,16 @@ export interface TemplateMeta {
    * yet.
    */
   requiredVariables?: RequiredVariable[];
+  /**
+   * The variables that carry a code or a one-time link, at the top level,
+   * sorted. The Template seed writes them to SkyMail's `sensitive_variables`,
+   * and a sensitive send's masking hides each one whole, whatever its name or
+   * shape (skymail-backend #65); the rest stay readable. List only what
+   * SkyMail already masks by name: a list makes masking certain, it must not
+   * hide more (sensitive-variables.test.ts). Left out, the seed sends nothing
+   * and SkyMail keeps the list the template has; [] clears it.
+   */
+  sensitiveVariables?: string[];
   sample: Record<string, unknown>;
 }
 

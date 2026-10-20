@@ -57,7 +57,6 @@ export const meta: TemplateMeta = {
 export default function ClubPrivilegeChange() {
   const added = ifEq("Change", "member-added");
   const removed = elseIfEq("Change", "member-removed");
-  const isRoles = ifEq("Change", "roles-changed");
   const board = ifEq("Root", "board");
   const audit = elseIfEq("Root", "audit");
   const admin = elseIfEq("Root", "admin");
@@ -75,21 +74,8 @@ export default function ClubPrivilegeChange() {
       {end}
     </>
   );
-  // Why this reader got it depends on the change: a role mapping goes to ADMIN alone.
-  const reason = (
-    <>
-      {isRoles}
-      Bu postayı yönetici grubunda (ADMIN) olduğun için alıyorsun. Grubun üyelerine bu değişiklik için posta
-      gitmez.
-      {elseBranch}
-      Bu postayı yönetici grubunda (ADMIN) ya da bu yönetim grubunda olduğun için alıyorsun. Eklenen ya da çıkarılan
-      kişi kendi bildirimini ayrıca alır.
-      {end}
-    </>
-  );
-
   return (
-    <Shell preview="SKY LAB yönetim yetkilerinde bir değişiklik oldu." brand="account" reason={reason}>
+    <Shell preview="SKY LAB yönetim yetkilerinde değişiklik." brand="account" reason={null}>
       {ifEq("Change", "member-removed")}
       <Context tone="bad">{v("GroupName")}</Context>
       {elseBranch}
@@ -108,8 +94,8 @@ export default function ClubPrivilegeChange() {
         {subject}, <Strong>{v("GroupName")}</Strong> grubundan çıkarıldı. {rootSentence} Bu grup üzerinden gelen
         yetkiler bu hesaptan kaldırıldı.
         {elseBranch}
-        <Strong>{v("GroupName")}</Strong> grubunun rol eşlemesi değişti. Bu gruptaki ve alt gruplarındaki herkes bu
-        rolleri grup üzerinden taşır.
+        <Strong>{v("GroupName")}</Strong> grubunun rol eşlemesi değişti; gruptaki ve alt gruplarındaki herkes
+        etkilenir.
         {ifEq("AdminRole", "yes")} Değişen rollerden en az biri bir yönetici rolü.{end}
         {end}
       </Paragraph>

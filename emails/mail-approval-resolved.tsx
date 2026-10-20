@@ -78,11 +78,7 @@ export default function MailApprovalResolved() {
   const declined = elseIfEq("Decision", "declined");
 
   return (
-    <Shell
-      preview={`SkyMail onay isteği sonuçlandı: ${v("TemplateName")}`}
-      brand="mail"
-      reason="Bu e-postayı, SkyMail'de sunduğun ya da onaylayabildiğin bir gönderim sonuçlandığı için alıyorsun."
-    >
+    <Shell preview={`SkyMail onay isteği sonuçlandı: ${v("TemplateName")}`} brand="mail" reason={null}>
       {approved}
       <Context tone="ok">Onaylandı</Context>
       {rejected}
@@ -116,19 +112,19 @@ export default function MailApprovalResolved() {
         {end} iletildi.
         {rejected}
         <Strong>{v("TemplateName")}</Strong> gönderimin {v("DecidedBy")} tarafından reddedildi ve
-        gönderilmedi. Düzeltip yeniden sunabilirsin.
+        gönderilmedi.
         {returned}
         <Strong>{v("TemplateName")}</Strong> gönderimini {v("DecidedBy")} düzenledi ve senin onayına
-        geri gönderdi. Gitmesi için senin bakman gerekiyor.
+        geri gönderdi.
         {expired}
         <Strong>{v("TemplateName")}</Strong> gönderimi için süresi içinde karar verilmedi, o yüzden
-        gönderilmedi. Bu isteği yeniden sunamazsın; hâlâ gerekiyorsa yeni bir istek aç.
+        gönderilmedi. Gerekiyorsa yeni bir istek aç.
         {declined}
         <Strong>{v("TemplateName")}</Strong> gönderiminde yapılan düzenlemeyi {v("DecidedBy")} kabul
         etmedi, gönderim yapılmadı.
         {elseBranch}
         <Strong>{v("TemplateName")}</Strong> gönderim isteğinin durumu {v("DecidedBy")} tarafından
-        güncellendi. Ayrıntı için isteğin sayfasına bak.
+        güncellendi.
         {end}
       </Paragraph>
 
