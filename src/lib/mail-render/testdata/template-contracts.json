@@ -492,6 +492,70 @@
       "{{if .FirstName}}"
     ]
   },
+  "core.feedback-request": {
+    "subject": "{{.EventName}} geri bildirim formu",
+    "system": true,
+    "contentSensitive": true,
+    "variables": [
+      "FirstName",
+      "EventName",
+      "Items"
+    ],
+    "requiredVariables": [
+      "Items"
+    ],
+    "sensitiveVariables": null,
+    "sampleKeys": [
+      "EventName",
+      "FirstName",
+      "Items"
+    ],
+    "referenced": [
+      "EventName",
+      "FirstName",
+      "Items"
+    ],
+    "actions": [
+      "{{.EventName}}",
+      "{{.FirstName}}",
+      "{{.Title}}",
+      "{{.URL}}",
+      "{{if .FirstName}}",
+      "{{range .Items}}"
+    ]
+  },
+  "core.feedback-reminder": {
+    "subject": "Hatırlatma: {{.EventName}} geri bildirim formu",
+    "system": true,
+    "contentSensitive": true,
+    "variables": [
+      "FirstName",
+      "EventName",
+      "Items"
+    ],
+    "requiredVariables": [
+      "Items"
+    ],
+    "sensitiveVariables": null,
+    "sampleKeys": [
+      "EventName",
+      "FirstName",
+      "Items"
+    ],
+    "referenced": [
+      "EventName",
+      "FirstName",
+      "Items"
+    ],
+    "actions": [
+      "{{.EventName}}",
+      "{{.FirstName}}",
+      "{{.Title}}",
+      "{{.URL}}",
+      "{{if .FirstName}}",
+      "{{range .Items}}"
+    ]
+  },
   "account.security-alert": {
     "subject": "SKY LAB hesabında: {{.EventTitle}}",
     "system": true,

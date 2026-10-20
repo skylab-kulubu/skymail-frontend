@@ -24,6 +24,8 @@ import CoreWelcome, { meta as coreWelcome } from "./core-welcome";
 import CoreCertificate, { meta as coreCertificate } from "./core-certificate";
 import CoreEventCancelled, { meta as coreEventCancelled } from "./core-event-cancelled";
 import CoreEventReinstated, { meta as coreEventReinstated } from "./core-event-reinstated";
+import CoreFeedbackRequest, { meta as coreFeedbackRequest } from "./core-feedback-request";
+import CoreFeedbackReminder, { meta as coreFeedbackReminder } from "./core-feedback-reminder";
 
 import AccountSecurityAlert, { meta as accountSecurityAlert } from "./account-security-alert";
 import AccountPrimaryEmailChanged, { meta as accountPrimaryEmailChanged } from "./account-primary-email-changed";
@@ -63,6 +65,8 @@ export const templates: EmailTemplate[] = [
   { meta: coreCertificate, Component: CoreCertificate },
   { meta: coreEventCancelled, Component: CoreEventCancelled },
   { meta: coreEventReinstated, Component: CoreEventReinstated },
+  { meta: coreFeedbackRequest, Component: CoreFeedbackRequest },
+  { meta: coreFeedbackReminder, Component: CoreFeedbackReminder },
 
   { meta: accountSecurityAlert, Component: AccountSecurityAlert },
   { meta: accountPrimaryEmailChanged, Component: AccountPrimaryEmailChanged },
