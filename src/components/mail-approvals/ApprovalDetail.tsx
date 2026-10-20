@@ -35,6 +35,7 @@ import {
   eventActorName,
   fetchApproval,
   approvalTracking,
+  approvalTrackingAudience,
   notificationNote,
   previewFailureNote,
   previewNote,
@@ -127,8 +128,8 @@ function ApprovalView({
         : { status: 'unreadable' };
   const source = pinnedSource.status === 'ready' ? pinnedSource.source : null;
   const fields = useMemo(() => approvalFields(source, approval.body_variables, approval.template.key), [source, approval]);
-  // "Takip: Kapalı" only where tracking could be on: a list request of a trackable template, read when it is needed.
-  const asksTemplate = canReadTemplates && approval.tracking === false && approval.audience.kind === 'mailing_list';
+  // "Takip: Kapalı" only where tracking could be on: a request to a list or to people of a trackable template, read when it is needed.
+  const asksTemplate = canReadTemplates && approval.tracking === false && approvalTrackingAudience(approval.audience.kind) !== null;
   const trackingTemplate = useApiLoad(
     (client, signal) => (asksTemplate ? fetchTemplate(client, approval.template.id, signal) : Promise.resolve(null)),
     `tracking:${asksTemplate}:${approval.template.id}`,
