@@ -42,6 +42,8 @@ const CONTRACTS: Record<string, string[]> = {
   "account.primary-email-changed": [],
   "account.deletion-requested": [],
   "account.deletion-completed": [],
+  "forms.status-changed": ["formTitle", "status"],
+  "forms.attempt-update": ["formTitle", "formId", "kind"],
 };
 
 describe("the contract Required variables declared in emails/", () => {

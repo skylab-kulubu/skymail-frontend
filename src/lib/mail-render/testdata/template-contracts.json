@@ -1088,5 +1088,140 @@
       "{{if eq .Change `member-removed`}}",
       "{{if eq .Root `board`}}"
     ]
+  },
+  "forms.status-changed": {
+    "subject": "{{if eq .status `approved`}}{{if or .nextFormId .linkedFormId}}Sonraki adıma geçtiniz{{else}}Cevabınız onaylandı{{end}}{{else}}Cevabınız incelendi{{end}} · {{.formTitle}}",
+    "system": true,
+    "contentSensitive": false,
+    "variables": [
+      "formTitle",
+      "status",
+      "reviewNote",
+      "reviewedAt",
+      "nextFormId",
+      "questionCount",
+      "firstName",
+      "recipientName",
+      "linkedFormId"
+    ],
+    "requiredVariables": [
+      "formTitle",
+      "status"
+    ],
+    "sensitiveVariables": null,
+    "sampleKeys": [
+      "firstName",
+      "formTitle",
+      "linkedFormId",
+      "nextFormId",
+      "questionCount",
+      "recipientName",
+      "reviewNote",
+      "reviewedAt",
+      "status"
+    ],
+    "referenced": [
+      "firstName",
+      "formTitle",
+      "linkedFormId",
+      "nextFormId",
+      "questionCount",
+      "recipientName",
+      "reviewNote",
+      "reviewedAt",
+      "status"
+    ],
+    "actions": [
+      "{{$next := or .nextFormId .linkedFormId}}",
+      "{{$next}}",
+      "{{.firstName}}",
+      "{{.formTitle}}",
+      "{{.questionCount}}",
+      "{{.recipientName}}",
+      "{{.reviewNote}}",
+      "{{.reviewedAt}}",
+      "{{else if .recipientName}}",
+      "{{else if eq .status `reopened`}}",
+      "{{else if eq .status `returned`}}",
+      "{{if $next}}",
+      "{{if .firstName}}",
+      "{{if .questionCount}}",
+      "{{if .reviewNote}}",
+      "{{if .reviewedAt}}",
+      "{{if eq .status `approved`}}",
+      "{{if eq .status `declined`}}",
+      "{{if eq .status `reopened`}}",
+      "{{if eq .status `returned`}}"
+    ]
+  },
+  "forms.attempt-update": {
+    "subject": "{{if eq .kind `reminder`}}Görevi henüz başlatmadınız{{else if eq .kind `extended`}}Sürenizi uzattık{{else if eq .kind `accepted`}}Tesliminiz kabul edildi{{else if eq .kind `closed`}}Tesliminiz kabul edilmedi{{else}}Süreniz doldu{{end}} · {{.formTitle}}",
+    "system": true,
+    "contentSensitive": false,
+    "variables": [
+      "formTitle",
+      "formId",
+      "kind",
+      "deadlineAt",
+      "minutes",
+      "duration",
+      "nextFormId",
+      "firstName",
+      "recipientName"
+    ],
+    "requiredVariables": [
+      "formTitle",
+      "formId",
+      "kind"
+    ],
+    "sensitiveVariables": null,
+    "sampleKeys": [
+      "deadlineAt",
+      "duration",
+      "firstName",
+      "formId",
+      "formTitle",
+      "kind",
+      "minutes",
+      "nextFormId",
+      "recipientName"
+    ],
+    "referenced": [
+      "deadlineAt",
+      "duration",
+      "firstName",
+      "formId",
+      "formTitle",
+      "kind",
+      "minutes",
+      "nextFormId",
+      "recipientName"
+    ],
+    "actions": [
+      "{{.deadlineAt}}",
+      "{{.duration}}",
+      "{{.firstName}}",
+      "{{.formId}}",
+      "{{.formTitle}}",
+      "{{.minutes}}",
+      "{{.nextFormId}}",
+      "{{.recipientName}}",
+      "{{else if .recipientName}}",
+      "{{else if eq .kind `accepted`}}",
+      "{{else if eq .kind `closed`}}",
+      "{{else if eq .kind `expiredEmpty`}}",
+      "{{else if eq .kind `expired`}}",
+      "{{else if eq .kind `extended`}}",
+      "{{if .deadlineAt}}",
+      "{{if .duration}}",
+      "{{if .firstName}}",
+      "{{if .nextFormId}}",
+      "{{if eq .kind `accepted`}}",
+      "{{if eq .kind `closed`}}",
+      "{{if eq .kind `expiredEmpty`}}",
+      "{{if eq .kind `expired`}}",
+      "{{if eq .kind `extended`}}",
+      "{{if eq .kind `reminder`}}"
+    ]
   }
 }

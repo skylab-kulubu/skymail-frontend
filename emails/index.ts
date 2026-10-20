@@ -42,6 +42,9 @@ import ClubRoleMembership, { meta as clubRoleMembership } from "./club-role-memb
 import ClubGroupMembership, { meta as clubGroupMembership } from "./club-group-membership";
 import ClubPrivilegeChange, { meta as clubPrivilegeChange } from "./club-privilege-change";
 
+import FormsStatusChanged, { meta as formsStatusChanged } from "./forms-status-changed";
+import FormsAttemptUpdate, { meta as formsAttemptUpdate } from "./forms-attempt-update";
+
 export interface EmailTemplate {
   meta: TemplateMeta;
   Component: ComponentType;
@@ -80,6 +83,9 @@ export const templates: EmailTemplate[] = [
   { meta: clubRoleMembership, Component: ClubRoleMembership },
   { meta: clubGroupMembership, Component: ClubGroupMembership },
   { meta: clubPrivilegeChange, Component: ClubPrivilegeChange },
+
+  { meta: formsStatusChanged, Component: FormsStatusChanged },
+  { meta: formsAttemptUpdate, Component: FormsAttemptUpdate },
 ];
 
 export function findTemplate(key: string): EmailTemplate | undefined {

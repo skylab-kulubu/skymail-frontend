@@ -19,6 +19,7 @@ import * as jsxRuntime from "react/jsx-runtime";
 import * as ReactEmail from "@react-email/components";
 import * as actionMail from "../../../emails/action-mail";
 import * as codeMail from "../../../emails/code-mail";
+import * as formsMail from "../../../emails/forms-mail";
 import * as go from "../../../emails/go";
 import * as theme from "../../../emails/theme";
 import * as types from "../../../emails/types";
@@ -33,6 +34,7 @@ const MODULES: Record<string, unknown> = {
   "./go": go,
   "./action-mail": actionMail,
   "./code-mail": codeMail,
+  "./forms-mail": formsMail,
   "./types": types,
 };
 

@@ -12,6 +12,12 @@ import { fillSampleValues, renderComponent } from ".";
 /** The one mail a person writes; its footer still says who it is for. */
 const OPERATOR_WRITTEN = new Set(["free.basic"]);
 
+/**
+ * Forms' own mails: their words are Fatih's (forms-frontend mail-templates/),
+ * taken as he writes them, footer sentence included.
+ */
+const FORMS_WRITTEN = new Set(["forms.status-changed", "forms.attempt-update"]);
+
 const CODE_MAILS = ["keycloak.login-code", "keycloak.personal-email-confirm"];
 const LINK_MAILS = ["keycloak.verify-email", "keycloak.reset-password", "keycloak.update-email", "keycloak.idp-link"];
 
@@ -21,7 +27,7 @@ const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/&#x27;|&ap
 
 describe("the account and notice mails", () => {
   for (const { meta, Component } of templates) {
-    if (OPERATOR_WRITTEN.has(meta.key)) continue;
+    if (OPERATOR_WRITTEN.has(meta.key) || FORMS_WRITTEN.has(meta.key)) continue;
     it(`${meta.key} says nothing about why it came and keeps the footer links`, async () => {
       const rendered = await renderComponent(Component);
       assert.ok(rendered.ok);
