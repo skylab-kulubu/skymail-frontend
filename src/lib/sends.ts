@@ -64,6 +64,12 @@ export type Send = Readonly<{
   content_access?: ContentAccess;
   /** When the content is emptied; null unless content_access is available or masked. */
   content_expires_at?: string | null;
+  /**
+   * Whether the send asked for open and click tracking and got it (SkyMail's
+   * tracking was on, and its template may be tracked). Missing from a backend
+   * before tracking.
+   */
+  tracking?: boolean;
 }>;
 
 /**
