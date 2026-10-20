@@ -36,6 +36,8 @@ const CONTRACTS: Record<string, string[]> = {
   "keycloak.generic": [],
   "core.welcome": [],
   "core.certificate": ["VerifyURL"],
+  "core.event-cancelled": ["EventName"],
+  "core.event-reinstated": ["EventName"],
   "account.security-alert": [],
   "account.primary-email-changed": [],
   "account.deletion-requested": [],

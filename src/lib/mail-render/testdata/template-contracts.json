@@ -425,6 +425,73 @@
       "{{.VerifyURL}}"
     ]
   },
+  "core.event-cancelled": {
+    "subject": "{{.EventName}} iptal edildi",
+    "system": true,
+    "contentSensitive": false,
+    "variables": [
+      "EventName",
+      "EventStart",
+      "CancelReason",
+      "FirstName"
+    ],
+    "requiredVariables": [
+      "EventName"
+    ],
+    "sensitiveVariables": null,
+    "sampleKeys": [
+      "CancelReason",
+      "EventName",
+      "EventStart",
+      "FirstName"
+    ],
+    "referenced": [
+      "CancelReason",
+      "EventName",
+      "EventStart",
+      "FirstName"
+    ],
+    "actions": [
+      "{{.CancelReason}}",
+      "{{.EventName}}",
+      "{{.EventStart}}",
+      "{{.FirstName}}",
+      "{{if .CancelReason}}",
+      "{{if .EventStart}}",
+      "{{if .FirstName}}"
+    ]
+  },
+  "core.event-reinstated": {
+    "subject": "{{.EventName}} yeniden yayında",
+    "system": true,
+    "contentSensitive": false,
+    "variables": [
+      "EventName",
+      "EventStart",
+      "FirstName"
+    ],
+    "requiredVariables": [
+      "EventName"
+    ],
+    "sensitiveVariables": null,
+    "sampleKeys": [
+      "EventName",
+      "EventStart",
+      "FirstName"
+    ],
+    "referenced": [
+      "EventName",
+      "EventStart",
+      "FirstName"
+    ],
+    "actions": [
+      "{{.EventName}}",
+      "{{.EventStart}}",
+      "{{.FirstName}}",
+      "{{if .EventStart}}",
+      "{{if .FirstName}}"
+    ]
+  },
   "account.security-alert": {
     "subject": "SKY LAB hesabında: {{.EventTitle}}",
     "system": true,
