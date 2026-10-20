@@ -95,6 +95,14 @@
  *  - what a test set with `refuseApproval` answers the next such action, and
  *    `failApprovalNotifications` names a notification problem.
  *
+ * Open and click tracking's read routes (skymail-backend 14b,
+ * internal/handlers/tracking_read.go), for a send a test gave a report with
+ * `trackSend`: the send reads `tracking: true`; `GET …/tracking` needs
+ * mails:read and answers the report; `GET …/tracking/recipients` needs
+ * skymail:mails:tracking:read or being the send's sender (403 otherwise),
+ * answers 410 mail.tracking_expired once the report is retained, and filters
+ * and pages the rows as the server does.
+ *
  * Account erasure (skymail-backend #34, ticket 27): `erase` does to the
  * mock's records what the Erasure command does to what the screens read.
  * Whoever sent, submitted, decided or wrote something becomes Silinmiş
@@ -220,6 +228,14 @@ type SendRecord = {
   approved: boolean;
   /** The content sweep emptied it (past retention). */
   cleared: boolean;
+  /** Its opens and clicks, when a test tracked it (`trackSend`). */
+  tracking?: TrackingFixture;
+};
+
+/** What a tracked send's read routes answer: the summary, and every recipient row. */
+export type TrackingFixture = {
+  summary: { retained: boolean; report: Record<string, unknown> | null };
+  recipients: Array<Record<string, unknown> & { first_open_at: string | null; first_likely_human_open_at: string | null; last_clicked_at: string | null; automated_only: boolean; open_count: number; recipient_full_name: string }>;
 };
 
 /** Who asks a send route: what decides whether they see its content. */
@@ -498,6 +514,16 @@ export class MockSkymail {
   /** SkyMail runs with MAIL_SENDER=paused, or no longer does: what the summary's `sender_paused` says. */
   pauseSender(paused = true) {
     this.senderPaused = paused;
+  }
+
+  /** The send asked for tracking and got it; its read routes answer `fixture`. */
+  trackSend(id: string, fixture: TrackingFixture) {
+    this.sends.get(id)!.tracking = fixture;
+  }
+
+  /** The requests for a send's recipients one by one. */
+  trackingRecipientRequests(): Recorded[] {
+    return this.requests.filter((request) => /^\/mail_tasks\/[^/]+\/tracking\/recipients$/.test(request.path));
   }
 
   /** Archives a template behind the page's back. */
@@ -805,6 +831,8 @@ export class MockSkymail {
     if (method === "GET" && contentMatch) {
       return can("skymail:mails:read") ? this.sentContent(contentMatch[1], contentMatch[2], viewer) : refuse(403, "server.forbidden");
     }
+    const trackingMatch = /^\/mail_tasks\/([^/]+)\/tracking(\/recipients)?$/.exec(path);
+    if (method === "GET" && trackingMatch) return this.trackingRead(trackingMatch[1], Boolean(trackingMatch[2]), query, viewer);
     const sendMatch = /^\/mail_tasks\/([^/]+)(\/queue)?$/.exec(path);
     if (method === "GET" && sendMatch) return this.readSend(sendMatch[1], Boolean(sendMatch[2]), viewer);
 
@@ -1083,7 +1111,44 @@ export class MockSkymail {
         body_variables: null,
         content_access: content.access,
         content_expires_at: content.expires_at,
+        tracking: send.tracking !== undefined,
       },
+    };
+  }
+
+  /** `GET /mail_tasks/:id/tracking` and `…/tracking/recipients`, as internal/handlers/tracking_read.go answers them. */
+  private trackingRead(id: string, recipients: boolean, query: URLSearchParams, viewer: Viewer): Answer {
+    const send = this.sends.get(id);
+    if (!send) return refuse(404, "server.not_found");
+    const tracking = send.tracking;
+    if (!recipients) {
+      if (!viewer.can("skymail:mails:read")) return refuse(403, "server.forbidden");
+      return {
+        status: 200,
+        body: { tracking_available: true, tracking_requested: tracking !== undefined, retained: tracking?.summary.retained ?? false, report: tracking?.summary.report ?? null },
+      };
+    }
+    if (!viewer.can("skymail:mails:tracking:read") && viewer.sub !== send.sent_by) return refuse(403, "server.forbidden");
+    if (!tracking || tracking.summary.retained) {
+      return { status: 410, body: { code: "mail.tracking_expired", message: "Kişi bazında takip kaydı 1 yıl sonra silindi." } };
+    }
+    const filter = query.get("filter") ?? "";
+    const opened = (row: TrackingFixture["recipients"][number]) => row.first_open_at !== null || row.first_likely_human_open_at !== null;
+    const rows = tracking.recipients
+      .filter((row) =>
+        filter === "" ? true
+        : filter === "opened" ? opened(row)
+        : filter === "not_opened" ? !opened(row)
+        : filter === "clicked" ? row.last_clicked_at !== null
+        : filter === "automated_only" ? row.automated_only && row.open_count > 0
+        : false,
+      )
+      .sort((a, b) => a.recipient_full_name.localeCompare(b.recipient_full_name));
+    const page = Number(query.get("page") ?? 1);
+    const size = Number(query.get("page_size") ?? 25);
+    return {
+      status: 200,
+      body: { tracking_available: true, page, page_size: size, total: rows.length, items: rows.slice((page - 1) * size, page * size) },
     };
   }
 
