@@ -64,6 +64,26 @@ describe("the Forms mails", () => {
     });
   }
 
+  it("each subject says the title of its status or kind", async () => {
+    const subjects: [string, Record<string, unknown>, string][] = [
+      ["forms.status-changed", { status: "approved", nextFormId: "n" }, "Sonraki adıma geçtiniz · Başvuru 2026"],
+      // approved without a next step ("Cevabınız onaylandı") branches on `or`, which the preview shows as true; the mailer's own run checks it.
+      ["forms.status-changed", { status: "declined" }, "Cevabınız kabul edilmedi · Başvuru 2026"],
+      ["forms.status-changed", { status: "returned" }, "Cevabınızda düzeltme istendi · Başvuru 2026"],
+      ["forms.status-changed", { status: "reopened" }, "Yeniden başvurabilirsiniz · Başvuru 2026"],
+      ["forms.attempt-update", { kind: "reminder" }, "Görevi henüz başlatmadınız · Başvuru 2026"],
+      ["forms.attempt-update", { kind: "extended" }, "Sürenizi uzattık · Başvuru 2026"],
+      ["forms.attempt-update", { kind: "expired" }, "Süreniz doldu · Başvuru 2026"],
+      ["forms.attempt-update", { kind: "expiredEmpty" }, "Süreniz doldu · Başvuru 2026"],
+      ["forms.attempt-update", { kind: "accepted" }, "Tesliminiz kabul edildi · Başvuru 2026"],
+      ["forms.attempt-update", { kind: "closed" }, "Tesliminiz kabul edilmedi · Başvuru 2026"],
+    ];
+    for (const [key, values, subject] of subjects) {
+      const { meta } = await rendered(key);
+      assert.equal(fillSampleValues(meta.subject, { formTitle: "Başvuru 2026", ...values }, { as: "text" }), subject);
+    }
+  });
+
   it("forms.status-changed links the next form and keeps the review note's lines", async () => {
     const { html } = await rendered("forms.status-changed");
     assert.ok(html.includes('href="https://forms.yildizskylab.com/{{$next}}"'), "the next step's link is not the next form");

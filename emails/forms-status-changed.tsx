@@ -7,7 +7,7 @@ export const meta: TemplateMeta = {
   key: "forms.status-changed",
   name: "Forms · Cevap Durumu",
   subject:
-    "{{if eq .status `approved`}}{{if or .nextFormId .linkedFormId}}Sonraki adıma geçtiniz{{else}}Cevabınız onaylandı{{end}}{{else}}Cevabınız incelendi{{end}} · {{.formTitle}}",
+    "{{if eq .status `approved`}}{{if or .nextFormId .linkedFormId}}Sonraki adıma geçtiniz{{else}}Cevabınız onaylandı{{end}}{{else if eq .status `declined`}}Cevabınız kabul edilmedi{{else if eq .status `returned`}}Cevabınızda düzeltme istendi{{else if eq .status `reopened`}}Yeniden başvurabilirsiniz{{else}}Cevabınız incelendi{{end}} · {{.formTitle}}",
   system: true,
   contentSensitive: false,
   brand: "forms",
