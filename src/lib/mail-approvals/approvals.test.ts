@@ -372,7 +372,17 @@ describe("whether a request asks for tracking", () => {
     assert.equal(approvalTracking({ tracking: false, audience: list }, { ...ordinary, content_sensitive: true }), null);
     assert.equal(approvalTracking({ tracking: false, audience: list }, { ...ordinary, content_sensitive_locked: true }), null);
     assert.equal(approvalTracking({ tracking: false, audience: list }, null), null);
-    for (const kind of ["single", "people", "form"] as const) assert.equal(approvalTracking({ tracking: false, audience: { kind } }, ordinary), null);
+    assert.equal(approvalTracking({ tracking: false, audience: { kind: "form" } }, ordinary), null);
+  });
+  it("says Kapalı for a request to people only of a template that says its content may be shown", () => {
+    const shown = { ...ordinary, content_sensitive: false };
+    for (const kind of ["single", "people"] as const) {
+      assert.equal(approvalTracking({ tracking: true, audience: { kind } }, null), "Açık");
+      assert.equal(approvalTracking({ tracking: false, audience: { kind } }, shown), "Kapalı");
+      // To one person a template that says nothing counts as sensitive.
+      assert.equal(approvalTracking({ tracking: false, audience: { kind } }, ordinary), null);
+      assert.equal(approvalTracking({ tracking: false, audience: { kind } }, { ...shown, system: true }), null);
+    }
   });
   it("says nothing for a backend that does not give it", () => {
     assert.equal(approvalTracking({ audience: list }, ordinary), null);

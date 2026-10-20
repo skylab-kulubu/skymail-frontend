@@ -30,7 +30,7 @@ import type { ApiClient, ApiPage } from "../api/client";
 import { pageRange, readPage, viewHref } from "../list-view";
 import { isErasedSubject, personLabel, recipientLabel, samePerson } from "../people";
 import { SEND_LIST_PATH, audienceLabel, type AudienceLabel, type SendAudience } from "../sends";
-import { templateTrackable, type TrackableTemplate } from "../send-form/tracking";
+import { templateTrackable, type TrackableTemplate, type TrackingAudience } from "../send-form/tracking";
 
 export const APPROVAL_PAGE_SIZE = 25;
 
@@ -394,19 +394,26 @@ const NOTIFICATION_PROBLEM: ReadonlyMap<string, (notification: ApprovalNotificat
   ["enqueue_failed", () => "Bildirim maili kuyruğa yazılamadı; kimseye haber gitmedi."],
 ]);
 
+/** Who a request goes to, as tracking reads it; null for a Forms source, which is never tracked. */
+export function approvalTrackingAudience(kind: SendAudience["kind"]): TrackingAudience | null {
+  if (kind === "mailing_list") return "list";
+  return kind === "single" || kind === "people" ? "people" : null;
+}
+
 /**
  * What the request's page says of its tracking, only where it could have
  * any: Açık for one that got it (skymail-backend keeps it only for a
- * trackable one); Kapalı for a list request of a template that may be
- * tracked (`template` null when it cannot be read). Null otherwise, and
- * for a backend that does not say (before tracking).
+ * trackable one); Kapalı for a request to a list or to people of a template
+ * that may be tracked to them (`template` null when it cannot be read). Null
+ * otherwise, and for a backend that does not say (before tracking).
  */
 export function approvalTracking(
   approval: Pick<ApprovalItem, "tracking"> & Readonly<{ audience: Pick<SendAudience, "kind"> }>,
   template: TrackableTemplate | null,
 ): "Açık" | "Kapalı" | null {
   if (approval.tracking === true) return "Açık";
-  if (approval.tracking === false && approval.audience.kind === "mailing_list" && template && templateTrackable(template)) return "Kapalı";
+  const audience = approvalTrackingAudience(approval.audience.kind);
+  if (approval.tracking === false && audience && template && templateTrackable(template, audience)) return "Kapalı";
   return null;
 }
 
