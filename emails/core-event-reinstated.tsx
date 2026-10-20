@@ -32,7 +32,7 @@ export default function CoreEventReinstated() {
       <Paragraph>
         {ifSet("FirstName")}Merhaba {v("FirstName")}, {end}
         <Strong>{v("EventName")}</Strong>
-        {ifSet("EventStart")} ({v("EventStart")}){end} etkinliğinin iptali geri alındı. Kaydın geçerli.
+        {ifSet("EventStart")} ({v("EventStart")}){end} etkinliğinin iptali geri alındı. Biletin geçerli.
       </Paragraph>
     </Shell>
   );

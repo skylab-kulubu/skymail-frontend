@@ -44,7 +44,7 @@ export default function CoreEventCancelled() {
       <Note tone="alert">{v("CancelReason")}</Note>
       {end}
 
-      <Paragraph>Kaydın silinmedi. Etkinlik yeniden yayına alınırsa kaydın geçerli olur.</Paragraph>
+      <Paragraph>Biletin silinmedi. Etkinlik yeniden yayına alınırsa biletin geçerli olur.</Paragraph>
     </Shell>
   );
 }
