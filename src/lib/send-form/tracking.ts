@@ -19,6 +19,7 @@
  * open pixel only). A Forms send is still not tracked.
  */
 import type { ApiClient } from "../api/client";
+import { ApiError } from "../api/errors";
 import { formatCount, type SendSummary } from "../sends";
 import type { MailTemplate } from "../templates";
 import type { ListRow } from "../mailing-lists";
@@ -45,8 +46,20 @@ export type TrackingMode = Readonly<{ available: boolean; always: boolean }>;
 /** What the form assumes while the summary loads, fails or may not be read: no box, nothing asked. */
 export const TRACKING_UNKNOWN: TrackingMode = { available: false, always: false };
 
-/** SkyMail's tracking, from the smallest summary (a day, a send). */
-export async function fetchTrackingMode(api: ApiClient, signal?: AbortSignal): Promise<TrackingMode> {
+/**
+ * SkyMail's tracking: `GET /mail_tasks/tracking-mode`, which anyone who may
+ * use SkyMail reads (a setting, not a send: someone who only submits for
+ * approval sees it too). A backend before it answers 404: then the smallest
+ * summary (a day, a send), when `canReadSummary` (mails:read), or nothing.
+ */
+export async function fetchTrackingMode(api: ApiClient, { canReadSummary, signal }: { canReadSummary: boolean; signal?: AbortSignal }): Promise<TrackingMode> {
+  try {
+    const mode = await api.get<Pick<SendSummary, "tracking_available" | "tracking_always">>("/mail_tasks/tracking-mode", { signal });
+    return { available: trackingAvailable(mode), always: trackingAlways(mode) };
+  } catch (error) {
+    if (!(error instanceof ApiError) || error.status !== 404) throw error;
+  }
+  if (!canReadSummary) return TRACKING_UNKNOWN;
   const summary = await api.get<SendSummary>("/mail_tasks/summary", { query: { days: 1, recent: 1 }, signal });
   return { available: trackingAvailable(summary), always: trackingAlways(summary) };
 }

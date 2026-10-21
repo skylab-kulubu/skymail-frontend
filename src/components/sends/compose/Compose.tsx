@@ -130,10 +130,10 @@ export function Compose({
   const list = audience === 'list' ? (lists.find((candidate) => candidate.id === listId) ?? null) : null;
   const input = { values, rich };
   const formSource = prefill?.formSource ?? null;
-  // The summary needs mails:read; without it, or while it loads or fails, the box stays hidden.
-  // While SkyMail tracks every send (tracking_always) there is no box: every list and people send asks.
+  // While the mode loads or fails, the box stays hidden. While SkyMail tracks every send
+  // (tracking_always) there is no box: every list and people send asks, and the confirmation says so.
   const trackingState = useApiLoad(
-    (loader, signal) => (access.detail ? fetchTrackingMode(loader, signal) : Promise.resolve(TRACKING_UNKNOWN)),
+    (loader, signal) => fetchTrackingMode(loader, { canReadSummary: access.detail, signal }),
     `tracking-mode:${access.detail}`,
   );
   const trackingMode = trackingState.status === 'success' ? trackingState.data : TRACKING_UNKNOWN;

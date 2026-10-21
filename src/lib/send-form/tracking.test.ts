@@ -118,20 +118,31 @@ describe("whether tracking is on", () => {
     assert.equal(trackingAlways({ tracking_available: false, tracking_always: true }), false);
   });
 
-  it("asks the smallest summary", async () => {
+  it("asks the tracking mode, which needs no mails:read", async () => {
     const { api, calls } = scriptedClient(json(200, { tracking_available: true, tracking_always: true }));
-    assert.deepEqual(await fetchTrackingMode(api), { available: true, always: true });
-    assert.equal(calls[0].url, `${TEST_BASE_URL}/mail_tasks/summary?days=1&recent=1`);
+    assert.deepEqual(await fetchTrackingMode(api, { canReadSummary: false }), { available: true, always: true });
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].url, `${TEST_BASE_URL}/mail_tasks/tracking-mode`);
+  });
+
+  it("falls back to the smallest summary on a backend before the tracking mode, only for one who may read it", async () => {
+    const notFound = () => json(404, { code: "server.not_found", message: "Not Found" });
+    const { api, calls } = scriptedClient(notFound(), json(200, { tracking_available: true }));
+    assert.deepEqual(await fetchTrackingMode(api, { canReadSummary: true }), { available: true, always: false });
+    assert.equal(calls[1].url, `${TEST_BASE_URL}/mail_tasks/summary?days=1&recent=1`);
+    const without = scriptedClient(notFound());
+    assert.deepEqual(await fetchTrackingMode(without.api, { canReadSummary: false }), TRACKING_UNKNOWN);
+    assert.equal(without.calls.length, 1);
   });
 
   it("is off for a backend that does not say, and not always for one before tracking_always", async () => {
-    assert.deepEqual(await fetchTrackingMode(scriptedClient(json(200, { sender_paused: false })).api), TRACKING_UNKNOWN);
-    assert.deepEqual(await fetchTrackingMode(scriptedClient(json(200, { tracking_available: true })).api), { available: true, always: false });
+    assert.deepEqual(await fetchTrackingMode(scriptedClient(json(200, {})).api, { canReadSummary: true }), TRACKING_UNKNOWN);
+    assert.deepEqual(await fetchTrackingMode(scriptedClient(json(200, { tracking_available: true })).api, { canReadSummary: true }), { available: true, always: false });
   });
 
-  it("passes a refused summary on as the API's error", async () => {
+  it("passes a refused tracking mode on as the API's error", async () => {
     const { api } = scriptedClient(json(403, { code: "server.forbidden", message: "Forbidden" }));
-    const error = await fetchTrackingMode(api).catch((reason: unknown) => reason);
+    const error = await fetchTrackingMode(api, { canReadSummary: true }).catch((reason: unknown) => reason);
     assert.ok(error instanceof ApiError);
     assert.equal(error.status, 403);
   });
