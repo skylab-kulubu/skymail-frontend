@@ -69,7 +69,7 @@ export type SendDraft = Readonly<{
   formSource?: FormSource | null;
   list: ChosenList | null;
   people: readonly PersonRow[];
-  /** Open and click tracking: true only when the form offered its box (tracking.ts trackingOffered) and it is ticked. A list or people send asks for it. */
+  /** Open and click tracking: true when the form offered its box (tracking.ts trackingOffered) and it is ticked, or while SkyMail tracks every send (trackingAsked). A list or people send asks for it. */
   tracking?: boolean;
 }>;
 

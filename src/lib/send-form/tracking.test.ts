@@ -8,6 +8,8 @@
  * content may be shown. Forms sends never get it. The box starts unticked; a
  * send that asked for it but came back untracked says so, and the
  * confirmation says who will not be tracked for want of a known account.
+ * While SkyMail tracks every send a person makes (summary tracking_always;
+ * Yusuf 2026-10-21) there is no box and every list and people send asks.
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
@@ -18,10 +20,13 @@ import type { SendPlan } from "./send";
 import {
   TRACKING_LABEL,
   TRACKING_NOT_APPLIED,
-  fetchTrackingAvailable,
+  TRACKING_UNKNOWN,
+  fetchTrackingMode,
   peopleTrackingDropped,
   untrackedCount,
   untrackedRecipientsNote,
+  trackingAlways,
+  trackingAsked,
   trackingAvailable,
   trackingDropped,
   templateTrackable,
@@ -106,22 +111,63 @@ describe("whether tracking is on", () => {
     assert.equal(trackingAvailable({}), false);
   });
 
+  it("reads tracking_always only beside tracking on", () => {
+    assert.equal(trackingAlways({ tracking_available: true, tracking_always: true }), true);
+    assert.equal(trackingAlways({ tracking_available: true, tracking_always: false }), false);
+    assert.equal(trackingAlways({ tracking_available: true }), false);
+    assert.equal(trackingAlways({ tracking_available: false, tracking_always: true }), false);
+  });
+
   it("asks the smallest summary", async () => {
-    const { api, calls } = scriptedClient(json(200, { tracking_available: true }));
-    assert.equal(await fetchTrackingAvailable(api), true);
+    const { api, calls } = scriptedClient(json(200, { tracking_available: true, tracking_always: true }));
+    assert.deepEqual(await fetchTrackingMode(api), { available: true, always: true });
     assert.equal(calls[0].url, `${TEST_BASE_URL}/mail_tasks/summary?days=1&recent=1`);
   });
 
-  it("is off for a backend that does not say", async () => {
-    const { api } = scriptedClient(json(200, { sender_paused: false }));
-    assert.equal(await fetchTrackingAvailable(api), false);
+  it("is off for a backend that does not say, and not always for one before tracking_always", async () => {
+    assert.deepEqual(await fetchTrackingMode(scriptedClient(json(200, { sender_paused: false })).api), TRACKING_UNKNOWN);
+    assert.deepEqual(await fetchTrackingMode(scriptedClient(json(200, { tracking_available: true })).api), { available: true, always: false });
   });
 
   it("passes a refused summary on as the API's error", async () => {
     const { api } = scriptedClient(json(403, { code: "server.forbidden", message: "Forbidden" }));
-    const error = await fetchTrackingAvailable(api).catch((reason: unknown) => reason);
+    const error = await fetchTrackingMode(api).catch((reason: unknown) => reason);
     assert.ok(error instanceof ApiError);
     assert.equal(error.status, 403);
+  });
+});
+
+describe("while every send is tracked", () => {
+  const always = { available: true, always: true } as const;
+  const asked = (overrides: Partial<Parameters<typeof trackingAsked>[0]> = {}) =>
+    trackingAsked({ mode: always, audience: "list", template: template(), ticked: false, ...overrides });
+
+  it("offers no box", () => {
+    assert.equal(offered({ always: true }), false);
+    assert.equal(offered({ always: true, audience: "people", template: template({ content_sensitive: false }) }), false);
+  });
+
+  it("asks for tracking on every list and people send, whatever the template, with no box ticked", () => {
+    assert.equal(asked(), true);
+    assert.equal(asked({ audience: "people" }), true);
+    assert.equal(asked({ template: template({ system: true }) }), true);
+    assert.equal(asked({ template: template({ content_sensitive: true }) }), true);
+    assert.equal(asked({ template: template({ content_sensitive_locked: true }), audience: "people" }), true);
+  });
+
+  it("never asks for a Forms send", () => {
+    assert.equal(asked({ audience: "form" }), false);
+    assert.equal(asked({ audience: "form", ticked: true }), false);
+  });
+
+  it("asks as the box says otherwise, and never while tracking is off or unknown", () => {
+    const on = { available: true, always: false } as const;
+    assert.equal(asked({ mode: on, ticked: true }), true);
+    assert.equal(asked({ mode: on, ticked: false }), false);
+    assert.equal(asked({ mode: on, ticked: true, template: template({ system: true }) }), false);
+    assert.equal(asked({ mode: on, ticked: true, audience: "people" }), false);
+    assert.equal(asked({ mode: TRACKING_UNKNOWN, ticked: true }), false);
+    assert.equal(asked({ mode: { available: false, always: true }, ticked: true }), false);
   });
 });
 
