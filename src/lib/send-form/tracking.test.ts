@@ -212,8 +212,10 @@ describe("who a tracked send will not track", () => {
   const person = (email: string) => ({ template_id: "t", recipient_email: email, recipient_full_name: "", body_variables: {}, tracking: true });
   const people: SendPlan = { kind: "people", requests: [person("a@ornek.com"), person("b@ornek.com"), person("c@ornek.com")] };
   const listPlan: SendPlan = { kind: "list", request: { template_id: "t", mail_list_id: "l", body_variables: {}, tracking: true } };
-  it("cannot count people typed in: their accounts are found when the send is queued", () => {
+  it("cannot count people typed in, nor a Forms source's respondents: their accounts are found when the send is queued", () => {
     assert.equal(untrackedCount(people, null, null), null);
+    const form = { kind: "form", request: { template_id: "t", form_source_id: "f", body_variables: {} }, source: {} } as unknown as SendPlan;
+    assert.equal(untrackedCount(form, null, null), null);
     assert.equal(untrackedRecipientsNote(untrackedCount(people, null, null)), "Hesabı olmayan alıcılar takip edilmez.");
   });
   it("counts an internal list's members, unknown while its size is; a Keycloak group's members all have an account", () => {

@@ -120,13 +120,12 @@ export function trackingAsked({
  * How many of a tracked send's recipients have no account, and so are not
  * tracked, as far as the form knows before it goes: every member of an
  * internal list (null while its size is unknown), none of a Keycloak group's;
- * of people typed in it cannot know — the backend finds their accounts when
- * the send is queued — so null.
+ * of people typed in, and of a Forms source's respondents, it cannot know —
+ * the backend finds their accounts when the send is queued — so null.
  */
 export function untrackedCount(plan: SendPlan, list: Pick<ListRow, "external"> | null, size: number | null): number | null {
-  if (plan.kind === "people") return null;
   if (plan.kind === "list") return list?.external ? 0 : size;
-  return 0;
+  return null;
 }
 
 /**

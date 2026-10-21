@@ -241,6 +241,7 @@ export function Compose({
       warnings={check.warnings.lines}
       progress={sending.progress}
       submitting={submitting.busy}
+      trackingAlways={trackingMode.available && trackingMode.always}
       onCancel={() => setConfirming(null)}
       onConfirm={(chosen) => void confirm(chosen)}
     />
