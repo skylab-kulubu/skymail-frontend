@@ -9,7 +9,7 @@ import { describe, it } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { SkylcnProvider } from "@skylab-kulubu/skylcn-ui";
-import { TRACKING_CAVEAT, TRACKING_EXPIRED_TEXT, type TrackingRecipientPage, type TrackingSummary } from "@/lib/tracking-report";
+import { TRACKING_CAVEAT, TRACKING_EXPIRED_TEXT, TRACKING_WITHHELD_TEXT, type TrackingRecipientPage, type TrackingSummary } from "@/lib/tracking-report";
 import { TrackingOverview, TrackingRecipientsView } from "./TrackingReport";
 
 const render = (element: ReturnType<typeof createElement>) =>
@@ -38,6 +38,22 @@ const SUMMARY: TrackingSummary = {
     ],
   },
 };
+
+describe("counts withheld from the reader", () => {
+  // skymail-backend GetTracking: a send to fewer than 10 tracked people, or
+  // mail the system sends, to one who may not read its people.
+  for (const retained of [false, true]) {
+    it(`says why there are no counts, and shows none${retained ? ", a year on too" : ""}`, () => {
+      const words = text(render(createElement(TrackingOverview, { summary: { ...SUMMARY, retained, withheld: true, report: null } })));
+      assert.match(words, new RegExp(TRACKING_WITHHELD_TEXT.replace(/[.;]/g, "\\$&")));
+      assert.doesNotMatch(words, /Takip edilen|takip bilgisi yok/);
+    });
+  }
+
+  it("shows the counts as before when the backend does not say", () => {
+    assert.doesNotMatch(text(render(createElement(TrackingOverview, { summary: SUMMARY }))), new RegExp(TRACKING_WITHHELD_TEXT.slice(0, 20)));
+  });
+});
 
 describe("the overview", () => {
   const html = render(createElement(TrackingOverview, { summary: SUMMARY }));

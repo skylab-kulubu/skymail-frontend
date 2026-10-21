@@ -15,6 +15,7 @@ import { buildVisual as b, visualSource, type VisualBlock, type VisualDocument, 
 const bold: VisualMark = { type: "bold" };
 const italic: VisualMark = { type: "italic" };
 const link = (href: string): VisualMark => ({ type: "link", href });
+const untracked = (href: string): VisualMark => ({ type: "link", href, notrack: true });
 
 function html(document: VisualDocument): string {
   const body = renderFreeBody(document);
@@ -29,6 +30,7 @@ describe("reading a free announcement's body back", () => {
       b.heading([b.text("Program")], 3),
       b.paragraph([b.text("Son gün "), b.text("5 Nisan", [bold]), b.text(". Ayrıntılar "), b.text("burada", [link("https://skyl.app/gecekodu")]), b.text(".")]),
       b.paragraph([b.text("a"), b.hardBreak(), b.text("b", [bold, italic, link("mailto:ayse@ornek.com")])]),
+      b.paragraph([b.text("Toplantı", [untracked("https://zoom.example/j/1?pwd=x")])]),
       b.list(false, [[b.text("24 saat")], [b.text("3–5 kişi", [italic])]]),
       b.list(true, [[b.text("bir"), b.hardBreak(), b.text("iki")]]),
       b.quote([b.text("Bir gecede bir ürün.")]),
@@ -43,6 +45,17 @@ describe("reading a free announcement's body back", () => {
     const read = readFreeBody(html(b.document([b.paragraph([b.text(typed)])])));
     assert.equal(read.exact, true);
     assert.deepEqual(read.document.blocks, [b.paragraph([b.text(typed)])]);
+  });
+
+  it("reads a link's no-track mark as the server keeps it: bare, empty or true", () => {
+    for (const mark of ["data-skymail-notrack", 'data-skymail-notrack=""', 'data-skymail-notrack="true"', "data-skymail-notrack='true'"]) {
+      const read = readFreeBody(`<p><a href="https://zoom.example/j/1" ${mark}>Toplantı</a></p>`);
+      assert.deepEqual(read.document.blocks, [b.paragraph([b.text("Toplantı", [untracked("https://zoom.example/j/1")])])], mark);
+    }
+    for (const other of ['data-skymail-notrack-x=""', 'data-skymail-notrack="false"', 'data-x="data-skymail-notrack"', ""]) {
+      const read = readFreeBody(`<p><a href="https://skyl.app/" ${other}>site</a></p>`);
+      assert.deepEqual(read.document.blocks, [b.paragraph([b.text("site", [link("https://skyl.app/")])])], other);
+    }
   });
 
   it("is empty for an empty body", () => {
@@ -120,7 +133,7 @@ function randomDocument(seed: number): VisualDocument {
   const marks = (): VisualMark[] => [
     ...(next() < 0.3 ? [bold] : []),
     ...(next() < 0.3 ? [italic] : []),
-    ...(next() < 0.3 ? [link(pick(HREFS))] : []),
+    ...(next() < 0.3 ? [(next() < 0.3 ? untracked : link)(pick(HREFS))] : []),
   ];
   const line = (rich: boolean): VisualInline[] =>
     Array.from({ length: 1 + Math.floor(next() * 4) }, () => (rich && next() < 0.15 ? b.hardBreak() : b.text(pick(TEXTS), rich ? marks() : [])));

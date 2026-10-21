@@ -13,12 +13,13 @@ import { buildVisual as b, visualSource, type VisualBlock, type VisualDocument, 
 
 /**
  * The server's allow-list, copied from skymail-backend
- * internal/mailer/sanitize.go (origin/main, 2026-09-23): the elements it keeps
- * with no attribute, and `href` on `a`. A change there is a change here.
+ * internal/mailer/sanitize.go (2026-10-21, #95 review T7): the elements it
+ * keeps with no attribute, and `href` and `data-skymail-notrack` (empty or
+ * "true") on `a`. A change there is a change here.
  */
 const SERVER_ALLOWLIST = {
   elements: ["p", "br", "strong", "b", "em", "i", "u", "ul", "ol", "li", "h2", "h3", "blockquote"],
-  attributes: { a: ["href"] } as Record<string, string[]>,
+  attributes: { a: ["href", "data-skymail-notrack"] } as Record<string, string[]>,
   schemes: ["http:", "https:", "mailto:"],
 };
 
@@ -33,6 +34,7 @@ function html(document: VisualDocument): string {
 const bold: VisualMark = { type: "bold" };
 const italic: VisualMark = { type: "italic" };
 const link = (href: string): VisualMark => ({ type: "link", href });
+const untracked = (href: string): VisualMark => ({ type: "link", href, notrack: true });
 
 describe("a free announcement's body", () => {
   it("is a heading as h2 and a sub-heading as h3, a paragraph as p, a list as ul or ol, a quote as blockquote, a line break as br", () => {
@@ -60,6 +62,13 @@ describe("a free announcement's body", () => {
     assert.equal(
       html(doc(b.paragraph([b.text("Ayrıntılar "), b.text("burada", [link("https://skyl.app/e"), bold, italic]), b.text(".")]))),
       '<p>Ayrıntılar <strong><em><a href="https://skyl.app/e">burada</a></em></strong>.</p>',
+    );
+  });
+
+  it("marks a link the sender said not to count, as the server keeps it, and no other", () => {
+    assert.equal(
+      html(doc(b.paragraph([b.text("Toplantı", [untracked("https://zoom.example/j/1?pwd=x")]), b.text(" "), b.text("site", [link("https://skyl.app/")])]))),
+      '<p><a href="https://zoom.example/j/1?pwd=x" data-skymail-notrack="true">Toplantı</a> <a href="https://skyl.app/">site</a></p>',
     );
   });
 
@@ -136,6 +145,7 @@ describe("a free announcement's body", () => {
       variables: false,
       lineBreaks: true,
       subheadings: true,
+      noTrackLinks: true,
     });
   });
 
@@ -190,7 +200,7 @@ function randomDocument(seed: number): VisualDocument {
   const marks = (): VisualMark[] => [
     ...(next() < 0.3 ? [bold] : []),
     ...(next() < 0.3 ? [italic] : []),
-    ...(next() < 0.3 ? [link(pick(HREFS))] : []),
+    ...(next() < 0.3 ? [(next() < 0.3 ? untracked : link)(pick(HREFS))] : []),
   ];
   const line = (rich: boolean): VisualInline[] =>
     Array.from({ length: Math.floor(next() * 4) }, () => (rich && next() < 0.15 ? b.hardBreak() : b.text(pick(TEXTS), rich ? marks() : [])));
@@ -218,6 +228,7 @@ function outsideTheAllowList(body: string): string[] {
     for (const [, name, value] of attributes.matchAll(ATTRIBUTE)) {
       if (!allowed.includes(name)) outside.push(`${tag}[${name}]`);
       if (name === "href" && !SERVER_ALLOWLIST.schemes.includes(new URL(value.replaceAll("&amp;", "&")).protocol)) outside.push(`href ${value}`);
+      if (name === "data-skymail-notrack" && value !== "" && value !== "true") outside.push(`data-skymail-notrack ${value}`);
     }
     if (tag === "a" && !closing && attributes.trim() === "") outside.push("<a> without href");
   }
@@ -229,7 +240,7 @@ describe("what the renderer writes, against the server's allow-list", () => {
     b.heading([b.text("Başlık")]),
     b.heading([b.text("Alt başlık")], 3),
     b.quote([b.text("q", [bold, link("https://skyl.app/q")]), b.hardBreak(), b.text("r")]),
-    b.paragraph([b.text("a", [bold, italic, link("https://skyl.app/")]), b.hardBreak(), b.text("b", [link("mailto:a@b.co")])]),
+    b.paragraph([b.text("a", [bold, italic, link("https://skyl.app/")]), b.hardBreak(), b.text("b", [link("mailto:a@b.co")]), b.text("c", [untracked("https://skyl.app/c")])]),
     b.list(false, [[b.text("x", [bold])]]),
     b.list(true, [[b.text("y", [italic]), b.hardBreak(), b.text("z")]]),
   );

@@ -131,9 +131,13 @@ function ToolButton({
 
 const Separator = () => <span aria-hidden className="mx-0.5 h-5 w-px shrink-0 bg-accent-strong" />;
 
-function LinkPanel({ editor, onClose }: { editor: Editor; onClose: () => void }) {
+/** What the link panel's switch says: SkyMail does not count the link's clicks, and sends it as it is. */
+export const NO_TRACK_LABEL = 'Bu bağlantıyı sayma';
+
+function LinkPanel({ editor, onClose, noTrack }: { editor: Editor; onClose: () => void; noTrack: boolean }) {
   const current = (editor.getAttributes('link').href as string | undefined) ?? '';
   const [href, setHref] = useState(current || 'https://');
+  const [notrack, setNotrack] = useState(editor.getAttributes('link').notrack === true);
   const problem = linkAddressProblem(href);
   const nothingSelected = editor.state.selection.empty && !editor.isActive('link');
   return (
@@ -147,7 +151,7 @@ function LinkPanel({ editor, onClose }: { editor: Editor; onClose: () => void })
           .chain()
           .focus()
           .extendMarkRange('link')
-          .setLink({ href })
+          .setLink(noTrack ? ({ href, notrack } as { href: string }) : { href })
           .command(({ tr }) => {
             tr.setSelection(TextSelection.create(tr.doc, tr.selection.to));
             return true;
@@ -167,6 +171,17 @@ function LinkPanel({ editor, onClose }: { editor: Editor; onClose: () => void })
         error={problem ? `${problem}.` : null}
       />
       {nothingSelected ? <p className="text-xs text-warning">Önce bağlantı yapılacak metni seç.</p> : null}
+      {noTrack ? (
+        <label className="flex w-fit cursor-pointer items-center gap-2 text-sm text-foreground">
+          <input
+            type="checkbox"
+            checked={notrack}
+            onChange={(event) => setNotrack(event.target.checked)}
+            className="accent-skylab-500 h-4 w-4 shrink-0 cursor-pointer"
+          />
+          {NO_TRACK_LABEL}
+        </label>
+      ) : null}
       <div className="flex flex-wrap gap-2">
         <Button type="submit" variant="primary" disabled={problem !== null || nothingSelected}>
           Bağlantıyı uygula
@@ -518,7 +533,7 @@ export function VisualEditor({
         {editor && panel ? (
           <div className="border-b border-border bg-card p-3">
             {panel === 'link' ? (
-              <LinkPanel editor={editor} onClose={() => setPanel(null)} />
+              <LinkPanel editor={editor} onClose={() => setPanel(null)} noTrack={allow.noTrackLinks === true} />
             ) : (
               <VariableInsertPanel
                 onInsert={(name) => {

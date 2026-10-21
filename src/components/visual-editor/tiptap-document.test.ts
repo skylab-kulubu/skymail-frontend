@@ -9,6 +9,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, it } from "node:test";
 import { getSchema } from "@tiptap/core";
+import { FREE_BODY_ALLOWANCE } from "@/lib/mail-render/free-body";
 import { TEMPLATE_BODY_ALLOWANCE, visualSource, type VisualDocument } from "@/lib/mail-render/visual-document";
 import { visualSchemaExtensions } from "./schema";
 import { fromEditorContent, toEditorContent } from "./tiptap-document";
@@ -183,3 +184,35 @@ describe("the editor for a free announcement's body", () => {
   });
 });
 
+
+// A link the sender said not to count (#95 review T7): the free body's
+// editor keeps the mark on the link, a Mail template's editor has none.
+describe("a link not to be counted", () => {
+  const free = getSchema(visualSchemaExtensions(FREE_BODY_ALLOWANCE));
+  const document: VisualDocument = {
+    type: "skymail.visual",
+    version: 1,
+    blocks: [
+      {
+        type: "paragraph",
+        content: [
+          { type: "text", text: "Toplantı", marks: [{ type: "link", href: "https://zoom.example/j/1", notrack: true }] },
+          { type: "text", text: " ve " },
+          { type: "text", text: "site", marks: [{ type: "link", href: "https://skyl.app/" }] },
+        ],
+      },
+    ],
+  };
+
+  it("is held by the free body's editor and given back as the same document", () => {
+    const node = free.nodeFromJSON(toEditorContent(document));
+    node.check();
+    assert.equal(JSON.stringify(fromEditorContent(node.toJSON())), JSON.stringify(document));
+  });
+
+  it("is a mark only the free body's editor has", () => {
+    assert.ok("notrack" in (free.marks.link.spec.attrs ?? {}));
+    const template = getSchema(visualSchemaExtensions(TEMPLATE_BODY_ALLOWANCE));
+    assert.ok(!("notrack" in (template.marks.link.spec.attrs ?? {})));
+  });
+});

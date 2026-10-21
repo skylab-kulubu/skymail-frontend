@@ -16,7 +16,9 @@ import { buildVisual, type VisualBlock, type VisualDocument, type VisualInline, 
 
 function marksTo(marks: readonly VisualMark[] | undefined): JSONContent["marks"] {
   if (!marks || marks.length === 0) return undefined;
-  return marks.map((mark) => (mark.type === "link" ? { type: "link", attrs: { href: mark.href } } : { type: mark.type }));
+  return marks.map((mark) =>
+    mark.type === "link" ? { type: "link", attrs: mark.notrack ? { href: mark.href, notrack: true } : { href: mark.href } } : { type: mark.type },
+  );
 }
 
 function inlineTo(node: VisualInline): JSONContent {
@@ -84,7 +86,7 @@ function marksFrom(marks: JSONContent["marks"]): VisualMark[] {
       case "italic":
         return { type: mark.type };
       case "link":
-        return { type: "link", href: text(mark.attrs?.href) };
+        return mark.attrs?.notrack === true ? { type: "link", href: text(mark.attrs.href), notrack: true } : { type: "link", href: text(mark.attrs?.href) };
       default:
         throw new Error(`Visual editörde bilinmeyen biçim "${mark.type}"`);
     }
