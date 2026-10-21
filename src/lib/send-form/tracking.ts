@@ -47,21 +47,32 @@ export type TrackingMode = Readonly<{ available: boolean; always: boolean }>;
 export const TRACKING_UNKNOWN: TrackingMode = { available: false, always: false };
 
 /**
- * SkyMail's tracking: `GET /mail_tasks/tracking-mode`, which anyone who may
- * use SkyMail reads (a setting, not a send: someone who only submits for
- * approval sees it too). A backend before it answers 404: then the smallest
- * summary (a day, a send), when `canReadSummary` (mails:read), or nothing.
+ * What a backend before `GET /mail_tasks/tracking-mode` answers it: the path
+ * falls to `GET /mail_tasks/:id`, which refuses one without mails:read (403)
+ * and fails the id as a server error (500) for one with it; 404 in case.
+ */
+const BEFORE_TRACKING_MODE: ReadonlySet<number> = new Set([403, 404, 500]);
+
+/**
+ * SkyMail's tracking. One who may read the summary (mails:read) reads it from
+ * the smallest summary (a day, a send), which every backend answers and a new
+ * one says `tracking_always` in. Anyone else asks `GET /mail_tasks/tracking-mode`,
+ * which anyone who may use SkyMail reads (a setting, not a send: someone who
+ * only submits for approval sees it too); a backend before it answers 403,
+ * 404 or 500, and then the form knows nothing.
  */
 export async function fetchTrackingMode(api: ApiClient, { canReadSummary, signal }: { canReadSummary: boolean; signal?: AbortSignal }): Promise<TrackingMode> {
+  if (canReadSummary) {
+    const summary = await api.get<SendSummary>("/mail_tasks/summary", { query: { days: 1, recent: 1 }, signal });
+    return { available: trackingAvailable(summary), always: trackingAlways(summary) };
+  }
   try {
     const mode = await api.get<Pick<SendSummary, "tracking_available" | "tracking_always">>("/mail_tasks/tracking-mode", { signal });
     return { available: trackingAvailable(mode), always: trackingAlways(mode) };
   } catch (error) {
-    if (!(error instanceof ApiError) || error.status !== 404) throw error;
+    if (error instanceof ApiError && BEFORE_TRACKING_MODE.has(error.status)) return TRACKING_UNKNOWN;
+    throw error;
   }
-  if (!canReadSummary) return TRACKING_UNKNOWN;
-  const summary = await api.get<SendSummary>("/mail_tasks/summary", { query: { days: 1, recent: 1 }, signal });
-  return { available: trackingAvailable(summary), always: trackingAlways(summary) };
 }
 
 /** A template's sends may be tracked: neither a System template nor sensitive (skymail-backend GetTemplateTrackingExclusion). */
