@@ -129,7 +129,10 @@ export function sendTracked(send: Pick<Send, "tracking">): boolean {
  * Whether the viewer may see the send's recipients one by one, as the API
  * decides it: `skymail:mails:tracking:read` (YK, DK, ADMIN), or the send's own
  * sender without any further role. Anyone else gets the counts only, and the
- * page never asks for the people.
+ * page never asks for the people. A mail the system sends (account and
+ * transaction mail, a Mail onayı notice whose sent_by is the person who
+ * acted) is read with the role only: the API refuses its sender (403), and
+ * the section keeps the counts alone.
  */
 export function mayReadTrackingRecipients(
   roles: readonly string[],

@@ -387,4 +387,22 @@ describe("whether a request asks for tracking", () => {
   it("says nothing for a backend that does not give it", () => {
     assert.equal(approvalTracking({ audience: list }, ordinary), null);
   });
+  it("says Açık (onaylanınca) for a waiting request while every send is tracked, whatever it asked", () => {
+    const now = new Date("2026-10-21T12:00:00Z");
+    const later = "2026-10-28T12:00:00Z";
+    for (const kind of ["mailing_list", "single", "people", "form"] as const) {
+      for (const state of ["pending", "returned"] as const) {
+        assert.equal(
+          approvalTracking({ tracking: false, state, deadline_at: later, audience: { kind } }, { ...ordinary, system: true }, { always: true, now }),
+          "Açık (onaylanınca)",
+        );
+      }
+    }
+    // Decided, it says what the send got; past its deadline it is no longer waiting.
+    assert.equal(approvalTracking({ tracking: true, state: "approved", deadline_at: later, audience: list }, null, { always: true, now }), "Açık");
+    assert.equal(approvalTracking({ tracking: false, state: "rejected", deadline_at: later, audience: list }, null, { always: true, now }), null);
+    assert.equal(approvalTracking({ tracking: false, state: "pending", deadline_at: "2026-10-20T12:00:00Z", audience: list }, null, { always: true, now }), null);
+    // Not always, as before.
+    assert.equal(approvalTracking({ tracking: false, state: "pending", deadline_at: later, audience: list }, ordinary, { now }), "Kapalı");
+  });
 });

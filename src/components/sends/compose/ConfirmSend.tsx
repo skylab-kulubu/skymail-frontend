@@ -41,6 +41,7 @@ export function ConfirmSend({
   warnings,
   progress,
   submitting = false,
+  trackingAlways = false,
   onCancel,
   onConfirm,
 }: {
@@ -54,6 +55,8 @@ export function ConfirmSend({
   progress: Progress | null;
   /** A submission for approval is on its way. */
   submitting?: boolean;
+  /** SkyMail tracks every send (tracking_always): a Forms source's too, which asks for nothing. */
+  trackingAlways?: boolean;
   onCancel: () => void;
   onConfirm: (confirming: Confirming) => void;
 }) {
@@ -77,7 +80,11 @@ export function ConfirmSend({
   const plan = confirming?.kind === 'send' || confirming?.kind === 'submit' || confirming?.kind === 'resendList' ? confirming.plan : null;
   const tracked =
     plan !== null &&
-    (plan.kind === 'list' ? plan.request.tracking === true : plan.kind === 'people' && plan.requests.some((request) => request.tracking === true));
+    (plan.kind === 'list'
+      ? plan.request.tracking === true
+      : plan.kind === 'people'
+        ? plan.requests.some((request) => request.tracking === true)
+        : trackingAlways);
   const untrackedNote = plan && tracked ? untrackedRecipientsNote(untrackedCount(plan, list, size)) : null;
   return (
     <PanelDialog isOpen={confirming !== null} onClose={busy ? () => {} : onCancel} title={title}>

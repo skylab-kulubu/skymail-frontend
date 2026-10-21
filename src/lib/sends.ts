@@ -134,6 +134,8 @@ export type SendSummary = Readonly<{
   sender_paused?: boolean;
   /** True while `SKYMAIL_TRACKING=on`: a send may ask for open and click tracking. Absent from a backend before tracking. */
   tracking_available?: boolean;
+  /** True while `SKYMAIL_TRACKING_OPERATOR=on` too: every send a person makes is tracked and the form shows no box. Absent from a backend before it. */
+  tracking_always?: boolean;
   send_counts: Readonly<Record<SendStatus, number>>;
   /** Oldest first, ending today; `date` is a calendar day in `time_zone` (`YYYY-MM-DD`). */
   daily_sent: ReadonlyArray<Readonly<{ date: string; sent: number }>>;
