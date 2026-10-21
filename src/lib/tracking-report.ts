@@ -61,8 +61,17 @@ export type TrackingSummary = Readonly<{
   tracking_available: boolean;
   tracking_requested: boolean;
   retained: boolean;
+  /**
+   * The send's counts tell of people (fewer than 10 tracked, or mail the
+   * system sends) and the caller may not read its people: report is null
+   * (skymail-backend GetTracking). Absent from an older backend.
+   */
+  withheld?: boolean;
   report: TrackingAggregate | null;
 }>;
+
+/** What the report says in place of counts withheld from the reader. */
+export const TRACKING_WITHHELD_TEXT = "Bu gönderimin sayıları kişiye dair bilgi sayılır; yalnız takip yetkisi olanlar görür.";
 
 export type TrackingRecipientLink = Readonly<{ link_id: number; clicks: number; last_clicked_at: string }>;
 

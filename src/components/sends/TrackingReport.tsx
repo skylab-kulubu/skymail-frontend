@@ -31,6 +31,7 @@ import {
   skipReasonLabel,
   TRACKING_CAVEAT,
   TRACKING_EXPIRED_TEXT,
+  TRACKING_WITHHELD_TEXT,
   TRACKING_FILTERS,
   TRACKING_PAGE_SIZE,
   trackingSeries,
@@ -78,6 +79,13 @@ export function TrackingSection({ send }: { send: Send }) {
 /** The caveat, the counts, the series and the links; after a year the kept totals only. */
 export function TrackingOverview({ summary }: { summary: TrackingSummary }) {
   const report = summary.report;
+  if (summary.withheld === true) {
+    return (
+      <Notice tone="info" aria-label="Açılma ve tıklama">
+        {TRACKING_WITHHELD_TEXT}
+      </Notice>
+    );
+  }
   if (summary.retained) {
     return (
       <div className="space-y-4">
