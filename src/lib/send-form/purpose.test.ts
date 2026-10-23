@@ -69,12 +69,12 @@ describe("a send's purpose", () => {
   });
 
   it("does not go without the statement its purpose needs, nor without a team once Ekip is picked", () => {
-    assert.equal(purposeProblem(PURPOSE_START, "list", internal), "Ticari içerik beyanını işaretle.");
+    assert.equal(purposeProblem(PURPOSE_START, "list", internal), "Tanıtım beyanını işaretle.");
     assert.equal(purposeProblem(ticked, "list", internal), null);
     assert.equal(purposeProblem({ ...PURPOSE_START, purpose: "islem" }, "people", null), "Beyanı işaretle.");
     assert.equal(purposeProblem({ ...PURPOSE_START, purpose: "islem", transactional: true }, "people", null), null);
     // An islem chosen for people does not hold a list send back: there it is a duyuru.
-    assert.equal(purposeProblem({ ...PURPOSE_START, purpose: "islem", transactional: true }, "list", internal), "Ticari içerik beyanını işaretle.");
+    assert.equal(purposeProblem({ ...PURPOSE_START, purpose: "islem", transactional: true }, "list", internal), "Tanıtım beyanını işaretle.");
     assert.equal(purposeProblem({ ...ticked, team: true, source: null }, "people", null), "Ekip seç.");
     assert.equal(purposeProblem({ ...ticked, team: true, source: null }, "list", group), null);
   });

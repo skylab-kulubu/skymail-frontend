@@ -141,7 +141,7 @@ export function parseCategory(category: string | null | undefined): { source: st
 export function purposeProblem(choice: PurposeChoice, audience: PurposeAudience, list: Pick<ListRow, "id" | "external"> | null): string | null {
   if (purposeOf(choice, audience) === "islem") return choice.transactional ? null : "Beyanı işaretle.";
   if (choice.team && sourceOf(choice, list) === CLUB) return "Ekip seç.";
-  return choice.commercialAbsent ? null : "Ticari içerik beyanını işaretle.";
+  return choice.commercialAbsent ? null : "Tanıtım beyanını işaretle.";
 }
 
 /** The fields the send carries for its purpose. */

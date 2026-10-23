@@ -78,7 +78,7 @@ describe("the read routes", () => {
   });
 
   it("reports the year-old send's 410 as such", async () => {
-    const { api } = scriptedClient(json(410, { code: "mail.tracking_expired", message: "Kişi bazında takip kaydı 1 yıl sonra silindi." }));
+    const { api } = scriptedClient(json(410, { code: "mail.tracking_expired", message: "Kişi bazında takip kaydı 90 gün sonra silindi." }));
     await assert.rejects(fetchTrackingRecipients(api, SEND_ID, { filter: "all", page: 1 }), { status: 410 });
   });
 
