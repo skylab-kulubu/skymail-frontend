@@ -32,6 +32,7 @@ import {
   type FieldSource,
   type VariableField,
 } from "../send-form/fields";
+import { purposeChoiceOf, type PurposeChoice, type PurposeFields } from "../send-form/purpose";
 import { FREE_BODY_VARIABLE, FREE_TEMPLATE_KEY, type SendPlan } from "../send-form/send";
 import { audienceLabel } from "../sends";
 import type { ApiClient } from "../api/client";
@@ -261,10 +262,12 @@ export function resubmission<T extends Pick<MailApproval, "state" | "body_variab
 // A submission from the send form
 
 /** `POST /mail_approvals` and `…/resubmit`: the send form's request, to a list or to people. */
-export type ApprovalRequest =
+export type ApprovalRequest = (
   | { template_id: string; mail_list_id: string; body_variables: Record<string, string>; tracking?: boolean }
   | { template_id: string; form_source_id: string; body_variables: Record<string, string> }
-  | { template_id: string; recipients: ApprovalRecipient[]; body_variables: Record<string, string>; tracking?: boolean };
+  | { template_id: string; recipients: ApprovalRecipient[]; body_variables: Record<string, string>; tracking?: boolean }
+) &
+  Partial<PurposeFields>;
 
 /**
  * A send plan as one request for approval: its people — each of the form's
@@ -281,6 +284,10 @@ export function approvalRequest(plan: SendPlan, { lists }: { lists: boolean }): 
     return { ok: false, problem: `Onaya en çok ${APPROVAL_PEOPLE_LIMIT} kişi sunulur; burada ${count} kişi var. ${crowd}` };
   }
   const [first] = plan.requests;
+  const { purpose, category, transactional_statement, commercial_content_absent } = first;
+  const purposeFields = Object.fromEntries(
+    Object.entries({ purpose, category, transactional_statement, commercial_content_absent }).filter(([, value]) => value !== undefined),
+  );
   return {
     ok: true,
     request: {
@@ -288,6 +295,7 @@ export function approvalRequest(plan: SendPlan, { lists }: { lists: boolean }): 
       recipients: plan.requests.map((request) => ({ email: request.recipient_email, full_name: request.recipient_full_name })),
       body_variables: first.body_variables,
       ...(first.tracking ? { tracking: true } : {}),
+      ...purposeFields,
     },
   };
 }
@@ -306,10 +314,13 @@ export type ComposePrefill = Readonly<{
   notes: string[];
   /** The request asked for open and click tracking: the box starts ticked, where the form offers it. */
   tracking?: boolean;
+  /** The request's purpose and category (send-form/purpose.ts); the form's start when it carried none. */
+  purpose?: PurposeChoice;
 }>;
 
 export function composePrefill(
-  approval: Pick<MailApproval, "template" | "audience" | "recipients" | "body_variables" | "tracking">,
+  approval: Pick<MailApproval, "template" | "audience" | "recipients" | "body_variables" | "tracking"> &
+    Partial<Pick<MailApproval, "purpose" | "category" | "transactional_statement" | "commercial_content_absent">>,
   { templates, lists, access }: { templates: readonly MailTemplate[]; lists: readonly ListRow[]; access: SendAccess },
 ): ComposePrefill {
   const notes: string[] = [];
@@ -370,5 +381,6 @@ export function composePrefill(
     rich,
     notes,
     tracking: approval.tracking === true,
+    purpose: purposeChoiceOf(approval),
   };
 }

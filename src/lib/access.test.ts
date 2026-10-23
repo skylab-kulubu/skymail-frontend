@@ -52,6 +52,12 @@ describe("the menu", () => {
     assert.equal(sectionLabel("/mailing-lists"), "Mail listeleri");
     assert.equal(sectionLabel("/mail-approvals"), "Mail onayları");
   });
+
+  it("shows the suppression list only to one who may reverse an unsubscribe", () => {
+    assert.ok(!hrefs(["skymail:access", "skymail:mails:read"]).includes("/suppressions"));
+    assert.ok(hrefs(["skymail:access", "skymail:unsubscribes:reactivate"]).includes("/suppressions"));
+    assert.deepEqual(requiredRolesFor("/suppressions"), ["skymail:unsubscribes:reactivate"]);
+  });
 });
 
 describe("a page opened by its address", () => {

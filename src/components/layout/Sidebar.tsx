@@ -29,7 +29,7 @@ import {
   useTheme,
   type ThemePreference,
 } from '@skylab-kulubu/skylcn-ui';
-import { ChevronRight, ClipboardCheck, FileText, Home, List, LogOut, Palette, Send, UserRound } from 'lucide-react';
+import { Ban, ChevronRight, ClipboardCheck, FileText, Home, List, LogOut, Palette, Send, UserRound } from 'lucide-react';
 import { DeveloperCredit } from '@/components/auth/DeveloperCredit';
 import { useConsole } from '@/components/layout/ConsoleContext';
 import { isApprover, navLabel, visibleNavigation } from '@/lib/access';
@@ -46,6 +46,7 @@ const NAV_ICON = {
   '/mailing-lists': List,
   '/mail-tasks': Send,
   '/mail-approvals': ClipboardCheck,
+  '/suppressions': Ban,
 } as const;
 
 /** How many requests wait for an approver; null for anyone else, or while it is not known. */

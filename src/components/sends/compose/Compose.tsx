@@ -45,10 +45,12 @@ import {
   trackingAsked,
   trackingOffered,
 } from '@/lib/send-form/tracking';
+import { CATEGORY_REFUSALS, PURPOSE_START, purposeFields, purposeProblem, type PurposeChoice } from '@/lib/send-form/purpose';
 import type { MailTemplate } from '@/lib/templates';
 import { AudiencePart, type Audience } from './AudiencePart';
 import { ConfirmSend, type Confirming } from './ConfirmSend';
 import { PeopleSummary } from './PeopleSummary';
+import { PurposePart } from './PurposePart';
 import { personEntry, type PersonEntry } from './PeopleEditor';
 import { SendPreview } from './SendPreview';
 import { useSending } from './use-sending';
@@ -116,6 +118,8 @@ export function Compose({
   );
   /** The tracking box; it counts only while the form offers it. */
   const [trackingTicked, setTrackingTicked] = useState(prefill?.tracking ?? false);
+  /** The purpose, category and statements; sent only while the backend takes a purpose. */
+  const [purposeChoice, setPurposeChoice] = useState<PurposeChoice>(prefill?.purpose ?? PURPOSE_START);
   const [attempts, setAttempts] = useState(0);
   /** Whether the sender last asked to send, or to submit for approval. */
   const [intent, setIntent] = useState<'send' | 'submit'>('send');
@@ -144,7 +148,11 @@ export function Compose({
   useEffect(() => {
     if (untrackable) setTrackingTicked(false);
   }, [untrackable]);
-  const draft = { what, template, fields: input, audience, list, people, formSource, tracking };
+  // With an older backend, or SKYMAIL_MAIL_PURPOSE off, the form says and sends nothing of it.
+  const purposeShown = trackingMode.purpose;
+  const purpose = purposeShown ? purposeFields(purposeChoice, audience, list) : null;
+  const purposeBlock = purposeShown ? purposeProblem(purposeChoice, audience, list) : null;
+  const draft = { what, template, fields: input, audience, list, people, formSource, tracking, purpose };
   const check = sendPlan(draft);
   const problems = attempts > 0 && !check.ok ? check.problems : null;
   const held = repeatsUncertainSend(draft, sending.uncertain);
@@ -176,14 +184,14 @@ export function Compose({
     if (busy || held) return;
     setIntent('send');
     setAttempts((count) => count + 1);
-    if (check.ok) setConfirming({ kind: 'send', plan: check.plan });
+    if (check.ok && !purposeBlock) setConfirming({ kind: 'send', plan: check.plan });
   }
 
   function submitForApproval() {
     if (busy) return;
     setIntent('submit');
     setAttempts((count) => count + 1);
-    if (!check.ok || !forApproval?.ok) return;
+    if (!check.ok || !forApproval?.ok || purposeBlock) return;
     // The API's last refusal, and the rows it marked, stand until another submission is on its way.
     submitting.clear();
     setConfirming({ kind: 'submit', plan: check.plan, request: forApproval.request, resubmit: resubmit !== null });
@@ -242,6 +250,7 @@ export function Compose({
       progress={sending.progress}
       submitting={submitting.busy}
       trackingAlways={trackingMode.available && trackingMode.always}
+      teams={lists}
       onCancel={() => setConfirming(null)}
       onConfirm={(chosen) => void confirm(chosen)}
     />
@@ -342,6 +351,18 @@ export function Compose({
               formSource={formSource}
             />
             {audienceNote ? <Notice tone="info">{audienceNote}</Notice> : null}
+            {purposeShown ? (
+              <PurposePart
+                choice={purposeChoice}
+                onChoice={setPurposeChoice}
+                audience={audience}
+                list={list}
+                lists={lists}
+                categoryProblem={sending.listFailure?.code && CATEGORY_REFUSALS.has(sending.listFailure.code) ? sending.listFailure.reason : null}
+                problem={attempts > 0 ? purposeBlock : null}
+                disabled={busy}
+              />
+            ) : null}
             {trackingShown ? (
               <label className="flex w-fit cursor-pointer items-center gap-2 text-sm text-foreground">
                 <input
@@ -422,12 +443,17 @@ export function Compose({
             }
             submit={
               <div className="flex flex-wrap items-center gap-2">
-                <Button variant={direct ? 'outline' : 'primary'} onClick={submitForApproval} disabled={busy}>
+                <Button variant={direct ? 'outline' : 'primary'} onClick={submitForApproval} disabled={busy || purposeBlock !== null}>
                   <ClipboardCheck className="h-4 w-4" aria-hidden />
                   {resubmit ? 'Yeniden onaya sun…' : 'Onaya sun…'}
                 </Button>
                 {direct ? (
-                  <Button variant="primary" onClick={send} disabled={busy || held} title={held ? 'Önce yeniden göndermeyi onayla' : undefined}>
+                  <Button
+                    variant="primary"
+                    onClick={send}
+                    disabled={busy || held || purposeBlock !== null}
+                    title={held ? 'Önce yeniden göndermeyi onayla' : (purposeBlock ?? undefined)}
+                  >
                     <SendIcon className="h-4 w-4" aria-hidden />
                     Gönder…
                   </Button>
