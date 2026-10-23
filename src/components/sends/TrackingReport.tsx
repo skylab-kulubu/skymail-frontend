@@ -89,9 +89,9 @@ export function TrackingOverview({ summary }: { summary: TrackingSummary }) {
   if (summary.retained) {
     return (
       <div className="space-y-4">
-        <Notice tone="info" icon={Clock} title="1 yıl doldu" aria-label="Kişi bazında kayıt">
+        <Notice tone="info" icon={Clock} title="90 gün doldu" aria-label="Kişi bazında kayıt">
           {TRACKING_EXPIRED_TEXT}{' '}
-          {report ? 'Aşağıda kişisiz toplamlar var.' : 'Toplamlar yalnız en az 10 takipli alıcısı olan gönderimlerde saklanır.'}
+          {report ? 'Aşağıda kişisiz toplamlar var.' : 'Bu gönderimin toplamı yok. 10\'dan az takipli alıcılı gönderimin toplamı 1 yıl sonra silinir.'}
         </Notice>
         {report ? (
           <>
@@ -200,7 +200,7 @@ function TrackingRecipients({ sendId, links }: { sendId: string; links: readonly
 
   if (state.status === 'error' && state.error.status === 410) {
     return (
-      <Notice tone="info" icon={Clock} title="1 yıl doldu" aria-label="Kişi bazında kayıt">
+      <Notice tone="info" icon={Clock} title="90 gün doldu" aria-label="Kişi bazında kayıt">
         {TRACKING_EXPIRED_TEXT}
       </Notice>
     );

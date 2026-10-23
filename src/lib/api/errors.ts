@@ -93,7 +93,7 @@ const BY_CODE: ReadonlyMap<string, string> = new Map([
   // A send's purpose and category (abonelik-cikisi 03/04, skymail-backend #99; category_unknown and preference_unavailable: ticket 09).
   ["mail_task.purpose_not_allowed", "Listeye ve Keycloak grubuna yalnız duyuru gönderilir."],
   ["mail_task.transactional_statement_required", "Başvuruyla ilgili bilgi için beyanı işaretle."],
-  ["mail_task.commercial_content_not_allowed", "Ticari içerik beyanı işaretlenmeden gönderilmez."],
+  ["mail_task.commercial_content_not_allowed", "Tanıtım beyanı işaretlenmeden gönderilmez."],
   ["mail_task.category_not_allowed", "Başvuruyla ilgili bilgide kategori seçilmez."],
   ["mail_task.category_required", "Duyuru için kategori seç."],
   ["mail_task.category_invalid", "Kategori geçersiz. Kulüp genelini ya da bir ekip seç."],
