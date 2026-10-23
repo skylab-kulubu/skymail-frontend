@@ -209,6 +209,9 @@ describe("a refused submission", () => {
       rows: null,
     });
     assert.equal(submissionRefusal(new ApiError(0, "network"), "submit", rows).reload, false);
+    // The form puts a refused category under the category picker.
+    assert.equal(submissionRefusal(refusal(400, "mail_task.category_unknown"), "submit", rows).code, "mail_task.category_unknown");
+    assert.equal(beyond.code, "validation.error");
   });
 
   it("shows the form's own problem on a row first, and what the API found where there is none", () => {

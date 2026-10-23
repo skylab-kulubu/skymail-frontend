@@ -77,11 +77,20 @@ export const REACTIVATE_WARNING = "Yalnız kişi isterse ya da bir hata olduysa 
 export const REASON_MIN = 10;
 export const REASON_MAX = 500;
 
-/** Why the reason may not go yet, as the backend counts it (characters, no address); null when it may. */
+export const REASON_LENGTH = `Gerekçe ${REASON_MIN}–${REASON_MAX} karakter olmalı.`;
+
+/** A line break, a tab or another control character: the backend takes printable characters and the plain space only (unicode.IsPrint). */
+const LINE_BREAK = /[\n\r\t\v\f\u0085\u2028\u2029]/u;
+const INVISIBLE = /[\p{C}\p{Z}]/u;
+
+/** Why the reason may not go yet, as the backend counts it (characters, one line, no address); null when it may. */
 export function reasonProblem(text: string): string | null {
-  const length = [...text.trim()].length;
-  if (length < REASON_MIN || length > REASON_MAX) return `Gerekçe ${REASON_MIN}–${REASON_MAX} karakter olmalı.`;
-  if (text.includes("@")) return "Gerekçeye adres yazma.";
+  const reason = text.trim();
+  const length = [...reason].length;
+  if (length < REASON_MIN || length > REASON_MAX) return REASON_LENGTH;
+  if (LINE_BREAK.test(reason)) return "Gerekçe tek satır olmalı.";
+  if ([...reason].some((char) => char !== " " && INVISIBLE.test(char))) return "Gerekçede görünmeyen bir karakter var.";
+  if (reason.includes("@")) return "Gerekçeye adres yazma.";
   return null;
 }
 

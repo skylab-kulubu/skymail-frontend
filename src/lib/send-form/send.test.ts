@@ -22,6 +22,7 @@ import type { MailTemplate } from "../templates";
 import {
   FREE_TEMPLATE_KEY,
   audienceSize,
+  categoryRefused,
   fetchSendableLists,
   fetchSendableTemplates,
   freeTemplate,
@@ -291,6 +292,26 @@ describe("sending", () => {
       calls.map((call) => JSON.parse(call.body!).recipient_email),
       ["ayse@ornek.com", "ali@ornek.c", "veli@ornek.com", "zeynep@ornek.com"],
     );
+    assert.equal(categoryRefused(outcomes), null);
+  });
+
+  it("to people stops at a category refused for the first person, and the form says it under the category", async () => {
+    const { api, calls } = scriptedClient(json(400, { code: "mail_task.category_unknown", message: "Bu grup bir ekip değil." }));
+    const outcomes = await sendToPeople(api, REQUESTS, { canSeeSends: true });
+    assert.equal(calls.length, 1);
+    assert.deepEqual(categoryRefused(outcomes), { kind: "final", reason: "Bu grup bir ekip değil; kulüp genelini ya da bir ekip seç.", code: "mail_task.category_unknown" });
+  });
+
+  it("to people goes on past a category refused after someone was sent to", async () => {
+    const { api, calls } = scriptedClient(
+      json(201, { id: TASK_ID }),
+      json(400, { code: "mail_task.category_unknown", message: "x" }),
+      json(201, { id: TASK_ID }),
+      json(201, { id: TASK_ID }),
+    );
+    const outcomes = await sendToPeople(api, REQUESTS, { canSeeSends: true });
+    assert.equal(calls.length, 4);
+    assert.equal(categoryRefused(outcomes), null);
   });
 });
 

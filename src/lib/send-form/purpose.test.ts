@@ -9,6 +9,7 @@ import {
   TRANSACTIONAL_STATEMENT,
   approvalPurposeText,
   categoryOf,
+  categoryTeam,
   parseCategory,
   purposeAvailable,
   purposeChoiceOf,
@@ -203,5 +204,15 @@ describe("a refused purpose", () => {
     });
     // Any other 503 may still have opened the send.
     assert.equal(sendFailure(apiErrorFromResponse(503, "{}"), "list", checking).kind, "uncertain");
+  });
+});
+
+describe("the team a request's category names", () => {
+  const team = "0f8b6d2e-1c3a-4b5d-9e7f-a1b2c3d4e5f6";
+  it("is read unless it is the club, none, or the group already named", () => {
+    assert.equal(categoryTeam(`team:${team}:haber`, null), team);
+    assert.equal(categoryTeam(`team:${team}:haber`, team.toUpperCase()), null);
+    assert.equal(categoryTeam("club:haber", null), null);
+    assert.equal(categoryTeam(null, null), null);
   });
 });

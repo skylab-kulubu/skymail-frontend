@@ -102,7 +102,7 @@ const BY_CODE: ReadonlyMap<string, string> = new Map([
   ["mail_task.category_unknown", "Bu grup bir ekip değil; kulüp genelini ya da bir ekip seç."],
   ["mail_task.preference_unavailable", "İletişim tercihleri şu an okunamıyor. Birkaç dakika sonra yeniden dene."],
   // The suppression list's unsubscribes (abonelik-cikisi 02/04, skymail-backend #98).
-  ["suppression.reason_required", "Gerekçe 10–500 karakter olmalı."],
+  ["suppression.reason_required", "Gerekçe tek satır ve 10–500 karakter olmalı."],
   ["suppression.reason_has_address", "Gerekçeye adres yazma."],
   ["suppression.use_delete", "Bu kayıt kalıcı ret; geri alınmaz, kaldırılır."],
   ["suppression.use_reactivate", "Bu kayıt abonelikten çıkış; kaldırılmaz, geri alınır."],

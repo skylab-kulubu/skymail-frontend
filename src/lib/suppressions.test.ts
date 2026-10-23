@@ -34,6 +34,11 @@ describe("reversing an unsubscribe", () => {
     assert.equal(reasonProblem("ş".repeat(501)), "Gerekçe 10–500 karakter olmalı.");
     assert.equal(reasonProblem("Kişi ayse@example.com adresinden yazdı"), "Gerekçeye adres yazma.");
     assert.equal(reasonProblem("Kişi bilgi kutusuna yazıp istedi."), null);
+    assert.equal(reasonProblem("  Kişi bilgi kutusuna yazıp istedi.\n"), null);
+    assert.equal(reasonProblem("Kişi bilgi kutusuna\nyazıp istedi."), "Gerekçe tek satır olmalı.");
+    assert.equal(reasonProblem("Kişi bilgi kutusuna\tyazıp istedi."), "Gerekçe tek satır olmalı.");
+    assert.equal(reasonProblem("Kişi bilgi kutusuna\u00a0yazıp istedi."), "Gerekçede görünmeyen bir karakter var.");
+    assert.equal(reasonProblem("Kişi bilgi kutusuna\u200byazıp istedi."), "Gerekçede görünmeyen bir karakter var.");
   });
 
   it("sends the reason trimmed, the row named by its id", async () => {
@@ -46,7 +51,7 @@ describe("reversing an unsubscribe", () => {
 
   it("says the backend's 400, 403 and 409 in words", () => {
     const refusal = (status: number, code: string) => reactivateRefusal(apiErrorFromResponse(status, JSON.stringify({ code })));
-    assert.deepEqual(refusal(400, "suppression.reason_required"), { text: "Gerekçe 10–500 karakter olmalı.", reload: false });
+    assert.deepEqual(refusal(400, "suppression.reason_required"), { text: "Gerekçe tek satır ve 10–500 karakter olmalı.", reload: false });
     assert.deepEqual(refusal(400, "suppression.reason_has_address"), { text: "Gerekçeye adres yazma.", reload: false });
     assert.deepEqual(refusal(403, "server.forbidden"), { text: "Geri alma yetkin yok (skymail:unsubscribes:reactivate).", reload: false });
     assert.deepEqual(refusal(409, "suppression.use_delete"), { text: "Bu kayıt kalıcı ret; geri alınmaz, kaldırılır.", reload: true });

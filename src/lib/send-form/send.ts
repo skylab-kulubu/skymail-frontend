@@ -27,7 +27,7 @@ import { fetchList, fetchRecipientPage, isInternal, toListRow, type ListRow, typ
 import { authorName, fetchTemplate, type MailTemplate } from "../templates";
 import { peopleProblems, peopleReady, type PeopleCheck, type PersonRow } from "./audience";
 import { bodyVariables, fieldWarnings, usesRecipientName, variableFields, type FieldInput } from "./fields";
-import { PURPOSE_REFUSALS, type PurposeFields } from "./purpose";
+import { CATEGORY_REFUSALS, PURPOSE_REFUSALS, type PurposeFields } from "./purpose";
 
 /** The Template key of the free-form template a free announcement is sent with. */
 export const FREE_TEMPLATE_KEY = "free.basic";
@@ -183,7 +183,7 @@ export type SendFailure = Readonly<{ kind: FailureKind; reason: string; code?: s
 
 /** How a send to one person went; a sent one says whether it got the tracking it asked for (absent from a backend before tracking). */
 export type PersonOutcome = Readonly<
-  { name: string; email: string } & ({ status: "sent"; sendId: string; tracking?: boolean } | { status: FailureKind; reason: string })
+  { name: string; email: string } & ({ status: "sent"; sendId: string; tracking?: boolean } | { status: FailureKind; reason: string; code?: string })
 >;
 
 /** Who the send's outcome can be checked by: the viewer, if they read sends (`mails:read`). */
@@ -207,11 +207,20 @@ export async function sendToPeople(
       outcomes.push({ ...person, status: "sent", sendId: id, ...(tracking === undefined ? {} : { tracking }) });
     } catch (error) {
       const failure = sendFailure(error, "person", { canSeeSends });
-      outcomes.push({ ...person, status: failure.kind, reason: failure.reason });
+      outcomes.push({ ...person, status: failure.kind, reason: failure.reason, ...(failure.code ? { code: failure.code } : {}) });
+      // The category is every person's: refused for the first, it is refused for all, and nobody has been sent to.
+      if (outcomes.length === 1 && failure.code && CATEGORY_REFUSALS.has(failure.code)) return outcomes;
     }
     onEach?.(outcomes.length);
   }
   return outcomes;
+}
+
+/** A send to people the category kept from going: refused for the first person, nobody sent to. */
+export function categoryRefused(outcomes: readonly PersonOutcome[]): SendFailure | null {
+  const [first] = outcomes;
+  if (outcomes.length !== 1 || !first || first.status === "sent" || !first.code || !CATEGORY_REFUSALS.has(first.code)) return null;
+  return { kind: first.status, reason: first.reason, code: first.code };
 }
 
 /** Who a retry would send to: the ones who have not got the mail for sure — never a refusal — and who of them may get it twice. */

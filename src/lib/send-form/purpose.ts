@@ -177,6 +177,12 @@ export function teamNames(lists: readonly Pick<ListRow, "id" | "name" | "externa
   return (id) => names.get(id.toLowerCase()) ?? null;
 }
 
+/** The team a stored category names, lower-cased, unless it is `named` (a group already named, the one sent to); null for the club or none. */
+export function categoryTeam(category: string | null | undefined, named: string | null | undefined): string | null {
+  const source = parseCategory(category)?.source.toLowerCase() ?? CLUB;
+  return source === CLUB || source === named?.toLowerCase() ? null : source;
+}
+
 /** The purpose in words, as the confirmation and the request's page say it: "Duyuru · Kulüp geneli · Haber". */
 export function purposeText(fields: StoredPurpose, team: TeamName = () => null): string | null {
   if (fields.purpose === "islem") return PURPOSE_LABEL.islem;

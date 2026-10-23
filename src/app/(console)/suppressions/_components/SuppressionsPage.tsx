@@ -11,7 +11,7 @@ import { Button, FilterPills, Notice, Pagination, StateCard } from '@skylab-kulu
 import { useCan } from '@/components/layout/ConsoleContext';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { DataTable } from '@/components/tables/DataTable';
-import { FormTextArea } from '@/components/common/FormField';
+import { FormField } from '@/components/common/FormField';
 import { OutcomeNotice } from '@/components/common/OutcomeNotice';
 import { PanelDialog, PrimaryActions } from '@/components/common/PanelDialog';
 import { ROLE, sectionLabel } from '@/lib/access';
@@ -22,6 +22,7 @@ import type { NoticeData } from '@/lib/notice';
 import {
   REACTIVATE_WARNING,
   REASON_FILTERS,
+  REASON_LENGTH,
   REASON_LABEL,
   SUPPRESSION_PAGE_SIZE,
   fetchReactivationPage,
@@ -203,15 +204,15 @@ function ReactivateDialog({
       <div className="space-y-3">
         <p className="break-all text-foreground">{row?.address}</p>
         <Notice tone="warning">{REACTIVATE_WARNING}</Notice>
-        <FormTextArea
+        <FormField
           label="Gerekçe"
-          hint="Adres yazma."
+          hint="10–500 karakter. Adres yazma."
           value={text}
           onChange={(event) => setText(event.target.value)}
           maxLength={500}
-          rows={3}
+          autoComplete="off"
           disabled={busy}
-          error={refused}
+          error={refused ?? (problem !== REASON_LENGTH ? problem : null)}
         />
       </div>
       <PrimaryActions onCancel={close} onConfirm={() => void confirm()} confirmLabel="Geri al" pendingLabel="Geri alınıyor…" isPending={busy} confirmDisabled={problem !== null} />
