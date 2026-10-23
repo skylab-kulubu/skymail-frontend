@@ -14,7 +14,9 @@
  *  - a variable the body takes as markup (`{{safeHTML .X}}`, free.basic's
  *    BodyHtml) is written in the Visual editor and sent as its render
  *    (free-body.ts); one named like a link (…Url, …Link, …Href) is an address;
- *  - what the mailer fills per recipient, Email and FullName, is not asked for.
+ *  - what the mailer fills per recipient, Email, FullName and the
+ *    unsubscribe link of a duyuru mail (the footer's UnsubscribeUrl), is not
+ *    asked for.
  *
  * Every field goes out, an empty one as "", so a subject never prints Go's
  * `<no value>` and an `{{if .X}}` sees an empty field as unset.
@@ -44,7 +46,7 @@ export type VariableField = Readonly<{
 export type FieldSource = Pick<MailTemplate, "subject" | "html_content" | "contract_required_variables" | "operator_required_variables">;
 
 /** Filled in by the mailer for each recipient (internal/mailer, renderAndQueue). */
-export const MAILER_PROVIDED: readonly string[] = ["Email", "FullName"];
+export const MAILER_PROVIDED: readonly string[] = ["Email", "FullName", "UnsubscribeUrl"];
 
 // A Map, not an object literal: a name comes from the template, and
 // "constructor" must not find what every object inherits.

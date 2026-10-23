@@ -24,16 +24,19 @@
       "CtaLabel",
       "CtaUrl",
       "Heading",
-      "Subject"
+      "Subject",
+      "UnsubscribeUrl"
     ],
     "actions": [
       "{{.CtaLabel}}",
       "{{.CtaUrl}}",
       "{{.Heading}}",
       "{{.Subject}}",
+      "{{.UnsubscribeUrl}}",
       "{{if .CtaLabel}}",
       "{{if .CtaUrl}}",
       "{{if .Heading}}",
+      "{{if .UnsubscribeUrl}}",
       "{{safeHTML .BodyHtml}}"
     ]
   },
@@ -375,6 +378,7 @@
       "LastName",
       "SchoolEmail",
       "SkyNumber",
+      "UnsubscribeUrl",
       "Username"
     ],
     "actions": [
@@ -383,7 +387,9 @@
       "{{.FirstName}}",
       "{{.LastName}}",
       "{{.SkyNumber}}",
+      "{{.UnsubscribeUrl}}",
       "{{.Username}}",
+      "{{if .UnsubscribeUrl}}",
       "{{if .Username}}",
       "{{if not .SchoolEmail}}"
     ]
@@ -415,6 +421,7 @@
       "FirstName",
       "OwnerTeam",
       "Serial",
+      "UnsubscribeUrl",
       "VerifyURL"
     ],
     "actions": [
@@ -422,7 +429,9 @@
       "{{.FirstName}}",
       "{{.OwnerTeam}}",
       "{{.Serial}}",
-      "{{.VerifyURL}}"
+      "{{.UnsubscribeUrl}}",
+      "{{.VerifyURL}}",
+      "{{if .UnsubscribeUrl}}"
     ]
   },
   "core.event-cancelled": {
@@ -449,16 +458,19 @@
       "CancelReason",
       "EventName",
       "EventStart",
-      "FirstName"
+      "FirstName",
+      "UnsubscribeUrl"
     ],
     "actions": [
       "{{.CancelReason}}",
       "{{.EventName}}",
       "{{.EventStart}}",
       "{{.FirstName}}",
+      "{{.UnsubscribeUrl}}",
       "{{if .CancelReason}}",
       "{{if .EventStart}}",
-      "{{if .FirstName}}"
+      "{{if .FirstName}}",
+      "{{if .UnsubscribeUrl}}"
     ]
   },
   "core.event-reinstated": {
@@ -482,14 +494,17 @@
     "referenced": [
       "EventName",
       "EventStart",
-      "FirstName"
+      "FirstName",
+      "UnsubscribeUrl"
     ],
     "actions": [
       "{{.EventName}}",
       "{{.EventStart}}",
       "{{.FirstName}}",
+      "{{.UnsubscribeUrl}}",
       "{{if .EventStart}}",
-      "{{if .FirstName}}"
+      "{{if .FirstName}}",
+      "{{if .UnsubscribeUrl}}"
     ]
   },
   "core.feedback-request": {
@@ -513,14 +528,17 @@
     "referenced": [
       "EventName",
       "FirstName",
-      "Items"
+      "Items",
+      "UnsubscribeUrl"
     ],
     "actions": [
       "{{.EventName}}",
       "{{.FirstName}}",
       "{{.Title}}",
       "{{.URL}}",
+      "{{.UnsubscribeUrl}}",
       "{{if .FirstName}}",
+      "{{if .UnsubscribeUrl}}",
       "{{range .Items}}"
     ]
   },
@@ -545,14 +563,17 @@
     "referenced": [
       "EventName",
       "FirstName",
-      "Items"
+      "Items",
+      "UnsubscribeUrl"
     ],
     "actions": [
       "{{.EventName}}",
       "{{.FirstName}}",
       "{{.Title}}",
       "{{.URL}}",
+      "{{.UnsubscribeUrl}}",
       "{{if .FirstName}}",
+      "{{if .UnsubscribeUrl}}",
       "{{range .Items}}"
     ]
   },
@@ -729,6 +750,7 @@
       "OwnerTeam",
       "TicketCode",
       "TicketQrUrl",
+      "UnsubscribeUrl",
       "Venue"
     ],
     "actions": [
@@ -738,12 +760,14 @@
       "{{.OwnerTeam}}",
       "{{.TicketCode}}",
       "{{.TicketQrUrl}}",
+      "{{.UnsubscribeUrl}}",
       "{{.Venue}}",
       "{{if .EventDate}}",
       "{{if .EventUrl}}",
       "{{if .OwnerTeam}}",
       "{{if .TicketCode}}",
       "{{if .TicketQrUrl}}",
+      "{{if .UnsubscribeUrl}}",
       "{{if .Venue}}"
     ]
   },
@@ -774,6 +798,7 @@
       "MapUrl",
       "StartsAt",
       "TicketQrUrl",
+      "UnsubscribeUrl",
       "Venue"
     ],
     "actions": [
@@ -781,9 +806,11 @@
       "{{.MapUrl}}",
       "{{.StartsAt}}",
       "{{.TicketQrUrl}}",
+      "{{.UnsubscribeUrl}}",
       "{{.Venue}}",
       "{{if .MapUrl}}",
-      "{{if .TicketQrUrl}}"
+      "{{if .TicketQrUrl}}",
+      "{{if .UnsubscribeUrl}}"
     ]
   },
   "event.updated": {
@@ -811,7 +838,8 @@
       "EventName",
       "EventUrl",
       "NewStartsAt",
-      "NewVenue"
+      "NewVenue",
+      "UnsubscribeUrl"
     ],
     "actions": [
       "{{.ChangeSummary}}",
@@ -819,10 +847,12 @@
       "{{.EventUrl}}",
       "{{.NewStartsAt}}",
       "{{.NewVenue}}",
+      "{{.UnsubscribeUrl}}",
       "{{if .ChangeSummary}}",
       "{{if .EventUrl}}",
       "{{if .NewStartsAt}}",
-      "{{if .NewVenue}}"
+      "{{if .NewVenue}}",
+      "{{if .UnsubscribeUrl}}"
     ]
   },
   "mail.approval-requested": {
@@ -856,7 +886,8 @@
       "PreviewUrl",
       "RecipientCount",
       "RequesterName",
-      "TemplateName"
+      "TemplateName",
+      "UnsubscribeUrl"
     ],
     "actions": [
       "{{.ApproveUrl}}",
@@ -865,9 +896,11 @@
       "{{.RecipientCount}}",
       "{{.RequesterName}}",
       "{{.TemplateName}}",
+      "{{.UnsubscribeUrl}}",
       "{{else if eq .AudienceKind `people`}}",
       "{{else if eq .AudienceKind `single`}}",
       "{{if .PreviewUrl}}",
+      "{{if .UnsubscribeUrl}}",
       "{{if eq .AudienceKind `mailing_list`}}",
       "{{if eq .AudienceKind `people`}}"
     ]
@@ -909,7 +942,8 @@
       "DecisionNote",
       "RecipientCount",
       "RequestUrl",
-      "TemplateName"
+      "TemplateName",
+      "UnsubscribeUrl"
     ],
     "actions": [
       "{{.AudienceName}}",
@@ -920,6 +954,7 @@
       "{{.RecipientCount}}",
       "{{.RequestUrl}}",
       "{{.TemplateName}}",
+      "{{.UnsubscribeUrl}}",
       "{{else if eq .AudienceKind `people`}}",
       "{{else if eq .AudienceKind `single`}}",
       "{{else if eq .Decision `declined`}}",
@@ -930,6 +965,7 @@
       "{{if .DecisionNote}}",
       "{{if .RecipientCount}}",
       "{{if .RequestUrl}}",
+      "{{if .UnsubscribeUrl}}",
       "{{if eq .AudienceKind `mailing_list`}}",
       "{{if eq .AudienceKind `people`}}",
       "{{if eq .Decision `approved`}}",
@@ -964,7 +1000,8 @@
       "TaskId",
       "TaskUrl",
       "TemplateName",
-      "TotalCount"
+      "TotalCount",
+      "UnsubscribeUrl"
     ],
     "actions": [
       "{{.FailedCount}}",
@@ -973,8 +1010,10 @@
       "{{.TaskUrl}}",
       "{{.TemplateName}}",
       "{{.TotalCount}}",
+      "{{.UnsubscribeUrl}}",
       "{{if .FirstError}}",
-      "{{if .TaskUrl}}"
+      "{{if .TaskUrl}}",
+      "{{if .UnsubscribeUrl}}"
     ]
   },
   "club.team-membership": {
@@ -1185,6 +1224,7 @@
       "status"
     ],
     "referenced": [
+      "UnsubscribeUrl",
       "firstName",
       "formTitle",
       "linkedFormId",
@@ -1198,6 +1238,7 @@
     "actions": [
       "{{$next := or .nextFormId .linkedFormId}}",
       "{{$next}}",
+      "{{.UnsubscribeUrl}}",
       "{{.firstName}}",
       "{{.formTitle}}",
       "{{.questionCount}}",
@@ -1208,6 +1249,7 @@
       "{{else if eq .status `reopened`}}",
       "{{else if eq .status `returned`}}",
       "{{if $next}}",
+      "{{if .UnsubscribeUrl}}",
       "{{if .firstName}}",
       "{{if .questionCount}}",
       "{{if .reviewNote}}",
@@ -1251,6 +1293,7 @@
       "recipientName"
     ],
     "referenced": [
+      "UnsubscribeUrl",
       "deadlineAt",
       "duration",
       "firstName",
@@ -1262,6 +1305,7 @@
       "recipientName"
     ],
     "actions": [
+      "{{.UnsubscribeUrl}}",
       "{{.deadlineAt}}",
       "{{.duration}}",
       "{{.firstName}}",
@@ -1276,6 +1320,7 @@
       "{{else if eq .kind `expiredEmpty`}}",
       "{{else if eq .kind `expired`}}",
       "{{else if eq .kind `extended`}}",
+      "{{if .UnsubscribeUrl}}",
       "{{if .deadlineAt}}",
       "{{if .duration}}",
       "{{if .firstName}}",

@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { templates } from "../../../emails";
 import type { Brand } from "../../../emails/theme";
-import { renderComponent } from ".";
+import { fillSampleValues, renderComponent } from ".";
 
 const BRAND_OF: Record<string, Brand> = {
   "free.basic": "skylab",
@@ -115,6 +115,44 @@ describe("the footer's communication preferences link", () => {
       assert.equal(linked, shown, `${meta.key}: the HTML link`);
       assert.equal(rendered.plainText.includes("İletişim tercihleri"), shown, `${meta.key}: the plain text`);
       assert.equal(rendered.plainText.includes(PREFERENCES), shown, `${meta.key}: the plain text's address`);
+    });
+  }
+});
+
+/**
+ * The footer's "Abonelikten çık" (abonelik-cikisi 05; ADR 0072): SkyMail
+ * gives a mail of the duyuru stream the recipient's own unsubscribe link as
+ * .UnsubscribeUrl, and no other mail any. Every footer but the account mails'
+ * shows it, before "İletişim tercihleri", only when it is set: an empty one
+ * leaves the footer as it was.
+ */
+const UNSUBSCRIBE = "https://mail.yildizskylab.com/api/skymail/u/ornek";
+
+describe("the footer's unsubscribe link", () => {
+  for (const { meta, Component } of templates) {
+    const shown = meta.brand !== "account";
+    it(`${meta.key} ${shown ? "links the unsubscribe link when it is set" : "has no unsubscribe link"}`, async () => {
+      const rendered = await renderComponent(Component);
+      assert.ok(rendered.ok);
+      assert.equal(rendered.variables.includes("UnsubscribeUrl"), shown, `${meta.key}: reads .UnsubscribeUrl`);
+
+      const set = { ...meta.sample, UnsubscribeUrl: UNSUBSCRIBE };
+      const html = fillSampleValues(rendered.html, set);
+      const text = fillSampleValues(rendered.plainText, set, { as: "text" });
+      const linked = new RegExp(
+        `<a[^>]*href="${UNSUBSCRIBE}"[^>]*>\\s*Abonelikten çık\\s*</a[\\s\\S]*?<a[^>]*href="${PREFERENCES}"[^>]*>\\s*İletişim tercihleri`,
+      ).test(html);
+      assert.equal(linked, shown, `${meta.key}: the HTML link, before the preferences`);
+      assert.equal(text.includes(`Abonelikten çık ${UNSUBSCRIBE} · İletişim tercihleri`), shown, `${meta.key}: the plain text`);
+
+      const empty = fillSampleValues(rendered.html, meta.sample);
+      const emptyText = fillSampleValues(rendered.plainText, meta.sample, { as: "text" });
+      assert.ok(!empty.includes("Abonelikten çık") && !emptyText.includes("Abonelikten çık"), `${meta.key}: nothing when empty`);
+      assert.ok(!empty.includes("UnsubscribeUrl") && !emptyText.includes("UnsubscribeUrl"), `${meta.key}: no action left`);
+      if (shown) {
+        assert.match(empty, new RegExp(`KVKK metni</a\\s*>\\s*·\\s*(<!-- -->)?<a[^>]*href="${PREFERENCES}"`), `${meta.key}: the footer as before`);
+        assert.ok(emptyText.includes(`kvkk-metni.pdf · İletişim tercihleri ${PREFERENCES}`), `${meta.key}: the plain footer as before`);
+      }
     });
   }
 });

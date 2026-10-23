@@ -35,6 +35,7 @@
  */
 import { Body, Head, Hr, Html, Img, Link, Preview } from "@react-email/components";
 import * as React from "react";
+import { end, ifSet, v } from "./go";
 
 /** Forms' palette: the light theme, inline. */
 const ink = {
@@ -121,6 +122,13 @@ const KVKK = "https://yildizskylab.com/kvkk-metni.pdf";
  * shows a way to its preferences, and account mails go whatever they say.
  */
 const PREFERENCES = "https://my.yildizskylab.com/communication-preferences";
+/**
+ * The recipient's own unsubscribe link, which SkyMail passes to a mail of the
+ * duyuru stream when the row has one (ADR 0072; abonelik-cikisi 05). Account
+ * and transactional mails get none, so the footer shows the link only when
+ * it is set. Not a Required variable: an empty one is the usual case.
+ */
+const UNSUBSCRIBE_URL = "UnsubscribeUrl";
 
 // Comments inside this string ship in every message, so the reasoning lives out
 // here instead.
@@ -330,6 +338,12 @@ function Footer({ brand, reason }: { brand: Brand; reason: React.ReactNode }) {
         {brand === "account" ? null : (
           <>
             {"  ·  "}
+            {ifSet(UNSUBSCRIBE_URL)}
+            <a href={v(UNSUBSCRIBE_URL)} className="t-muted" style={quiet}>
+              Abonelikten çık
+            </a>
+            {"  ·  "}
+            {end}
             <a href={PREFERENCES} className="t-muted" style={quiet}>
               İletişim tercihleri
             </a>

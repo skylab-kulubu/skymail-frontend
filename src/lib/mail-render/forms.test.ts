@@ -41,7 +41,7 @@ describe("the Forms mails", () => {
       assert.equal(meta.brand, "forms");
       assert.deepEqual([...meta.variables].sort(), [...variables].sort());
       assert.deepEqual(Object.keys(meta.sample).sort(), [...variables].sort());
-      const referenced = [...referencedVariables(html)].filter((name) => name !== "Email" && name !== "FullName");
+      const referenced = [...referencedVariables(html)].filter((name) => !["Email", "FullName", "UnsubscribeUrl"].includes(name));
       assert.deepEqual(referenced.sort(), [...variables].sort());
     });
   }
