@@ -177,6 +177,13 @@ describe("each Visual block is a house mail component", () => {
   }
 });
 
+/**
+ * The Shell footer's unsubscribe link (abonelik-cikisi 05): the same in every
+ * Visual mail, not the document's, so these checks read the mail without it.
+ */
+const withoutFooterLink = (text: string) => text.replace(/\{\{if \.UnsubscribeUrl\}\}[\s\S]*?\{\{end\}\}/, "");
+const documentVariables = (variables: readonly string[]) => variables.filter((name) => name !== "UnsubscribeUrl");
+
 describe("a Visual document rendered", () => {
   it("keeps each Go action it writes, byte for byte, in both bodies", async () => {
     const { html, plainText } = await renderVisual(EVERY_BLOCK);
@@ -186,7 +193,7 @@ describe("a Visual document rendered", () => {
       assert.ok(plainText.includes(action), `düz metinde ${action} yok: ${plainText}`);
     }
     assert.ok(html.includes('href="{{.TicketUrl}}"'));
-    assert.deepEqual(blockBalance(html), { opens: 3, ends: 3 });
+    assert.deepEqual(blockBalance(withoutFooterLink(html)), { opens: 3, ends: 3 });
   });
 
   it("keeps an action whole even when its variable's name is as long as the mailer allows", async () => {
@@ -211,7 +218,7 @@ describe("a Visual document rendered", () => {
   it("references the variables the document uses, as the server's reading of the body counts them", async () => {
     const rendered = await renderVisual(EVERY_BLOCK);
 
-    assert.deepEqual(rendered.variables, visualDocumentVariables(EVERY_BLOCK));
+    assert.deepEqual(documentVariables(rendered.variables), visualDocumentVariables(EVERY_BLOCK));
     assert.deepEqual(rendered.variables, referencedVariables(rendered.html));
     assert.deepEqual(referencedVariables(rendered.plainText), rendered.variables);
   });
@@ -323,8 +330,8 @@ describe("a Visual document rendered", () => {
       const rendered = await renderVisual(documentOf(blocks));
 
       for (const [body, text] of [
-        ["HTML", rendered.html],
-        ["düz metin", rendered.plainText],
+        ["HTML", withoutFooterLink(rendered.html)],
+        ["düz metin", withoutFooterLink(rendered.plainText)],
         ["önizleme satırı", previewLineOf(rendered.html)],
       ]) {
         const actions = findActions(text)
@@ -340,7 +347,7 @@ describe("a Visual document rendered", () => {
         assert.ok(!text.includes("{{{"), `${body}'de üç süslü parantez: ${text}`);
       }
       const variables = meant.flatMap((action) => referencedVariables(action));
-      assert.deepEqual(rendered.variables, [...new Set(variables)].sort());
+      assert.deepEqual(documentVariables(rendered.variables), [...new Set(variables)].sort());
       assert.deepEqual(referencedVariables(rendered.plainText), rendered.variables);
     });
   }
@@ -371,7 +378,7 @@ describe("a Visual document rendered", () => {
 
       assert.ok(line.length <= 150, `${line.length} karakter`);
       assert.ok(!/[{}]/.test(outside), `önizleme satırında yarım aksiyon: ${line}`);
-      assert.deepEqual(blockBalance(html), { opens: 0, ends: 0 });
+      assert.deepEqual(blockBalance(withoutFooterLink(html)), { opens: 0, ends: 0 });
     });
   }
 
