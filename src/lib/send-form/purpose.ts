@@ -80,8 +80,8 @@ export const KIND_OPTIONS = [
 
 export const TRANSACTIONAL_STATEMENT =
   "Bu posta alıcının kendi başvurusu ya da işlemi hakkında (yer veya saat değişikliği, eksik belge, sonuç). Duyuru ya da davet değil.";
-/** The same words as duyuru-haber 08's send from a news item. */
-export const COMMERCIAL_STATEMENT = "Bu postada sponsor tanıtımı, ücretli bilet, şirket iş ilanı ya da çekiliş yok.";
+/** KVKK notice s6 §5.10: a short sponsor thanks or logo is not promotion. The same words as duyuru-haber 08's send from a news item. */
+export const COMMERCIAL_STATEMENT = "Postanın asıl amacı tanıtım değildir. Kısa sponsor teşekkürü ve logo serbesttir.";
 
 /** The API's refusals of a send's purpose or category (skymail-backend #99; category_unknown: ticket 09); api/errors.ts words each. */
 export const PURPOSE_REFUSALS: ReadonlySet<string> = new Set([
