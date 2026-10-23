@@ -38,7 +38,7 @@ declare module "next-auth/jwt" {
   interface JWT extends SessionToken {}
 }
 
-export const { handlers, auth, signIn, signOut } = NextAuth(() => {
+export const { handlers, auth, signIn, signOut, unstable_update: updateSession } = NextAuth(() => {
   const { issuer, clientId } = keycloakSettings();
 
   return {
@@ -68,9 +68,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth(() => {
         if (session?.error) login.searchParams.set("error", "SessionExpired");
         return NextResponse.redirect(login);
       },
-      async jwt({ token, account, profile }) {
+      /**
+       * An update (the refreshRoles action) refreshes the token now, whatever
+       * time it has left, so a role granted since it was issued shows at once.
+       * What the update sends is ignored: the cookie only takes what Keycloak
+       * says.
+       */
+      async jwt({ token, account, profile, trigger }) {
         if (account) return tokenFromSignIn(account, { clientId, profile: profile ?? {} });
-        return refreshIfExpiring(token, { issuer, clientId });
+        return refreshIfExpiring(token, { issuer, clientId, force: trigger === "update" });
       },
       // What reaches the browser: never the refresh or ID token.
       async session({ session, token }) {

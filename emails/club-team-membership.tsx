@@ -74,6 +74,10 @@ export default function ClubTeamMembership() {
         {end}
       </Paragraph>
 
+      {added}
+      <Paragraph>Yeni yetkilerin en geç 5 dakika içinde gelir; açık sayfaları yenile.</Paragraph>
+      {end}
+
       <Rows>
         <RowItem label="Takım">{v("TeamName")}</RowItem>
         <RowItem label="Geçerlilik">{v("EffectiveAt")}</RowItem>
