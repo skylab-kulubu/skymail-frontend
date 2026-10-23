@@ -114,6 +114,13 @@ const LOGO_LILAC = `${ASSETS}/skylab-lilac.png`;
 
 const REPORT = "mailto:info@yildizskylab.com?subject=SKY%20LAB%20-%20Sorun%20Bildirimi";
 const KVKK = "https://yildizskylab.com/kvkk-metni.pdf";
+/**
+ * The Account center's communication preferences (core keeps them): which
+ * club and team announcements reach the reader. Every footer but the account
+ * mails' carries it (skymail-backend bounce ticket 11): a mail to many always
+ * shows a way to its preferences, and account mails go whatever they say.
+ */
+const PREFERENCES = "https://my.yildizskylab.com/communication-preferences";
 
 // Comments inside this string ship in every message, so the reasoning lives out
 // here instead.
@@ -320,6 +327,14 @@ function Footer({ brand, reason }: { brand: Brand; reason: React.ReactNode }) {
         <a href={KVKK} className="t-muted" style={quiet}>
           KVKK metni
         </a>
+        {brand === "account" ? null : (
+          <>
+            {"  ·  "}
+            <a href={PREFERENCES} className="t-muted" style={quiet}>
+              İletişim tercihleri
+            </a>
+          </>
+        )}
       </p>
       <div style={{ marginTop: "24px" }}>
         {credit ? <CreditLine credit={credit} /> : null}

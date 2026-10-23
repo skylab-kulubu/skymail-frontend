@@ -11,8 +11,15 @@
  * that verified primary e-mail (the backend looks it up when the send is
  * queued); an internal list's addresses are not looked up (no_account). A
  * Forms send is not offered the box. The box starts unticked.
+ *
+ * While SkyMail tracks every send a person makes (`SKYMAIL_TRACKING_OPERATOR`,
+ * summary `tracking_always`; Yusuf 2026-10-21: no box, no opting out per
+ * send) the form shows no box: every list and people send asks for tracking
+ * and the backend tracks it whatever the template (a sensitive one with the
+ * open pixel only). A Forms send is still not tracked.
  */
 import type { ApiClient } from "../api/client";
+import { ApiError } from "../api/errors";
 import { formatCount, type SendSummary } from "../sends";
 import type { MailTemplate } from "../templates";
 import type { ListRow } from "../mailing-lists";
@@ -28,10 +35,44 @@ export function trackingAvailable(summary: Pick<SendSummary, "tracking_available
   return summary.tracking_available === true;
 }
 
-/** Whether SkyMail's tracking is on, from the smallest summary (a day, a send). */
-export async function fetchTrackingAvailable(api: ApiClient, signal?: AbortSignal): Promise<boolean> {
-  const summary = await api.get<SendSummary>("/mail_tasks/summary", { query: { days: 1, recent: 1 }, signal });
-  return trackingAvailable(summary);
+/** Whether SkyMail tracks every send a person makes: only a `true` beside tracking on does; a missing field (an older backend) does not. */
+export function trackingAlways(summary: Pick<SendSummary, "tracking_available" | "tracking_always">): boolean {
+  return trackingAvailable(summary) && summary.tracking_always === true;
+}
+
+/** SkyMail's tracking as the send form reads it: on (the box may be offered), and always (no box, every send tracked). */
+export type TrackingMode = Readonly<{ available: boolean; always: boolean }>;
+
+/** What the form assumes while the summary loads, fails or may not be read: no box, nothing asked. */
+export const TRACKING_UNKNOWN: TrackingMode = { available: false, always: false };
+
+/**
+ * What a backend before `GET /mail_tasks/tracking-mode` answers it: the path
+ * falls to `GET /mail_tasks/:id`, which refuses one without mails:read (403)
+ * and fails the id as a server error (500) for one with it; 404 in case.
+ */
+const BEFORE_TRACKING_MODE: ReadonlySet<number> = new Set([403, 404, 500]);
+
+/**
+ * SkyMail's tracking. One who may read the summary (mails:read) reads it from
+ * the smallest summary (a day, a send), which every backend answers and a new
+ * one says `tracking_always` in. Anyone else asks `GET /mail_tasks/tracking-mode`,
+ * which anyone who may use SkyMail reads (a setting, not a send: someone who
+ * only submits for approval sees it too); a backend before it answers 403,
+ * 404 or 500, and then the form knows nothing.
+ */
+export async function fetchTrackingMode(api: ApiClient, { canReadSummary, signal }: { canReadSummary: boolean; signal?: AbortSignal }): Promise<TrackingMode> {
+  if (canReadSummary) {
+    const summary = await api.get<SendSummary>("/mail_tasks/summary", { query: { days: 1, recent: 1 }, signal });
+    return { available: trackingAvailable(summary), always: trackingAlways(summary) };
+  }
+  try {
+    const mode = await api.get<Pick<SendSummary, "tracking_available" | "tracking_always">>("/mail_tasks/tracking-mode", { signal });
+    return { available: trackingAvailable(mode), always: trackingAlways(mode) };
+  } catch (error) {
+    if (error instanceof ApiError && BEFORE_TRACKING_MODE.has(error.status)) return TRACKING_UNKNOWN;
+    throw error;
+  }
 }
 
 /** A template's sends may be tracked: neither a System template nor sensitive (skymail-backend GetTemplateTrackingExclusion). */
@@ -50,30 +91,52 @@ export function templateTrackable(template: TrackableTemplate, audience: Trackin
   return audience === "list" || template.content_sensitive === false;
 }
 
-/** Whether the form offers the tracking box for this send. */
+/** Whether the form offers the tracking box for this send: never while every send is tracked anyway. */
 export function trackingOffered({
   available,
+  always = false,
   audience,
   template,
 }: {
   available: boolean;
+  always?: boolean;
   audience: "list" | "people" | "form";
   template: TrackableTemplate | null;
 }): boolean {
-  return available && audience !== "form" && template !== null && templateTrackable(template, audience);
+  return available && !always && audience !== "form" && template !== null && templateTrackable(template, audience);
+}
+
+/**
+ * Whether the send asks for tracking: a list or people send while SkyMail
+ * tracks every one, whatever its template and with no box; otherwise only
+ * when the box is offered and ticked. A Forms send never asks.
+ */
+export function trackingAsked({
+  mode,
+  audience,
+  template,
+  ticked,
+}: {
+  mode: TrackingMode;
+  audience: "list" | "people" | "form";
+  template: TrackableTemplate | null;
+  ticked: boolean;
+}): boolean {
+  if (audience === "form") return false;
+  if (mode.available && mode.always) return true;
+  return ticked && trackingOffered({ available: mode.available, audience, template });
 }
 
 /**
  * How many of a tracked send's recipients have no account, and so are not
  * tracked, as far as the form knows before it goes: every member of an
  * internal list (null while its size is unknown), none of a Keycloak group's;
- * of people typed in it cannot know — the backend finds their accounts when
- * the send is queued — so null.
+ * of people typed in, and of a Forms source's respondents, it cannot know —
+ * the backend finds their accounts when the send is queued — so null.
  */
 export function untrackedCount(plan: SendPlan, list: Pick<ListRow, "external"> | null, size: number | null): number | null {
-  if (plan.kind === "people") return null;
   if (plan.kind === "list") return list?.external ? 0 : size;
-  return 0;
+  return null;
 }
 
 /**

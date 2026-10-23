@@ -3,8 +3,8 @@
  * document, so it can be edited again in the editor it was written in: an
  * approver's edit of a submitted send, a submitter's resubmission (ticket
  * 20). free-body.ts wrote it, so it is a handful of elements with no
- * attributes but a link's `href`; reading exactly those gives a document that
- * renders to the same markup, byte for byte.
+ * attributes but a link's `href` and its no-track mark; reading exactly
+ * those gives a document that renders to the same markup, byte for byte.
  *
  * A body written some other way is read as well as it can be — an element
  * the editor has no block or mark for keeps its text, an address the editor
@@ -23,6 +23,8 @@ export type FreeBodyRead = Readonly<{
 
 const TOKEN = /<!--[\s\S]*?-->|<(\/?)([a-zA-Z][a-zA-Z0-9]*)((?:\s[^>]*)?)\/?>|([^<]+|<)/g;
 const HREF = /\shref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/i;
+/** data-skymail-notrack as the server keeps it: bare, empty or "true" (sanitize.go). */
+const NO_TRACK = /\sdata-skymail-notrack(?:\s*=\s*(?:"(?:true)?"|'(?:true)?'|true))?(?![\w-]|\s*=)/i;
 
 // A Map, not an object literal: a name comes from the body, and "constructor"
 // must not find what every object inherits.
@@ -65,7 +67,7 @@ export function readFreeBody(html: string): FreeBodyRead {
   let open: Open | null = null;
   let bold = 0;
   let italic = 0;
-  const links: (string | null)[] = [];
+  const links: ({ href: string; notrack: boolean } | null)[] = [];
   let lost = false;
 
   const close = () => {
@@ -93,11 +95,11 @@ export function readFreeBody(html: string): FreeBodyRead {
   };
 
   const marks = (): VisualMark[] => {
-    const href = links.findLast((candidate) => candidate !== null) ?? null;
+    const link = links.findLast((candidate) => candidate !== null) ?? null;
     return [
       ...(bold > 0 ? [{ type: "bold" } as const] : []),
       ...(italic > 0 ? [{ type: "italic" } as const] : []),
-      ...(href !== null ? [{ type: "link", href } as const] : []),
+      ...(link !== null ? [link.notrack ? ({ type: "link", href: link.href, notrack: true } as const) : ({ type: "link", href: link.href } as const)] : []),
     ];
   };
 
@@ -173,7 +175,7 @@ export function readFreeBody(html: string): FreeBodyRead {
       const href = found ? decode(found[1] ?? found[2] ?? found[3] ?? "") : null;
       const usable = href !== null && linkAddressProblem(href) === null;
       if (!usable) lost = true;
-      links.push(usable ? href : null);
+      links.push(usable ? { href, notrack: NO_TRACK.test(attributes ?? "") } : null);
     } else {
       // An element the editor has no block or mark for: its text stays.
       if (whole) lost = true;

@@ -14,9 +14,10 @@
  * as its text. The editor's own blocks copy and paste within it by their data
  * attributes; an image from a web page does not become an image block.
  */
-import { Node, mergeAttributes, type Extensions } from "@tiptap/core";
+import { Extension, Node, mergeAttributes, type Extensions } from "@tiptap/core";
 import { ListItem } from "@tiptap/extension-list";
 import StarterKit from "@tiptap/starter-kit";
+import { NO_TRACK_ATTRIBUTE } from "@/lib/mail-render/free-body";
 import { linkAddressProblem, type VisualAllowance, type VisualBlockType } from "@/lib/mail-render/visual-document";
 
 /** A text attribute kept in a data-* attribute, so a block copied within the editor keeps it. */
@@ -209,6 +210,27 @@ export const BLOCK_NODES: Readonly<Record<Exclude<VisualBlockType, "paragraph" |
  * leaves out is not in the schema at all, so it can be neither typed nor
  * pasted in. A heading stays one line.
  */
+/**
+ * A link's notrack (VisualMark): kept as data-skymail-notrack, so a link
+ * copied within the editor, or pasted from a body that had it, keeps it.
+ * Only where the body may say it (VisualAllowance noTrackLinks).
+ */
+export const LinkNoTrack = Extension.create({
+  name: "linkNoTrack",
+  addGlobalAttributes: () => [
+    {
+      types: ["link"],
+      attributes: {
+        notrack: {
+          default: false,
+          parseHTML: (element: HTMLElement) => element.hasAttribute(NO_TRACK_ATTRIBUTE),
+          renderHTML: (attributes: Record<string, unknown>) => (attributes.notrack === true ? { [NO_TRACK_ATTRIBUTE]: "true" } : {}),
+        },
+      },
+    },
+  ],
+});
+
 export function visualSchemaExtensions(allowance: VisualAllowance): Extensions {
   const blocks = (Object.keys(BLOCK_NODES) as (keyof typeof BLOCK_NODES)[])
     .filter((type) => allowance.blocks.includes(type) && (type !== "conditional" || allowance.variables))
@@ -221,6 +243,7 @@ export function visualSchemaExtensions(allowance: VisualAllowance): Extensions {
     basics(allowance),
     ...(allowance.blocks.includes("list") ? [ListItemNode] : []),
     ...(allowance.variables ? [VariableNode] : []),
+    ...(allowance.noTrackLinks && allowance.marks.includes("link") ? [LinkNoTrack] : []),
     ...blocks,
   ];
 }

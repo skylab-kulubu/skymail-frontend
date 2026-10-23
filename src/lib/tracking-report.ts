@@ -61,8 +61,17 @@ export type TrackingSummary = Readonly<{
   tracking_available: boolean;
   tracking_requested: boolean;
   retained: boolean;
+  /**
+   * The send's counts tell of people (fewer than 10 tracked, or mail the
+   * system sends) and the caller may not read its people: report is null
+   * (skymail-backend GetTracking). Absent from an older backend.
+   */
+  withheld?: boolean;
   report: TrackingAggregate | null;
 }>;
+
+/** What the report says in place of counts withheld from the reader. */
+export const TRACKING_WITHHELD_TEXT = "Bu gönderimin sayıları kişiye dair bilgi sayılır; yalnız takip yetkisi olanlar görür.";
 
 export type TrackingRecipientLink = Readonly<{ link_id: number; clicks: number; last_clicked_at: string }>;
 
@@ -129,7 +138,10 @@ export function sendTracked(send: Pick<Send, "tracking">): boolean {
  * Whether the viewer may see the send's recipients one by one, as the API
  * decides it: `skymail:mails:tracking:read` (YK, DK, ADMIN), or the send's own
  * sender without any further role. Anyone else gets the counts only, and the
- * page never asks for the people.
+ * page never asks for the people. A mail the system sends (account and
+ * transaction mail, a Mail onayı notice whose sent_by is the person who
+ * acted) is read with the role only: the API refuses its sender (403), and
+ * the section keeps the counts alone.
  */
 export function mayReadTrackingRecipients(
   roles: readonly string[],

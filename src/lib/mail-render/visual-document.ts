@@ -26,7 +26,12 @@ import { isVariableName } from "./go-template";
 export const VISUAL_DOCUMENT_TYPE = "skymail.visual";
 export const VISUAL_DOCUMENT_VERSION = 1;
 
-export type VisualMark = { type: "bold" } | { type: "italic" } | { type: "link"; href: string };
+/**
+ * A link's `notrack`: SkyMail does not count its clicks and sends it as it
+ * is, never through its own address (skymail-backend data-skymail-notrack):
+ * for a personal or one-off link. Only on a body whose allowance says so.
+ */
+export type VisualMark = { type: "bold" } | { type: "italic" } | { type: "link"; href: string; notrack?: true };
 
 export type VisualInline =
   | { type: "text"; text: string; marks?: VisualMark[] }
@@ -81,6 +86,8 @@ export type VisualAllowance = Readonly<{
   variables: boolean;
   lineBreaks: boolean;
   subheadings: boolean;
+  /** A link may be marked not to be counted (VisualMark notrack). */
+  noTrackLinks?: boolean;
 }>;
 
 /** Every block the model knows, whatever a body may use of them. */
@@ -105,6 +112,7 @@ const WHOLE_MODEL: VisualAllowance = {
   variables: true,
   lineBreaks: true,
   subheadings: true,
+  noTrackLinks: true,
 };
 
 export { isVariableName };
@@ -263,13 +271,22 @@ class Reader {
       this.only(item, ["type"], at);
       return { type: item.type };
     }
-    this.only(item, ["type", "href"], at);
+    this.only(item, ["type", "href", "notrack"], at);
     const problem = typeof item.href === "string" ? linkAddressProblem(item.href) : "bağlantının adresi yok";
     if (problem) {
       this.problem(`${at}.href`, problem);
       return null;
     }
-    return { type: "link", href: item.href as string };
+    if (item.notrack === undefined) return { type: "link", href: item.href as string };
+    if (item.notrack !== true) {
+      this.problem(`${at}.notrack`, "yalnız true olabilir");
+      return null;
+    }
+    if (!this.allowance.noTrackLinks) {
+      this.problem(`${at}.notrack`, "bağlantıyı saymama burada kullanılamaz");
+      return null;
+    }
+    return { type: "link", href: item.href as string, notrack: true };
   }
 
   marks(value: unknown, path: string): VisualMark[] | null {

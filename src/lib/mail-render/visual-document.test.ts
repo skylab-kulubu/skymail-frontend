@@ -391,3 +391,26 @@ describe("a list, a line break, a quote and a sub-heading", () => {
     ]);
   });
 });
+
+// A link the sender said not to count (#95 review T7): only on a body whose
+// allowance says so (a free announcement's), only as true.
+describe("a link marked not to be counted", () => {
+  const marked = (notrack: unknown) =>
+    withBlocks([{ type: "paragraph", content: [{ type: "text", text: "a", marks: [{ type: "link", href: "https://skyl.app", notrack }] }] }]);
+
+  it("is read where the body may have it", () => {
+    const read = readVisualDocument(marked(true), { ...TEMPLATE_BODY_ALLOWANCE, noTrackLinks: true });
+    assert.ok(read.ok, read.ok ? "" : read.problems.join("\n"));
+    const [paragraph] = read.document.blocks;
+    assert.deepEqual(paragraph.type === "paragraph" && paragraph.content[0], { type: "text", text: "a", marks: [{ type: "link", href: "https://skyl.app", notrack: true }] });
+  });
+
+  it("is refused on a Mail template's body, and as anything but true", () => {
+    const template = readVisualDocument(marked(true), TEMPLATE_BODY_ALLOWANCE);
+    assert.ok(!template.ok && template.problems.some((problem) => /marks\[0\]\.notrack: bağlantıyı saymama burada kullanılamaz/.test(problem)));
+    for (const value of [false, "true", 1, null]) {
+      const read = readVisualDocument(marked(value), { ...TEMPLATE_BODY_ALLOWANCE, noTrackLinks: true });
+      assert.ok(!read.ok && read.problems.some((problem) => /notrack: yalnız true olabilir/.test(problem)), String(value));
+    }
+  });
+});
