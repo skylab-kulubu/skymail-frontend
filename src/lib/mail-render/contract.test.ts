@@ -38,6 +38,8 @@ const CONTRACTS: Record<string, string[]> = {
   "core.certificate": ["VerifyURL"],
   "core.event-cancelled": ["EventName"],
   "core.event-reinstated": ["EventName"],
+  "core.feedback-request": ["Items"],
+  "core.feedback-reminder": ["Items"],
   "account.security-alert": [],
   "account.primary-email-changed": [],
   "account.deletion-requested": [],

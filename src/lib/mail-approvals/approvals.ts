@@ -394,7 +394,7 @@ const NOTIFICATION_PROBLEM: ReadonlyMap<string, (notification: ApprovalNotificat
   ["enqueue_failed", () => "Bildirim maili kuyruğa yazılamadı; kimseye haber gitmedi."],
 ]);
 
-/** Who a request goes to, as tracking reads it; null for a Forms source, which is never tracked. */
+/** Who a request goes to, as tracking reads it; null for a Forms source, which has no box (tracked only while SkyMail tracks every send). */
 export function approvalTrackingAudience(kind: SendAudience["kind"]): TrackingAudience | null {
   if (kind === "mailing_list") return "list";
   return kind === "single" || kind === "people" ? "people" : null;
@@ -405,12 +405,21 @@ export function approvalTrackingAudience(kind: SendAudience["kind"]): TrackingAu
  * any: Açık for one that got it (skymail-backend keeps it only for a
  * trackable one); Kapalı for a request to a list or to people of a template
  * that may be tracked to them (`template` null when it cannot be read). Null
- * otherwise, and for a backend that does not say (before tracking).
+ * otherwise, and for a backend that does not say (before tracking). While
+ * SkyMail tracks every send (`always`, tracking_always), a request still
+ * waiting is tracked once it is approved, whatever it asked: Açık
+ * (onaylanınca).
  */
 export function approvalTracking(
-  approval: Pick<ApprovalItem, "tracking"> & Readonly<{ audience: Pick<SendAudience, "kind"> }>,
+  approval: Pick<ApprovalItem, "tracking"> &
+    Partial<Pick<ApprovalItem, "state" | "deadline_at">> &
+    Readonly<{ audience: Pick<SendAudience, "kind"> }>,
   template: TrackableTemplate | null,
-): "Açık" | "Kapalı" | null {
+  { always = false, now = new Date() }: { always?: boolean; now?: Date } = {},
+): "Açık" | "Açık (onaylanınca)" | "Kapalı" | null {
+  if (always && approval.state && approval.deadline_at && isWaiting(effectiveState({ state: approval.state, deadline_at: approval.deadline_at }, now))) {
+    return "Açık (onaylanınca)";
+  }
   if (approval.tracking === true) return "Açık";
   const audience = approvalTrackingAudience(approval.audience.kind);
   if (approval.tracking === false && audience && template && templateTrackable(template, audience)) return "Kapalı";

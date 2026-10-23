@@ -25,6 +25,8 @@ const BRAND_OF: Record<string, Brand> = {
   "core.certificate": "skylab",
   "core.event-cancelled": "skylab",
   "core.event-reinstated": "skylab",
+  "core.feedback-request": "skylab",
+  "core.feedback-reminder": "skylab",
   "account.security-alert": "account",
   "account.primary-email-changed": "account",
   "account.deletion-requested": "account",
@@ -92,6 +94,27 @@ describe("the product each template speaks for", () => {
       }
       assert.ok(!/SKY LAB (Mail )?by WEBLAB/.test(rendered.plainText), `${meta.key}: a club or SKY LAB Mail product line`);
       assert.ok(!rendered.plainText.includes("SKY LAB Hesap"), `${meta.key}: still names "SKY LAB Hesap"`);
+    });
+  }
+});
+
+/**
+ * The footer's link to the Account center's communication preferences
+ * (skymail-backend bounce ticket 11): every mail but the account mails, which
+ * go whatever the preferences say, beside "Sorun bildir" and the KVKK link.
+ */
+const PREFERENCES = "https://my.yildizskylab.com/communication-preferences";
+
+describe("the footer's communication preferences link", () => {
+  for (const { meta, Component } of templates) {
+    const shown = meta.brand !== "account";
+    it(`${meta.key} ${shown ? "links" : "does not link"} the communication preferences`, async () => {
+      const rendered = await renderComponent(Component);
+      assert.ok(rendered.ok);
+      const linked = new RegExp(`<a[^>]*href="${PREFERENCES}"[^>]*>\\s*İletişim tercihleri\\s*</a`).test(rendered.html);
+      assert.equal(linked, shown, `${meta.key}: the HTML link`);
+      assert.equal(rendered.plainText.includes("İletişim tercihleri"), shown, `${meta.key}: the plain text`);
+      assert.equal(rendered.plainText.includes(PREFERENCES), shown, `${meta.key}: the plain text's address`);
     });
   }
 });

@@ -18,6 +18,9 @@ export const elseBranch = "{{else}}";
 /** `{{else if eq .Name `value`}}` — the chain Go templates use in place of a switch. */
 export const elseIfEq = (name: string, value: string) => `{{else if eq .${name} \`${value}\`}}`;
 
+/** `{{range .Name}}`: what follows up to `end` repeats per element, with dot bound to the element. */
+export const rangeOver = (name: string) => `{{range .${name}}}`;
+
 export const end = "{{end}}";
 
 /** `{{if .X}}a{{else}}b{{end}}` as one string, for attributes and subjects. */

@@ -8,6 +8,8 @@
  * content may be shown. Forms sends never get it. The box starts unticked; a
  * send that asked for it but came back untracked says so, and the
  * confirmation says who will not be tracked for want of a known account.
+ * While SkyMail tracks every send a person makes (summary tracking_always;
+ * Yusuf 2026-10-21) there is no box and every list and people send asks.
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
@@ -18,10 +20,13 @@ import type { SendPlan } from "./send";
 import {
   TRACKING_LABEL,
   TRACKING_NOT_APPLIED,
-  fetchTrackingAvailable,
+  TRACKING_UNKNOWN,
+  fetchTrackingMode,
   peopleTrackingDropped,
   untrackedCount,
   untrackedRecipientsNote,
+  trackingAlways,
+  trackingAsked,
   trackingAvailable,
   trackingDropped,
   templateTrackable,
@@ -106,22 +111,109 @@ describe("whether tracking is on", () => {
     assert.equal(trackingAvailable({}), false);
   });
 
-  it("asks the smallest summary", async () => {
-    const { api, calls } = scriptedClient(json(200, { tracking_available: true }));
-    assert.equal(await fetchTrackingAvailable(api), true);
+  it("reads tracking_always only beside tracking on", () => {
+    assert.equal(trackingAlways({ tracking_available: true, tracking_always: true }), true);
+    assert.equal(trackingAlways({ tracking_available: true, tracking_always: false }), false);
+    assert.equal(trackingAlways({ tracking_available: true }), false);
+    assert.equal(trackingAlways({ tracking_available: false, tracking_always: true }), false);
+  });
+
+  it("asks the tracking mode, which needs no mails:read", async () => {
+    const { api, calls } = scriptedClient(json(200, { tracking_available: true, tracking_always: true }));
+    assert.deepEqual(await fetchTrackingMode(api, { canReadSummary: false }), { available: true, always: true });
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].url, `${TEST_BASE_URL}/mail_tasks/tracking-mode`);
+  });
+
+  it("reads the smallest summary for one who may read it, and never asks the tracking mode", async () => {
+    const { api, calls } = scriptedClient(json(200, { tracking_available: true, tracking_always: true }));
+    assert.deepEqual(await fetchTrackingMode(api, { canReadSummary: true }), { available: true, always: true });
+    assert.equal(calls.length, 1);
     assert.equal(calls[0].url, `${TEST_BASE_URL}/mail_tasks/summary?days=1&recent=1`);
   });
 
-  it("is off for a backend that does not say", async () => {
-    const { api } = scriptedClient(json(200, { sender_paused: false }));
-    assert.equal(await fetchTrackingAvailable(api), false);
+  // A backend before GET /mail_tasks/tracking-mode routes it as GET /mail_tasks/:id:
+  // 403 without mails:read, 500 (the id is no UUID) with it; never 404.
+  describe("on a backend before the tracking mode, with a frontend after it", () => {
+    const oldBackend = (canReadSummary: boolean) =>
+      canReadSummary
+        ? json(500, { code: "server.internal_server_error", message: "invalid UUID length: 13" })
+        : json(403, { code: "server.forbidden", message: "Forbidden" });
+
+    it("still offers the box to one with mails:read: the summary says tracking is on", async () => {
+      const { api, calls } = scriptedClient(json(200, { tracking_available: true }), oldBackend(true));
+      assert.deepEqual(await fetchTrackingMode(api, { canReadSummary: true }), { available: true, always: false });
+      assert.equal(calls.length, 1);
+      assert.equal(calls[0].url, `${TEST_BASE_URL}/mail_tasks/summary?days=1&recent=1`);
+    });
+
+    for (const [status, body] of [
+      [403, { code: "server.forbidden", message: "Forbidden" }],
+      [500, { code: "server.internal_server_error", message: "invalid UUID length: 13" }],
+      [404, { code: "server.not_found", message: "Not Found" }],
+    ] as const) {
+      it(`knows nothing, and fails nothing, for one without mails:read on ${status}`, async () => {
+        const { api, calls } = scriptedClient(json(status, body));
+        assert.deepEqual(await fetchTrackingMode(api, { canReadSummary: false }), TRACKING_UNKNOWN);
+        assert.equal(calls.length, 1);
+        assert.equal(calls[0].url, `${TEST_BASE_URL}/mail_tasks/tracking-mode`);
+      });
+    }
+
+    it("is what the old backend answers one without mails:read", async () => {
+      assert.deepEqual(await fetchTrackingMode(scriptedClient(oldBackend(false)).api, { canReadSummary: false }), TRACKING_UNKNOWN);
+    });
   });
 
-  it("passes a refused summary on as the API's error", async () => {
-    const { api } = scriptedClient(json(403, { code: "server.forbidden", message: "Forbidden" }));
-    const error = await fetchTrackingAvailable(api).catch((reason: unknown) => reason);
+  it("is off for a backend that does not say, and not always for one before tracking_always", async () => {
+    assert.deepEqual(await fetchTrackingMode(scriptedClient(json(200, {})).api, { canReadSummary: true }), TRACKING_UNKNOWN);
+    assert.deepEqual(await fetchTrackingMode(scriptedClient(json(200, {})).api, { canReadSummary: false }), TRACKING_UNKNOWN);
+    assert.deepEqual(await fetchTrackingMode(scriptedClient(json(200, { tracking_available: true })).api, { canReadSummary: true }), { available: true, always: false });
+  });
+
+  it("passes any other refusal on as the API's error", async () => {
+    const { api } = scriptedClient(json(401, { code: "server.unauthorized", message: "Unauthorized" }));
+    const error = await fetchTrackingMode(api, { canReadSummary: false }).catch((reason: unknown) => reason);
     assert.ok(error instanceof ApiError);
-    assert.equal(error.status, 403);
+    assert.equal(error.status, 401);
+    const summary = scriptedClient(json(500, { code: "server.internal_server_error", message: "boom" }));
+    const failed = await fetchTrackingMode(summary.api, { canReadSummary: true }).catch((reason: unknown) => reason);
+    assert.ok(failed instanceof ApiError);
+    assert.equal(failed.status, 500);
+  });
+});
+
+describe("while every send is tracked", () => {
+  const always = { available: true, always: true } as const;
+  const asked = (overrides: Partial<Parameters<typeof trackingAsked>[0]> = {}) =>
+    trackingAsked({ mode: always, audience: "list", template: template(), ticked: false, ...overrides });
+
+  it("offers no box", () => {
+    assert.equal(offered({ always: true }), false);
+    assert.equal(offered({ always: true, audience: "people", template: template({ content_sensitive: false }) }), false);
+  });
+
+  it("asks for tracking on every list and people send, whatever the template, with no box ticked", () => {
+    assert.equal(asked(), true);
+    assert.equal(asked({ audience: "people" }), true);
+    assert.equal(asked({ template: template({ system: true }) }), true);
+    assert.equal(asked({ template: template({ content_sensitive: true }) }), true);
+    assert.equal(asked({ template: template({ content_sensitive_locked: true }), audience: "people" }), true);
+  });
+
+  it("never asks for a Forms send", () => {
+    assert.equal(asked({ audience: "form" }), false);
+    assert.equal(asked({ audience: "form", ticked: true }), false);
+  });
+
+  it("asks as the box says otherwise, and never while tracking is off or unknown", () => {
+    const on = { available: true, always: false } as const;
+    assert.equal(asked({ mode: on, ticked: true }), true);
+    assert.equal(asked({ mode: on, ticked: false }), false);
+    assert.equal(asked({ mode: on, ticked: true, template: template({ system: true }) }), false);
+    assert.equal(asked({ mode: on, ticked: true, audience: "people" }), false);
+    assert.equal(asked({ mode: TRACKING_UNKNOWN, ticked: true }), false);
+    assert.equal(asked({ mode: { available: false, always: true }, ticked: true }), false);
   });
 });
 
@@ -155,8 +247,10 @@ describe("who a tracked send will not track", () => {
   const person = (email: string) => ({ template_id: "t", recipient_email: email, recipient_full_name: "", body_variables: {}, tracking: true });
   const people: SendPlan = { kind: "people", requests: [person("a@ornek.com"), person("b@ornek.com"), person("c@ornek.com")] };
   const listPlan: SendPlan = { kind: "list", request: { template_id: "t", mail_list_id: "l", body_variables: {}, tracking: true } };
-  it("cannot count people typed in: their accounts are found when the send is queued", () => {
+  it("cannot count people typed in, nor a Forms source's respondents: their accounts are found when the send is queued", () => {
     assert.equal(untrackedCount(people, null, null), null);
+    const form = { kind: "form", request: { template_id: "t", form_source_id: "f", body_variables: {} }, source: {} } as unknown as SendPlan;
+    assert.equal(untrackedCount(form, null, null), null);
     assert.equal(untrackedRecipientsNote(untrackedCount(people, null, null)), "Hesabı olmayan alıcılar takip edilmez.");
   });
   it("counts an internal list's members, unknown while its size is; a Keycloak group's members all have an account", () => {

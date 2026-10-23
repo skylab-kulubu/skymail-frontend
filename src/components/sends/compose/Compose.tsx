@@ -36,7 +36,15 @@ import {
   sendPlan,
   templateChoices,
 } from '@/lib/send-form/send';
-import { TRACKING_LABEL, fetchTrackingAvailable, peopleTrackingDropped, templateTrackable, trackingOffered } from '@/lib/send-form/tracking';
+import {
+  TRACKING_LABEL,
+  TRACKING_UNKNOWN,
+  fetchTrackingMode,
+  peopleTrackingDropped,
+  templateTrackable,
+  trackingAsked,
+  trackingOffered,
+} from '@/lib/send-form/tracking';
 import type { MailTemplate } from '@/lib/templates';
 import { AudiencePart, type Audience } from './AudiencePart';
 import { ConfirmSend, type Confirming } from './ConfirmSend';
@@ -122,17 +130,15 @@ export function Compose({
   const list = audience === 'list' ? (lists.find((candidate) => candidate.id === listId) ?? null) : null;
   const input = { values, rich };
   const formSource = prefill?.formSource ?? null;
-  // The summary needs mails:read; without it, or while it loads or fails, the box stays hidden.
+  // While the mode loads or fails, the box stays hidden. While SkyMail tracks every send
+  // (tracking_always) there is no box: every list and people send asks, and the confirmation says so.
   const trackingState = useApiLoad(
-    (loader, signal) => (access.detail ? fetchTrackingAvailable(loader, signal) : Promise.resolve(false)),
-    `tracking-available:${access.detail}`,
+    (loader, signal) => fetchTrackingMode(loader, { canReadSummary: access.detail, signal }),
+    `tracking-mode:${access.detail}`,
   );
-  const trackingShown = trackingOffered({
-    available: trackingState.status === 'success' && trackingState.data,
-    audience,
-    template,
-  });
-  const tracking = trackingShown && trackingTicked;
+  const trackingMode = trackingState.status === 'success' ? trackingState.data : TRACKING_UNKNOWN;
+  const trackingShown = trackingOffered({ ...trackingMode, audience, template });
+  const tracking = trackingAsked({ mode: trackingMode, audience, template, ticked: trackingTicked });
   // A template that may not be tracked to this audience clears the box: going back to one that may does not tick it again.
   const untrackable = template !== null && audience !== 'form' && !templateTrackable(template, audience);
   useEffect(() => {
@@ -235,6 +241,7 @@ export function Compose({
       warnings={check.warnings.lines}
       progress={sending.progress}
       submitting={submitting.busy}
+      trackingAlways={trackingMode.available && trackingMode.always}
       onCancel={() => setConfirming(null)}
       onConfirm={(chosen) => void confirm(chosen)}
     />

@@ -26,6 +26,7 @@ import { useApi, useApiLoad } from '@/lib/api/react';
 import { approvalViewer, viewerActions, type ViewerActions } from '@/lib/mail-approvals/actions';
 import { formatClubTime } from '@/lib/format';
 import { fetchTemplate } from '@/lib/templates';
+import { fetchTrackingMode } from '@/lib/send-form/tracking';
 import {
   APPROVAL_LIST_PATH,
   approvalAudience,
@@ -134,6 +135,12 @@ function ApprovalView({
     (client, signal) => (asksTemplate ? fetchTemplate(client, approval.template.id, signal) : Promise.resolve(null)),
     `tracking:${asksTemplate}:${approval.template.id}`,
   );
+  // While SkyMail tracks every send, a waiting request is tracked once approved, whatever it asked.
+  const canReadSummary = useCan(ROLE.mailsRead);
+  const trackingMode = useApiLoad(
+    (client, signal) => fetchTrackingMode(client, { canReadSummary, signal }),
+    `tracking-mode:${canReadSummary}`,
+  );
 
   const [started, setEditing] = useState<Editing | null>(null);
   // An edit shows only while the request can still be edited: one that moved on under it (reloaded after a refusal) drops it.
@@ -197,7 +204,9 @@ function ApprovalView({
   }
 
   const audience = approvalAudience(approval, PEOPLE_NAMED);
-  const tracking = approvalTracking(approval, trackingTemplate.status === 'success' ? trackingTemplate.data : null);
+  const tracking = approvalTracking(approval, trackingTemplate.status === 'success' ? trackingTemplate.data : null, {
+    always: trackingMode.status === 'success' && trackingMode.data.available && trackingMode.data.always,
+  });
   const warnings = editing && edit?.ok ? fieldWarnings(fields.filter((field) => edit.changed.includes(field.name)), editing.current) : {};
 
   return (

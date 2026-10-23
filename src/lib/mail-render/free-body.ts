@@ -10,7 +10,8 @@
  * the Visual render (visual.tsx), which draws a whole mail. It writes only
  * elements the allow-list keeps: a heading as `h2` and a sub-heading as
  * `h3`, a paragraph as `p`, a list as `ul` or `ol`, a quote as `blockquote`,
- * a line break as `br`, bold, italic and links
+ * a line break as `br`, bold, italic and links, a link the sender marked
+ * not to be counted with `data-skymail-notrack="true"`
  * (free-body.test.ts holds its output to that list). The server still
  * sanitises; nothing here is a second gate.
  *
@@ -37,10 +38,17 @@ export const FREE_BODY_ALLOWANCE: VisualAllowance = {
   variables: false,
   lineBreaks: true,
   subheadings: true,
+  noTrackLinks: true,
 };
 
 /** The body's markup — empty when nothing in the document shows — or what keeps it from going out. */
 export type FreeBody = { ok: true; html: string } | { ok: false; problems: string[] };
+
+/**
+ * What marks a link SkyMail does not count: the one attribute beside href
+ * the server's allow-list keeps on `a`, empty or "true" (sanitize.go).
+ */
+export const NO_TRACK_ATTRIBUTE = "data-skymail-notrack";
 
 /** The schemes the server's allow-list keeps a link with (sanitize.go, AllowURLSchemes). */
 const SERVER_LINK_SCHEMES = ["http", "https", "mailto"];
@@ -83,7 +91,7 @@ export function renderFreeBody(document: VisualDocument): FreeBody {
     if (address) {
       const href = hrefFor(address.href);
       if (href === null) problems.push(`${path}: ${unkept(address.href)}`);
-      else content = `<a href="${escapeHtml(href)}">${content}</a>`;
+      else content = `<a href="${escapeHtml(href)}"${address.notrack ? ` ${NO_TRACK_ATTRIBUTE}="true"` : ""}>${content}</a>`;
     }
     if (marks.some((mark) => mark.type === "italic")) content = `<em>${content}</em>`;
     if (marks.some((mark) => mark.type === "bold")) content = `<strong>${content}</strong>`;
