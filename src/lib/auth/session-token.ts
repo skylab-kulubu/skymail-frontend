@@ -191,11 +191,17 @@ export type RefreshOptions = {
   now?: () => number;
   /** Defaults to one store for the whole server process. */
   store?: RefreshStore;
+  /**
+   * Refresh even while the access token has time left: the panel asks for
+   * this when a page says the viewer lacks a role (RoleGate), so a role
+   * granted minutes ago shows without waiting for the token to run out.
+   */
+  force?: boolean;
 };
 
 async function requestTokens(
   refreshToken: string,
-  { issuer, clientId, fetch, now }: Required<Omit<RefreshOptions, "store">>,
+  { issuer, clientId, fetch, now }: Required<Omit<RefreshOptions, "store" | "force">>,
 ): Promise<Issued | null> {
   try {
     // A public client authenticates with its client_id alone: no secret in the
@@ -217,9 +223,11 @@ async function requestTokens(
 }
 
 /**
- * Returns the token unchanged while it has time left, and otherwise trades the
- * refresh token for a new one (shared with every read that needs the same
- * trade, see RefreshStore).
+ * Returns the token unchanged while it has time left (unless `force`), and
+ * otherwise trades the refresh token for a new one (shared with every read
+ * that needs the same trade, see RefreshStore). The roles are read again from
+ * the new access token, so a role granted or taken in Keycloak reaches the
+ * panel with the next refresh.
  *
  * A refusal does not throw. While the access token is still valid the token
  * comes back unchanged — flagging it would log out someone whose token still
@@ -229,9 +237,9 @@ async function requestTokens(
  */
 export async function refreshIfExpiring(
   token: SessionToken,
-  { issuer, clientId, fetch = globalThis.fetch, now = Date.now, store = processStore }: RefreshOptions,
+  { issuer, clientId, fetch = globalThis.fetch, now = Date.now, store = processStore, force = false }: RefreshOptions,
 ): Promise<SessionToken> {
-  if (now() < token.expiresAt - EXPIRY_MARGIN_MS) return token;
+  if (!force && now() < token.expiresAt - EXPIRY_MARGIN_MS) return token;
 
   const issued = token.refreshToken
     ? await store.run(token.refreshToken, () => requestTokens(token.refreshToken!, { issuer, clientId, fetch, now }), now)

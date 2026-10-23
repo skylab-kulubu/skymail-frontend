@@ -1,7 +1,10 @@
 'use client';
 
-import { createContext, useContext, type ReactNode } from 'react';
+import { getSession } from 'next-auth/react';
+import { usePathname, useRouter } from 'next/navigation';
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { hasRole, type Role } from '@/lib/access';
+import { createRoleSync, sameRoles, type RoleSync } from '@/lib/auth/role-sync';
 import type { PublicConfig } from '@/lib/runtime-config';
 
 export type ConsoleUser = Readonly<{
@@ -15,15 +18,98 @@ type ConsoleContextValue = Readonly<{
   roles: readonly string[];
   user: ConsoleUser;
   config: PublicConfig;
+  /**
+   * Refreshes the token now and resolves to the roles held afterwards; at most
+   * once a minute (role-sync.ts). RoleGate asks before it says no.
+   */
+  confirmRoles: () => Promise<readonly string[]>;
 }>;
 
 const ConsoleContext = createContext<ConsoleContextValue | null>(null);
 
-/** What the server knew when it rendered the page: the signed-in person, their roles, the runtime config. */
+/** The session's roles as /api/auth/session gives them; null without a usable session. */
+async function sessionRoles(): Promise<readonly string[] | null> {
+  const session = await getSession();
+  return session && !session.error && Array.isArray(session.roles) ? session.roles : null;
+}
+
+/**
+ * Refreshes the token now and answers with its roles: the refreshRoles server
+ * action (src/lib/auth/actions.ts). The server layout hands it down, so this
+ * client module never imports the server-only auth code.
+ */
+export type RefreshRoles = () => Promise<readonly string[] | null>;
+
+/**
+ * Keeps `rendered` (the roles the server rendered with) in step with the
+ * session: checked when the tab is shown again and on every move to another
+ * page (role-sync.ts). A change is shown at once and the server parts are
+ * rendered again (router.refresh), e.g. the layout's "Erişimin yok" screen.
+ */
+export function useLiveRoles(
+  rendered: readonly string[],
+  refreshRoles: RefreshRoles,
+): readonly [readonly string[], RoleSync] {
+  const router = useRouter();
+  const pathname = usePathname();
+  const [roles, setRoles] = useState(rendered);
+  const [renderedBefore, setRenderedBefore] = useState(rendered);
+  // A new server render (router.refresh, a reload of the layout) brings the roles it read.
+  if (!sameRoles(renderedBefore, rendered)) {
+    setRenderedBefore(rendered);
+    setRoles(rendered);
+  }
+
+  const current = useRef(roles);
+  useEffect(() => {
+    current.current = roles;
+  }, [roles]);
+
+  const [sync] = useState(() =>
+    createRoleSync({
+      current: () => current.current,
+      read: sessionRoles,
+      refresh: refreshRoles,
+      apply: (next) => {
+        current.current = next;
+        setRoles(next);
+        router.refresh();
+      },
+    }),
+  );
+
+  useEffect(() => {
+    void sync.check();
+  }, [sync, pathname]);
+
+  useEffect(() => {
+    const shown = () => {
+      if (document.visibilityState !== 'hidden') void sync.check();
+    };
+    window.addEventListener('focus', shown);
+    document.addEventListener('visibilitychange', shown);
+    return () => {
+      window.removeEventListener('focus', shown);
+      document.removeEventListener('visibilitychange', shown);
+    };
+  }, [sync]);
+
+  return [roles, sync] as const;
+}
+
+/** The signed-in person, their roles (kept current, see useLiveRoles) and the runtime config. */
 export function ConsoleProvider({
   children,
-  ...value
-}: ConsoleContextValue & { children: ReactNode }) {
+  roles: rendered,
+  user,
+  config,
+  refreshRoles,
+}: Omit<ConsoleContextValue, 'confirmRoles'> & { refreshRoles: RefreshRoles; children: ReactNode }) {
+  const [roles, sync] = useLiveRoles(rendered, refreshRoles);
+  const value = useMemo(
+    () => ({ roles, user, config, confirmRoles: sync.confirm }),
+    [roles, user, config, sync],
+  );
   return <ConsoleContext.Provider value={value}>{children}</ConsoleContext.Provider>;
 }
 
