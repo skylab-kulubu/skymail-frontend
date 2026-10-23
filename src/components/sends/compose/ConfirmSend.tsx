@@ -8,6 +8,7 @@ import { formatCount } from '@/lib/sends';
 import { peopleSentApart, type PersonRow } from '@/lib/send-form/audience';
 import type { Retry, SendPlan } from '@/lib/send-form/send';
 import { untrackedCount, untrackedRecipientsNote } from '@/lib/send-form/tracking';
+import { purposeText, statementText, teamNames, type StoredPurpose } from '@/lib/send-form/purpose';
 import type { Progress } from './use-sending';
 import { Notice } from '@skylab-kulubu/skylcn-ui';
 
@@ -42,6 +43,7 @@ export function ConfirmSend({
   progress,
   submitting = false,
   trackingAlways = false,
+  teams = [],
   onCancel,
   onConfirm,
 }: {
@@ -57,6 +59,8 @@ export function ConfirmSend({
   submitting?: boolean;
   /** SkyMail tracks every send (tracking_always): a Forms source's too, which asks for nothing. */
   trackingAlways?: boolean;
+  /** The lists the form offers, for a team category's name. */
+  teams?: readonly ListRow[];
   onCancel: () => void;
   onConfirm: (confirming: Confirming) => void;
 }) {
@@ -86,6 +90,9 @@ export function ConfirmSend({
         ? plan.requests.some((request) => request.tracking === true)
         : trackingAlways);
   const untrackedNote = plan && tracked ? untrackedRecipientsNote(untrackedCount(plan, list, size)) : null;
+  const purposeOf: StoredPurpose | null = plan === null ? null : plan.kind === 'people' ? (plan.requests[0] ?? null) : plan.request;
+  const purpose = purposeOf ? purposeText(purposeOf, teamNames(teams)) : null;
+  const statement = purposeOf ? statementText(purposeOf) : null;
   return (
     <PanelDialog isOpen={confirming !== null} onClose={busy ? () => {} : onCancel} title={title}>
       {confirming?.kind === 'retryPeople' ? (
@@ -122,6 +129,13 @@ export function ConfirmSend({
                 <dd className="mt-1 max-h-32 overflow-y-auto text-xs text-muted-foreground">{people.map(({ name, email }) => name || email).join(', ')}</dd>
               ) : null}
             </div>
+            {purpose ? (
+              <div>
+                <dt className="text-xs text-subtle-foreground">Amaç</dt>
+                <dd className="text-foreground">{purpose}</dd>
+                {statement ? <dd className="mt-1 text-xs text-muted-foreground">Beyan: {statement}</dd> : null}
+              </div>
+            ) : null}
             {tracked ? (
               <div>
                 <dt className="text-xs text-subtle-foreground">Takip</dt>

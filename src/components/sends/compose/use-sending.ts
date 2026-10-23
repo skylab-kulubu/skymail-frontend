@@ -14,6 +14,7 @@ import { useApi } from '@/lib/api/react';
 import { flashNotice } from '@/lib/notice';
 import { sendHref } from '@/lib/sends';
 import {
+  categoryRefused,
   mergeOutcomes,
   sendFailure,
   sendToList,
@@ -39,7 +40,7 @@ export function useSending({ canSeeSends }: { canSeeSends: boolean }) {
   const api = useApi();
   const router = useRouter();
   const [progress, setProgress] = useState<Progress | null>(null);
-  /** Why the last send to a list did not open, or may not have. */
+  /** Why the last send to a list or a Forms source did not open, or may not have; a people send's refused category too. */
   const [listFailure, setListFailure] = useState<SendFailure | null>(null);
   /** A send to a list that may be open: the same one waits for a confirmed re-send. */
   const [uncertain, setUncertain] = useState<UncertainListSend | null>(null);
@@ -76,12 +77,16 @@ export function useSending({ canSeeSends }: { canSeeSends: boolean }) {
 
   async function toPeople(requests: readonly SingleSendRequest[], what: string) {
     setProgress({ done: 0, total: requests.length });
+    setListFailure(null);
     const outcomes = await sendToPeople(api, requests, {
       canSeeSends,
       onEach: (done) => setProgress({ done, total: requests.length }),
     });
     setProgress(null);
-    setPeople({ what, requests, outcomes });
+    // A refused category sent to nobody: the form stays, the refusal under the category.
+    const refused = categoryRefused(outcomes);
+    if (refused) setListFailure(refused);
+    else setPeople({ what, requests, outcomes });
   }
 
   async function toFormSource(request: FormSourceSendRequest, title: string, what: string) {

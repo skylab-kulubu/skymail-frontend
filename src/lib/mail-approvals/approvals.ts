@@ -31,6 +31,7 @@ import { pageRange, readPage, viewHref } from "../list-view";
 import { isErasedSubject, personLabel, recipientLabel, samePerson } from "../people";
 import { SEND_LIST_PATH, audienceLabel, type AudienceLabel, type SendAudience } from "../sends";
 import { templateTrackable, type TrackableTemplate, type TrackingAudience } from "../send-form/tracking";
+import type { StoredPurpose } from "../send-form/purpose";
 
 export const APPROVAL_PAGE_SIZE = 25;
 
@@ -120,7 +121,9 @@ export type ApprovalItem = Readonly<{
   last_event: ApprovalEvent | null;
   /** It asked for open and click tracking and may get it. Absent from a backend before tracking. */
   tracking?: boolean;
-}>;
+}> &
+  /** Its purpose, category and statements (send-form/purpose.ts); null or absent before the backend took them. */
+  StoredPurpose;
 
 /** The mail an action sent about itself. */
 export type ApprovalNotification = Readonly<{

@@ -30,7 +30,9 @@ describe("the welcome mail", () => {
     assert.deepEqual(meta.requiredVariables, []);
     assert.deepEqual([...meta.variables].sort(), [...CORE_SENDS].sort());
     assert.deepEqual(Object.keys(meta.sample).sort(), [...CORE_SENDS].sort());
-    assert.deepEqual([...referencedVariables(html)].sort(), [...CORE_SENDS].sort());
+    // Beside the footer's unsubscribe link, which the mailer fills.
+    const referenced = [...referencedVariables(html)].filter((name) => name !== "UnsubscribeUrl");
+    assert.deepEqual(referenced.sort(), [...CORE_SENDS].sort());
     assert.ok(!meta.subject.includes("{{"));
   });
 

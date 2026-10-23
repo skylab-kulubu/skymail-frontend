@@ -27,6 +27,8 @@ import { approvalViewer, viewerActions, type ViewerActions } from '@/lib/mail-ap
 import { formatClubTime } from '@/lib/format';
 import { fetchTemplate } from '@/lib/templates';
 import { fetchTrackingMode } from '@/lib/send-form/tracking';
+import { approvalPurposeText, categoryTeam, statementText } from '@/lib/send-form/purpose';
+import { fetchList } from '@/lib/mailing-lists';
 import {
   APPROVAL_LIST_PATH,
   approvalAudience,
@@ -142,6 +144,17 @@ function ApprovalView({
     `tracking-mode:${canReadSummary}`,
   );
 
+  // A team category names its group by id; the request's own group is named already, any other is read (skymail:lists:read).
+  const groupId = approval.audience.source === 'keycloak' ? approval.audience.mail_list_id?.toLowerCase() : null;
+  const canReadLists = useCan(ROLE.listsRead);
+  const otherTeam = canReadLists ? categoryTeam(approval.category, groupId) : null;
+  const team = useApiLoad(
+    (client, signal) => (otherTeam ? fetchList(client, otherTeam, signal) : Promise.resolve(null)),
+    `team:${otherTeam}`,
+  );
+  // Unread (no role, gone, an error): the id stays.
+  const teamName = team.status === 'success' && team.data ? team.data.name : null;
+
   const [started, setEditing] = useState<Editing | null>(null);
   // An edit shows only while the request can still be edited: one that moved on under it (reloaded after a refusal) drops it.
   const editing = started && actions.actions.includes('edit') ? started : null;
@@ -207,6 +220,15 @@ function ApprovalView({
   const tracking = approvalTracking(approval, trackingTemplate.status === 'success' ? trackingTemplate.data : null, {
     always: trackingMode.status === 'success' && trackingMode.data.available && trackingMode.data.always,
   });
+  // The approver reads the purpose, category and statement as submitted; a list or group request is a duyuru.
+  const purpose = approvalPurposeText(
+    { ...approval, audienceKind: approval.audience.kind },
+    {
+      available: trackingMode.status === 'success' && trackingMode.data.purpose,
+      team: (id) => (id.toLowerCase() === groupId ? approval.audience.name : id.toLowerCase() === otherTeam ? teamName : null),
+    },
+  );
+  const statement = statementText(approval);
   const warnings = editing && edit?.ok ? fieldWarnings(fields.filter((field) => edit.changed.includes(field.name)), editing.current) : {};
 
   return (
@@ -276,6 +298,12 @@ function ApprovalView({
             {approval.template.republished ? 'Sunulduktan sonra yeni sürümü yayımlandı' : 'Sunulduğu andaki yayımlanmış sürümü'}
           </span>
         </Fact>
+        {purpose ? (
+          <Fact term="Amaç">
+            <span className="block whitespace-normal">{purpose}</span>
+            {statement ? <span className="text-2xs block whitespace-normal text-subtle-foreground">Beyan: {statement}</span> : null}
+          </Fact>
+        ) : null}
         {tracking ? <Fact term="Takip">{tracking}</Fact> : null}
       </dl>
 

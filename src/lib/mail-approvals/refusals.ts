@@ -96,7 +96,8 @@ function invalidSubmission(error: ApiError): string | null {
 type RefusedAddress = Readonly<{ problem: "missing" }> | Readonly<{ problem: "invalid" }> | Readonly<{ problem: "duplicate"; first: string }>;
 
 /** A refused submission: in words, and — when it named people — what it found, by the address as sent. */
-export type SubmissionRefusal = ApprovalRefusal & Readonly<{ addresses: ReadonlyMap<string, RefusedAddress> | null }>;
+/** `code`: the API's, when the refusal names no row (the form puts a category's refusal under the category). */
+export type SubmissionRefusal = ApprovalRefusal & Readonly<{ addresses: ReadonlyMap<string, RefusedAddress> | null; code?: string }>;
 
 const address = (row: PersonRow) => row.email.trim();
 
@@ -107,7 +108,8 @@ const address = (row: PersonRow) => row.email.trim();
 export function submissionRefusal(thrown: unknown, action: "submit" | "resubmit", rows: readonly PersonRow[]): SubmissionRefusal {
   const sent = sentRowIndexes(rows).map((index) => rows[index]);
   const addresses = new Map<string, RefusedAddress>();
-  for (const entry of fieldErrors(asApiError(thrown))) {
+  const error = asApiError(thrown);
+  for (const entry of fieldErrors(error)) {
     const person = sent[recipientIndex(entry.field) ?? -1];
     if (!person) continue;
     const first = sent[recipientIndex(entry.params?.first) ?? -1];
@@ -120,7 +122,7 @@ export function submissionRefusal(thrown: unknown, action: "submit" | "resubmit"
           : { problem: "invalid" },
     );
   }
-  if (addresses.size === 0) return { ...approvalRefusal(thrown, action), addresses: null };
+  if (addresses.size === 0) return { ...approvalRefusal(thrown, action), addresses: null, ...(error.code ? { code: error.code } : {}) };
   return { text: "SkyMail bazı adresleri kabul etmedi: işaretli kişileri düzelt.", reload: false, addresses };
 }
 

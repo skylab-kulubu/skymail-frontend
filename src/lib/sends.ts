@@ -136,6 +136,8 @@ export type SendSummary = Readonly<{
   tracking_available?: boolean;
   /** True while `SKYMAIL_TRACKING_OPERATOR=on` too: every send a person makes is tracked and the form shows no box. Absent from a backend before it. */
   tracking_always?: boolean;
+  /** True while `SKYMAIL_MAIL_PURPOSE=on`: a send carries its purpose and category (send-form/purpose.ts). Absent from a backend before it. */
+  purpose_available?: boolean;
   send_counts: Readonly<Record<SendStatus, number>>;
   /** Oldest first, ending today; `date` is a calendar day in `time_zone` (`YYYY-MM-DD`). */
   daily_sent: ReadonlyArray<Readonly<{ date: string; sent: number }>>;

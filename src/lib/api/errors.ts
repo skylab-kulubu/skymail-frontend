@@ -90,6 +90,22 @@ const BY_CODE: ReadonlyMap<string, string> = new Map([
   ],
   ["mail_approval.not_submitter", "Bu işlemi yalnız isteği sunan yapabilir."],
   ["mail_approval.no_edit", "Düzenleme sunulan değerlerle aynı."],
+  // A send's purpose and category (abonelik-cikisi 03/04, skymail-backend #99; category_unknown and preference_unavailable: ticket 09).
+  ["mail_task.purpose_not_allowed", "Listeye ve Keycloak grubuna yalnız duyuru gönderilir."],
+  ["mail_task.transactional_statement_required", "Başvuruyla ilgili bilgi için beyanı işaretle."],
+  ["mail_task.commercial_content_not_allowed", "Ticari içerik beyanı işaretlenmeden gönderilmez."],
+  ["mail_task.category_not_allowed", "Başvuruyla ilgili bilgide kategori seçilmez."],
+  ["mail_task.category_required", "Duyuru için kategori seç."],
+  ["mail_task.category_invalid", "Kategori geçersiz. Kulüp genelini ya da bir ekip seç."],
+  ["mail_task.purpose_required", "Gönderim amacını seç."],
+  ["mail_task.purpose_invalid", "Gönderim amacı geçersiz."],
+  ["mail_task.category_unknown", "Bu grup bir ekip değil; kulüp genelini ya da bir ekip seç."],
+  ["mail_task.preference_unavailable", "İletişim tercihleri şu an okunamıyor. Birkaç dakika sonra yeniden dene."],
+  // The suppression list's unsubscribes (abonelik-cikisi 02/04, skymail-backend #98).
+  ["suppression.reason_required", "Gerekçe tek satır ve 10–500 karakter olmalı."],
+  ["suppression.reason_has_address", "Gerekçeye adres yazma."],
+  ["suppression.use_delete", "Bu kayıt kalıcı ret; geri alınmaz, kaldırılır."],
+  ["suppression.use_reactivate", "Bu kayıt abonelikten çıkış; kaldırılmaz, geri alınır."],
   [
     "template.invalid_variable_name",
     "Değişken adı geçersiz: harf ya da alt çizgiyle başlamalı; yalnız İngilizce harf, rakam ve alt çizgi içerebilir, en çok 64 karakter.",
