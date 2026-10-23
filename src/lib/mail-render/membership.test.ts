@@ -42,6 +42,24 @@ describe("the membership mails", () => {
     });
   }
 
+  // Roles reach the apps with the next token refresh, at most five minutes
+  // (ticket ekip-yetkileri 05): an addition says so, a removal does not.
+  const WAIT = "Yeni yetkilerin en geç 5 dakika içinde gelir; açık sayfaları yenile.";
+  const additions: Record<string, Record<string, string>> = {
+    "club.team-membership": { TeamName: "WEBLAB · Web Geliştirme", Action: "added", Role: "member", EffectiveAt: "22.10.2026", LeaderName: "" },
+    "club.role-membership": { GroupName: "YK · Yönetim Kurulu", Role: "board", Action: "added", EffectiveAt: "22.10.2026", ActorName: "" },
+    "club.group-membership": { GroupName: "ARGE · Ar-Ge", Action: "added", EffectiveAt: "22.10.2026", ActorName: "" },
+  };
+  for (const [key, sample] of Object.entries(additions)) {
+    it(`${key} says when new permissions arrive, only on an addition`, async () => {
+      const { html } = await rendered(key);
+      const added = text(fillSampleValues(html, sample));
+      const removed = text(fillSampleValues(html, { ...sample, Action: "removed" }));
+      assert.ok(added.includes(WAIT), added);
+      assert.ok(!removed.includes(WAIT), removed);
+    });
+  }
+
   // The heading never names the board or says a membership ended: the Group
   // may be a subgroup (/UYELER/YK/BASKAN), and the person may sit in another
   // management Group still. The root travels in the text only.

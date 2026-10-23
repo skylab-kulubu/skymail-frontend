@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { AccessDenied } from '@/components/auth/AccessDenied';
+import { AccessRecheck } from '@/components/auth/AccessRecheck';
 import { ConsoleShell } from '@/components/layout/ConsoleShell';
 import { hasAccess } from '@/lib/access';
 import { publicConfig } from '@/lib/runtime-config';
@@ -23,7 +24,12 @@ export default async function ConsoleLayout({ children }: Readonly<{ children: R
 
   const config = publicConfig();
   if (!hasAccess(session.roles)) {
-    return <AccessDenied name={session.user?.name} consoles={config.consoles} />;
+    return (
+      <>
+        <AccessDenied name={session.user?.name} consoles={config.consoles} />
+        <AccessRecheck roles={session.roles} />
+      </>
+    );
   }
 
   return (

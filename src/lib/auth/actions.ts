@@ -4,7 +4,7 @@ import "server-only";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getToken } from "next-auth/jwt";
-import { signIn, signOut } from "@/auth";
+import { signIn, signOut, updateSession } from "@/auth";
 import { safeCallbackPath } from "@/lib/auth/redirect";
 import type { SessionToken } from "@/lib/auth/session-token";
 import { keycloakSettings } from "@/lib/runtime-config";
@@ -12,6 +12,22 @@ import { keycloakSettings } from "@/lib/runtime-config";
 /** Sends the browser to Keycloak's login, coming back to `callbackUrl`. */
 export async function signInWithKeycloak(formData: FormData): Promise<void> {
   await signIn("keycloak", { redirectTo: safeCallbackPath(formData.get("callbackUrl")) });
+}
+
+/**
+ * Refreshes the access token now and answers with the `skymail` roles it
+ * carries, or null when there is no session or Keycloak refused the refresh
+ * (the roles the page already has stay then). The new token goes into the
+ * session cookie, so the API calls that follow carry it too.
+ */
+export async function refreshRoles(): Promise<string[] | null> {
+  try {
+    const session = await updateSession({});
+    if (!session || session.error || !Array.isArray(session.roles)) return null;
+    return session.roles;
+  } catch {
+    return null;
+  }
 }
 
 async function appOrigin(): Promise<string> {

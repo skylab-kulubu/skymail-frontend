@@ -350,6 +350,37 @@ describe("a refused refresh", () => {
   });
 });
 
+// A page that says the viewer lacks a role asks for one refresh first
+// (RoleGate, ticket ekip-yetkileri 05): the role may have been granted after
+// the access token was issued, and waiting for it to run out takes minutes.
+describe("a forced refresh", () => {
+  it("trades a token that still has time left and reads the roles again", async () => {
+    const { fetch, calls } = tokenEndpoint(() =>
+      Response.json({
+        access_token: tokenWithRoles(["skymail:access", "skymail:templates:read"]),
+        refresh_token: "refresh-2",
+        expires_in: 300,
+      }),
+    );
+
+    const next = await refreshIfExpiring(signedIn(), { ...options(fetch), force: true });
+
+    assert.equal(calls.length, 1);
+    assert.deepEqual(next.roles, ["skymail:access", "skymail:templates:read"]);
+    assert.equal(next.refreshToken, "refresh-2");
+    assert.equal(next.expiresAt, NOW + 300_000);
+  });
+
+  it("keeps the token as it was, unflagged, when Keycloak refuses it", async () => {
+    const { fetch } = tokenEndpoint(() => Response.json({ error: "invalid_grant" }, { status: 400 }));
+    const token = signedIn();
+
+    const next = await refreshIfExpiring(token, { ...options(fetch), force: true });
+
+    assert.equal(next, token);
+  });
+});
+
 // /api/auth/session answers the browser with this, and the HTTP client reads
 // it on every request. The access token has to be there; the refresh token and
 // the ID token must never be.
