@@ -19,6 +19,8 @@ export const ROLE = {
   mailsApprove: "skymail:mails:approve",
   /** A tracked send's recipients one by one (hub ticket 15b; YK, DK, ADMIN). A send's own sender needs no role for its own. */
   mailsTrackingRead: "skymail:mails:tracking:read",
+  /** Reverses an address's unsubscribe at the person's request, with a reason (abonelik-cikisi 04, Keycloak ticket 10). */
+  unsubscribesReactivate: "skymail:unsubscribes:reactivate",
 } as const;
 
 export type Role = (typeof ROLE)[keyof typeof ROLE];
@@ -43,9 +45,10 @@ export const NAVIGATION: readonly NavItem[] = [
   { href: "/mailing-lists", label: "Mail listeleri", requires: ROLE.listsRead },
   { href: "/mail-tasks", label: "Gönderimler", requires: ROLE.mailsRead },
   { href: "/mail-approvals", label: "Mail onayları" },
+  { href: "/suppressions", label: "Bastırma listesi", requires: ROLE.unsubscribesReactivate },
 ];
 
-export type SectionHref = "/" | "/templates" | "/mailing-lists" | "/mail-tasks" | "/mail-approvals";
+export type SectionHref = "/" | "/templates" | "/mailing-lists" | "/mail-tasks" | "/mail-approvals" | "/suppressions";
 
 /** A section's label, for the menu, the breadcrumbs, the tab title and the page header. */
 export function sectionLabel(href: SectionHref): string {

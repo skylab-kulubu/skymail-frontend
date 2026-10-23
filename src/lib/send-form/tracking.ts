@@ -23,6 +23,7 @@ import { ApiError } from "../api/errors";
 import { formatCount, type SendSummary } from "../sends";
 import type { MailTemplate } from "../templates";
 import type { ListRow } from "../mailing-lists";
+import { purposeAvailable } from "./purpose";
 import type { PersonOutcome, SendPlan, SingleSendRequest } from "./send";
 
 export const TRACKING_LABEL = "Açılma ve tıklama takibi";
@@ -40,11 +41,23 @@ export function trackingAlways(summary: Pick<SendSummary, "tracking_available" |
   return trackingAvailable(summary) && summary.tracking_always === true;
 }
 
-/** SkyMail's tracking as the send form reads it: on (the box may be offered), and always (no box, every send tracked). */
-export type TrackingMode = Readonly<{ available: boolean; always: boolean }>;
+/**
+ * SkyMail's tracking as the send form reads it: on (the box may be offered),
+ * and always (no box, every send tracked); and, read from the same answer,
+ * whether a send carries its purpose (purpose.ts).
+ */
+export type TrackingMode = Readonly<{ available: boolean; always: boolean; purpose: boolean }>;
 
-/** What the form assumes while the summary loads, fails or may not be read: no box, nothing asked. */
-export const TRACKING_UNKNOWN: TrackingMode = { available: false, always: false };
+/** What the form assumes while the summary loads, fails or may not be read: no box, nothing asked, no purpose. */
+export const TRACKING_UNKNOWN: TrackingMode = { available: false, always: false, purpose: false };
+
+type ModeAnswer = Pick<SendSummary, "tracking_available" | "tracking_always" | "purpose_available">;
+
+const modeOf = (answer: ModeAnswer): TrackingMode => ({
+  available: trackingAvailable(answer),
+  always: trackingAlways(answer),
+  purpose: purposeAvailable(answer),
+});
 
 /**
  * What a backend before `GET /mail_tasks/tracking-mode` answers it: the path
@@ -63,12 +76,10 @@ const BEFORE_TRACKING_MODE: ReadonlySet<number> = new Set([403, 404, 500]);
  */
 export async function fetchTrackingMode(api: ApiClient, { canReadSummary, signal }: { canReadSummary: boolean; signal?: AbortSignal }): Promise<TrackingMode> {
   if (canReadSummary) {
-    const summary = await api.get<SendSummary>("/mail_tasks/summary", { query: { days: 1, recent: 1 }, signal });
-    return { available: trackingAvailable(summary), always: trackingAlways(summary) };
+    return modeOf(await api.get<SendSummary>("/mail_tasks/summary", { query: { days: 1, recent: 1 }, signal }));
   }
   try {
-    const mode = await api.get<Pick<SendSummary, "tracking_available" | "tracking_always">>("/mail_tasks/tracking-mode", { signal });
-    return { available: trackingAvailable(mode), always: trackingAlways(mode) };
+    return modeOf(await api.get<ModeAnswer>("/mail_tasks/tracking-mode", { signal }));
   } catch (error) {
     if (error instanceof ApiError && BEFORE_TRACKING_MODE.has(error.status)) return TRACKING_UNKNOWN;
     throw error;
@@ -117,7 +128,7 @@ export function trackingAsked({
   template,
   ticked,
 }: {
-  mode: TrackingMode;
+  mode: Pick<TrackingMode, "available" | "always">;
   audience: "list" | "people" | "form";
   template: TrackableTemplate | null;
   ticked: boolean;

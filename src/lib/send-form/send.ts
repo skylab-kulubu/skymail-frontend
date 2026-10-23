@@ -27,6 +27,7 @@ import { fetchList, fetchRecipientPage, isInternal, toListRow, type ListRow, typ
 import { authorName, fetchTemplate, type MailTemplate } from "../templates";
 import { peopleProblems, peopleReady, type PeopleCheck, type PersonRow } from "./audience";
 import { bodyVariables, fieldWarnings, usesRecipientName, variableFields, type FieldInput } from "./fields";
+import { CATEGORY_REFUSALS, PURPOSE_REFUSALS, type PurposeFields } from "./purpose";
 
 /** The Template key of the free-form template a free announcement is sent with. */
 export const FREE_TEMPLATE_KEY = "free.basic";
@@ -40,11 +41,11 @@ export type ListSendRequest = {
   body_variables: Record<string, string>;
   /** Open and click tracking (tracking.ts); present only when asked for. */
   tracking?: boolean;
-};
+} & Partial<PurposeFields>;
 
 /** `POST /mail_tasks`'s answer: the new send, and whether it got the tracking it asked for (absent from a backend before tracking). */
 export type CreatedSend = Readonly<{ id: string; tracking?: boolean }>;
-export type FormSourceSendRequest = { template_id: string; form_source_id: string; body_variables: Record<string, string> };
+export type FormSourceSendRequest = { template_id: string; form_source_id: string; body_variables: Record<string, string> } & Partial<PurposeFields>;
 
 export type SingleSendRequest = {
   template_id: string;
@@ -53,7 +54,7 @@ export type SingleSendRequest = {
   body_variables: Record<string, string>;
   /** Open and click tracking (tracking.ts); present only when asked for. */
   tracking?: boolean;
-};
+} & Partial<PurposeFields>;
 
 /** The list a send goes to, as the form knows it. */
 export type ChosenList = Pick<ListRow, "id" | "name" | "external">;
@@ -71,6 +72,8 @@ export type SendDraft = Readonly<{
   people: readonly PersonRow[];
   /** Open and click tracking: true when the form offered its box (tracking.ts trackingOffered) and it is ticked, or while SkyMail tracks every send (trackingAsked). A list or people send asks for it. */
   tracking?: boolean;
+  /** The purpose and category the send carries (purpose.ts); none while the backend takes no purpose. */
+  purpose?: PurposeFields | null;
 }>;
 
 export type SendPlan = { kind: "list"; request: ListSendRequest } | { kind: "people"; requests: SingleSendRequest[] } | { kind: "form"; request: FormSourceSendRequest; source: FormSource };
@@ -125,15 +128,16 @@ export function sendPlan(
     };
   }
   const body_variables = variables.variables;
+  const purpose = draft.purpose ?? {};
   if (draft.audience === "form") return {
-    ok: true, plan: { kind: "form", source: draft.formSource!, request: { template_id: template.id, form_source_id: draft.formSource!.id, body_variables } }, warnings,
+    ok: true, plan: { kind: "form", source: draft.formSource!, request: { template_id: template.id, form_source_id: draft.formSource!.id, body_variables, ...purpose } }, warnings,
   };
   if (draft.audience === "list") {
     return {
       ok: true,
       plan: {
         kind: "list",
-        request: { template_id: template.id, mail_list_id: draft.list!.id, body_variables, ...(draft.tracking ? { tracking: true } : {}) },
+        request: { template_id: template.id, mail_list_id: draft.list!.id, body_variables, ...(draft.tracking ? { tracking: true } : {}), ...purpose },
       },
       warnings,
     };
@@ -148,6 +152,7 @@ export function sendPlan(
         recipient_full_name: person.name,
         body_variables,
         ...(draft.tracking ? { tracking: true } : {}),
+        ...purpose,
       })),
     },
     warnings,
@@ -173,11 +178,12 @@ export async function sendToFormSource(api: ApiClient, request: FormSourceSendRe
  */
 export type FailureKind = "final" | "notSent" | "uncertain";
 
-export type SendFailure = Readonly<{ kind: FailureKind; reason: string }>;
+/** `code`: the API's, when it named one (the form puts a category's refusal under the category). */
+export type SendFailure = Readonly<{ kind: FailureKind; reason: string; code?: string }>;
 
 /** How a send to one person went; a sent one says whether it got the tracking it asked for (absent from a backend before tracking). */
 export type PersonOutcome = Readonly<
-  { name: string; email: string } & ({ status: "sent"; sendId: string; tracking?: boolean } | { status: FailureKind; reason: string })
+  { name: string; email: string } & ({ status: "sent"; sendId: string; tracking?: boolean } | { status: FailureKind; reason: string; code?: string })
 >;
 
 /** Who the send's outcome can be checked by: the viewer, if they read sends (`mails:read`). */
@@ -201,11 +207,20 @@ export async function sendToPeople(
       outcomes.push({ ...person, status: "sent", sendId: id, ...(tracking === undefined ? {} : { tracking }) });
     } catch (error) {
       const failure = sendFailure(error, "person", { canSeeSends });
-      outcomes.push({ ...person, status: failure.kind, reason: failure.reason });
+      outcomes.push({ ...person, status: failure.kind, reason: failure.reason, ...(failure.code ? { code: failure.code } : {}) });
+      // The category is every person's: refused for the first, it is refused for all, and nobody has been sent to.
+      if (outcomes.length === 1 && failure.code && CATEGORY_REFUSALS.has(failure.code)) return outcomes;
     }
     onEach?.(outcomes.length);
   }
   return outcomes;
+}
+
+/** A send to people the category kept from going: refused for the first person, nobody sent to. */
+export function categoryRefused(outcomes: readonly PersonOutcome[]): SendFailure | null {
+  const [first] = outcomes;
+  if (outcomes.length !== 1 || !first || first.status === "sent" || !first.code || !CATEGORY_REFUSALS.has(first.code)) return null;
+  return { kind: first.status, reason: first.reason, code: first.code };
 }
 
 /** Who a retry would send to: the ones who have not got the mail for sure — never a refusal — and who of them may get it twice. */
@@ -256,6 +271,8 @@ function checkAdvice({ canSeeSends }: Checking): string {
 export function sendFailure(error: unknown, to: "list" | "person", checking: Checking): SendFailure {
   const refusal = asApiError(error);
   const { status } = refusal;
+  // core's preferences could not be read (ticket 09): nothing was queued, so it may be sent again as it is.
+  if (refusal.code === "mail_task.preference_unavailable") return { kind: "notSent", reason: refusal.message, code: refusal.code };
   if (status === 0 || status === 408 || status >= 500) {
     const cause = status === 0 ? "Sunucudan yanıt gelmedi." : `Sunucu bir hatayla yanıt verdi (HTTP ${status}).`;
     const open = to === "list" ? "Gönderim açılmış olabilir." : "Bu kişiye gönderim açılmış olabilir.";
@@ -288,6 +305,7 @@ export function sendFailure(error: unknown, to: "list" | "person", checking: Che
   if (refusal.code === "validation.error" && invalidField(refusal) === "recipient_email") {
     return { kind: "final", reason: "SkyMail bu adresi geçerli bir e-posta adresi saymadı." };
   }
+  if (PURPOSE_REFUSALS.has(refusal.code)) return { kind: "final", reason: refusal.message, code: refusal.code };
   return { kind: "final", reason: `SkyMail gönderimi reddetti: ${apiErrorMessage(refusal)}` };
 }
 

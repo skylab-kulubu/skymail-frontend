@@ -64,6 +64,11 @@ describe("a template's variable fields", () => {
     assert.deepEqual(variableFields({ ...FREE_BASIC, subject: "Duyuru", html_content: "<p>Merhaba {{.FullName}}</p>" }), []);
   });
 
+  it("do not ask for the footer's unsubscribe link: the mailer fills it for a duyuru mail", () => {
+    const footer = '<p>Merhaba {{.FullName}}</p>{{if .UnsubscribeUrl}}<a href="{{.UnsubscribeUrl}}">Abonelikten çık</a>{{end}}';
+    assert.deepEqual(variableFields({ ...FREE_BASIC, subject: "Duyuru", html_content: footer }), []);
+  });
+
   it("know when the mail greets the recipient by name", () => {
     assert.equal(usesRecipientName(CERTIFICATE), true);
     assert.equal(usesRecipientName(FREE_BASIC), false);

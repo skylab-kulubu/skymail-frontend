@@ -30,7 +30,9 @@ describe("the feedback mails", () => {
       assert.equal(meta.contentSensitive, true);
       assert.deepEqual(meta.variables, ["FirstName", "EventName", "Items"]);
       assert.deepEqual((meta.requiredVariables ?? []).map(({ name }) => name), ["Items"]);
-      assert.deepEqual([...referencedVariables(html)].sort(), ["EventName", "FirstName", "Items"]);
+      // Beside the footer's unsubscribe link, which the mailer fills.
+      const referenced = [...referencedVariables(html)].filter((name) => name !== "UnsubscribeUrl");
+      assert.deepEqual(referenced.sort(), ["EventName", "FirstName", "Items"]);
     });
 
     it(`${key} prints a link per item, in both bodies`, async () => {
