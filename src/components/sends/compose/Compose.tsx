@@ -179,6 +179,14 @@ export function Compose({
   const approvalProblem = intent === 'submit' && attempts > 0 && forApproval && !forApproval.ok ? forApproval.problem : null;
   const audienceNote = approvalNote(access, audience, { resubmit: resubmit !== null });
   const refusal = submitting.failure ? refusalNow(submitting.failure, people) : null;
+  // A refused category is said under the picker, whichever action it came from.
+  const categoryRefusal = (code: string | undefined, text: string) => (code && CATEGORY_REFUSALS.has(code) ? text : null);
+  const categoryProblem =
+    (sending.listFailure && categoryRefusal(sending.listFailure.code, sending.listFailure.reason)) ??
+    (submitting.failure && categoryRefusal(submitting.failure.code, submitting.failure.text)) ??
+    null;
+  // Why the actions do not go, beside them as well as on hover.
+  const sendBlock = held ? 'Önce yeniden göndermeyi onayla.' : purposeBlock;
 
   function send() {
     if (busy || held) return;
@@ -358,7 +366,7 @@ export function Compose({
                 audience={audience}
                 list={list}
                 lists={lists}
-                categoryProblem={sending.listFailure?.code && CATEGORY_REFUSALS.has(sending.listFailure.code) ? sending.listFailure.reason : null}
+                categoryProblem={categoryProblem}
                 problem={attempts > 0 ? purposeBlock : null}
                 disabled={busy}
               />
@@ -443,7 +451,18 @@ export function Compose({
             }
             submit={
               <div className="flex flex-wrap items-center gap-2">
-                <Button variant={direct ? 'outline' : 'primary'} onClick={submitForApproval} disabled={busy || purposeBlock !== null}>
+                {purposeBlock || (direct && held) ? (
+                  <p id="send-blocked" className="text-xs text-subtle-foreground">
+                    {direct ? sendBlock : purposeBlock}
+                  </p>
+                ) : null}
+                <Button
+                  variant={direct ? 'outline' : 'primary'}
+                  onClick={submitForApproval}
+                  disabled={busy || purposeBlock !== null}
+                  title={purposeBlock ?? undefined}
+                  aria-describedby={purposeBlock ? 'send-blocked' : undefined}
+                >
                   <ClipboardCheck className="h-4 w-4" aria-hidden />
                   {resubmit ? 'Yeniden onaya sun…' : 'Onaya sun…'}
                 </Button>
@@ -452,7 +471,8 @@ export function Compose({
                     variant="primary"
                     onClick={send}
                     disabled={busy || held || purposeBlock !== null}
-                    title={held ? 'Önce yeniden göndermeyi onayla' : (purposeBlock ?? undefined)}
+                    title={sendBlock ?? undefined}
+                    aria-describedby={sendBlock ? 'send-blocked' : undefined}
                   >
                     <SendIcon className="h-4 w-4" aria-hidden />
                     Gönder…
