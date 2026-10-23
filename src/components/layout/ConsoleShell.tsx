@@ -8,7 +8,7 @@
 import { AppShell, Breadcrumbs } from '@skylab-kulubu/skylcn-ui';
 import { usePathname } from 'next/navigation';
 import { Suspense, type ReactNode } from 'react';
-import { ConsoleProvider, type ConsoleUser } from './ConsoleContext';
+import { ConsoleProvider, type ConsoleUser, type RefreshRoles } from './ConsoleContext';
 import { RoleGate } from './RoleGate';
 import { SessionEndedDialog } from './SessionEndedDialog';
 import { Sidebar } from './Sidebar';
@@ -21,12 +21,14 @@ type ConsoleShellProps = Readonly<{
   roles: readonly string[];
   user: ConsoleUser;
   config: PublicConfig;
+  /** The refreshRoles server action, from the layout. */
+  refreshRoles: RefreshRoles;
 }>;
 
-export function ConsoleShell({ children, roles, user, config }: ConsoleShellProps) {
+export function ConsoleShell({ children, roles, user, config, refreshRoles }: ConsoleShellProps) {
   const pathname = usePathname() || '/';
   return (
-    <ConsoleProvider roles={roles} user={user} config={config}>
+    <ConsoleProvider roles={roles} user={user} config={config} refreshRoles={refreshRoles}>
       <ApiProvider baseUrl={config.apiUrl}>
         <AppShell
           // Keeps the collapsed choice people made before the move to skylcn-ui
