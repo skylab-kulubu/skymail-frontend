@@ -4,7 +4,6 @@ import { getSession } from 'next-auth/react';
 import { usePathname, useRouter } from 'next/navigation';
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { hasRole, type Role } from '@/lib/access';
-import { refreshRoles } from '@/lib/auth/actions';
 import { createRoleSync, sameRoles, type RoleSync } from '@/lib/auth/role-sync';
 import type { PublicConfig } from '@/lib/runtime-config';
 
@@ -35,12 +34,22 @@ async function sessionRoles(): Promise<readonly string[] | null> {
 }
 
 /**
+ * Refreshes the token now and answers with its roles: the refreshRoles server
+ * action (src/lib/auth/actions.ts). The server layout hands it down, so this
+ * client module never imports the server-only auth code.
+ */
+export type RefreshRoles = () => Promise<readonly string[] | null>;
+
+/**
  * Keeps `rendered` (the roles the server rendered with) in step with the
  * session: checked when the tab is shown again and on every move to another
  * page (role-sync.ts). A change is shown at once and the server parts are
  * rendered again (router.refresh), e.g. the layout's "Erişimin yok" screen.
  */
-export function useLiveRoles(rendered: readonly string[]): readonly [readonly string[], RoleSync] {
+export function useLiveRoles(
+  rendered: readonly string[],
+  refreshRoles: RefreshRoles,
+): readonly [readonly string[], RoleSync] {
   const router = useRouter();
   const pathname = usePathname();
   const [roles, setRoles] = useState(rendered);
@@ -94,8 +103,9 @@ export function ConsoleProvider({
   roles: rendered,
   user,
   config,
-}: Omit<ConsoleContextValue, 'confirmRoles'> & { children: ReactNode }) {
-  const [roles, sync] = useLiveRoles(rendered);
+  refreshRoles,
+}: Omit<ConsoleContextValue, 'confirmRoles'> & { refreshRoles: RefreshRoles; children: ReactNode }) {
+  const [roles, sync] = useLiveRoles(rendered, refreshRoles);
   const value = useMemo(
     () => ({ roles, user, config, confirmRoles: sync.confirm }),
     [roles, user, config, sync],

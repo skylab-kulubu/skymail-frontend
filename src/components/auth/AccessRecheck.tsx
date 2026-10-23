@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useLiveRoles } from '@/components/layout/ConsoleContext';
+import { useLiveRoles, type RefreshRoles } from '@/components/layout/ConsoleContext';
 import { CONFIRM_INTERVAL_MS } from '@/lib/auth/role-sync';
 
 // Across mounts too: the refresh's new cookie renders the layout again.
@@ -13,8 +13,8 @@ let confirmedAt = Number.NEGATIVE_INFINITY;
  * is shown; once the session holds the role, the layout renders the panel
  * (useLiveRoles, router.refresh) without signing out and in.
  */
-export function AccessRecheck({ roles }: { roles: readonly string[] }) {
-  const [, sync] = useLiveRoles(roles);
+export function AccessRecheck({ roles, refreshRoles }: { roles: readonly string[]; refreshRoles: RefreshRoles }) {
+  const [, sync] = useLiveRoles(roles, refreshRoles);
   useEffect(() => {
     if (Date.now() - confirmedAt < CONFIRM_INTERVAL_MS) return;
     confirmedAt = Date.now();

@@ -4,6 +4,7 @@ import { AccessDenied } from '@/components/auth/AccessDenied';
 import { AccessRecheck } from '@/components/auth/AccessRecheck';
 import { ConsoleShell } from '@/components/layout/ConsoleShell';
 import { hasAccess } from '@/lib/access';
+import { refreshRoles } from '@/lib/auth/actions';
 import { publicConfig } from '@/lib/runtime-config';
 
 // Every render reads the session and the runtime environment.
@@ -27,7 +28,7 @@ export default async function ConsoleLayout({ children }: Readonly<{ children: R
     return (
       <>
         <AccessDenied name={session.user?.name} consoles={config.consoles} />
-        <AccessRecheck roles={session.roles} />
+        <AccessRecheck roles={session.roles} refreshRoles={refreshRoles} />
       </>
     );
   }
@@ -37,6 +38,7 @@ export default async function ConsoleLayout({ children }: Readonly<{ children: R
       roles={session.roles}
       user={{ name: session.user?.name, email: session.user?.email, sub: session.subject }}
       config={config}
+      refreshRoles={refreshRoles}
     >
       {children}
     </ConsoleShell>
