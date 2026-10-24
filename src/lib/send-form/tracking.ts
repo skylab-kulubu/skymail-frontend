@@ -23,7 +23,7 @@ import { ApiError } from "../api/errors";
 import { formatCount, type SendSummary } from "../sends";
 import type { MailTemplate } from "../templates";
 import type { ListRow } from "../mailing-lists";
-import { purposeAvailable } from "./purpose";
+import { listConsentAvailable, purposeAvailable } from "./purpose";
 import type { PersonOutcome, SendPlan, SingleSendRequest } from "./send";
 
 export const TRACKING_LABEL = "Açılma ve tıklama takibi";
@@ -46,17 +46,18 @@ export function trackingAlways(summary: Pick<SendSummary, "tracking_available" |
  * and always (no box, every send tracked); and, read from the same answer,
  * whether a send carries its purpose (purpose.ts).
  */
-export type TrackingMode = Readonly<{ available: boolean; always: boolean; purpose: boolean }>;
+export type TrackingMode = Readonly<{ available: boolean; always: boolean; purpose: boolean; listConsent: boolean }>;
 
 /** What the form assumes while the summary loads, fails or may not be read: no box, nothing asked, no purpose. */
-export const TRACKING_UNKNOWN: TrackingMode = { available: false, always: false, purpose: false };
+export const TRACKING_UNKNOWN: TrackingMode = { available: false, always: false, purpose: false, listConsent: false };
 
-type ModeAnswer = Pick<SendSummary, "tracking_available" | "tracking_always" | "purpose_available">;
+type ModeAnswer = Pick<SendSummary, "tracking_available" | "tracking_always" | "purpose_available" | "list_consent_available">;
 
 const modeOf = (answer: ModeAnswer): TrackingMode => ({
   available: trackingAvailable(answer),
   always: trackingAlways(answer),
   purpose: purposeAvailable(answer),
+  listConsent: listConsentAvailable(answer),
 });
 
 /**

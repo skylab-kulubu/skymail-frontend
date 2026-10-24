@@ -138,6 +138,8 @@ export type SendSummary = Readonly<{
   tracking_always?: boolean;
   /** True while `SKYMAIL_MAIL_PURPOSE=on`: a send carries its purpose and category (send-form/purpose.ts). Absent from a backend before it. */
   purpose_available?: boolean;
+  /** True while `SKYMAIL_LIST_CONSENT=on`: a list's guests need their announcement consent unless the send states it is about the list's own event (send-form/purpose.ts). Absent from a backend before it. */
+  list_consent_available?: boolean;
   send_counts: Readonly<Record<SendStatus, number>>;
   /** Oldest first, ending today; `date` is a calendar day in `time_zone` (`YYYY-MM-DD`). */
   daily_sent: ReadonlyArray<Readonly<{ date: string; sent: number }>>;

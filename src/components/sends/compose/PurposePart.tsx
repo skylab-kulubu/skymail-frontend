@@ -12,10 +12,12 @@ import {
   CLUB,
   COMMERCIAL_STATEMENT,
   KIND_OPTIONS,
+  OWN_EVENT_STATEMENT,
   PURPOSE_LABEL,
   PURPOSE_OPTIONS,
   SOURCE_OPTIONS,
   TRANSACTIONAL_STATEMENT,
+  ownEventOffered,
   purposeChoosable,
   purposeOf,
   sourceOf,
@@ -48,6 +50,7 @@ export function PurposePart({
   list,
   lists,
   categoryProblem,
+  listConsent = false,
   problem,
   disabled,
 }: {
@@ -58,6 +61,8 @@ export function PurposePart({
   lists: readonly ListRow[];
   /** The API's refusal of the category, said under it. */
   categoryProblem: string | null;
+  /** The backend holds a list's guests to their announcement consent: the own event box is offered for a list. */
+  listConsent?: boolean;
   /** What keeps the send from going, once the sender has tried. */
   problem: string | null;
   disabled: boolean;
@@ -110,6 +115,11 @@ export function PurposePart({
           <Statement checked={choice.commercialAbsent} onChange={(checked) => set({ commercialAbsent: checked })} disabled={disabled}>
             {COMMERCIAL_STATEMENT}
           </Statement>
+          {ownEventOffered(audience, listConsent) ? (
+            <Statement checked={choice.ownEvent} onChange={(checked) => set({ ownEvent: checked })} disabled={disabled}>
+              {OWN_EVENT_STATEMENT}
+            </Statement>
+          ) : null}
         </>
       )}
       {problem ? <p role="alert" className="text-xs text-destructive">{problem}</p> : null}

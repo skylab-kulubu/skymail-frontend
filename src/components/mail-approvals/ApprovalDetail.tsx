@@ -27,7 +27,7 @@ import { approvalViewer, viewerActions, type ViewerActions } from '@/lib/mail-ap
 import { formatClubTime } from '@/lib/format';
 import { fetchTemplate } from '@/lib/templates';
 import { fetchTrackingMode } from '@/lib/send-form/tracking';
-import { approvalPurposeText, categoryTeam, statementText } from '@/lib/send-form/purpose';
+import { approvalPurposeText, categoryTeam, ownEventText, statementText } from '@/lib/send-form/purpose';
 import { fetchList } from '@/lib/mailing-lists';
 import {
   APPROVAL_LIST_PATH,
@@ -229,6 +229,7 @@ function ApprovalView({
     },
   );
   const statement = statementText(approval);
+  const ownEvent = ownEventText(approval);
   const warnings = editing && edit?.ok ? fieldWarnings(fields.filter((field) => edit.changed.includes(field.name)), editing.current) : {};
 
   return (
@@ -302,6 +303,7 @@ function ApprovalView({
           <Fact term="Amaç">
             <span className="block whitespace-normal">{purpose}</span>
             {statement ? <span className="text-2xs block whitespace-normal text-subtle-foreground">Beyan: {statement}</span> : null}
+            {ownEvent ? <span className="text-2xs block whitespace-normal text-subtle-foreground">Beyan: {ownEvent}</span> : null}
           </Fact>
         ) : null}
         {tracking ? <Fact term="Takip">{tracking}</Fact> : null}
