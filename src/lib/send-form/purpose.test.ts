@@ -4,6 +4,7 @@ import { apiErrorFromResponse } from "../api/errors";
 import { approvalRequest, composePrefill } from "../mail-approvals/edit";
 import {
   COMMERCIAL_STATEMENT,
+  OWN_EVENT_STATEMENT,
   PURPOSE_REFUSALS,
   PURPOSE_START,
   TRANSACTIONAL_STATEMENT,
@@ -11,6 +12,7 @@ import {
   categoryOf,
   categoryTeam,
   listConsentAvailable,
+  ownEventText,
   ownEventOffered,
   parseCategory,
   purposeAvailable,
@@ -113,6 +115,9 @@ describe("a send's purpose", () => {
     assert.equal(statementText({ purpose: "duyuru", commercial_content_absent: true }), COMMERCIAL_STATEMENT);
     assert.equal(statementText({ purpose: "islem", transactional_statement: true }), TRANSACTIONAL_STATEMENT);
     assert.equal(statementText({}), null);
+    assert.equal(ownEventText({ purpose: "duyuru", own_event_statement: true }), OWN_EVENT_STATEMENT);
+    assert.equal(ownEventText({ purpose: "duyuru", own_event_statement: false }), null);
+    assert.equal(ownEventText({ purpose: "islem", own_event_statement: true }), null);
   });
 
   it("shows a list or group request as a duyuru on its page, once the backend takes a purpose", () => {

@@ -224,6 +224,11 @@ export function statementText(fields: StoredPurpose): string | null {
   return null;
 }
 
+/** The list's own event statement a duyuru carries, in its words; null for none. The approver reads it: it lifts the guests' consent. */
+export function ownEventText(fields: StoredPurpose): string | null {
+  return fields.purpose === "duyuru" && fields.own_event_statement === true ? OWN_EVENT_STATEMENT : null;
+}
+
 /**
  * What a request's page says of its purpose: the stored one; for a request to
  * a list or a group without one, "Duyuru" while the backend takes a purpose

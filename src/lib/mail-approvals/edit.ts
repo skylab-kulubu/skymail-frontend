@@ -320,7 +320,7 @@ export type ComposePrefill = Readonly<{
 
 export function composePrefill(
   approval: Pick<MailApproval, "template" | "audience" | "recipients" | "body_variables" | "tracking"> &
-    Partial<Pick<MailApproval, "purpose" | "category" | "transactional_statement" | "commercial_content_absent">>,
+    Partial<Pick<MailApproval, "purpose" | "category" | "transactional_statement" | "commercial_content_absent" | "own_event_statement">>,
   { templates, lists, access }: { templates: readonly MailTemplate[]; lists: readonly ListRow[]; access: SendAccess },
 ): ComposePrefill {
   const notes: string[] = [];
