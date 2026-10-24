@@ -28,7 +28,7 @@ export const TRACKING_CAVEAT =
   "Açılma kesin değildir. Apple Mail postayı kendisi yükleyebilir, Outlook resimleri engelleyebilir. Tıklama daha güçlü bir işarettir.";
 
 /** What the recipients route answers (410) and the retained summary means. */
-export const TRACKING_EXPIRED_TEXT = "Kişi bazında kayıt 1 yıl sonra silindi.";
+export const TRACKING_EXPIRED_TEXT = "Kişi bazında kayıt 90 gün sonra silindi.";
 
 export type TrackingLinkCounts = Readonly<{ id: number; position: number; clicks: number; unique_clickers: number }>;
 

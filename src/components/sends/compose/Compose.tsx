@@ -150,7 +150,7 @@ export function Compose({
   }, [untrackable]);
   // With an older backend, or SKYMAIL_MAIL_PURPOSE off, the form says and sends nothing of it.
   const purposeShown = trackingMode.purpose;
-  const purpose = purposeShown ? purposeFields(purposeChoice, audience, list) : null;
+  const purpose = purposeShown ? purposeFields(purposeChoice, audience, list, trackingMode.listConsent) : null;
   const purposeBlock = purposeShown ? purposeProblem(purposeChoice, audience, list) : null;
   const draft = { what, template, fields: input, audience, list, people, formSource, tracking, purpose };
   const check = sendPlan(draft);
@@ -367,6 +367,7 @@ export function Compose({
                 list={list}
                 lists={lists}
                 categoryProblem={categoryProblem}
+                listConsent={trackingMode.listConsent}
                 problem={attempts > 0 ? purposeBlock : null}
                 disabled={busy}
               />

@@ -33,6 +33,8 @@ export type PurposeChoice = Readonly<{
   kind: CategoryKind;
   transactional: boolean;
   commercialAbsent: boolean;
+  /** A list's mail about the list's own event or work (KVKK notice s6 row 15): its guests need no announcement consent. */
+  ownEvent: boolean;
 }>;
 
 export const PURPOSE_START: PurposeChoice = {
@@ -42,6 +44,7 @@ export const PURPOSE_START: PurposeChoice = {
   kind: "duyuru",
   transactional: false,
   commercialAbsent: false,
+  ownEvent: false,
 };
 
 /** The fields a send, or a request for approval, carries. */
@@ -50,6 +53,7 @@ export type PurposeFields = Readonly<{
   category?: string;
   transactional_statement?: boolean;
   commercial_content_absent?: boolean;
+  own_event_statement?: boolean;
 }>;
 
 /** The four fields as the API answers them: null on a record written before the switch. */
@@ -58,6 +62,7 @@ export type StoredPurpose = Readonly<{
   category?: string | null;
   transactional_statement?: boolean | null;
   commercial_content_absent?: boolean | null;
+  own_event_statement?: boolean | null;
 }>;
 
 export type PurposeAudience = "list" | "people" | "form";
@@ -80,8 +85,10 @@ export const KIND_OPTIONS = [
 
 export const TRANSACTIONAL_STATEMENT =
   "Bu posta alıcının kendi başvurusu ya da işlemi hakkında (yer veya saat değişikliği, eksik belge, sonuç). Duyuru ya da davet değil.";
-/** The same words as duyuru-haber 08's send from a news item. */
-export const COMMERCIAL_STATEMENT = "Bu postada sponsor tanıtımı, ücretli bilet, şirket iş ilanı ya da çekiliş yok.";
+/** KVKK notice s6 row 15 (skymail-backend own_event_statement): a list's mail about the list's own event or work goes to its guests without their announcement consent. Optional. */
+export const OWN_EVENT_STATEMENT = "Bu posta listenin oluşturulduğu etkinlik ya da çalışmayla ilgili (oturum saati, yer değişikliği, iptal).";
+/** KVKK notice s6 §5.10: a short sponsor thanks or logo is not promotion. The same words as duyuru-haber 08's send from a news item. */
+export const COMMERCIAL_STATEMENT = "Postanın asıl amacı tanıtım değildir. Kısa sponsor teşekkürü ve logo serbesttir.";
 
 /** The API's refusals of a send's purpose or category (skymail-backend #99; category_unknown: ticket 09); api/errors.ts words each. */
 export const PURPOSE_REFUSALS: ReadonlySet<string> = new Set([
@@ -102,6 +109,16 @@ export const CATEGORY_REFUSALS: ReadonlySet<string> = new Set(["mail_task.catego
 /** Whether the backend takes a purpose: only a `true` does; a missing field (an older backend) does not. */
 export function purposeAvailable(mode: Readonly<{ purpose_available?: boolean }>): boolean {
   return mode.purpose_available === true;
+}
+
+/** Whether the backend holds a list's guests to their announcement consent (`list_consent_available`): only then is the own event box shown. */
+export function listConsentAvailable(mode: Readonly<{ list_consent_available?: boolean }>): boolean {
+  return mode.list_consent_available === true;
+}
+
+/** Whether the own event box is shown: a list or a group, while the backend holds a list's guests to their consent. */
+export function ownEventOffered(audience: PurposeAudience, listConsent: boolean): boolean {
+  return audience === "list" && listConsent;
 }
 
 /** Whether the sender chooses the purpose: to people and to a Forms source's respondents; a list or a group gets a duyuru. */
@@ -141,13 +158,19 @@ export function parseCategory(category: string | null | undefined): { source: st
 export function purposeProblem(choice: PurposeChoice, audience: PurposeAudience, list: Pick<ListRow, "id" | "external"> | null): string | null {
   if (purposeOf(choice, audience) === "islem") return choice.transactional ? null : "Beyanı işaretle.";
   if (choice.team && sourceOf(choice, list) === CLUB) return "Ekip seç.";
-  return choice.commercialAbsent ? null : "Ticari içerik beyanını işaretle.";
+  return choice.commercialAbsent ? null : "Tanıtım beyanını işaretle.";
 }
 
 /** The fields the send carries for its purpose. */
-export function purposeFields(choice: PurposeChoice, audience: PurposeAudience, list: Pick<ListRow, "id" | "external"> | null): PurposeFields {
+export function purposeFields(
+  choice: PurposeChoice,
+  audience: PurposeAudience,
+  list: Pick<ListRow, "id" | "external"> | null,
+  listConsent = false,
+): PurposeFields {
   if (purposeOf(choice, audience) === "islem") return { purpose: "islem", transactional_statement: true };
-  return { purpose: "duyuru", category: categoryOf(sourceOf(choice, list), choice.kind), commercial_content_absent: true };
+  const fields = { purpose: "duyuru" as const, category: categoryOf(sourceOf(choice, list), choice.kind), commercial_content_absent: true };
+  return ownEventOffered(audience, listConsent) && choice.ownEvent ? { ...fields, own_event_statement: true } : fields;
 }
 
 /** The form as a stored request fills it; the start when it carries no purpose. */
@@ -161,6 +184,7 @@ export function purposeChoiceOf(stored: StoredPurpose): PurposeChoice {
     team: category.source !== CLUB,
     kind: category.kind,
     commercialAbsent: stored.commercial_content_absent === true,
+    ownEvent: stored.own_event_statement === true,
   };
 }
 
@@ -198,6 +222,11 @@ export function statementText(fields: StoredPurpose): string | null {
   if (fields.purpose === "islem") return fields.transactional_statement === true ? TRANSACTIONAL_STATEMENT : null;
   if (fields.purpose === "duyuru") return fields.commercial_content_absent === true ? COMMERCIAL_STATEMENT : null;
   return null;
+}
+
+/** The list's own event statement a duyuru carries, in its words; null for none. The approver reads it: it lifts the guests' consent. */
+export function ownEventText(fields: StoredPurpose): string | null {
+  return fields.purpose === "duyuru" && fields.own_event_statement === true ? OWN_EVENT_STATEMENT : null;
 }
 
 /**
