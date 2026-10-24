@@ -120,14 +120,14 @@ describe("whether tracking is on", () => {
 
   it("asks the tracking mode, which needs no mails:read", async () => {
     const { api, calls } = scriptedClient(json(200, { tracking_available: true, tracking_always: true }));
-    assert.deepEqual(await fetchTrackingMode(api, { canReadSummary: false }), { available: true, always: true, purpose: false });
+    assert.deepEqual(await fetchTrackingMode(api, { canReadSummary: false }), { available: true, always: true, purpose: false, listConsent: false });
     assert.equal(calls.length, 1);
     assert.equal(calls[0].url, `${TEST_BASE_URL}/mail_tasks/tracking-mode`);
   });
 
   it("reads the smallest summary for one who may read it, and never asks the tracking mode", async () => {
     const { api, calls } = scriptedClient(json(200, { tracking_available: true, tracking_always: true }));
-    assert.deepEqual(await fetchTrackingMode(api, { canReadSummary: true }), { available: true, always: true, purpose: false });
+    assert.deepEqual(await fetchTrackingMode(api, { canReadSummary: true }), { available: true, always: true, purpose: false, listConsent: false });
     assert.equal(calls.length, 1);
     assert.equal(calls[0].url, `${TEST_BASE_URL}/mail_tasks/summary?days=1&recent=1`);
   });
@@ -142,7 +142,7 @@ describe("whether tracking is on", () => {
 
     it("still offers the box to one with mails:read: the summary says tracking is on", async () => {
       const { api, calls } = scriptedClient(json(200, { tracking_available: true }), oldBackend(true));
-      assert.deepEqual(await fetchTrackingMode(api, { canReadSummary: true }), { available: true, always: false, purpose: false });
+      assert.deepEqual(await fetchTrackingMode(api, { canReadSummary: true }), { available: true, always: false, purpose: false, listConsent: false });
       assert.equal(calls.length, 1);
       assert.equal(calls[0].url, `${TEST_BASE_URL}/mail_tasks/summary?days=1&recent=1`);
     });
@@ -168,7 +168,16 @@ describe("whether tracking is on", () => {
   it("is off for a backend that does not say, and not always for one before tracking_always", async () => {
     assert.deepEqual(await fetchTrackingMode(scriptedClient(json(200, {})).api, { canReadSummary: true }), TRACKING_UNKNOWN);
     assert.deepEqual(await fetchTrackingMode(scriptedClient(json(200, {})).api, { canReadSummary: false }), TRACKING_UNKNOWN);
-    assert.deepEqual(await fetchTrackingMode(scriptedClient(json(200, { tracking_available: true })).api, { canReadSummary: true }), { available: true, always: false, purpose: false });
+    assert.deepEqual(await fetchTrackingMode(scriptedClient(json(200, { tracking_available: true })).api, { canReadSummary: true }), { available: true, always: false, purpose: false, listConsent: false });
+  });
+
+  it("reads whether list consents are on from the same answer, only a true", async () => {
+    for (const canReadSummary of [true, false]) {
+      const on = await fetchTrackingMode(scriptedClient(json(200, { list_consent_available: true })).api, { canReadSummary });
+      assert.equal(on.listConsent, true);
+      const off = await fetchTrackingMode(scriptedClient(json(200, { list_consent_available: "yes" })).api, { canReadSummary });
+      assert.equal(off.listConsent, false);
+    }
   });
 
   it("reads whether a send carries its purpose from the same answer, only a true", async () => {

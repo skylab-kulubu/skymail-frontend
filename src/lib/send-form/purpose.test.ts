@@ -10,6 +10,8 @@ import {
   approvalPurposeText,
   categoryOf,
   categoryTeam,
+  listConsentAvailable,
+  ownEventOffered,
   parseCategory,
   purposeAvailable,
   purposeChoiceOf,
@@ -66,6 +68,24 @@ describe("a send's purpose", () => {
       purpose: "islem",
       transactional_statement: true,
     });
+  });
+
+  it("states a list's own event only for a list, while the backend holds its guests to their consent", () => {
+    const own = { ...ticked, ownEvent: true };
+    assert.deepEqual(purposeFields(own, "list", internal, true), {
+      purpose: "duyuru",
+      category: "club:duyuru",
+      commercial_content_absent: true,
+      own_event_statement: true,
+    });
+    assert.equal(purposeFields(own, "list", internal, false).own_event_statement, undefined);
+    assert.equal(purposeFields(own, "people", null, true).own_event_statement, undefined);
+    assert.equal(purposeFields(ticked, "list", internal, true).own_event_statement, undefined);
+    assert.equal(ownEventOffered("list", true), true);
+    assert.equal(ownEventOffered("form", true), false);
+    assert.equal(listConsentAvailable({ list_consent_available: true }), true);
+    assert.equal(listConsentAvailable({}), false);
+    assert.equal(purposeChoiceOf({ purpose: "duyuru", category: "club:duyuru", commercial_content_absent: true, own_event_statement: true }).ownEvent, true);
   });
 
   it("does not go without the statement its purpose needs, nor without a team once Ekip is picked", () => {
