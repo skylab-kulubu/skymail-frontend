@@ -81,6 +81,9 @@ export default function EventTicketCreated() {
       {end}
 
       <Small style={{ marginTop: "24px" }}>QR görünmüyorsa bilet kodunu görevliye söyle.</Small>
+
+      {/* KVKK aydınlatma §5.12: the photo notice goes in the registration mail, fixed, before the footer. */}
+      <Small>Etkinlikte fotoğraf ve video çekilir, Kulübün kanallarında paylaşılabilir.</Small>
     </Shell>
   );
 }
