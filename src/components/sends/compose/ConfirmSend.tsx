@@ -8,7 +8,7 @@ import { formatCount } from '@/lib/sends';
 import { peopleSentApart, type PersonRow } from '@/lib/send-form/audience';
 import type { Retry, SendPlan } from '@/lib/send-form/send';
 import { untrackedCount, untrackedRecipientsNote } from '@/lib/send-form/tracking';
-import { purposeText, statementText, teamNames, type StoredPurpose } from '@/lib/send-form/purpose';
+import { ownEventText, purposeText, statementText, teamNames, type StoredPurpose } from '@/lib/send-form/purpose';
 import type { Progress } from './use-sending';
 import { Notice } from '@skylab-kulubu/skylcn-ui';
 
@@ -93,6 +93,7 @@ export function ConfirmSend({
   const purposeOf: StoredPurpose | null = plan === null ? null : plan.kind === 'people' ? (plan.requests[0] ?? null) : plan.request;
   const purpose = purposeOf ? purposeText(purposeOf, teamNames(teams)) : null;
   const statement = purposeOf ? statementText(purposeOf) : null;
+  const ownEvent = purposeOf ? ownEventText(purposeOf) : null;
   return (
     <PanelDialog isOpen={confirming !== null} onClose={busy ? () => {} : onCancel} title={title}>
       {confirming?.kind === 'retryPeople' ? (
@@ -134,6 +135,7 @@ export function ConfirmSend({
                 <dt className="text-xs text-subtle-foreground">Amaç</dt>
                 <dd className="text-foreground">{purpose}</dd>
                 {statement ? <dd className="mt-1 text-xs text-muted-foreground">Beyan: {statement}</dd> : null}
+                {ownEvent ? <dd className="mt-1 text-xs text-muted-foreground">Beyan: {ownEvent}</dd> : null}
               </div>
             ) : null}
             {tracked ? (

@@ -4,12 +4,16 @@ import { apiErrorFromResponse } from "../api/errors";
 import { approvalRequest, composePrefill } from "../mail-approvals/edit";
 import {
   COMMERCIAL_STATEMENT,
+  OWN_EVENT_STATEMENT,
   PURPOSE_REFUSALS,
   PURPOSE_START,
   TRANSACTIONAL_STATEMENT,
   approvalPurposeText,
   categoryOf,
   categoryTeam,
+  listConsentAvailable,
+  ownEventText,
+  ownEventOffered,
   parseCategory,
   purposeAvailable,
   purposeChoiceOf,
@@ -68,13 +72,31 @@ describe("a send's purpose", () => {
     });
   });
 
+  it("states a list's own event only for a list, while the backend holds its guests to their consent", () => {
+    const own = { ...ticked, ownEvent: true };
+    assert.deepEqual(purposeFields(own, "list", internal, true), {
+      purpose: "duyuru",
+      category: "club:duyuru",
+      commercial_content_absent: true,
+      own_event_statement: true,
+    });
+    assert.equal(purposeFields(own, "list", internal, false).own_event_statement, undefined);
+    assert.equal(purposeFields(own, "people", null, true).own_event_statement, undefined);
+    assert.equal(purposeFields(ticked, "list", internal, true).own_event_statement, undefined);
+    assert.equal(ownEventOffered("list", true), true);
+    assert.equal(ownEventOffered("form", true), false);
+    assert.equal(listConsentAvailable({ list_consent_available: true }), true);
+    assert.equal(listConsentAvailable({}), false);
+    assert.equal(purposeChoiceOf({ purpose: "duyuru", category: "club:duyuru", commercial_content_absent: true, own_event_statement: true }).ownEvent, true);
+  });
+
   it("does not go without the statement its purpose needs, nor without a team once Ekip is picked", () => {
-    assert.equal(purposeProblem(PURPOSE_START, "list", internal), "Ticari içerik beyanını işaretle.");
+    assert.equal(purposeProblem(PURPOSE_START, "list", internal), "Tanıtım beyanını işaretle.");
     assert.equal(purposeProblem(ticked, "list", internal), null);
     assert.equal(purposeProblem({ ...PURPOSE_START, purpose: "islem" }, "people", null), "Beyanı işaretle.");
     assert.equal(purposeProblem({ ...PURPOSE_START, purpose: "islem", transactional: true }, "people", null), null);
     // An islem chosen for people does not hold a list send back: there it is a duyuru.
-    assert.equal(purposeProblem({ ...PURPOSE_START, purpose: "islem", transactional: true }, "list", internal), "Ticari içerik beyanını işaretle.");
+    assert.equal(purposeProblem({ ...PURPOSE_START, purpose: "islem", transactional: true }, "list", internal), "Tanıtım beyanını işaretle.");
     assert.equal(purposeProblem({ ...ticked, team: true, source: null }, "people", null), "Ekip seç.");
     assert.equal(purposeProblem({ ...ticked, team: true, source: null }, "list", group), null);
   });
@@ -93,6 +115,9 @@ describe("a send's purpose", () => {
     assert.equal(statementText({ purpose: "duyuru", commercial_content_absent: true }), COMMERCIAL_STATEMENT);
     assert.equal(statementText({ purpose: "islem", transactional_statement: true }), TRANSACTIONAL_STATEMENT);
     assert.equal(statementText({}), null);
+    assert.equal(ownEventText({ purpose: "duyuru", own_event_statement: true }), OWN_EVENT_STATEMENT);
+    assert.equal(ownEventText({ purpose: "duyuru", own_event_statement: false }), null);
+    assert.equal(ownEventText({ purpose: "islem", own_event_statement: true }), null);
   });
 
   it("shows a list or group request as a duyuru on its page, once the backend takes a purpose", () => {

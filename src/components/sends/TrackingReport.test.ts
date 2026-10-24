@@ -97,7 +97,7 @@ describe("the overview", () => {
   });
 });
 
-describe("a year after the last mail", () => {
+describe("90 days after the last mail", () => {
   it("says the per-person record is gone and shows the kept totals", () => {
     const kept = { ...SUMMARY.report!, series: undefined, automated_only_recipients: undefined };
     const words = text(render(createElement(TrackingOverview, { summary: { ...SUMMARY, retained: true, report: kept } })));
@@ -110,8 +110,9 @@ describe("a year after the last mail", () => {
 
   it("without kept totals, says why", () => {
     const words = text(render(createElement(TrackingOverview, { summary: { ...SUMMARY, retained: true, report: null } })));
-    assert.match(words, /Kişi bazında kayıt 1 yıl sonra silindi\./);
-    assert.match(words, /en az 10 takipli alıcısı/);
+    assert.match(words, /90 gün doldu/);
+    assert.match(words, /Kişi bazında kayıt 90 gün sonra silindi\./);
+    assert.match(words, /10'dan az takipli alıcılı gönderimin toplamı 1 yıl sonra silinir\./);
   });
 });
 
