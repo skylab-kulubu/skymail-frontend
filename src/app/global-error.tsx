@@ -22,7 +22,7 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
     <html lang="tr">
       <body className="antialiased">
         {unstable_isUnrecognizedActionError(error) ? (
-          <StateCard loading title="SkyMail güncellendi, sayfa yenileniyor" />
+          <StateCard loading title="İletişim güncellendi, sayfa yenileniyor" />
         ) : (
           <StateCard
             icon={TriangleAlert}

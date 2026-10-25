@@ -8,13 +8,13 @@ describe("the club console switcher", () => {
     { id: "forms", label: "Forms", href: "https://forms.example.test/admin" },
   ]);
 
-  it("lists the other consoles at their configured addresses, then SkyMail itself", () => {
+  it("lists the other consoles at their configured addresses, then this console, İletişim", () => {
     assert.deepEqual(
       consoles.map(({ id, label, href }) => ({ id, label, href })),
       [
         { id: "admin", label: "Yönetim", href: "https://admin.example.test" },
         { id: "forms", label: "Forms", href: "https://forms.example.test/admin" },
-        { id: "mail", label: "Mail", href: "/" },
+        { id: "mail", label: "İletişim", href: "/" },
       ],
     );
   });

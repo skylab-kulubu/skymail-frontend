@@ -42,7 +42,7 @@ Ortam değişkenleri çalışma zamanında okunur; imaj sandbox ve production i�
 | Değişken | Ne için | Örnek |
 | --- | --- | --- |
 | `AUTH_SECRET` | Auth.js oturum çerezini şifreler; Keycloak'a gitmez | `openssl rand -base64 33` |
-| `AUTH_URL` | Sitenin dış adresi; yerelde boş | `https://mail.yildizskylab.com` |
+| `AUTH_URL` | Sitenin dış adresi; yerelde boş | `https://iletisim.yildizskylab.com` |
 | `KEYCLOAK_ISSUER` | Realm adresi | `https://e.yildizskylab.com/realms/e-skylab` |
 | `KEYCLOAK_CLIENT_ID` | Public istemci (varsayılan `skymail`) | `skymail` |
 | `API_URL` | SkyMail API'si (yerelde dev proxy'si, aşağıda) | `https://api.yildizskylab.com/api/skymail/v1` |
@@ -120,8 +120,11 @@ GitHub ortamlarında durur ve kimse görmez. Kurulumu ve secret'ın yenilenmesi 
 ops'taki `skymail-seed-github-wizard.sh` ile yapılır.
 
 Şablonların görünümü `emails/theme.tsx`'tedir (SKY LAB Forms'un mail düzeni). Logolar
-SkyMail'in kendi sitesinden, `public/mail/` altından (`https://mail.yildizskylab.com/mail/…`)
+SkyMail'in kendi sitesinden, `public/mail/` altından (`https://iletisim.yildizskylab.com/mail/…`)
 oturumsuz gelir; bu dosyalara dokunan bir değişiklik, seed'den önce production'a çıkmalıdır.
+Eski `https://mail.yildizskylab.com` adresi yolu ve sorguyu koruyarak kalıcı 301 ile
+`iletisim.`'e yönlenir (iletişim-servisi 11); gönderilmiş postalardaki logolar ve bağlantılar
+çalışmaya devam eder. Yeni adla seed, alan adı ve sertifika canlıya çıktıktan **sonra** koşulur.
 
 Elle koşmak için yerelde `corepack yarn emails:seed`: seçenekler ve ortam değişkenleri
 `scripts/seed-templates.ts`'in başında.

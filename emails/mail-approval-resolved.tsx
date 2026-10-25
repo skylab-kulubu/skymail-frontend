@@ -46,7 +46,7 @@ export const meta: TemplateMeta = {
     Decision: "returned",
     DecidedBy: "Fatih Naz",
     DecisionNote: "Tarih satırını düzelttim, bir de başlığı kısalttım. Sana uyuyorsa onayla.",
-    RequestUrl: "https://mail.yildizskylab.com/mail-approvals/show/6f3d2c61",
+    RequestUrl: "https://iletisim.yildizskylab.com/mail-approvals/show/6f3d2c61",
     DeadlineAt: "26 Eyl 2026 18:00",
   },
 };

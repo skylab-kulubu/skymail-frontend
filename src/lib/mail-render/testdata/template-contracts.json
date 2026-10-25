@@ -577,6 +577,42 @@
       "{{range .Items}}"
     ]
   },
+  "core.contact-consent-confirm": {
+    "subject": "{{if eq .purpose `event_invitations`}}SKY LAB duyuru iznini onayla{{else if eq .purpose `promotional`}}SKY LAB tanıtım e-postası iznini onayla{{else}}SKY LAB iznini onayla{{end}}",
+    "system": true,
+    "contentSensitive": true,
+    "variables": [
+      "confirmUrl",
+      "withdrawUrl",
+      "purpose"
+    ],
+    "requiredVariables": [
+      "confirmUrl"
+    ],
+    "sensitiveVariables": [
+      "confirmUrl",
+      "withdrawUrl"
+    ],
+    "sampleKeys": [
+      "confirmUrl",
+      "purpose",
+      "withdrawUrl"
+    ],
+    "referenced": [
+      "UnsubscribeUrl",
+      "confirmUrl",
+      "purpose",
+      "withdrawUrl"
+    ],
+    "actions": [
+      "{{.UnsubscribeUrl}}",
+      "{{.confirmUrl}}",
+      "{{.withdrawUrl}}",
+      "{{else if eq .purpose `promotional`}}",
+      "{{if .UnsubscribeUrl}}",
+      "{{if eq .purpose `event_invitations`}}"
+    ]
+  },
   "account.security-alert": {
     "subject": "SKY LAB hesabında: {{.EventTitle}}",
     "system": true,
@@ -1190,6 +1226,86 @@
       "{{if eq .Change `member-added`}}",
       "{{if eq .Change `member-removed`}}",
       "{{if eq .Root `board`}}"
+    ]
+  },
+  "club.news": {
+    "subject": "{{.Subject}}",
+    "system": true,
+    "contentSensitive": false,
+    "variables": [
+      "Subject",
+      "Preheader",
+      "Title",
+      "Summary",
+      "BodyHtml",
+      "FullBody",
+      "HeroUrl",
+      "HeroAlt",
+      "CtaHref",
+      "CtaLabel",
+      "ReadMoreUrl",
+      "KindLabel",
+      "AudienceReason",
+      "CategoryLabel",
+      "UnsubscribeUrl"
+    ],
+    "requiredVariables": [
+      "ReadMoreUrl",
+      "UnsubscribeUrl"
+    ],
+    "sensitiveVariables": null,
+    "sampleKeys": [
+      "AudienceReason",
+      "BodyHtml",
+      "CategoryLabel",
+      "CtaHref",
+      "CtaLabel",
+      "FullBody",
+      "HeroAlt",
+      "HeroUrl",
+      "KindLabel",
+      "Preheader",
+      "ReadMoreUrl",
+      "Subject",
+      "Summary",
+      "Title"
+    ],
+    "referenced": [
+      "AudienceReason",
+      "BodyHtml",
+      "CategoryLabel",
+      "CtaHref",
+      "CtaLabel",
+      "FullBody",
+      "HeroAlt",
+      "HeroUrl",
+      "KindLabel",
+      "Preheader",
+      "ReadMoreUrl",
+      "Summary",
+      "Title",
+      "UnsubscribeUrl"
+    ],
+    "actions": [
+      "{{.AudienceReason}}",
+      "{{.CategoryLabel}}",
+      "{{.CtaHref}}",
+      "{{.CtaLabel}}",
+      "{{.HeroAlt}}",
+      "{{.HeroUrl}}",
+      "{{.KindLabel}}",
+      "{{.Preheader}}",
+      "{{.ReadMoreUrl}}",
+      "{{.Summary}}",
+      "{{.Title}}",
+      "{{.UnsubscribeUrl}}",
+      "{{if .AudienceReason}}",
+      "{{if .CategoryLabel}}",
+      "{{if .CtaHref}}",
+      "{{if .FullBody}}",
+      "{{if .HeroUrl}}",
+      "{{if .UnsubscribeUrl}}",
+      "{{safeHTML .BodyHtml}}"
     ]
   },
   "forms.status-changed": {
