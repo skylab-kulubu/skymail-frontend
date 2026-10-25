@@ -189,6 +189,23 @@ interface Refusal {
 }
 
 /** A template's upsert body: what the repo holds, and the module's render of its source. */
+/** A Notification type's upsert body (skymail-backend requests.PutNotificationType). */
+interface NotificationTypePayload {
+  category: string | null;
+  required: boolean;
+  default_channels: string[];
+  lane: string;
+  inbox?: { title: string; summary: string; link: string };
+}
+
+const notificationTypePayload = (n: NonNullable<TemplateMeta["notification"]>): NotificationTypePayload => ({
+  category: n.category,
+  required: n.required,
+  default_channels: n.defaultChannels,
+  lane: n.lane,
+  ...(n.inbox !== undefined && { inbox: n.inbox }),
+});
+
 interface SeedPayload {
   name: string;
   subject: string;
@@ -238,13 +255,20 @@ export async function runSeed(run: SeedRun): Promise<number> {
   if (run.dryRun) {
     run.print(`[kuru çalışma] ${run.baseUrl} üzerine hiçbir şey yazılmayacak.\n`);
     for (const { meta } of payloads) {
-      const marks = [meta.system && "[sistem]", isForced(run.force, meta.key) && "[zorla]"].filter(Boolean).join(" ");
+      const marks = [
+        meta.system && "[sistem]",
+        meta.notification && "[bildirim türü]",
+        isForced(run.force, meta.key) && "[zorla]",
+      ]
+        .filter(Boolean)
+        .join(" ");
       run.print(`· ${meta.key.padEnd(34)} ${marks ? `${marks} ` : ""}"${meta.subject}"`);
     }
     return 0;
   }
 
   let written = 0;
+  let types = 0;
   let failed = false;
   const refusals: Refusal[] = [];
   for (const [index, { meta, payload }] of payloads.entries()) {
@@ -256,7 +280,26 @@ export async function runSeed(run: SeedRun): Promise<number> {
     } else if (outcome.kind === "refused") {
       refusals.push({ key: meta.key, conflict: outcome.conflict });
       run.print(`✗ ${meta.key.padEnd(34)} reddedildi: son seed'den sonra bir operatör değiştirmiş`);
-    } else {
+    }
+    // The Notification type is the seed's alone (no operator edits it yet),
+    // so it is written whether or not the template was refused: a refused
+    // template still exists, with the operator's text.
+    if (outcome.kind !== "failed" && meta.notification) {
+      const typeOutcome = await upsertNotificationType(run, meta.key, notificationTypePayload(meta.notification));
+      if (typeOutcome === null) {
+        types += 1;
+        run.print(`✓ ${meta.key.padEnd(34)} bildirim türü`);
+        continue;
+      }
+      failed = true;
+      run.print(`✗ ${meta.key.padEnd(34)} bildirim türü yazılamadı: ${typeOutcome}`);
+      const untried = payloads.slice(index + 1).map(({ meta }) => meta.key);
+      if (untried.length > 0) {
+        run.print(`Seed durdu; denenmeyenler: ${untried.join(", ")}`);
+      }
+      break;
+    }
+    if (outcome.kind === "failed") {
       // Anything else — a token that expired, a server that fails — would
       // fail the rest the same way.
       failed = true;
@@ -269,7 +312,7 @@ export async function runSeed(run: SeedRun): Promise<number> {
     }
   }
 
-  run.print(`\n${written} şablon ${run.baseUrl} üzerine yazıldı.`);
+  run.print(`\n${written} şablon${types > 0 ? ` ve ${types} bildirim türü` : ""} ${run.baseUrl} üzerine yazıldı.`);
   reportRefusals(run.print, refusals, run.hideNames ?? false);
   run.print(
     "\nRepoda olmayan anahtarlar silinmedi — canlı bir servisin çağırdığı şablonu arşivlemek postayı sessizce durdurur.",
@@ -314,6 +357,26 @@ async function upsert(run: SeedRun, key: string, payload: SeedPayload, forced: b
     return { kind: "refused", conflict: { ...NO_CONFLICT, ...(error.params as Partial<SeedConflict> | undefined) } };
   }
   return { kind: "failed", reason: `HTTP ${response.status} ${error.code} — ${error.message}` };
+}
+
+/** Writes a Notification type; null when written, else why not. */
+async function upsertNotificationType(run: SeedRun, key: string, payload: NotificationTypePayload): Promise<string | null> {
+  let response: Response;
+  try {
+    response = await run.fetch(`${run.baseUrl}/v1/notification_types/${encodeURIComponent(key)}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${run.token}` },
+      body: JSON.stringify(payload),
+    });
+  } catch (error) {
+    const cause = error instanceof Error ? error.message : String(error);
+    return `sunucuya ulaşılamadı (${cause})`;
+  }
+  if (response.ok) {
+    return null;
+  }
+  const error = apiErrorFromResponse(response.status, await response.text());
+  return `HTTP ${response.status} ${error.code} — ${error.message}`;
 }
 
 function reportRefusals(print: (line: string) => void, refusals: Refusal[], hideNames: boolean): void {
