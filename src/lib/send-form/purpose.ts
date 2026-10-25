@@ -90,7 +90,7 @@ export const OWN_EVENT_STATEMENT = "Bu posta listenin oluşturulduğu etkinlik y
 /** KVKK notice s6 §5.10: a short sponsor thanks or logo is not promotion. The same words as duyuru-haber 08's send from a news item. */
 export const COMMERCIAL_STATEMENT = "Postanın asıl amacı tanıtım değildir. Kısa sponsor teşekkürü ve logo serbesttir.";
 
-/** The API's refusals of a send's purpose or category (skymail-backend #99; category_unknown: ticket 09); api/errors.ts words each. */
+/** The API's refusals of a send's purpose or category (skymail-backend #99; category_unknown, commercial_statement_required: ticket 09); api/errors.ts words each. */
 export const PURPOSE_REFUSALS: ReadonlySet<string> = new Set([
   "mail_task.purpose_not_allowed",
   "mail_task.transactional_statement_required",
@@ -101,6 +101,7 @@ export const PURPOSE_REFUSALS: ReadonlySet<string> = new Set([
   "mail_task.purpose_required",
   "mail_task.purpose_invalid",
   "mail_task.category_unknown",
+  "mail_task.commercial_statement_required",
 ]);
 
 /** The refusals the form puts under the category picker. */

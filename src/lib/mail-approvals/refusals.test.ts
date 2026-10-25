@@ -102,6 +102,16 @@ describe("a refused approval action", () => {
     });
   });
 
+  // core's preferences could not be read at the approval (abonelik-cikisi 09): nothing was sent, the request did not change.
+  it("says nothing was sent when core's preferences could not be read", () => {
+    for (const action of ["approve", "approveEdited", "accept"] as const) {
+      assert.deepEqual(approvalRefusal(refusal(503, "mail_task.preference_unavailable"), action), {
+        text: "İletişim tercihleri şu an okunamıyor; gönderim açılmadı. Birkaç dakika sonra yeniden dene.",
+        reload: false,
+      });
+    }
+  });
+
   it("falls back on the API's Turkish sentence for anything else", () => {
     assert.deepEqual(approvalRefusal(refusal(401, "session.ended"), "approve"), {
       text: "Oturumun sona erdi. Devam etmek için yeniden giriş yap.",
