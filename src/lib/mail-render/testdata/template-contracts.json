@@ -577,6 +577,42 @@
       "{{range .Items}}"
     ]
   },
+  "core.contact-consent-confirm": {
+    "subject": "{{if eq .purpose `event_invitations`}}SKY LAB duyuru iznini onayla{{else if eq .purpose `promotional`}}SKY LAB tanıtım e-postası iznini onayla{{else}}SKY LAB iznini onayla{{end}}",
+    "system": true,
+    "contentSensitive": true,
+    "variables": [
+      "confirmUrl",
+      "withdrawUrl",
+      "purpose"
+    ],
+    "requiredVariables": [
+      "confirmUrl"
+    ],
+    "sensitiveVariables": [
+      "confirmUrl",
+      "withdrawUrl"
+    ],
+    "sampleKeys": [
+      "confirmUrl",
+      "purpose",
+      "withdrawUrl"
+    ],
+    "referenced": [
+      "UnsubscribeUrl",
+      "confirmUrl",
+      "purpose",
+      "withdrawUrl"
+    ],
+    "actions": [
+      "{{.UnsubscribeUrl}}",
+      "{{.confirmUrl}}",
+      "{{.withdrawUrl}}",
+      "{{else if eq .purpose `promotional`}}",
+      "{{if .UnsubscribeUrl}}",
+      "{{if eq .purpose `event_invitations`}}"
+    ]
+  },
   "account.security-alert": {
     "subject": "SKY LAB hesabında: {{.EventTitle}}",
     "system": true,

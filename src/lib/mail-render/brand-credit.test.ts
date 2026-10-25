@@ -27,6 +27,7 @@ const BRAND_OF: Record<string, Brand> = {
   "core.event-reinstated": "skylab",
   "core.feedback-request": "skylab",
   "core.feedback-reminder": "skylab",
+  "core.contact-consent-confirm": "skylab",
   "account.security-alert": "account",
   "account.primary-email-changed": "account",
   "account.deletion-requested": "account",
