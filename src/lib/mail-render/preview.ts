@@ -11,6 +11,7 @@
  *  - `if` with a single field, `not` a single field or an `eq` against
  *    literals shows the branch the sample values select, `else if` and `else`
  *    included; any other condition shows as true;
+ *  - `len .X` prints how many elements a list sample value has;
  *  - an action holding only a literal prints it (the Visual editor writes
  *    braces an operator typed as {{`{{`}});
  *  - `range`, `with`, `define` and `block` stay as written, with everything
@@ -37,6 +38,8 @@ const NAME = String.raw`[\p{L}_][\p{L}\p{N}_]*`;
 const ONLY_FIELD = new RegExp(String.raw`^\$?\.(${NAME})$`, "u");
 /** An action that prints a field as markup, not escaped (`safeHTML .X`, free.basic's BodyHtml): the field's name in group 1. */
 export const SAFE_HTML = new RegExp(String.raw`^safeHTML\s+\$?\.(${NAME})$`, "u");
+/** `len .X`: the field's name in group 1. */
+const LEN_FIELD = new RegExp(String.raw`^len\s+\$?\.(${NAME})$`, "u");
 const NOT_FIELD = new RegExp(String.raw`^not\s+\$?\.(${NAME})$`, "u");
 const EQ = new RegExp(String.raw`^eq\s+\$?\.(${NAME})\s+([\s\S]+)$`, "u");
 const LITERAL = /"(?:[^"\\\n]|\\.)*"|`[^`]*`|[+-]?\d+(?:\.\d+)?/gy;
@@ -152,6 +155,10 @@ export function fillSampleValues(body: string, sample: SampleValues, { as = "htm
     if (field) {
       const text = value(field[1]);
       return { emit: as === "html" ? escapeHtml(text) : text, trims: true };
+    }
+    const counted = LEN_FIELD.exec(inside);
+    if (counted && Array.isArray(sample[counted[1]])) {
+      return { emit: String((sample[counted[1]] as unknown[]).length), trims: true };
     }
     const printed = literals(inside);
     if (printed?.length === 1) {

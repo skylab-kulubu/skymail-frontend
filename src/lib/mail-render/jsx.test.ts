@@ -20,6 +20,15 @@ import { renderComponent, renderSource } from ".";
 const againstTags = (html: string) =>
   html.replace(/(white-space:(?:pre|pre-wrap|pre-line|break-spaces)\b[^"]*"[^>]*>)\s*([^<]*?)\s*(<\/)/g, "$1$2$3");
 
+/**
+ * Such an element holding markup of its own (forms.form-copy's answer, with
+ * its "Boş bırakıldı" span) is laid out by the formatter across lines, tags
+ * included, which againstTags cannot undo. Compared as tags and words, with
+ * the whitespace between them gone.
+ */
+const keepsMarkupInside = (html: string) => /white-space:(?:pre|pre-wrap|pre-line|break-spaces)\b[^"]*"[^>]*>[^<]*<(?!\/)/.test(html);
+const tagsAndWords = (html: string) => html.replace(/\s+/g, " ").replace(/\s*([<>])\s*/g, "$1");
+
 // The Template seed sends each template's file as its JSX source, and the
 // render of that text as its body (lib/template-seed). Compiled here as the
 // panel's JSX mode compiles it, the text must give the mail the component
@@ -37,7 +46,12 @@ describe("a template from the repo, compiled from its file as it is", async () =
       assert.equal(result.ok, true, result.ok ? "" : result.message);
       assert.ok(result.ok && seeded.ok);
       assert.equal(result.html, seeded.html);
-      assert.equal(result.html, againstTags(await render(createElement(Component), { pretty: true })));
+      const formatted = againstTags(await render(createElement(Component), { pretty: true }));
+      if (keepsMarkupInside(result.html)) {
+        assert.equal(tagsAndWords(result.html), tagsAndWords(formatted));
+      } else {
+        assert.equal(result.html, formatted);
+      }
       assert.equal(result.plainText, await render(createElement(Component), { plainText: true }));
     });
   }

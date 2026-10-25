@@ -856,6 +856,8 @@ export function ListHeader({ title, count }: { title: React.ReactNode; count?: R
       <tr>
         <td className="t-primary" style={{ paddingBottom: "8px", fontSize: "13px", lineHeight: "20px", fontWeight: 500, color: ink.primary, fontFamily: fontStack }}>
           {title}
+          {/* Does not show in the cell; keeps the plain text from reading "Formlar2 form". */}
+          {" "}
         </td>
         <td className="t-muted" align="right" style={{ paddingBottom: "8px", fontSize: "12px", lineHeight: "20px", color: ink.muted, textAlign: "right", fontFamily: fontStack }}>
           {count}
