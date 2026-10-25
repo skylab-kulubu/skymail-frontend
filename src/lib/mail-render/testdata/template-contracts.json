@@ -1299,6 +1299,8 @@
       "{{.Summary}}",
       "{{.Title}}",
       "{{.UnsubscribeUrl}}",
+      "{{if .AudienceReason}}",
+      "{{if .CategoryLabel}}",
       "{{if .CtaHref}}",
       "{{if .FullBody}}",
       "{{if .HeroUrl}}",

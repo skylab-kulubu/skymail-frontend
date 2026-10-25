@@ -65,6 +65,9 @@ export const meta: TemplateMeta = {
   },
 };
 
+/** The club's address a reader writes to (bilet 06: the sender's name and contact in the footer). */
+const CONTACT = "info@yildizskylab.com";
+
 /**
  * A News record as mail: the whole body ("Tam metin") or its summary with a
  * link to read on ("Özet + bağlantı"). The footer says why this reader got it
@@ -75,7 +78,15 @@ export default function ClubNews() {
     <Shell
       preview={v("Preheader")}
       brand="skylab"
-      reason={`Bu e-postayı ${v("AudienceReason")} alıyorsun (${v("CategoryLabel")}).`}
+      reason={`${ifSet("AudienceReason")}Bu e-postayı ${v("AudienceReason")} alıyorsun${ifSet("CategoryLabel")} (${v("CategoryLabel")})${end}.${end}`}
+      sender={
+        <>
+          Gönderen: SKY LAB, Yıldız Teknik Üniversitesi ·{" "}
+          <a href={`mailto:${CONTACT}`} className="t-muted" style={{ color: "inherit", textDecoration: "none" }}>
+            {CONTACT}
+          </a>
+        </>
+      }
     >
       <Context tone="brand">{v("KindLabel")}</Context>
       <Title>{v("Title")}</Title>

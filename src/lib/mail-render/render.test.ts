@@ -46,7 +46,9 @@ describe("an element that keeps its whitespace", () => {
     for (const { meta, Component } of templates) {
       const rendered = await renderComponent(Component);
       assert.ok(rendered.ok, meta.key);
-      for (const [, content] of rendered.html.matchAll(/white-space:\s*(?:pre|pre-wrap|pre-line|break-spaces)\b[^"]*"[^>]*>([^<]*)</g)) {
+      // Inline styles only: the stylesheet's rules (.free-body pre) are no element.
+      const body = rendered.html.replace(/<style[\s\S]*?<\/style>/g, "");
+      for (const [, content] of body.matchAll(/white-space:\s*(?:pre|pre-wrap|pre-line|break-spaces)\b[^"]*"[^>]*>([^<]*)</g)) {
         assert.equal(content, content.trim(), `${meta.key}: "${content}" has whitespace around it`);
       }
     }

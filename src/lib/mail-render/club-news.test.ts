@@ -46,8 +46,9 @@ describe("club.news", () => {
   it("says in the footer why this reader got it, beside their way out of that category", async () => {
     const { meta, html, plainText } = await rendered();
     const filled = fillSampleValues(html, meta.sample);
-    assert.match(filled, /Bu e-postayı SKY LAB üyesi olduğun için alıyorsun\s+\(Kulüp geneli · Duyurular\)\./);
-    assert.ok(plainText.includes("Bu e-postayı {{.AudienceReason}} alıyorsun ({{.CategoryLabel}})."));
+    assert.match(filled, /Bu e-postayı\s+SKY LAB üyesi olduğun için alıyorsun\s+\(Kulüp geneli · Duyurular\)\./);
+    assert.ok(plainText.includes("{{if .AudienceReason}}Bu e-postayı {{.AudienceReason}} alıyorsun{{if .CategoryLabel}} ({{.CategoryLabel}}){{end}}.{{end}}"));
+    assert.match(filled, /Gönderen: SKY LAB, Yıldız Teknik Üniversitesi ·\s*(<!-- -->)?\s*<a[^>]*href="mailto:info@yildizskylab.com"/);
     assert.match(html, /href="\{\{\.UnsubscribeUrl\}\}"/);
     assert.match(html, /href="\{\{\.ReadMoreUrl\}\}"/);
     assert.ok(plainText.includes("Sitede oku"));
@@ -58,5 +59,19 @@ describe("club.news", () => {
     const { html } = await rendered();
     assert.match(html, /\{\{if \.HeroUrl\}\}\s*<div[^>]*>\s*<img\s+alt="\{\{\.HeroAlt\}\}"\s+src="\{\{\.HeroUrl\}\}"[^>]*>\s*<\/div>\s*\{\{end\}\}/);
     assert.match(html, /\{\{if \.CtaHref\}\}[\s\S]*href="\{\{\.CtaHref\}\}"[\s\S]*\{\{\.CtaLabel\}\}[\s\S]*\{\{end\}\}/);
+  });
+
+  it("prints no reason sentence when core gave none", async () => {
+    const { meta, html } = await rendered();
+    const filled = fillSampleValues(html, { ...meta.sample, AudienceReason: "", CategoryLabel: "" });
+    assert.ok(!filled.includes("Bu e-postayı"), "an empty reason left its sentence");
+    assert.ok(!filled.includes("()"));
+  });
+
+  it("wraps long preformatted lines instead of widening the column", async () => {
+    const { html } = await rendered();
+    assert.match(html, /\.free-body pre \{[^}]*white-space: pre-wrap;[^}]*word-break: break-word;/);
+    assert.match(html, /\.free-body code \{[^}]*monospace/);
+    assert.match(html, /\.free-body hr \{/);
   });
 });
