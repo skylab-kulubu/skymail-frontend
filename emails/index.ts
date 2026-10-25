@@ -44,6 +44,7 @@ import ClubTeamMembership, { meta as clubTeamMembership } from "./club-team-memb
 import ClubRoleMembership, { meta as clubRoleMembership } from "./club-role-membership";
 import ClubGroupMembership, { meta as clubGroupMembership } from "./club-group-membership";
 import ClubPrivilegeChange, { meta as clubPrivilegeChange } from "./club-privilege-change";
+import ClubNews, { meta as clubNews } from "./club-news";
 
 import FormsStatusChanged, { meta as formsStatusChanged } from "./forms-status-changed";
 import FormsAttemptUpdate, { meta as formsAttemptUpdate } from "./forms-attempt-update";
@@ -89,6 +90,7 @@ export const templates: EmailTemplate[] = [
   { meta: clubRoleMembership, Component: ClubRoleMembership },
   { meta: clubGroupMembership, Component: ClubGroupMembership },
   { meta: clubPrivilegeChange, Component: ClubPrivilegeChange },
+  { meta: clubNews, Component: ClubNews },
 
   { meta: formsStatusChanged, Component: FormsStatusChanged },
   { meta: formsAttemptUpdate, Component: FormsAttemptUpdate },
