@@ -56,6 +56,7 @@ const LISTS: Record<string, string[]> = {
   "account.deletion-completed": [],
   "event.ticket-created": ["TicketCode", "TicketQrUrl"],
   "event.reminder": ["TicketQrUrl"],
+  "core.contact-consent-confirm": ["confirmUrl", "withdrawUrl"],
 };
 
 describe("the sensitive variables declared in emails/", () => {

@@ -14,11 +14,16 @@ const ICON: Record<ClubConsoleEntry["id"], LucideIcon> = { admin: ShieldCheck, f
 const DESCRIPTION: Record<ClubConsoleEntry["id"], string> = {
   admin: "Üyeler ve etkinlikler",
   forms: "Formlar ve başvurular",
-  mail: "Toplu e-posta ve listeler",
+  mail: "E-posta ve bildirim gönderimi",
 };
 
-/** Every club console for skylcn's SidebarBrand switcher, SkyMail ("mail", the current one) included. */
+/**
+ * Every club console for skylcn's SidebarBrand switcher, this one included: the
+ * İletişim console (id "mail", the SkyMail UI; iletişim-servisi 10, dilim 1). The
+ * admin panel's own switcher (core-frontend) still says Mail until its entry is
+ * renamed too.
+ */
 export function clubConsoles(others: readonly ConsoleLink[]): ClubConsoleEntry[] {
-  const all = [...others, { id: "mail" as const, label: "Mail", href: "/" }];
+  const all = [...others, { id: "mail" as const, label: "İletişim", href: "/" }];
   return all.map((app) => ({ ...app, icon: ICON[app.id], description: DESCRIPTION[app.id] }));
 }

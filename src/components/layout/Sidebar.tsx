@@ -113,7 +113,7 @@ export function Sidebar() {
 
   return (
     <>
-      <SidebarBrand name="SKY LAB" subtitle="SkyMail" consoles={clubConsoles(config.consoles)} current="mail" />
+      <SidebarBrand name="SKY LAB" subtitle="İletişim" consoles={clubConsoles(config.consoles)} current="mail" />
       <SidebarContent>
         <div className="flex flex-col gap-1">
           {items.map((item) => {

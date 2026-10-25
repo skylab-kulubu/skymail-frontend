@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { Lock } from 'lucide-react';
+import { BellRing, Lock } from 'lucide-react';
 import { Badge } from '@skylab-kulubu/skylcn-ui';
 import { formatClubTime } from '@/lib/format';
+import { notificationTypeLine, type NotificationTypeSummary } from '@/lib/notification-types';
 import {
   SYSTEM_TEMPLATE_NOTE,
   mainSourceLabel,
@@ -18,7 +19,16 @@ import {
  * was archived. Written out, not in a tooltip, so it reads on a phone and to a
  * keyboard.
  */
-export function TemplateName({ row, actions }: { row: TemplateRow; actions: TemplateActions }) {
+export function TemplateName({
+  row,
+  actions,
+  notification,
+}: {
+  row: TemplateRow;
+  actions: TemplateActions;
+  /** The Notification type of the template's key, when it is one (iletişim-servisi 10, dilim 2). */
+  notification?: NotificationTypeSummary;
+}) {
   return (
     <div className="min-w-0 whitespace-normal">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -36,6 +46,14 @@ export function TemplateName({ row, actions }: { row: TemplateRow; actions: Temp
         <p className="text-2xs mt-0.5 font-mono break-all text-muted-foreground">
           <span className="sr-only">Template key: </span>
           {row.key}
+        </p>
+      ) : null}
+      {notification ? (
+        <p className="mt-0.5 flex items-start gap-1.5 text-xs text-secondary-foreground">
+          <BellRing className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
+          <span>
+            <span className="font-medium">Bildirim türü</span>: {notificationTypeLine(notification)}
+          </span>
         </p>
       ) : null}
       {actions.systemNote ? (

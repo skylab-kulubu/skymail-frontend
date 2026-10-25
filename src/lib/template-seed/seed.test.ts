@@ -397,6 +397,93 @@ describe("the Template seed", () => {
   });
 });
 
+describe("the Template seed's Notification types", () => {
+  const ticket = () =>
+    template("event.ticket-created", "Biletin hazır", {
+      notification: {
+        category: null,
+        required: true,
+        defaultChannels: ["email", "inbox"],
+        lane: "system",
+        inbox: { title: "{{.EventName}} biletin hazır", summary: "{{.Venue}}", link: "/events/{{.EventId}}" },
+      },
+    });
+
+  it("writes a template's Notification type after the template, and none for a template without one", async () => {
+    const { fetch, calls } = scriptedFetch(seeded("event.ticket-created"), json(200, {}), seeded("core.welcome"));
+
+    const { exitCode, output } = await run({ templates: [ticket(), template("core.welcome", "Hoş geldin")], fetch });
+
+    assert.equal(exitCode, 0, output);
+    assert.deepEqual(
+      calls.map((call) => `${call.method} ${call.url}`),
+      [
+        `PUT ${BASE_URL}/v1/templates/by-key/event.ticket-created`,
+        `PUT ${BASE_URL}/v1/notification_types/event.ticket-created`,
+        `PUT ${BASE_URL}/v1/templates/by-key/core.welcome`,
+      ],
+    );
+    assert.equal(calls[1].headers.get("Authorization"), "Bearer seed-token");
+    assert.deepEqual(bodyOf(calls[1]), {
+      category: null,
+      required: true,
+      default_channels: ["email", "inbox"],
+      lane: "system",
+      inbox: { title: "{{.EventName}} biletin hazır", summary: "{{.Venue}}", link: "/events/{{.EventId}}" },
+    });
+    assert.match(output, /2 şablon ve 1 bildirim türü/);
+  });
+
+  it("writes the type of a template SkyMail refused: the template is there, with the operator's text", async () => {
+    const { fetch, calls } = scriptedFetch(refused("event.ticket-created", { rules: ["operator_subject"] }), json(200, {}));
+
+    const { exitCode, output } = await run({ templates: [ticket()], fetch });
+
+    assert.equal(exitCode, 1, output);
+    assert.equal(calls[1].url, `${BASE_URL}/v1/notification_types/event.ticket-created`);
+    assert.match(output, /bildirim türü/);
+  });
+
+  it("stops and fails when SkyMail refuses a type, and says why", async () => {
+    const { fetch, calls } = scriptedFetch(
+      seeded("event.ticket-created"),
+      json(400, { code: "notification_type.inbox_variant_invalid", message: "bad link", params: { part: "link" } }),
+    );
+
+    const { exitCode, output } = await run({ templates: [ticket(), template("core.welcome", "Hoş geldin")], fetch });
+
+    assert.equal(exitCode, 1, output);
+    assert.equal(calls.length, 2);
+    assert.match(output, /bildirim türü yazılamadı: HTTP 400 notification_type\.inbox_variant_invalid/);
+    assert.match(output, /denenmeyenler: core\.welcome/);
+  });
+
+  it("marks the types in a dry run", async () => {
+    const { fetch, calls } = scriptedFetch();
+    const { exitCode, output } = await run({ templates: [ticket()], fetch, dryRun: true });
+    assert.equal(exitCode, 0, output);
+    assert.equal(calls.length, 0);
+    assert.match(output, /event\.ticket-created.*\[bildirim türü\]/);
+  });
+
+  it("are stated in the repo with an inbox text exactly when they go to the inbox", () => {
+    const typed = repoTemplates.filter(({ meta }) => meta.notification);
+    assert.ok(typed.some(({ meta }) => meta.key === "event.ticket-created"));
+    for (const { meta } of typed) {
+      const n = meta.notification!;
+      assert.equal(n.inbox !== undefined, n.defaultChannels.includes("inbox"), meta.key);
+      assert.ok(n.inbox === undefined || /^\/[^/]/.test(n.inbox.link) || n.inbox.link.startsWith("https://"), meta.key);
+      assert.ok(!/\.(FullName|Email)\b/.test(JSON.stringify(n.inbox ?? {})), `${meta.key}: the inbox text reads no person`);
+    }
+    const ticketType = typed.find(({ meta }) => meta.key === "event.ticket-created")!.meta.notification!;
+    assert.deepEqual(
+      { required: ticketType.required, lane: ticketType.lane, channels: ticketType.defaultChannels, category: ticketType.category },
+      { required: true, lane: "system", channels: ["email", "inbox"], category: null },
+    );
+    assert.equal(ticketType.inbox?.link, "/events/{{.EventId}}");
+  });
+});
+
 describe("the seed's command line", () => {
   const keys = ["free.basic", "core.welcome", "keycloak.reset-password"];
 

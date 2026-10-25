@@ -5,7 +5,7 @@ import { DeveloperCredit } from '@/components/auth/DeveloperCredit';
 
 /**
  * The frame for the screens outside the shell: sign-in and "erişimin yok".
- * skylcn-ui's TaskPage, with SkyMail's name beside the SKY LAB mark and the
+ * skylcn-ui's TaskPage, with the console's name (İletişim) beside the SKY LAB mark and the
  * developer credit under the task.
  */
 export function AuthScreen({
@@ -35,7 +35,7 @@ export function AuthScreen({
       brand={
         <>
           <SkylabMark size={22} />
-          <span className="text-sm font-semibold tracking-tight">SkyMail</span>
+          <span className="text-sm font-semibold tracking-tight">İletişim</span>
         </>
       }
       footer={<DeveloperCredit />}

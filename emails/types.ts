@@ -58,6 +58,34 @@ export interface TemplateMeta {
    */
   sensitiveVariables?: string[];
   sample: Record<string, unknown>;
+  /**
+   * The Notification type of the same key (skymail-backend
+   * docs/notifications.md, ADR 0070), for a template a service sends through
+   * `POST /v1/notifications`: the seed writes it after the template with
+   * `PUT /v1/notification_types/{key}`. Left out, the template is no
+   * Notification type and the seed writes none.
+   */
+  notification?: NotificationTypeMeta;
+}
+
+/** A Notification type as the seed writes it. */
+export interface NotificationTypeMeta {
+  /** The preference category; null for none (a required type has none). */
+  category: string | null;
+  /** A required type does not look at preferences (a login code, a ticket). */
+  required: boolean;
+  /** The channels it goes by. */
+  defaultChannels: ("email" | "inbox")[];
+  /** system never waits behind a bulk send. */
+  lane: "system" | "bulk";
+  /**
+   * The inbox item's text, Go text/template over the notification's
+   * variables only (no `.FullName`, no `.Email`; a missing variable is an
+   * error, not empty). Required when defaultChannels holds inbox. `link` is
+   * an in-app path (`/events/…`) or an https address on yildizskylab.com
+   * with its host written out.
+   */
+  inbox?: { title: string; summary: string; link: string };
 }
 
 /** A contract Required variable and why the mail needs it. */
