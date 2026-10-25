@@ -1311,7 +1311,7 @@
   "forms.status-changed": {
     "subject": "{{if eq .status `approved`}}{{if or .nextFormId .linkedFormId}}Sonraki adıma geçtiniz{{else}}Cevabınız onaylandı{{end}}{{else if eq .status `declined`}}Cevabınız kabul edilmedi{{else if eq .status `returned`}}Cevabınızda düzeltme istendi{{else if eq .status `reopened`}}Yeniden başvurabilirsiniz{{else}}Cevabınız incelendi{{end}} · {{.formTitle}}",
     "system": true,
-    "contentSensitive": false,
+    "contentSensitive": true,
     "variables": [
       "formTitle",
       "status",
@@ -1447,6 +1447,97 @@
       "{{if eq .kind `expired`}}",
       "{{if eq .kind `extended`}}",
       "{{if eq .kind `reminder`}}"
+    ]
+  },
+  "forms.form-copy": {
+    "subject": "Cevabınızı aldık · {{.formTitle}}",
+    "system": true,
+    "contentSensitive": true,
+    "variables": [
+      "formTitle",
+      "submittedAt",
+      "answers",
+      "firstName",
+      "recipientName"
+    ],
+    "requiredVariables": [
+      "formTitle",
+      "answers"
+    ],
+    "sensitiveVariables": null,
+    "sampleKeys": [
+      "answers",
+      "firstName",
+      "formTitle",
+      "recipientName",
+      "submittedAt"
+    ],
+    "referenced": [
+      "UnsubscribeUrl",
+      "answers",
+      "firstName",
+      "formTitle",
+      "recipientName",
+      "submittedAt"
+    ],
+    "actions": [
+      "{{.UnsubscribeUrl}}",
+      "{{.answer}}",
+      "{{.firstName}}",
+      "{{.formTitle}}",
+      "{{.question}}",
+      "{{.recipientName}}",
+      "{{.submittedAt}}",
+      "{{else if .recipientName}}",
+      "{{if .UnsubscribeUrl}}",
+      "{{if .answer}}",
+      "{{if .firstName}}",
+      "{{len .answers}}",
+      "{{printf `%02d` (add1 $index)}}",
+      "{{range $index, $answer := .answers}}"
+    ]
+  },
+  "forms.pending-reminder": {
+    "subject": "İncelemeni bekleyen {{.totalPending}} cevap var",
+    "system": true,
+    "contentSensitive": false,
+    "variables": [
+      "totalPending",
+      "forms",
+      "firstName",
+      "recipientName"
+    ],
+    "requiredVariables": [
+      "totalPending",
+      "forms"
+    ],
+    "sensitiveVariables": null,
+    "sampleKeys": [
+      "firstName",
+      "forms",
+      "recipientName",
+      "totalPending"
+    ],
+    "referenced": [
+      "UnsubscribeUrl",
+      "firstName",
+      "forms",
+      "recipientName",
+      "totalPending"
+    ],
+    "actions": [
+      "{{.UnsubscribeUrl}}",
+      "{{.firstName}}",
+      "{{.formId}}",
+      "{{.formTitle}}",
+      "{{.pendingCount}}",
+      "{{.recipientName}}",
+      "{{.totalPending}}",
+      "{{else if .recipientName}}",
+      "{{if .UnsubscribeUrl}}",
+      "{{if .firstName}}",
+      "{{len .forms}}",
+      "{{range .forms}}"
     ]
   }
 }

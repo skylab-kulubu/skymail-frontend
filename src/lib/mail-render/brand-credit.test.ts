@@ -45,6 +45,8 @@ const BRAND_OF: Record<string, Brand> = {
   "club.news": "skylab",
   "forms.status-changed": "forms",
   "forms.attempt-update": "forms",
+  "forms.form-copy": "forms",
+  "forms.pending-reminder": "forms",
 };
 
 /** The name beside the logo, and the footer's credit lines, last one last. */
