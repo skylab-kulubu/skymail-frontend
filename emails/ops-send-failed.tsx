@@ -19,7 +19,7 @@ export const meta: TemplateMeta = {
     FailedCount: "7",
     TotalCount: "312",
     FirstError: "dial tcp 10.0.1.25:587: i/o timeout",
-    TaskUrl: "https://mail.yildizskylab.com/mail_tasks/6f3d2c61-8a1e-4f5b-9f21-2b7c4de90a13",
+    TaskUrl: "https://iletisim.yildizskylab.com/mail_tasks/6f3d2c61-8a1e-4f5b-9f21-2b7c4de90a13",
   },
 };
 

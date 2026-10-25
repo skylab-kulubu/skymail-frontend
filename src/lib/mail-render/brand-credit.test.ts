@@ -52,7 +52,7 @@ const SKYMAIL_LINE = "SkyMail by WEBLAB Developed by Enes Genç";
 const SIGNED: Record<Brand, { name: string; credits: string[] }> = {
   account: { name: "e-skylab", credits: ["e-skylab by WEBLAB Developed by Yusuf Açmacı", SKYMAIL_LINE] },
   forms: { name: "SKY LAB Forms", credits: ["SKY LAB Forms by WEBLAB Developed by Fatih Naz", SKYMAIL_LINE] },
-  mail: { name: "SKY LAB Mail", credits: [SKYMAIL_LINE] },
+  mail: { name: "SKY LAB İletişim", credits: [SKYMAIL_LINE] },
   skylab: { name: "SKY LAB", credits: [SKYMAIL_LINE] },
 };
 
@@ -94,7 +94,7 @@ describe("the product each template speaks for", () => {
           assert.match(rendered.html, new RegExp(`<a[^>]*href="${href}"[^>]*>\\s*${credit.replaceAll(" ", "\\s+")}\\s*</a`), `${meta.key}: "${credit}" is not linked`);
         }
       }
-      assert.ok(!/SKY LAB (Mail )?by WEBLAB/.test(rendered.plainText), `${meta.key}: a club or SKY LAB Mail product line`);
+      assert.ok(!/SKY LAB (Mail |İletişim )?by WEBLAB/.test(rendered.plainText), `${meta.key}: a club or SKY LAB İletişim product line`);
       assert.ok(!rendered.plainText.includes("SKY LAB Hesap"), `${meta.key}: still names "SKY LAB Hesap"`);
     });
   }
