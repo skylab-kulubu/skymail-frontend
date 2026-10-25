@@ -143,13 +143,19 @@ const UNSUBSCRIBE_URL = "UnsubscribeUrl";
 //
 // The free-form body is the one place markup comes from the sender, so its
 // links are plain <a> with nothing on them; the server's allowlist drops style
-// and class inside that body, so their colour can only come from here.
+// and class inside that body, so their colour can only come from here. The
+// same holds for a News record's body (club.news), which may also carry
+// <pre>, <code> and <hr>: a long line wraps instead of widening the column
+// on a phone.
 const css = `
 :root { color-scheme: light dark; supported-color-schemes: light dark; }
 body { margin: 0; padding: 0; background-color: ${ink.page}; }
 .free-body a { color: ${ink.link}; }
 .free-body p { margin: 12px 0 0; }
 .free-body p:first-child { margin-top: 0; }
+.free-body pre { margin: 12px 0 0; padding: 12px; background-color: ${ink.surface}; border-radius: 8px; white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; line-height: 20px; }
+.free-body code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; word-break: break-word; overflow-wrap: anywhere; }
+.free-body hr { margin: 20px 0 0; border: none; border-top: 1px solid ${ink.hair}; }
 
 @media (prefers-color-scheme: dark) {
   .email-bg   { background-color: #0a0a0a !important; }
@@ -170,6 +176,8 @@ body { margin: 0; padding: 0; background-color: ${ink.page}; }
   .logo-light { display: none !important; }
   .logo-dark  { display: inline-block !important; max-height: none !important; }
   .free-body a { color: #ebd5ee !important; }
+  .free-body pre { background-color: #141414 !important; }
+  .free-body hr { border-top-color: #262626 !important; }
 }
 
 [data-ogsb] .email-bg, .email-bg[data-ogsb] { background-color: #0a0a0a !important; }
@@ -313,7 +321,7 @@ function BrandMark({ brand }: { brand: Brand }) {
   );
 }
 
-function Footer({ brand, reason }: { brand: Brand; reason: React.ReactNode }) {
+function Footer({ brand, reason, sender }: { brand: Brand; reason: React.ReactNode; sender?: React.ReactNode }) {
   const { credit } = brands[brand];
   // Muted, not Forms' faint: the reason and the credit are text to read, and
   // faint is 2.5:1 on white (WCAG AA asks 4.5:1); muted is 4.7:1, 5.7:1 dark.
@@ -327,7 +335,12 @@ function Footer({ brand, reason }: { brand: Brand; reason: React.ReactNode }) {
           {reason}
         </p>
       ) : null}
-      <p className="t-muted" style={hasReason ? { ...small, margin: "8px 0 0" } : small}>
+      {sender ? (
+        <p className="t-muted" style={hasReason ? { ...small, margin: "8px 0 0" } : small}>
+          {sender}
+        </p>
+      ) : null}
+      <p className="t-muted" style={hasReason || sender ? { ...small, margin: "8px 0 0" } : small}>
         <a href={REPORT} className="t-muted" style={quiet}>
           Sorun bildir
         </a>
@@ -425,6 +438,7 @@ export function Shell({
   preview,
   brand = "skylab",
   reason,
+  sender,
   children,
 }: {
   preview: string;
@@ -436,6 +450,11 @@ export function Shell({
    * 2026-10-19: no explanatory sentences in those mails).
    */
   reason?: React.ReactNode | null;
+  /**
+   * Who sends it and how to reach them, for a mail to many (club.news, bilet
+   * 06): a line under the reason. Left out, the footer has none.
+   */
+  sender?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
@@ -459,7 +478,7 @@ export function Shell({
                   <td className="shell" style={{ padding: "40px 24px 32px", fontFamily: fontStack, textAlign: "left" }}>
                     <BrandMark brand={brand} />
                     <div style={{ paddingTop: "32px" }}>{children}</div>
-                    <Footer brand={brand} reason={reason === undefined ? defaultReason() : reason} />
+                    <Footer brand={brand} reason={reason === undefined ? defaultReason() : reason} sender={sender} />
                   </td>
                 </tr>
               </Table>

@@ -42,6 +42,7 @@ const BRAND_OF: Record<string, Brand> = {
   "club.role-membership": "account",
   "club.group-membership": "account",
   "club.privilege-change": "account",
+  "club.news": "skylab",
   "forms.status-changed": "forms",
   "forms.attempt-update": "forms",
 };

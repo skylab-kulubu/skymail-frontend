@@ -18,6 +18,13 @@ const OPERATOR_WRITTEN = new Set(["free.basic"]);
  */
 const FORMS_WRITTEN = new Set(["forms.status-changed", "forms.attempt-update"]);
 
+/**
+ * A duyuru to many (club.news, duyuru-haber 06): its footer says why this
+ * reader got it, in core's words for them (SPEC §5.7: AudienceReason,
+ * CategoryLabel), beside their way out of that category.
+ */
+const ANNOUNCEMENTS = new Set(["club.news"]);
+
 const CODE_MAILS = ["keycloak.login-code", "keycloak.personal-email-confirm"];
 const LINK_MAILS = ["keycloak.verify-email", "keycloak.reset-password", "keycloak.update-email", "keycloak.idp-link"];
 
@@ -28,7 +35,7 @@ const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/&#x27;|&ap
 describe("the account and notice mails", () => {
   for (const { meta, Component } of templates) {
     if (OPERATOR_WRITTEN.has(meta.key)) continue;
-    const ourWords = !FORMS_WRITTEN.has(meta.key);
+    const ourWords = !FORMS_WRITTEN.has(meta.key) && !ANNOUNCEMENTS.has(meta.key);
     it(`${meta.key} ${ourWords ? "says nothing about why it came and " : ""}keeps the footer links`, async () => {
       const rendered = await renderComponent(Component);
       assert.ok(rendered.ok);
