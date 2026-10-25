@@ -21,6 +21,9 @@ const FORMS_SENDS: Record<string, string[]> = {
   "forms.pending-reminder": ["totalPending", "forms", "firstName", "recipientName"],
 };
 
+/** Mails whose content is the recipient's alone: the form copy's answers, the status mail's review note. */
+const SENSITIVE = new Set(["forms.form-copy", "forms.status-changed"]);
+
 /** Read by the body but no longer sent: the old two-form chaining's next form, which the body still falls back to. */
 const LEGACY: Record<string, string[]> = { "forms.status-changed": ["linkedFormId"], "forms.attempt-update": [], "forms.form-copy": [], "forms.pending-reminder": [] };
 
@@ -40,8 +43,9 @@ describe("the Forms mails", () => {
     it(`${key} is a System template in the Forms brand, visible to operators, reading what Forms sends`, async () => {
       const { meta, html } = await rendered(key);
       assert.equal(meta.system, true);
-      // No code or one-time link: an operator may read a send.
-      assert.equal(meta.contentSensitive, false);
+      // No code or one-time link; the person's answers and the team's note
+      // about them are for the recipient alone, so those sends stay masked.
+      assert.equal(meta.contentSensitive, SENSITIVE.has(key));
       assert.equal(meta.brand, "forms");
       assert.deepEqual([...meta.variables].sort(), [...variables].sort());
       assert.deepEqual(Object.keys(meta.sample).sort(), [...variables].sort());

@@ -8,7 +8,10 @@ export const meta: TemplateMeta = {
   name: "Forms · Yanıt Alındı",
   subject: "Cevabınızı aldık · {{.formTitle}}",
   system: true,
-  contentSensitive: false,
+  // The person's own answers (a phone or student number among them) are what
+  // the recipient alone should see: a send's content is kept masked. No
+  // sensitiveVariables list; SkyMail masks by name and shape.
+  contentSensitive: true,
   brand: "forms",
   trigger:
     "forms-backend, bir form gönderildiğinde gönderen kişiye cevaplarının kopyası; doğrulanmamış misafir adresine form başına bir kopya ve günde en çok FormMail:GuestCopyDailyLimit (FormMailNotifier.NotifyResponseCopyAsync). Gövde forms-frontend mail-templates/FormSubmission.jsx.",
