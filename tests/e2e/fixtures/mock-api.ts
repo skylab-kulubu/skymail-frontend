@@ -375,6 +375,9 @@ export class MockSkymail {
     return new Date(this.clock).toISOString();
   }
 
+  /** The Notification types `GET /notification_types` lists (iletişim-servisi 10, dilim 2); none by default. */
+  notificationTypes: unknown[] = [];
+
   /** A template with one published version. */
   addTemplate(input: {
     name: string;
@@ -810,6 +813,9 @@ export class MockSkymail {
     const draftsMatch = /^\/templates\/([^/]+)\/drafts$/.exec(path);
 
     if (method === "GET" && path === "/templates") return this.templateList(query);
+    if (method === "GET" && path === "/notification_types") {
+      return can("skymail:templates:read") ? { status: 200, body: this.notificationTypes } : refuse(403, "server.forbidden");
+    }
     if (method === "GET" && path === "/mailing_lists") return this.listPage(query);
     const listMatch = /^\/mailing_lists\/([^/]+)(\/recipients)?$/.exec(path);
     if (method === "GET" && listMatch) return this.listOrRecipients(listMatch[1], Boolean(listMatch[2]), query);

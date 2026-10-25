@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { AlertTriangle, Plus } from 'lucide-react';
 import { ArchiveDialog } from '@/components/common/ArchiveDialog';
 import { Button, FilterPills, Pagination, StateCard } from '@skylab-kulubu/skylcn-ui';
@@ -13,6 +13,7 @@ import { ROLE, hasRole, sectionLabel } from '@/lib/access';
 import { useApi } from '@/lib/api/react';
 import { LIFECYCLE_FILTERS, type Lifecycle } from '@/lib/list-view';
 import type { NoticeData } from '@/lib/notice';
+import { fetchNotificationTypes, type NotificationTypeSummary } from '@/lib/notification-types';
 import {
   TEMPLATE_PAGE_SIZE,
   archiveTemplate,
@@ -60,6 +61,14 @@ export function TemplatesPage() {
     canRestore: canWrite,
   });
   const { view, state } = list;
+  // The templates' Notification types, beside the list: a failure leaves the lines out, the list stands.
+  const [types, setTypes] = useState<ReadonlyMap<string, NotificationTypeSummary>>(new Map());
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchNotificationTypes(api, controller.signal).then(setTypes, () => undefined);
+    return () => controller.abort();
+  }, [api]);
+  const typeOf = (row: TemplateRow) => (row.key ? types.get(row.key) : undefined);
   const rows = state.status === 'success' ? state.data.templates.map((item) => toTemplateRow(item, viewerSub)) : [];
 
   async function archive(template: ArchivableRecord) {
@@ -90,7 +99,7 @@ export function TemplatesPage() {
       header: 'Mail template',
       render: (_: unknown, row: TemplateRow) => (
         <div className="max-w-[20rem] min-w-[14rem]">
-          <TemplateName row={row} actions={templateActions(row, roles)} />
+          <TemplateName row={row} actions={templateActions(row, roles)} notification={typeOf(row)} />
         </div>
       ),
     },
@@ -160,7 +169,7 @@ export function TemplatesPage() {
             columns={columns}
             emptyText={EMPTY_TEXT[view.lifecycle]}
             renderItem={(row) => (
-              <TemplateItem row={row} actions={templateActions(row, roles)}>
+              <TemplateItem row={row} actions={templateActions(row, roles)} notification={typeOf(row)}>
                 {rowActions(row)}
               </TemplateItem>
             )}
@@ -196,15 +205,17 @@ export function TemplatesPage() {
 function TemplateItem({
   row,
   actions,
+  notification,
   children,
 }: {
   row: TemplateRow;
   actions: TemplateActions;
+  notification?: NotificationTypeSummary;
   children: ReactNode;
 }) {
   return (
     <li className="space-y-2 px-3.5 py-3 text-sm">
-      <TemplateName row={row} actions={actions} />
+      <TemplateName row={row} actions={actions} notification={notification} />
       <p className="text-xs break-words text-secondary-foreground">
         <span className="text-subtle-foreground">Konu: </span>
         {row.subject}
