@@ -12,9 +12,22 @@ export const meta: TemplateMeta = {
   contentSensitive: true,
   brand: "skylab",
   trigger:
-    "core-backend, Member apply / Guest apply / Apply-for-other bir Ticket yazdığında. NOT: bu gönderimi yapan kod henüz yazılmadı.",
+    "core-backend, Member apply / Guest apply / Apply-for-other bir Ticket yazdığında, yayında ve bitmemiş bir etkinlikte (TICKET_CREATED_NOTIFICATION=on; docs/ticket-created-notification.md). Üyeye bildirim olarak (POST /v1/notifications: kutu + e-posta), konuğa yalnız bu e-posta. core bugün TicketQrUrl, TicketCode ve EventUrl göndermez; satırları boşsa görünmez.",
   variables: ["EventName", "EventDate", "Venue", "TicketQrUrl", "TicketCode", "OwnerTeam", "EventUrl"],
   sensitiveVariables: ["TicketCode", "TicketQrUrl"],
+  notification: {
+    category: null,
+    required: true,
+    defaultChannels: ["email", "inbox"],
+    lane: "system",
+    // core always sends EventId, EventName, EventDate (empty without a
+    // start), Venue and OwnerTeam: the inbox text reads only those.
+    inbox: {
+      title: `${v("EventName")} biletin hazır`,
+      summary: `${ifSet("EventDate")}${v("EventDate")} · ${end}${v("Venue")}`,
+      link: `/events/${v("EventId")}`,
+    },
+  },
   sample: {
     EventName: "GECEKODU 2026",
     EventDate: "12–13 Nisan 2026, 10:00",

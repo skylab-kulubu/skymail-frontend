@@ -73,7 +73,7 @@ zaman verdiği değişkenler kullanılır.
 - **Birincil E-posta Değişti (eski adrese)** (`account.primary-email-changed`) — Account center, birincil e-posta değiştiğinde — ESKİ adrese gider. Yeni adres zaten doğrulama postası aldığı için bu, değişikliği kaçıran kişiye tek uyarıdır.
 - **Hesap Silme Talebi Alındı** (`account.deletion-requested`) — Account center, kişi hesabını sildiğinde. Erişim anında kapanır, kişisel veriler sonra anonimleştirilir (ADR-0042). ACCOUNT_ERASURE_MODE açıldığında devreye girer.
 - **Hesap Silindi** (`account.deletion-completed`) — Account center, anonimleştirme tamamlandığında. Bu, bu adrese gönderdiğimiz son postadır.
-- **Etkinlik · Bilet Oluşturuldu** (`event.ticket-created`) — core-backend, Member apply / Guest apply / Apply-for-other bir Ticket yazdığında. NOT: bu gönderimi yapan kod henüz yazılmadı.
+- **Etkinlik · Bilet Oluşturuldu** (`event.ticket-created`) — core-backend, Member apply / Guest apply / Apply-for-other bir Ticket yazdığında, yayında ve bitmemiş bir etkinlikte (TICKET_CREATED_NOTIFICATION=on; docs/ticket-created-notification.md). Üyeye bildirim olarak (POST /v1/notifications: kutu + e-posta), konuğa yalnız bu e-posta. core bugün TicketQrUrl, TicketCode ve EventUrl göndermez; satırları boşsa görünmez.
 - **Etkinlik · Hatırlatma** (`event.reminder`) — Etkinlikten bir gün önce, bileti olan herkese. NOT: zamanlayıcı ve gönderim kodu henüz yazılmadı; konu satırı T-1 varsayıyor.
 - **Etkinlik · Güncellendi** (`event.updated`) — Etkinliğin saati veya yeri değiştiğinde, bileti olan herkese. NOT: gönderim kodu henüz yazılmadı.
 - **Mail Onayı · Onayını Bekliyor** (`mail.approval-requested`) — SkyMail, gönderme yetkisi olmayan biri taslak gönderdiğinde onaycılara (ADR-0031, CONTEXT.md "Mail onayı", ticket 19).
