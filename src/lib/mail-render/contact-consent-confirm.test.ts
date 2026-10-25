@@ -63,6 +63,9 @@ describe("the contact consent confirmation mail", () => {
     assert.match(html, /href="\{\{\.confirmUrl\}\}"/);
     assert.match(html, /href="\{\{\.withdrawUrl\}\}"/);
     assert.ok(plainText.includes("{{.confirmUrl}}") && plainText.includes("{{.withdrawUrl}}"));
+    // A full stop right after the URL would be taken into it by some clients.
+    assert.ok(!plainText.includes("{{.withdrawUrl}}."), "a full stop follows the withdraw URL");
+    assert.match(html, /izni geri al<\/a\s*>\s*<\/p\s*>/);
     assert.match(html, /href="https:\/\/yildizskylab\.com\/acik-riza-metni\.pdf"/);
   });
 
@@ -91,7 +94,7 @@ describe("the contact consent confirmation mail", () => {
     for (const purpose of ["event_invitations", "promotional"]) {
       const { html } = await receivedFor(purpose);
       const count = (phrase: string) => html.split(phrase).length - 1;
-      assert.equal(count("Onaylayana kadar bu adrese gönderilmez."), 1, purpose);
+      assert.equal(count("Onaylayana kadar bu e-postalar gönderilmez."), 1, purpose);
       // core's PendingTTL: the confirm link of a pending grant expires 30 days after the mail.
       assert.equal(count("Bu bağlantı 30 gün geçerli."), 1, purpose);
       assert.equal(count("Bu isteği sen yapmadıysan bu e-postayı yok say"), 1, purpose);

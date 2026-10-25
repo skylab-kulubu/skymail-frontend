@@ -32,7 +32,9 @@ export const meta: TemplateMeta = {
 /**
  * Whoever typed the address may have typed any name with it, so the mail
  * greets nobody. It must carry no sponsor or other commercial content
- * (ADR-0062). The withdraw link ends the pending grant, so its mails stop.
+ * (ADR-0062). The withdraw link ends the pending grant, so its mails stop;
+ * it closes its sentence with no full stop, so the plain-text URL is not
+ * followed by one.
  */
 export default function CoreContactConsentConfirm() {
   const confirm = v("confirmUrl");
@@ -45,7 +47,7 @@ export default function CoreContactConsentConfirm() {
         {ifEq("purpose", "event_invitations")}Bu adrese <Strong>diğer SKY LAB etkinlikleri ve duyurularıyla ilgili e-postalar</Strong> gönderilmesi
         için izin verildi.{elseIfEq("purpose", "promotional")}Bu adrese{" "}
         <Strong>tanıtım içerikli SKY LAB e-postaları (indirim kodu, şirket iş ilanı, çekiliş gibi)</Strong> gönderilmesi için izin verildi.
-        {elseBranch}Bu adres için SKY LAB&apos;e bir iletişim izni verildi.{end} Onaylayana kadar bu adrese gönderilmez.
+        {elseBranch}Bu adres için SKY LAB&apos;e bir iletişim izni verildi.{end} Onaylayana kadar bu e-postalar gönderilmez.
       </Paragraph>
 
       <Cta href={confirm}>İznimi Onayla</Cta>
@@ -59,7 +61,7 @@ export default function CoreContactConsentConfirm() {
       </Small>
 
       <Small>
-        Bu isteği sen yapmadıysan bu e-postayı yok say ya da <TextLink href={v("withdrawUrl")}>izni geri al</TextLink>.
+        Bu isteği sen yapmadıysan bu e-postayı yok say ya da <TextLink href={v("withdrawUrl")}>izni geri al</TextLink>
       </Small>
     </Shell>
   );
