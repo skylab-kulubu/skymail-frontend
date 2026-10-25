@@ -28,7 +28,7 @@ export function AccessDenied({
       description={
         <>
           {person ? <strong className="text-foreground font-medium">{person}</strong> : 'Bu hesapla'}
-          {person ? ' olarak giriş yaptın, ama' : ''} SkyMail&apos;i kullanma yetkin yok. Erişime
+          {person ? ' olarak giriş yaptın, ama' : ''} İletişim konsolunu kullanma yetkin yok. Erişime
           ihtiyacın varsa kulüp yönetiminden <code className="text-secondary-foreground font-mono">skymail:access</code>{' '}
           rolünü iste.
         </>

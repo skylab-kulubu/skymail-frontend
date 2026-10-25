@@ -19,8 +19,8 @@ const mono = Space_Mono({
 });
 
 export const metadata: Metadata = {
-  title: { default: "SkyMail", template: "%s · SkyMail" },
-  description: "SKY LAB mail paneli: Mail template'ler, mail listeleri ve gönderimler.",
+  title: { default: "İletişim", template: "%s · İletişim" },
+  description: "SKY LAB iletişim konsolu: e-posta ve bildirim gönderimi, şablonlar ve listeler.",
   icons: { icon: "/favicon.ico" },
 };
 
