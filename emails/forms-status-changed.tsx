@@ -9,7 +9,9 @@ export const meta: TemplateMeta = {
   subject:
     "{{if eq .status `approved`}}{{if or .nextFormId .linkedFormId}}Sonraki adıma geçtiniz{{else}}Cevabınız onaylandı{{end}}{{else if eq .status `declined`}}Cevabınız kabul edilmedi{{else if eq .status `returned`}}Cevabınızda düzeltme istendi{{else if eq .status `reopened`}}Yeniden başvurabilirsiniz{{else}}Cevabınız incelendi{{end}} · {{.formTitle}}",
   system: true,
-  contentSensitive: false,
+  // The team's review note is written about this person's application, for
+  // them alone: a send's content is kept masked. No sensitiveVariables list.
+  contentSensitive: true,
   brand: "forms",
   trigger:
     "forms-backend, ekip bir cevabı onayladığında (approved), reddettiğinde (declined) ya da düzeltme istediğinde (returned); akış adımındaysa sonraki adımın formu nextFormId ile gelir. Ekip bir başvuruyu kapatıp yeniden başvuruya açtığında da (reopened) akışın ilk formu nextFormId ile gelir (FormMailNotifier.NotifyStatusChangedAsync / NotifyRunReopenedAsync). Gövde forms-frontend mail-templates/StatusChanged.jsx.",

@@ -16,7 +16,7 @@ const OPERATOR_WRITTEN = new Set(["free.basic"]);
  * Forms' own mails: their words are Fatih's (forms-frontend mail-templates/),
  * taken as he writes them, footer sentence included. They keep the footer links.
  */
-const FORMS_WRITTEN = new Set(["forms.status-changed", "forms.attempt-update"]);
+const FORMS_WRITTEN = new Set(["forms.status-changed", "forms.attempt-update", "forms.form-copy", "forms.pending-reminder"]);
 
 /**
  * A duyuru to many (club.news, duyuru-haber 06): its footer says why this

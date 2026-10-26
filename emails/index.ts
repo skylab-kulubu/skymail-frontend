@@ -48,6 +48,8 @@ import ClubNews, { meta as clubNews } from "./club-news";
 
 import FormsStatusChanged, { meta as formsStatusChanged } from "./forms-status-changed";
 import FormsAttemptUpdate, { meta as formsAttemptUpdate } from "./forms-attempt-update";
+import FormsFormCopy, { meta as formsFormCopy } from "./forms-form-copy";
+import FormsPendingReminder, { meta as formsPendingReminder } from "./forms-pending-reminder";
 
 export interface EmailTemplate {
   meta: TemplateMeta;
@@ -94,6 +96,8 @@ export const templates: EmailTemplate[] = [
 
   { meta: formsStatusChanged, Component: FormsStatusChanged },
   { meta: formsAttemptUpdate, Component: FormsAttemptUpdate },
+  { meta: formsFormCopy, Component: FormsFormCopy },
+  { meta: formsPendingReminder, Component: FormsPendingReminder },
 ];
 
 export function findTemplate(key: string): EmailTemplate | undefined {
