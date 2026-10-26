@@ -15,10 +15,17 @@ import { fillSampleValues, referencedVariables, renderComponent } from ".";
 const FORMS_SENDS: Record<string, string[]> = {
   "forms.status-changed": ["formTitle", "status", "reviewNote", "reviewedAt", "nextFormId", "questionCount", "firstName", "recipientName"],
   "forms.attempt-update": ["formTitle", "formId", "kind", "deadlineAt", "minutes", "duration", "nextFormId", "firstName", "recipientName"],
+  // NotifyResponseCopyAsync; answers is a list of { question, answer }.
+  "forms.form-copy": ["formTitle", "submittedAt", "answers", "firstName", "recipientName"],
+  // PendingResponseReminderWorker; forms is a list of { formId, formTitle, pendingCount }.
+  "forms.pending-reminder": ["totalPending", "forms", "firstName", "recipientName"],
 };
 
+/** Mails whose content is the recipient's alone: the form copy's answers, the status mail's review note. */
+const SENSITIVE = new Set(["forms.form-copy", "forms.status-changed"]);
+
 /** Read by the body but no longer sent: the old two-form chaining's next form, which the body still falls back to. */
-const LEGACY: Record<string, string[]> = { "forms.status-changed": ["linkedFormId"], "forms.attempt-update": [] };
+const LEGACY: Record<string, string[]> = { "forms.status-changed": ["linkedFormId"], "forms.attempt-update": [], "forms.form-copy": [], "forms.pending-reminder": [] };
 
 async function rendered(key: string) {
   const template = findTemplate(key);
@@ -36,8 +43,9 @@ describe("the Forms mails", () => {
     it(`${key} is a System template in the Forms brand, visible to operators, reading what Forms sends`, async () => {
       const { meta, html } = await rendered(key);
       assert.equal(meta.system, true);
-      // No code or one-time link: an operator may read a send.
-      assert.equal(meta.contentSensitive, false);
+      // No code or one-time link; the person's answers and the team's note
+      // about them are for the recipient alone, so those sends stay masked.
+      assert.equal(meta.contentSensitive, SENSITIVE.has(key));
       assert.equal(meta.brand, "forms");
       assert.deepEqual([...meta.variables].sort(), [...variables].sort());
       assert.deepEqual(Object.keys(meta.sample).sort(), [...variables].sort());
@@ -77,6 +85,8 @@ describe("the Forms mails", () => {
       ["forms.attempt-update", { kind: "expiredEmpty" }, "Süreniz doldu · Başvuru 2026"],
       ["forms.attempt-update", { kind: "accepted" }, "Tesliminiz kabul edildi · Başvuru 2026"],
       ["forms.attempt-update", { kind: "closed" }, "Tesliminiz kabul edilmedi · Başvuru 2026"],
+      ["forms.form-copy", {}, "Cevabınızı aldık · Başvuru 2026"],
+      ["forms.pending-reminder", { totalPending: 7 }, "İncelemeni bekleyen 7 cevap var"],
     ];
     for (const [key, values, subject] of subjects) {
       const { meta } = await rendered(key);
@@ -97,9 +107,11 @@ describe("the Forms mails", () => {
     const { html } = await rendered("forms.status-changed");
     assert.ok(html.includes('pre-wrap">{{.reviewNote}}</p>'), "the review note is not against its tags");
     assert.ok(html.includes('pre-wrap">Not bırakılmadı.</p>'), "the empty note is not against its tags");
+    // forms.form-copy's answer keeps its lines too: an answer is typed in a text area.
+    const preWrap: Record<string, number> = { "forms.status-changed": 2, "forms.form-copy": 1 };
     for (const key of Object.keys(FORMS_SENDS)) {
       const notes = [...(await rendered(key)).html.matchAll(/white-space:pre-wrap">([^<]*)</g)].map((match) => match[1]);
-      assert.equal(notes.length, key === "forms.status-changed" ? 2 : 0, `${key}: pre-wrap notes`);
+      assert.equal(notes.length, preWrap[key] ?? 0, `${key}: pre-wrap notes`);
       for (const note of notes) assert.equal(note, note.trim(), `${key}: "${note}" has whitespace around it`);
     }
   });
@@ -124,9 +136,41 @@ describe("the Forms mails", () => {
   }
 
   it("the inbox line goes whole, with every action it branches on", async () => {
-    for (const key of Object.keys(FORMS_SENDS)) {
+    for (const key of ["forms.status-changed", "forms.attempt-update"]) {
       const html = (await rendered(key)).html.replace(/\s+/g, " ");
       assert.ok(html.includes("{{else if eq ." + (key === "forms.status-changed" ? "status `reopened`}}için yeniden başvurabilirsiniz" : "kind `closed`}}Süre dolduğunda")), `${key}: the preview was cut`);
     }
+  });
+
+  // Inside a range dot is the element: .question and .answer, .formId,
+  // .formTitle and .pendingCount are its fields, not variables Forms sends
+  // (the test above), and the preview leaves the rows as written.
+  it("forms.form-copy lists every answer, numbered, an empty one as left blank", async () => {
+    const { html, meta } = await rendered("forms.form-copy");
+    for (const part of [
+      "{{range $index, $answer := .answers}}",
+      "{{printf `%02d` (add1 $index)}}",
+      "{{.question}}",
+      'pre-wrap">{{if .answer}}{{.answer}}{{else}}<span',
+      "Boş bırakıldı",
+    ]) {
+      assert.ok(html.includes(part), `missing ${part}`);
+    }
+    const shown = text(fillSampleValues(html, meta.sample));
+    assert.ok(shown.includes("Merhaba Ayşe, cevabınız bize ulaştı."), shown);
+    assert.ok(shown.includes("Cevaplarınız 3 soru"), `the answer count: ${shown}`);
+    assert.ok(shown.includes("{{range $index, $answer := .answers}}"), "the preview does not leave the rows as written");
+  });
+
+  it("forms.pending-reminder links each form's responses and the panel", async () => {
+    const { html, meta, plainText } = await rendered("forms.pending-reminder");
+    assert.ok(html.includes("{{range .forms}}"), "the forms are not listed");
+    assert.ok(html.includes('href="https://forms.yildizskylab.com/admin/forms/{{.formId}}/responses"'), "a form does not link its responses");
+    assert.ok(html.includes('href="https://forms.yildizskylab.com/admin/forms"'), "no link to the panel");
+    const shown = text(fillSampleValues(html, meta.sample));
+    assert.ok(shown.includes("İncelemeni bekleyen 7 cevap var"), shown);
+    assert.ok(shown.includes("Formlar 2 form"), `the form count: ${shown}`);
+    assert.ok(plainText.includes("/responses {{.pendingCount}} bekliyor {{end}}"), `the address runs into the count, or a row into the next: ${plainText}`);
+    assert.ok(plainText.includes("Formlar {{len .forms}} form"), plainText);
   });
 });

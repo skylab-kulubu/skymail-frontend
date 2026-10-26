@@ -214,6 +214,9 @@ export function approvalRefusal(thrown: unknown, action: ApprovalActionName): Ap
       return say("Mail listesi arşivlenmiş ya da Keycloak grubu artık yok; gönderilemez.");
     case "mail_approval.audience_empty":
       return say("Mail listesinde gönderilecek kimse yok; gönderilemez.");
+    // core's preferences could not be read at the approval (skymail-backend, abonelik-cikisi 09): nothing was queued and the request is as it was.
+    case "mail_task.preference_unavailable":
+      return say("İletişim tercihleri şu an okunamıyor; gönderim açılmadı. Birkaç dakika sonra yeniden dene.");
   }
   if (error.status === 0 || error.status >= 500) return unanswered(error, action);
   if (error.status === 403) {

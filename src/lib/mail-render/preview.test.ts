@@ -125,6 +125,15 @@ describe("a preview with sample values", () => {
     assert.equal(fillSampleValues(body, { Items: ["a"], Title: "x", Done: true, Org: "o", Name: "n" }), body);
   });
 
+  // forms.form-copy and forms.pending-reminder count the rows their range lists.
+  it("prints how many elements a list sample has, and leaves any other len as written", () => {
+    assert.equal(
+      fillSampleValues("<td>{{len .answers}} soru · {{ len $.forms }} form</td>", { answers: [{}, {}, {}], forms: [] }),
+      "<td>3 soru · 0 form</td>",
+    );
+    assert.equal(fillSampleValues("<td>{{len .Name}}|{{len .Missing}}</td>", { Name: "Ayşe" }), "<td>{{len .Name}}|{{len .Missing}}</td>");
+  });
+
   // The pretty printer wraps long lines inside an action, even between `else`
   // and `if` (mail.approval-resolved, main #50). The branch chosen must not
   // depend on the whitespace.
