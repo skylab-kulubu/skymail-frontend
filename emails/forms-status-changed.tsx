@@ -14,7 +14,7 @@ export const meta: TemplateMeta = {
   contentSensitive: true,
   brand: "forms",
   trigger:
-    "forms-backend, ekip bir cevabı onayladığında (approved), reddettiğinde (declined) ya da düzeltme istediğinde (returned); akış adımındaysa sonraki adımın formu nextFormId ile gelir. Ekip bir başvuruyu kapatıp yeniden başvuruya açtığında da (reopened) akışın ilk formu nextFormId ile gelir (FormMailNotifier.NotifyStatusChangedAsync / NotifyRunReopenedAsync). Gövde forms-frontend mail-templates/StatusChanged.jsx.",
+    "forms-backend, ekip bir cevabı onayladığında (approved), reddettiğinde (declined) ya da düzeltme istediğinde (returned); akış adımındaysa sonraki adımın formu nextFormId ile gelir. Ekip bir başvuruyu kapatıp yeniden başvuruya açtığında da (reopened) akışın ilk formu nextFormId ile gelir (FormMailNotifier.NotifyStatusChangedAsync / NotifyRunReopenedAsync). Gövde forms-frontend mail-templates/StatusChanged.jsx. Bildirim türü kayıtlı (zorunlu, yalnız e-posta, system şeridi): core üyeye bu postayı POST /v1/notifications ile gönderecek (ADR-0075); Forms bugün /single ile gönderir.",
   // forms-backend FormMailNotifier: formTitle, status, reviewNote ("" when the
   // team left none) and firstName/recipientName (MailNames) always; reviewedAt,
   // nextFormId and questionCount (returned, the questions to fix) when set.
@@ -25,6 +25,10 @@ export const meta: TemplateMeta = {
     { name: "formTitle", reason: "Postanın hangi form için olduğunu söyleyen tek alan; kaldırılırsa posta formu adlandırmaz." },
     { name: "status", reason: "Onay, ret, düzeltme ve yeniden başvuru metinlerinden hangisinin gideceğini seçer; kaldırılırsa gövde boş gider." },
   ],
+  // core sends this to a member with POST /v1/notifications (ADR-0075 karar
+  // 5), which refuses a type SkyMail has no record of. By e-mail only for
+  // now: an inbox text is its own change.
+  notification: { category: null, required: true, defaultChannels: ["email"], lane: "system" },
   sample: {
     formTitle: "SKY LAB Yazılım Ekibi Başvurusu 2026",
     status: "approved",

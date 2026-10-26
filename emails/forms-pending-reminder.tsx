@@ -11,7 +11,7 @@ export const meta: TemplateMeta = {
   contentSensitive: false,
   brand: "forms",
   trigger:
-    "forms-backend, ReminderThresholdHours'tan uzun süredir bekleyen cevabı olan formların her inceleyicisine, formları tek listede; tarama ReminderScanIntervalMinutes'ta bir koşar ve bir cevap için bir kez hatırlatır (PendingResponseReminderWorker). Gövde forms-frontend mail-templates/PendingResponses.jsx.",
+    "forms-backend, ReminderThresholdHours'tan uzun süredir bekleyen cevabı olan formların her inceleyicisine, formları tek listede; tarama ReminderScanIntervalMinutes'ta bir koşar ve bir cevap için bir kez hatırlatır (PendingResponseReminderWorker). Gövde forms-frontend mail-templates/PendingResponses.jsx. Bildirim türü kayıtlı (zorunlu, yalnız e-posta, system şeridi): core üyeye bu postayı POST /v1/notifications ile gönderecek (ADR-0075); Forms bugün /single ile gönderir.",
   // forms-backend PendingResponseReminderWorker: totalPending, forms (one
   // { formId, formTitle, pendingCount } per form the reviewer reviews) and
   // firstName/recipientName (MailNames), always.
@@ -20,6 +20,10 @@ export const meta: TemplateMeta = {
     { name: "totalPending", reason: "Bekleyen cevapların sayısı; konu ve başlık onu söyler, kaldırılırsa posta kaç cevap beklediğini söylemez." },
     { name: "forms", reason: "Bekleyen cevabı olan formlar ve cevap sayfalarının bağlantısı; kaldırılırsa posta hangi formların beklediğini söylemez." },
   ],
+  // core sends this to a member with POST /v1/notifications (ADR-0075 karar
+  // 5), which refuses a type SkyMail has no record of. By e-mail only for
+  // now: an inbox text is its own change.
+  notification: { category: null, required: true, defaultChannels: ["email"], lane: "system" },
   sample: {
     totalPending: 7,
     forms: [

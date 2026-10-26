@@ -14,7 +14,7 @@ export const meta: TemplateMeta = {
   contentSensitive: true,
   brand: "forms",
   trigger:
-    "forms-backend, bir form gönderildiğinde gönderen kişiye cevaplarının kopyası; doğrulanmamış misafir adresine form başına bir kopya ve günde en çok FormMail:GuestCopyDailyLimit (FormMailNotifier.NotifyResponseCopyAsync). Gövde forms-frontend mail-templates/FormSubmission.jsx.",
+    "forms-backend, bir form gönderildiğinde gönderen kişiye cevaplarının kopyası; doğrulanmamış misafir adresine form başına bir kopya ve günde en çok FormMail:GuestCopyDailyLimit (FormMailNotifier.NotifyResponseCopyAsync). Gövde forms-frontend mail-templates/FormSubmission.jsx. Bildirim türü kayıtlı (zorunlu, yalnız e-posta, system şeridi): core üyeye bu postayı POST /v1/notifications ile gönderecek (ADR-0075); Forms bugün /single ile gönderir.",
   // forms-backend FormMailNotifier.NotifyResponseCopyAsync: formTitle,
   // submittedAt ("dd MMMM yyyy, HH:mm", tr-TR), answers (one { question,
   // answer } per question, answer null when left empty) and
@@ -24,6 +24,10 @@ export const meta: TemplateMeta = {
     { name: "formTitle", reason: "Postanın hangi form için olduğunu söyleyen tek alan; kaldırılırsa posta formu adlandırmaz." },
     { name: "answers", reason: "Gönderilen cevapların kopyası; kaldırılırsa posta kopyayı taşımaz." },
   ],
+  // core sends this to a member with POST /v1/notifications (ADR-0075 karar
+  // 5), which refuses a type SkyMail has no record of. By e-mail only for
+  // now: an inbox text is its own change.
+  notification: { category: null, required: true, defaultChannels: ["email"], lane: "system" },
   sample: {
     formTitle: "SKY LAB Yazılım Ekibi Başvurusu 2026",
     submittedAt: "04 Ekim 2026, 22:10",
