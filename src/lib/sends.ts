@@ -27,6 +27,16 @@ export type RecipientStatus = "pending" | "processing" | "sent" | "failed";
 /** Queue rows by status; each row is one mail to one recipient. */
 export type RecipientCounts = Readonly<Record<RecipientStatus, number>>;
 
+/**
+ * A send's recipients by status, and what the suppression list did to them
+ * (skymail-backend QueueTotals; missing from an older backend): undelivered
+ * were sent and a report said the address does not exist (in sent);
+ * suppressed were never sent (in failed); suppressed_but_sent were account
+ * mail sent to a suppressed address anyway, flagged (in their status).
+ */
+export type SendRecipientCounts = RecipientCounts &
+  Readonly<Partial<Record<"undelivered" | "suppressed" | "suppressed_but_sent", number>>>;
+
 /** Who a send went to. Fields that do not apply to the kind are null. */
 export type SendAudience = Readonly<{
   /** `people` only on a Mail onayı request to several (mail-approvals/approvals.ts): a send goes to one person or a list. */
@@ -55,7 +65,7 @@ export type Send = Readonly<{
   mail_list_name: string | null;
   audience: SendAudience;
   status: SendStatus;
-  recipient_counts: RecipientCounts;
+  recipient_counts: SendRecipientCounts;
   /**
    * Whether the viewer may open the send's content (skymail-backend, sent mail
    * content): its recipients' mails as they were sent. Missing from a backend
@@ -539,6 +549,15 @@ export function recipientSummary(counts: RecipientCounts): { total: number; part
   if (counts.failed) parts.push(`${formatCount(counts.failed)} başarısız`);
   if (waiting) parts.push(`${formatCount(waiting)} bekliyor`);
   return { total: waiting + counts.sent + counts.failed, parts };
+}
+
+/** "2 ulaşmadı", "3 bastırıldı", "1 hesap postası bastırılmış adrese gitti": only what happened. */
+export function deliveryNotes(counts: SendRecipientCounts): string[] {
+  const notes: string[] = [];
+  if (counts.undelivered) notes.push(`${formatCount(counts.undelivered)} ulaşmadı`);
+  if (counts.suppressed) notes.push(`${formatCount(counts.suppressed)} bastırıldı`);
+  if (counts.suppressed_but_sent) notes.push(`${formatCount(counts.suppressed_but_sent)} hesap postası bastırılmış adrese gitti`);
+  return notes;
 }
 
 const QUEUE_GRACE_MS = 60_000;

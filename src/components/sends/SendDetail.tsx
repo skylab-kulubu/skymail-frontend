@@ -27,6 +27,7 @@ import {
   recipientsLabel,
   recipientStatus,
   recipientSummary,
+  deliveryNotes,
   SEND_LIST_PATH,
   sendHref,
   templateLabel,
@@ -73,6 +74,7 @@ export function SendDetail({ id }: { id: string }) {
 
 function SendView({ send, notice, onDismiss }: { send: Send; notice: NoticeData | null; onDismiss: () => void }) {
   const recipients = recipientSummary(send.recipient_counts);
+  const delivery = deliveryNotes(send.recipient_counts);
 
   return (
     <div className="space-y-6">
@@ -102,6 +104,9 @@ function SendView({ send, notice, onDismiss }: { send: Send; notice: NoticeData 
             <span className="text-2xs block whitespace-normal text-subtle-foreground tabular-nums">
               {recipients.parts.join(' · ')}
             </span>
+          ) : null}
+          {delivery.length > 0 ? (
+            <span className="text-2xs block whitespace-normal text-warning tabular-nums">{delivery.join(' · ')}</span>
           ) : null}
         </Fact>
       </dl>
