@@ -11,10 +11,16 @@
  *  - `GET /suppressions/reactivations` says who reversed one, when and why,
  *    without the address; the same role reads it.
  *
- * Removing a bounce is skymail-bounce-isleme 08's.
+ *  - A bounce row is removed by one with `skymail:suppressions:manage`
+ *    (`DELETE /suppressions/{id}`; skymail-bounce-isleme 08, ADR 0073
+ *    decision 7): mail goes to the address again. The same role reads the
+ *    bounce rate and the NDR reader's state (`GET /suppressions/bounces`).
+ *
+ * `GET /suppressions` takes either role.
  */
 import type { ApiClient } from "./api/client";
 import { asApiError } from "./api/errors";
+import { formatDateTime } from "./format";
 import { pageRange } from "./list-view";
 import { ERASED_PERSON, isErasedSubject } from "./people";
 
@@ -30,6 +36,8 @@ export type Suppression = Readonly<{
   count: number;
   first_seen: string;
   last_seen: string;
+  /** When account mail (a login code, a verification, a password reset) last went to a bounced address anyway; null if never. */
+  exempt_flagged_at?: string | null;
 }>;
 
 export type Reactivation = Readonly<{
@@ -62,10 +70,94 @@ export const REASON_FILTERS: ReadonlyArray<{ value: ReasonFilter; label: string 
 
 export type Page<T> = Readonly<{ rows: T[]; total: number }>;
 
-export async function fetchSuppressionPage(api: ApiClient, { reason, page }: { reason: ReasonFilter; page: number }, signal?: AbortSignal): Promise<Page<Suppression>> {
-  const query = { ...(reason === "all" ? {} : { reason }), ...pageRange(page, SUPPRESSION_PAGE_SIZE) };
+export async function fetchSuppressionPage(
+  api: ApiClient,
+  { reason, page, q = "" }: { reason: ReasonFilter; page: number; q?: string },
+  signal?: AbortSignal,
+): Promise<Page<Suppression>> {
+  const search = q.trim();
+  const query = { ...(reason === "all" ? {} : { reason }), ...(search ? { q: search } : {}), ...pageRange(page, SUPPRESSION_PAGE_SIZE) };
   const answer = await api.getPage<Suppression>("/suppressions", { query, signal });
   return { rows: answer.items, total: answer.total ?? answer.items.length };
+}
+
+const SOURCE_LABEL: Readonly<Record<Suppression["source"], string>> = {
+  dsn: "Teslim raporu",
+  smtp: "Gönderimde ret",
+  link: "Çıkış bağlantısı",
+};
+
+/** Where a row came from, with the failure's codes (the API keeps no text). */
+export function sourceLabel(row: Pick<Suppression, "source" | "reason_code">): string {
+  const code = row.reason_code?.trim();
+  return code ? `${SOURCE_LABEL[row.source]} · ${code}` : SOURCE_LABEL[row.source];
+}
+
+/** A bounced address that account mail still went to (ADR 0073 decision 6); null if none did. */
+export function exemptNote(row: Pick<Suppression, "exempt_flagged_at">): string | null {
+  return row.exempt_flagged_at ? `Hesap postası gitti · ${formatDateTime(row.exempt_flagged_at)}` : null;
+}
+
+export async function removeSuppression(api: ApiClient, id: string): Promise<void> {
+  await api.delete(`/suppressions/${encodeURIComponent(id)}`);
+}
+
+/** A refused removal in words; `reload` when the list no longer holds the row as it was. */
+export function removeRefusal(error: unknown): { text: string; reload: boolean } {
+  const refusal = asApiError(error);
+  if (refusal.status === 403) return { text: "Kaldırma yetkin yok (skymail:suppressions:manage).", reload: false };
+  if (refusal.status === 404) return { text: "Kayıt artık listede yok.", reload: true };
+  if (refusal.code === "suppression.use_reactivate") return { text: refusal.message, reload: true };
+  return { text: refusal.message, reload: false };
+}
+
+export const REMOVE_WARNING = "Bu adrese yeniden posta gider. Adres hâlâ yoksa bir sonraki ret onu yeniden listeye alır.";
+
+/** One sender mailbox's last read by the NDR reader (SKYMAIL_BOUNCE_READER). */
+export type BounceReaderState = Readonly<{
+  mailbox: string;
+  mode: "dry-run" | "on";
+  last_polled_at: string | null;
+  last_error: string | null;
+}>;
+
+/** The e-mails sent in the last `days` and what reports said of them (`GET /suppressions/bounces`). */
+export type BounceSummary = Readonly<{
+  days: number;
+  sent: number;
+  hard: number;
+  soft: number;
+  delay: number;
+  hard_rate: number;
+  reader: readonly BounceReaderState[];
+}>;
+
+export const BOUNCE_DAYS = 30;
+
+export function fetchBounceSummary(api: ApiClient, days: number = BOUNCE_DAYS, signal?: AbortSignal): Promise<BounceSummary> {
+  return api.get<BounceSummary>("/suppressions/bounces", { query: { days }, signal });
+}
+
+const COUNT = new Intl.NumberFormat("tr-TR");
+const RATE = new Intl.NumberFormat("tr-TR", { style: "percent", maximumFractionDigits: 1 });
+
+/** "1.200 gönderildi", "6 ulaşmadı (%0,5)", …: only what happened. */
+export function bounceSummaryParts(summary: BounceSummary): string[] {
+  if (summary.sent === 0 && summary.hard === 0 && summary.soft === 0 && summary.delay === 0) return ["Gönderim yok"];
+  const parts = [`${COUNT.format(summary.sent)} gönderildi`];
+  if (summary.hard) parts.push(`${COUNT.format(summary.hard)} ulaşmadı (${RATE.format(summary.hard_rate)})`);
+  if (summary.soft) parts.push(`${COUNT.format(summary.soft)} yumuşak ret`);
+  if (summary.delay) parts.push(`${COUNT.format(summary.delay)} gecikme`);
+  return parts;
+}
+
+const READER_MODE: Readonly<Record<BounceReaderState["mode"], string>> = { on: "açık", "dry-run": "deneme" };
+
+/** "hesap@… · açık · son yoklama 27.10.2026 13:00", with the last error if any. */
+export function readerLine(state: BounceReaderState): string {
+  const read = state.last_polled_at ? `son yoklama ${formatDateTime(state.last_polled_at)}` : "henüz yoklanmadı";
+  const line = `${state.mailbox} · ${READER_MODE[state.mode] ?? state.mode} · ${read}`;
+  return state.last_error ? `${line} · hata: ${state.last_error}` : line;
 }
 
 export async function fetchReactivationPage(api: ApiClient, page: number, signal?: AbortSignal): Promise<Page<Reactivation>> {
