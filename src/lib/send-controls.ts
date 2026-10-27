@@ -63,6 +63,14 @@ export function controlNotice(send: Send): ControlNotice | null {
   };
 }
 
+/**
+ * When a paused send's pending row is due: skymail-backend parks it at
+ * 2999-01-01 until the send is resumed, so it is no time to show.
+ */
+export function parkedAttempt(nextAttemptAt: string | null): boolean {
+  return !!nextAttemptAt && new Date(nextAttemptAt).getUTCFullYear() >= 2999;
+}
+
 /** The cancel's question. */
 export function cancelConfirmText(send: Send): string {
   const waiting = send.recipient_counts.pending;

@@ -12,6 +12,7 @@ import {
   cancelConfirmText,
   controlNotice,
   controlSend,
+  parkedAttempt,
   sendControls,
 } from "./send-controls";
 import { recipientSummary, type Send, type SendSummary } from "./sends";
@@ -86,6 +87,14 @@ describe("what the send's page says", () => {
     const summary = recipientSummary({ pending: 0, processing: 0, sent: 60, failed: 125, cancelled: 122 });
     assert.deepEqual(summary.parts, ["60 gönderildi", "3 başarısız", "122 iptal edildi"]);
     assert.equal(summary.total, 185);
+  });
+});
+
+describe("a paused send's parked rows", () => {
+  it("show no next attempt", () => {
+    assert.equal(parkedAttempt("2999-01-01T00:00:00Z"), true);
+    assert.equal(parkedAttempt("2026-10-27T10:10:00Z"), false);
+    assert.equal(parkedAttempt(null), false);
   });
 });
 

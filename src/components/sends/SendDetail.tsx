@@ -45,6 +45,7 @@ import { RecipientStatusBadge, SendStatusBadge } from './StatusBadge';
 import { OutcomeNotice } from '@/components/common/OutcomeNotice';
 import { SentContentDialog } from './SentContentDialog';
 import { SendControlBadge, SendControlNotice, SendControls } from './SendControls';
+import { parkedAttempt } from '@/lib/send-controls';
 import { TrackingSection } from './TrackingReport';
 import { sendTracked } from '@/lib/tracking-report';
 
@@ -305,7 +306,7 @@ function Recipient({ row }: { row: RecipientRow }) {
 
 /** How many times the mailer tried; a pending row that already failed once says when it tries again. */
 function Attempts({ row, inline = false }: { row: RecipientRow; inline?: boolean }) {
-  const retrying = recipientStatus(row.status) === 'pending' && row.attempts > 0 && row.next_attempt_at;
+  const retrying = recipientStatus(row.status) === 'pending' && row.attempts > 0 && row.next_attempt_at && !parkedAttempt(row.next_attempt_at);
   const next = retrying ? `Sonraki deneme: ${formatSendTime(row.next_attempt_at)}` : null;
   if (inline) {
     // One attempt is the ordinary case; say so only when the mailer had to try again.
