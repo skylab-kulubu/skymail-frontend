@@ -44,6 +44,7 @@ import { SectionTitle } from './SectionTitle';
 import { RecipientStatusBadge, SendStatusBadge } from './StatusBadge';
 import { OutcomeNotice } from '@/components/common/OutcomeNotice';
 import { SentContentDialog } from './SentContentDialog';
+import { SendControlBadge, SendControlNotice, SendControls } from './SendControls';
 import { TrackingSection } from './TrackingReport';
 import { sendTracked } from '@/lib/tracking-report';
 
@@ -68,10 +69,10 @@ export function SendDetail({ id }: { id: string }) {
       </StateCard>
     );
   }
-  return <SendView send={send.data} notice={notice} onDismiss={() => setNotice(null)} />;
+  return <SendView send={send.data} notice={notice} onDismiss={() => setNotice(null)} onChanged={send.reload} />;
 }
 
-function SendView({ send, notice, onDismiss }: { send: Send; notice: NoticeData | null; onDismiss: () => void }) {
+function SendView({ send, notice, onDismiss, onChanged }: { send: Send; notice: NoticeData | null; onDismiss: () => void; onChanged: () => Promise<void> }) {
   const recipients = recipientSummary(send.recipient_counts);
 
   return (
@@ -79,9 +80,11 @@ function SendView({ send, notice, onDismiss }: { send: Send; notice: NoticeData 
       <PageHeader
         title={templateLabel(send)}
         description={`Gönderim · ${formatSendTime(send.created_at)}`}
+        actions={<SendControls send={send} onChanged={onChanged} />}
         meta={
           <>
             <SendStatusBadge status={send.status} />
+            <SendControlBadge send={send} />
             {send.template_key ? (
               <span className="text-2xs font-mono text-subtle-foreground">{send.template_key}</span>
             ) : null}
@@ -90,6 +93,8 @@ function SendView({ send, notice, onDismiss }: { send: Send; notice: NoticeData 
       />
 
       {notice ? <OutcomeNotice notice={notice} onDismiss={onDismiss} /> : null}
+
+      <SendControlNotice send={send} />
 
       <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         <Fact term="Kitle" className="col-span-2 sm:col-span-1">
