@@ -41,6 +41,8 @@ import {
   reasonProblem,
   removeRefusal,
   removeSuppression,
+  rowAction,
+  sectionParts,
   sourceLabel,
   type Page,
   type ReasonFilter,
@@ -74,6 +76,8 @@ function Loaded<T>({ query, title, children }: { query: Query<Page<T>>; title: s
 export function SuppressionsPage() {
   const canReactivate = useCan(ROLE.unsubscribesReactivate);
   const canManage = useCan(ROLE.suppressionsManage);
+  const powers = { canManage, canReactivate };
+  const parts = sectionParts(powers);
   const [view, setView] = useState<View>('list');
   const [reason, setReason] = useState<ReasonFilter>('all');
   const [page, setPage] = useState(1);
@@ -124,17 +128,17 @@ export function SuppressionsPage() {
     { key: 'count', header: 'Sayı', render: (value: number) => <span className="tabular-nums">{value}</span> },
     { key: 'first_seen', header: 'İlk kayıt', render: (value: string) => (value ? formatDateTime(value) : dash) },
     { key: 'last_seen', header: 'Son kayıt', render: (value: string) => (value ? formatDateTime(value) : dash) },
-    ...(canReactivate || canManage
+    ...(parts.actions
       ? [
           {
             key: 'actions',
             header: 'İşlemler',
             render: (_: unknown, row: Suppression) =>
-              row.reason === 'unsubscribed' && canReactivate ? (
+              rowAction(row, powers) === 'reactivate' ? (
                 <Button variant="outline" size="sm" onClick={() => setAsked(row)} aria-label={`${row.address} çıkışını geri al`}>
                   Geri al
                 </Button>
-              ) : row.reason === 'bounce' && canManage ? (
+              ) : rowAction(row, powers) === 'remove' ? (
                 <Button variant="outline" size="sm" onClick={() => setRemoving(row)} aria-label={`${row.address} adresini listeden kaldır`}>
                   Kaldır
                 </Button>
@@ -161,11 +165,11 @@ export function SuppressionsPage() {
 
       {notice ? <OutcomeNotice notice={notice} onDismiss={() => setNotice(null)} /> : null}
 
-      {canManage ? <BounceRate /> : null}
+      {parts.bounceRate ? <BounceRate /> : null}
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
-          {canReactivate ? (
+          {parts.reactivations ? (
             <FilterPills aria-label="Görünüm" value={view} options={VIEWS} onValueChange={(next) => show({ view: next })} />
           ) : null}
           {view === 'list' ? (
@@ -183,7 +187,6 @@ export function SuppressionsPage() {
             type="search"
             value={typed}
             onChange={(event) => setTyped(event.target.value)}
-            onBlur={() => typed.trim() !== search && show({ search: typed })}
             placeholder="Adreste ara"
             maxLength={254}
             autoComplete="off"

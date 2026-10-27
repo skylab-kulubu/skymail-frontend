@@ -111,6 +111,20 @@ export function removeRefusal(error: unknown): { text: string; reload: boolean }
   return { text: refusal.message, reload: false };
 }
 
+/** The viewer's suppression roles (skymail-backend main.go registerSuppressionRoutes). */
+export type SuppressionPowers = Readonly<{ canManage: boolean; canReactivate: boolean }>;
+
+/** A row's one action: Kaldır on a bounce (manage), Geri al on an unsubscribe (reactivate); null when the viewer may do neither. */
+export function rowAction(row: Pick<Suppression, "reason">, can: SuppressionPowers): "remove" | "reactivate" | null {
+  if (row.reason === "bounce") return can.canManage ? "remove" : null;
+  return can.canReactivate ? "reactivate" : null;
+}
+
+/** The parts of the section the viewer's roles open: the bounce rate (manage), the reversals (reactivate), the action column (either). */
+export function sectionParts(can: SuppressionPowers): { bounceRate: boolean; reactivations: boolean; actions: boolean } {
+  return { bounceRate: can.canManage, reactivations: can.canReactivate, actions: can.canManage || can.canReactivate };
+}
+
 export const REMOVE_WARNING = "Bu adrese yeniden posta gider. Adres hâlâ yoksa bir sonraki ret onu yeniden listeye alır.";
 
 /** One sender mailbox's last read by the NDR reader (SKYMAIL_BOUNCE_READER). */

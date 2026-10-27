@@ -16,7 +16,10 @@ import {
   readerLine,
   removeRefusal,
   removeSuppression,
+  rowAction,
+  sectionParts,
   sourceLabel,
+  type Suppression,
 } from "./suppressions";
 
 describe("the suppression list", () => {
@@ -157,5 +160,40 @@ describe("the bounce rate", () => {
     assert.equal(readerLine({ ...state, mode: "dry-run" }), "hesap@bildirim.yildizskylab.com · deneme · henüz yoklanmadı");
     const read = readerLine({ ...state, last_polled_at: "2026-10-27T10:00:00Z", last_error: "graph: 403 ErrorAccessDenied" });
     assert.match(read, /^hesap@bildirim\.yildizskylab\.com · açık · son yoklama .+ · hata: graph: 403 ErrorAccessDenied$/);
+  });
+});
+
+describe("what each viewer may do on the list", () => {
+  const ROLES = [
+    { name: "none", canManage: false, canReactivate: false },
+    { name: "manage", canManage: true, canReactivate: false },
+    { name: "reactivate", canManage: false, canReactivate: true },
+    { name: "both", canManage: true, canReactivate: true },
+  ] as const;
+  const ROWS: ReadonlyArray<Pick<Suppression, "reason" | "source" | "reason_code">> = [
+    { reason: "bounce", source: "dsn", reason_code: "5.1.10" },
+    { reason: "bounce", source: "dsn", reason_code: "5.4.1 AS(201806281)" },
+    { reason: "bounce", source: "smtp", reason_code: "RCPT TO 550 5.1.1" },
+    { reason: "bounce", source: "dsn", reason_code: "" },
+    { reason: "unsubscribed", source: "link", reason_code: null },
+  ];
+
+  // skymail-backend main.go: DELETE needs manage, a bounce only (409 otherwise);
+  // POST reactivate needs reactivate, an unsubscribe only. Source and code never decide.
+  it("offers Kaldır only on a bounce to manage, Geri al only on an unsubscribe to reactivate", () => {
+    for (const can of ROLES) {
+      for (const row of ROWS) {
+        const expected =
+          row.reason === "bounce" ? (can.canManage ? "remove" : null) : can.canReactivate ? "reactivate" : null;
+        assert.equal(rowAction(row, can), expected, `${can.name} × ${row.reason}/${row.source}/${row.reason_code}`);
+      }
+    }
+  });
+
+  it("shows the bounce rate to manage, the reversals to reactivate, and an action column to either", () => {
+    assert.deepEqual(sectionParts(ROLES[0]), { bounceRate: false, reactivations: false, actions: false });
+    assert.deepEqual(sectionParts(ROLES[1]), { bounceRate: true, reactivations: false, actions: true });
+    assert.deepEqual(sectionParts(ROLES[2]), { bounceRate: false, reactivations: true, actions: true });
+    assert.deepEqual(sectionParts(ROLES[3]), { bounceRate: true, reactivations: true, actions: true });
   });
 });
