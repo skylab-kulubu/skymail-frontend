@@ -1,12 +1,15 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useId } from 'react';
+import { useId, useRef, useState } from 'react';
 import { FormField } from '@/components/common/FormField';
+import { RecipientNamePanel } from '@/components/visual-editor/RecipientNamePanel';
 import { FREE_BODY_ALLOWANCE } from '@/lib/mail-render/free-body';
 import { variableAction } from '@/lib/mail-render/go-template';
+import { recipientNameTag } from '@/lib/mail-render/recipient-name';
 import { EMPTY_VISUAL_SOURCE } from '@/lib/mail-render/visual-document';
 import type { FieldInput, VariableField } from '@/lib/send-form/fields';
+import { Button } from '@skylab-kulubu/skylcn-ui';
 import { enterSends } from './PeopleEditor';
 
 const VisualEditor = dynamic(() => import('@/components/visual-editor/VisualEditor'), {
@@ -23,9 +26,9 @@ const BODY_WORDING = {
 function BodyNote() {
   return (
     <p className="border-t border-border px-4 py-2 text-xs leading-relaxed text-subtle-foreground">
-      Gövdede başlık, alt başlık, paragraf, madde ve numaralı liste, alıntı, kalın, italik ve bağlantı kullanılır; satır içinde alt
-      satıra geçmek için Shift+Enter. Sunucu gönderenin yazdığı gövdeden bunların dışındakini düşürür; buton için aşağıdaki buton
-      alanlarını kullan.
+      Gövdede başlık, alt başlık, paragraf, madde ve numaralı liste, alıntı, kalın, italik, bağlantı ve alıcının adı kullanılır;
+      satır içinde alt satıra geçmek için Shift+Enter. Sunucu gönderenin yazdığı gövdeden bunların dışındakini düşürür; buton için
+      aşağıdaki buton alanlarını kullan.
     </p>
   );
 }
@@ -101,6 +104,75 @@ function RichField({
 }
 
 /**
+ * A single-line field. One the subject prints in a free announcement may
+ * take the recipient's name, put where the cursor was (recipient-name.ts:
+ * the mailer fills it in the variables the subject prints).
+ */
+function TextField({
+  field,
+  value,
+  onChange,
+  error,
+  warning,
+  onSend,
+  recipientName,
+}: {
+  field: VariableField;
+  value: string;
+  onChange: (value: string) => void;
+  error: string | null;
+  warning: string | null;
+  onSend?: () => void;
+  recipientName: boolean;
+}) {
+  const [naming, setNaming] = useState(false);
+  // Where the cursor last was: the name goes there, or at the end.
+  const caret = useRef<number | null>(null);
+  const hint =
+    field.why || warning || recipientName ? (
+      <span className="flex flex-col items-start gap-1">
+        <Hint why={field.why} warning={warning} />
+        {recipientName && !naming ? (
+          <Button variant="link" size="sm" className="h-auto p-0" onClick={() => setNaming(true)}>
+            Alıcının adını ekle
+          </Button>
+        ) : null}
+      </span>
+    ) : null;
+  return (
+    <div className="min-w-0 space-y-2">
+      <FormField
+        label={<FieldLabel field={field} />}
+        type={field.kind === 'url' ? 'url' : 'text'}
+        inputMode={field.kind === 'url' ? 'url' : undefined}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        onSelect={(event) => {
+          caret.current = event.currentTarget.selectionStart;
+        }}
+        onKeyDown={onSend ? enterSends(onSend) : undefined}
+        placeholder={field.kind === 'url' ? 'https://' : undefined}
+        autoComplete="off"
+        hint={hint}
+        error={error}
+      />
+      {naming ? (
+        <div className="rounded-lg border border-border bg-card p-3">
+          <RecipientNamePanel
+            onInsert={(fallback) => {
+              const at = Math.min(caret.current ?? value.length, value.length);
+              onChange(value.slice(0, at) + recipientNameTag(fallback) + value.slice(at));
+              setNaming(false);
+            }}
+            onClose={() => setNaming(false)}
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/**
  * The fields a send fills in: one per variable of the Mail template it
  * sends, a markup one (free.basic's BodyHtml) in the Visual editor with only
  * what the server's allow-list keeps. Only a Required variable is marked and
@@ -126,6 +198,8 @@ export function VariableFields({
   /** What Enter in a single-line field does; nothing when it is not given. */
   onSend?: () => void;
 }) {
+  // A free announcement (its body is markup) may greet each recipient by name in its subject too.
+  const freeBody = fields.some((field) => field.kind === 'rich');
   return (
     <div className="grid gap-4 md:grid-cols-2">
       {fields.map((field) =>
@@ -139,18 +213,15 @@ export function VariableFields({
             warning={warnings[field.name] ?? null}
           />
         ) : (
-          <FormField
+          <TextField
             key={field.name}
-            label={<FieldLabel field={field} />}
-            type={field.kind === 'url' ? 'url' : 'text'}
-            inputMode={field.kind === 'url' ? 'url' : undefined}
+            field={field}
             value={input.values[field.name] ?? ''}
-            onChange={(event) => onValue(field.name, event.target.value)}
-            onKeyDown={onSend ? enterSends(onSend) : undefined}
-            placeholder={field.kind === 'url' ? 'https://' : undefined}
-            autoComplete="off"
-            hint={field.why || warnings[field.name] ? <Hint why={field.why} warning={warnings[field.name] ?? null} /> : null}
+            onChange={(value) => onValue(field.name, value)}
             error={problems?.[field.name] ?? null}
+            warning={warnings[field.name] ?? null}
+            onSend={onSend}
+            recipientName={freeBody && field.inSubject && field.kind === 'text'}
           />
         ),
       )}

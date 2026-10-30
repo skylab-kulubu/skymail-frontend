@@ -10,6 +10,12 @@ export type FormSource = Readonly<{
   form_id: string;
   form_title: string;
   recipient_count: number;
+  /**
+   * Of them, those who gave no name (skymail-backend unnamed_count): a mail
+   * that greets its recipient by name prints the fallback for them. Absent
+   * from a backend before it, and from a historical readback.
+   */
+  unnamed_count?: number;
   prepared_at: string;
 }>;
 
@@ -33,6 +39,7 @@ export async function fetchFormSource(api: ApiClient, id: string, formId: string
       || typeof source.form_title !== "string" || source.form_title.length > 100
       || typeof source.prepared_at !== "string" || typeof source.expires_at !== "string"
       || counts.some((count) => !Number.isSafeInteger(count) || count < 0) || source.recipient_count === 0
+      || (source.unnamed_count !== undefined && (!Number.isSafeInteger(source.unnamed_count) || source.unnamed_count < 0 || source.unnamed_count > source.recipient_count))
       || source.response_count !== source.recipient_count + source.skipped_count + source.duplicate_count
       || !Number.isFinite(prepared) || !Number.isFinite(expires) || prepared >= expires || expires <= now) {
     throw new ApiError(409, "form_source.changed");

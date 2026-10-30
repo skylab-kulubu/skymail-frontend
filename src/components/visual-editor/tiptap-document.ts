@@ -25,7 +25,9 @@ function inlineTo(node: VisualInline): JSONContent {
   if (node.type === "hardBreak") return { type: "hardBreak" };
   const marks = marksTo(node.marks);
   const content: JSONContent =
-    node.type === "text" ? { type: "text", text: node.text } : { type: "variable", attrs: { name: node.name } };
+    node.type === "text"
+      ? { type: "text", text: node.text }
+      : { type: "variable", attrs: node.fallback ? { name: node.name, fallback: node.fallback } : { name: node.name } };
   return marks ? { ...content, marks } : content;
 }
 
@@ -98,7 +100,7 @@ function inlineFrom(node: JSONContent): VisualInline {
     case "text":
       return buildVisual.text(text(node.text), marksFrom(node.marks));
     case "variable":
-      return buildVisual.variable(text(node.attrs?.name), marksFrom(node.marks));
+      return buildVisual.variable(text(node.attrs?.name), marksFrom(node.marks), text(node.attrs?.fallback));
     case "hardBreak":
       return buildVisual.hardBreak();
     default:

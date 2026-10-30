@@ -11,7 +11,16 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { buildVisual as b, visualSource } from "../mail-render/visual-document";
-import { bodyVariables, fieldProblems, fieldValues, fieldWarnings, usesRecipientName, variableFields, type FieldInput } from "./fields";
+import {
+  bodyVariables,
+  fieldProblems,
+  fieldValues,
+  fieldWarnings,
+  usesRecipientName,
+  variableFields,
+  withRecipientName,
+  type FieldInput,
+} from "./fields";
 
 /** free.basic as the Template seed publishes it, trimmed to its actions. */
 const FREE_BASIC = {
@@ -72,6 +81,31 @@ describe("a template's variable fields", () => {
   it("know when the mail greets the recipient by name", () => {
     assert.equal(usesRecipientName(CERTIFICATE), true);
     assert.equal(usesRecipientName(FREE_BASIC), false);
+  });
+
+  it("know when a free announcement greets the recipient by name: its subject or its body holds the tag", () => {
+    const fields = variableFields(FREE_BASIC);
+    const greets = (values: Record<string, string>) => usesRecipientName(FREE_BASIC, { fields, values });
+    assert.equal(greets({ Subject: "Sayın {{.FullName}}" }), true);
+    assert.equal(greets({ BodyHtml: "<p>Sayın {{or .FullName &#34;katılımcı&#34;}},</p>" }), true);
+    // The mailer fills neither the heading nor another variable, nor a tag it does not know.
+    assert.equal(greets({ Subject: "Duyuru {{ .FullName }}", Heading: "{{.FullName}}", BodyHtml: "<p>{{.Email}}</p>" }), false);
+  });
+
+  it("fill the recipient's name where the mailer fills it, as it fills it", () => {
+    const fields = variableFields(FREE_BASIC);
+    const values = {
+      Subject: 'Sayın {{or .FullName "katılımcı"}}',
+      Heading: "{{.FullName}}",
+      BodyHtml: "<p>{{.FullName}} &amp; {{.Email}}</p>",
+      CtaUrl: "https://skyl.app/{{.FullName}}",
+    };
+    assert.deepEqual(withRecipientName(fields, values, " Ali  <Veli> "), {
+      ...values,
+      Subject: "Sayın Ali <Veli>",
+      BodyHtml: "<p>Ali &lt;Veli&gt; &amp; {{.Email}}</p>",
+    });
+    assert.equal(withRecipientName(fields, values, "").Subject, "Sayın katılımcı");
   });
 });
 

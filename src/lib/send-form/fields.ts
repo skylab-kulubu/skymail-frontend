@@ -24,6 +24,13 @@
 import { freeBodyFromSource } from "../mail-render/free-body";
 import { actionInside, findActions, referencedVariables } from "../mail-render/go-template";
 import { SAFE_HTML } from "../mail-render/preview";
+import {
+  fillRecipientName,
+  fillRecipientNameMarkup,
+  hasRecipientNameTag,
+  markupHasRecipientNameTag,
+  recipientName,
+} from "../mail-render/recipient-name";
 import { linkAddressProblem } from "../mail-render/visual-document";
 import type { MailTemplate } from "../templates";
 
@@ -123,9 +130,42 @@ export function namedField(name: string, kind: FieldKind = kindByName(name)): Va
   return { name, label: LABELS.get(name) ?? name, kind, required: false, why: null, inSubject: false };
 }
 
-/** Whether the mail uses the recipient's name, so a person sent to needs one. */
-export function usesRecipientName(template: Pick<FieldSource, "subject" | "html_content">): boolean {
-  return [template.subject, template.html_content].some((text) => read(text).includes("FullName"));
+/**
+ * Whether the mail uses the recipient's name, so a person sent to needs one:
+ * the template prints it, or a field the mailer fills it in (the subject's,
+ * a markup body) holds its tag (recipient-name.ts).
+ */
+export function usesRecipientName(
+  template: Pick<FieldSource, "subject" | "html_content">,
+  filled?: { fields: readonly VariableField[]; values: Readonly<Record<string, string>> },
+): boolean {
+  if ([template.subject, template.html_content].some((text) => read(text).includes("FullName"))) return true;
+  return (filled?.fields ?? []).some((field) => {
+    const value = filled!.values[field.name] ?? "";
+    return field.kind === "rich" ? markupHasRecipientNameTag(value) : field.inSubject && hasRecipientNameTag(value);
+  });
+}
+
+/** A field the mailer fills the recipient's name tags in: one the subject prints, or a markup body. */
+const takesRecipientName = (field: VariableField) => field.kind === "rich" || field.inSubject;
+
+/**
+ * The fields' values as one recipient gets them: the recipient's name filled
+ * in the fields the mailer fills it in, as it fills it — a preview's.
+ */
+export function withRecipientName(
+  fields: readonly VariableField[],
+  values: Readonly<Record<string, string>>,
+  fullName: string,
+): Record<string, string> {
+  const name = recipientName(fullName);
+  const filled: Record<string, string> = { ...values };
+  for (const field of fields) {
+    const value = values[field.name];
+    if (value === undefined || !takesRecipientName(field)) continue;
+    filled[field.name] = field.kind === "rich" ? fillRecipientNameMarkup(value, name) : fillRecipientName(value, name);
+  }
+  return filled;
 }
 
 /** What the sender filled in: a text per field, and a markup field's Visual source. */
