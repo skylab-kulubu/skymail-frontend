@@ -1308,7 +1308,6 @@
     ],
     "referenced": [
       "Count",
-      "DaysLeft",
       "EndsAt",
       "GroupId",
       "GroupName",
@@ -1320,7 +1319,6 @@
     ],
     "actions": [
       "{{.Count}}",
-      "{{.DaysLeft}}",
       "{{.EndsAt}}",
       "{{.GroupId}}",
       "{{.GroupName}}",
@@ -1328,6 +1326,7 @@
       "{{.SubjectName}}",
       "{{else if eq .Notice `weekly-summary`}}",
       "{{if .GroupId}}",
+      "{{if .SubjectName}}",
       "{{if eq .Notice `expired-list`}}",
       "{{if eq .Role `team-leaders`}}",
       "{{if eq .Self `no`}}",

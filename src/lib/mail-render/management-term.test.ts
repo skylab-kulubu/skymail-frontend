@@ -68,8 +68,10 @@ describe("the management term mail", () => {
     assert.deepEqual(Object.keys(meta.sample).sort(), CORE_SENDS);
     assert.deepEqual((meta.requiredVariables ?? []).map(({ name }) => name), ["Notice"]);
     assert.equal(meta.sensitiveVariables, undefined);
+    // DaysLeft is listed but not read: the 14-day warning also goes when
+    // fewer days are left (a term extended or handed over to a near end).
     const referenced = [...referencedVariables(html)].filter((name) => name !== "UnsubscribeUrl");
-    assert.deepEqual(referenced.sort(), CORE_SENDS);
+    assert.deepEqual(referenced.sort(), CORE_SENDS.filter((name) => name !== "DaysLeft"));
     // The subject reads only Notice and Self, which core always fills.
     const subjectVars = [...meta.subject.matchAll(/\.([A-Za-z]+)/g)].map((m) => m[1]);
     assert.deepEqual([...new Set(subjectVars)].sort(), ["Notice", "Self"]);
@@ -79,7 +81,7 @@ describe("the management term mail", () => {
     const mail = await received({ ...warning, Self: "yes", SubjectName: "Ada Lovelace" });
     assert.equal(mail.subject, "Yönetim görevinin süresi doluyor");
     for (const body of [mail.html, mail.plainText]) {
-      assert.match(body, /YK · Yönetim Kurulu grubundaki üyeliğinin süresi 31\.05\.2027 tarihinde doluyor; 14 gün kaldı\./);
+      assert.match(body, /YK · Yönetim Kurulu grubundaki üyeliğinin süresi 31\.05\.2027 tarihinde doluyor\./);
       assert.match(body, /Süre dolunca üyelik kendiliğinden kalkmaz/);
       assert.match(body, /Süreni kendin uzatamazsın\. Uzatma ya da devir için Yönetim Kurulu'na ya da yönetici grubuna \(ADMIN\) başvur\./);
       assert.doesNotMatch(body, /Ada Lovelace/);
@@ -93,7 +95,8 @@ describe("the management term mail", () => {
   it("tells a Team Leader to ask YK or the Team above", async () => {
     const mail = await received({ ...warning, Self: "yes", Role: "team-leaders", GroupName: "LIDERLER", DaysLeft: "1" });
     for (const body of [mail.html, mail.plainText]) {
-      assert.match(body, /1 gün kaldı\./);
+      assert.match(body, /31\.05\.2027 tarihinde doluyor\./);
+      assert.doesNotMatch(body, /gün kaldı/);
       assert.match(body, /Uzatma ya da devir için Yönetim Kurulu'na ya da varsa üst ekibin liderlerine başvur\./);
       assert.doesNotMatch(body, /ADMIN/);
     }
@@ -103,10 +106,18 @@ describe("the management term mail", () => {
     const mail = await received({ ...warning, Self: "no", SubjectName: "Ada Lovelace", Role: "audit", GroupName: "DK · Denetim Kurulu" });
     assert.equal(mail.subject, "Bir yönetim üyeliğinin süresi doluyor");
     for (const body of [mail.html, mail.plainText]) {
-      assert.match(body, /Ada Lovelace adlı kişinin DK · Denetim Kurulu grubundaki üyeliğinin süresi 31\.05\.2027 tarihinde doluyor; 14 gün kaldı\./);
+      assert.match(body, /Ada Lovelace adlı kişinin DK · Denetim Kurulu grubundaki üyeliğinin süresi 31\.05\.2027 tarihinde doluyor\./);
       assert.match(body, /Bu grubun üyeliğini değiştirme yetkin varsa süreyi uzatabilir ya da görevi devredebilirsin\./);
       assert.doesNotMatch(body, /kendin uzatamazsın/);
     }
+  });
+
+  it("puts a dash for a holder core could not name", async () => {
+    const mail = await received({ ...warning, Self: "no", SubjectName: "" });
+    for (const body of [mail.html, mail.plainText]) {
+      assert.match(body, /— adlı kişinin YK · Yönetim Kurulu grubundaki/);
+    }
+    assert.match(mail.html, /Kişi —/);
   });
 
   it("leaves the panel link out when core has no Group id", async () => {

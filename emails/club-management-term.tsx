@@ -19,7 +19,9 @@ export const meta: TemplateMeta = {
   // sahibiyse `yes`, değilse `no`; SubjectName sahibin adı; GroupName grup
   // ("KOD · Türkçe ad"), GroupId panel bağlantısı için kimliği (grup
   // okunamadıysa boş); Role `board`, `audit`, `privileged` ya da
-  // `team-leaders`; EndsAt bitiş, "dd.MM.yyyy" (İstanbul). Listelerde: Count
+  // `team-leaders`; EndsAt bitiş, "dd.MM.yyyy" (İstanbul). DaysLeft gövdede
+  // okunmaz: 14 günlük uyarı bitişe 14 günden az kalınca da gider; tarih
+  // yeter. Listelerde: Count
   // ve Items, satırlar "\n" ile; süresi dolanlarda "Ad · Grup · dd.MM.yyyy",
   // haftalık özette "Grup: N". Core her anahtarı her zaman gönderir;
   // uymayanlar boştur (Self `no`).
@@ -53,6 +55,15 @@ function Lines() {
  */
 export default function ClubManagementTerm() {
   const self = ifEq("Self", "yes");
+  // core sends no name for someone it cannot read (erased since): a dash,
+  // as its expired list does.
+  const name = (
+    <>
+      {ifSet("SubjectName")}
+      {v("SubjectName")}
+      {elseBranch}—{end}
+    </>
+  );
   return (
     <Shell preview="SKY LAB yönetim üyeliği süresi." brand="account" reason={null}>
       {ifEq("Notice", "expired-list")}
@@ -76,11 +87,10 @@ export default function ClubManagementTerm() {
       </Title>
       <Paragraph>
         {self}
-        <Strong>{v("GroupName")}</Strong> grubundaki üyeliğinin süresi <Strong>{v("EndsAt")}</Strong> tarihinde doluyor;{" "}
-        {v("DaysLeft")} gün kaldı.
+        <Strong>{v("GroupName")}</Strong> grubundaki üyeliğinin süresi <Strong>{v("EndsAt")}</Strong> tarihinde doluyor.
         {elseBranch}
-        <Strong>{v("SubjectName")}</Strong> adlı kişinin <Strong>{v("GroupName")}</Strong> grubundaki üyeliğinin süresi{" "}
-        <Strong>{v("EndsAt")}</Strong> tarihinde doluyor; {v("DaysLeft")} gün kaldı.
+        <Strong>{name}</Strong> adlı kişinin <Strong>{v("GroupName")}</Strong> grubundaki üyeliğinin süresi{" "}
+        <Strong>{v("EndsAt")}</Strong> tarihinde doluyor.
         {end}
       </Paragraph>
       <Paragraph>Süre dolunca üyelik kendiliğinden kalkmaz; süresi dolmuş diye işaretlenir ve yönetici grubuna bildirilir.</Paragraph>
@@ -96,7 +106,7 @@ export default function ClubManagementTerm() {
       <Rows>
         <RowItem label="Grup">{v("GroupName")}</RowItem>
         {ifEq("Self", "no")}
-        <RowItem label="Kişi">{v("SubjectName")}</RowItem>
+        <RowItem label="Kişi">{name}</RowItem>
         {end}
         <RowItem label="Bitiş">{v("EndsAt")}</RowItem>
         <RowsEnd />
