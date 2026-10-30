@@ -52,6 +52,9 @@ describe("the team page consent notice", () => {
     const mail = await received({ Teams: "WEBLAB · Web Geliştirme, AGC", HideAt: "11.11.2026 00:00" });
     for (const body of [mail.html, mail.plainText]) {
       assert.match(body, /Merhaba Yusuf,/);
+      assert.match(body, /SKY LAB uygulamasındaki şu ekip sayfalarında görünüyor/);
+      // The site reads no core roster: the mail promises nothing about it.
+      assert.doesNotMatch(body, /site/i);
       assert.match(body, /WEBLAB · Web Geliştirme, AGC/);
       assert.match(body, /11\.11\.2026 00:00 itibarıyla bu sayfalarda yalnız izin veren üyeler görünecek\./);
       assert.match(body, /İzin vermezsen bu sayfalardan kaldırılırsın\./);
@@ -63,9 +66,10 @@ describe("the team page consent notice", () => {
   it("tells a Board member that the Board's page keeps their name only", async () => {
     const mail = await received({ Board: "true", Teams: "YK · Yönetim Kurulu" });
     for (const body of [mail.html, mail.plainText]) {
-      assert.match(body, /Yönetim Kurulu sayfasında adın ve soyadın görünmeye devam eder/);
+      assert.match(body, /uygulamadaki Yönetim Kurulu sayfasında adın ve soyadın görünmeye devam eder/);
       assert.match(body, /fotoğrafın ve diğer bilgilerin yalnız izin verirsen görünür/);
       assert.doesNotMatch(body, /İzin vermezsen bu sayfalardan kaldırılırsın/);
+      assert.doesNotMatch(body, /site/i);
     }
   });
 

@@ -36,7 +36,9 @@ export const meta: TemplateMeta = {
 /**
  * One notice, sent once (ekip-yetki-devri 21): the person's data will leave
  * the public team pages unless they consent. No promotion and no event news
- * goes into it: it is a transactional mail (stream islem).
+ * goes into it: it is a transactional mail (stream islem). The pages are
+ * the SKY LAB app's: the site reads no core roster (its Board cards are the
+ * CMS's), so the mail promises nothing about the site.
  */
 export default function CoreTeamPageConsentNotice() {
   const settings = v("SettingsURL");
@@ -50,14 +52,14 @@ export default function CoreTeamPageConsentNotice() {
       {end}
 
       <Paragraph>
-        Adın ve profil bilgilerin SKY LAB&apos;in sitesindeki ve uygulamasındaki şu ekip sayfalarında görünüyor:{" "}
+        Adın ve profil bilgilerin SKY LAB uygulamasındaki şu ekip sayfalarında görünüyor:{" "}
         <Strong>{v("Teams")}</Strong>.
       </Paragraph>
 
       <Paragraph>
         <Strong>{v("HideAt")}</Strong> itibarıyla bu sayfalarda yalnız izin veren üyeler görünecek.{" "}
         {ifSet("Board")}
-        Yönetim Kurulu üyesi olduğun için Yönetim Kurulu sayfasında adın ve soyadın görünmeye devam eder; fotoğrafın ve diğer
+        Yönetim Kurulu üyesi olduğun için uygulamadaki Yönetim Kurulu sayfasında adın ve soyadın görünmeye devam eder; fotoğrafın ve diğer
         bilgilerin yalnız izin verirsen görünür. Öteki ekip sayfalarında da yalnız izin verirsen görünürsün.
         {elseBranch}
         İzin vermezsen bu sayfalardan kaldırılırsın.
