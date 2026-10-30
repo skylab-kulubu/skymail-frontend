@@ -28,8 +28,8 @@ zaman verdiği değişkenler kullanılır.
 | Katılım Sertifikası 🔒 | `core.certificate` | Katılım sertifikan hazır | `FirstName`, `EventName`, `VerifyURL`, `Serial`, `OwnerTeam` |
 | Etkinlik İptali 🔒 | `core.event-cancelled` | {{.EventName}} iptal edildi | `EventName`, `EventStart`, `CancelReason`, `FirstName` |
 | Etkinlik Yeniden Yayında 🔒 | `core.event-reinstated` | {{.EventName}} yeniden yayında | `EventName`, `EventStart`, `FirstName` |
-| Geri Bildirim İsteği 🔒 🙈 | `core.feedback-request` | {{.EventName}} geri bildirim formu | `FirstName`, `EventName`, `Items` |
-| Geri Bildirim Hatırlatması 🔒 🙈 | `core.feedback-reminder` | Hatırlatma: {{.EventName}} geri bildirim formu | `FirstName`, `EventName`, `Items` |
+| Geri Bildirim İsteği 🔒 🙈 | `core.feedback-request` | {{.EventName}} geri bildirim formu | `FirstName`, `EventName`, `Items`, `EventId` |
+| Geri Bildirim Hatırlatması 🔒 🙈 | `core.feedback-reminder` | Hatırlatma: {{.EventName}} geri bildirim formu | `FirstName`, `EventName`, `Items`, `EventId` |
 | İletişim İzni Onayı 🔒 🙈 | `core.contact-consent-confirm` | {{if eq .purpose `event_invitations`}}SKY LAB duyuru iznini onayla{{else if eq .purpose `promotional`}}SKY LAB tanıtım e-postası iznini onayla{{else}}SKY LAB iznini onayla{{end}} | `confirmUrl`, `withdrawUrl`, `purpose` |
 | Hesap Güvenlik Bildirimi 🔒 🙈 | `account.security-alert` | SKY LAB hesabında: {{.EventTitle}} | `EventTitle`, `EventDetail`, `OccurredAt`, `DeviceLabel`, `IpAddress`, `Location`, `SecureAccountUrl` |
 | Birincil E-posta Değişti (eski adrese) 🔒 🙈 | `account.primary-email-changed` | SKY LAB hesabının e-posta adresi değişti | `OldEmail`, `NewEmail`, `OccurredAt`, `SecureAccountUrl` |
@@ -69,8 +69,8 @@ zaman verdiği değişkenler kullanılır.
 - **Katılım Sertifikası** (`core.certificate`) — core-backend, yoklama kesinleştikten sonra sertifika üretildiğinde (SKYMAIL_CERTIFICATE_TEMPLATE_ID, certificate/service.go).
 - **Etkinlik İptali** (`core.event-cancelled`) — core-backend, etkinlik iptal edilirken "Bilet sahiplerine bildir" seçiliyse, bilet sahiplerinin her birine bir kez (internal/eventstatusmail).
 - **Etkinlik Yeniden Yayında** (`core.event-reinstated`) — core-backend, iptal geri alınırken "Katılımcılara tekrar bildir" seçiliyse, iptal postası ulaşan her bilet sahibine bir kez (internal/eventstatusmail).
-- **Geri Bildirim İsteği** (`core.feedback-request`) — core-backend, etkinlik ya da oturum bitişinden 2 saat sonra (ya da "Şimdi gönder" ile) yoklaması alınan her bilet sahibine; kişi başına günde tek posta, o günün formları tek listede (ADR-0069).
-- **Geri Bildirim Hatırlatması** (`core.feedback-reminder`) — core-backend, ilk geri bildirim postasından 3 gün sonra, tek sefer, henüz cevaplanmamış ve iptal edilmemiş formlarla; kişi başına günde tek posta (ADR-0069).
+- **Geri Bildirim İsteği** (`core.feedback-request`) — core-backend (üyeye Bildirim olarak: e-posta + kutu; misafire yalnız e-posta), etkinlik ya da oturum bitişinden 2 saat sonra (ya da "Şimdi gönder" ile) yoklaması alınan her bilet sahibine; kişi başına günde tek posta, o günün formları tek listede (ADR-0069).
+- **Geri Bildirim Hatırlatması** (`core.feedback-reminder`) — core-backend (üyeye Bildirim olarak: e-posta + kutu; misafire yalnız e-posta), ilk geri bildirim postasından 3 gün sonra, tek sefer, henüz cevaplanmamış ve iptal edilmemiş formlarla; kişi başına günde tek posta (ADR-0069).
 - **İletişim İzni Onayı** (`core.contact-consent-confirm`) — core-backend, girişsiz verilen bir iletişim izni (Guest apply, Forms, Place, Guessr) pending yazıldığında; aynı izin için günde en çok bir, toplam en çok üç posta (çift onay, ADR-0062, docs/contact-consents.md). CONTACT_CONSENT_KEY açıkken gider. Ad taşımaz.
 - **Hesap Güvenlik Bildirimi** (`account.security-alert`) — Account center / sky-account SPI, hesapta güvenlikle ilgili bir şey değiştiğinde: parola değişti, geçiş anahtarı eklendi/silindi, doğrulama uygulaması eklendi/kaldırıldı, yeni cihazdan giriş, tüm oturumlar kapatıldı, kullanıcı adı değişti, kişisel e-posta eklendi/kaldırıldı.
 - **Birincil E-posta Değişti (eski adrese)** (`account.primary-email-changed`) — Account center, birincil e-posta değiştiğinde — ESKİ adrese gider. Yeni adres zaten doğrulama postası aldığı için bu, değişikliği kaçıran kişiye tek uyarıdır.
