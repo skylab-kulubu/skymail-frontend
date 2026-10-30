@@ -17,6 +17,7 @@ import { sectionLabel } from '@/lib/access';
 import { useApiLoad } from '@/lib/api/react';
 import { knownPageCount } from '@/lib/list-view';
 import { sendAccess } from '@/lib/send-form/access';
+import { newsAccess, newsSendHref } from '@/lib/news-send';
 import {
   audienceLabel,
   composeHref,
@@ -52,7 +53,9 @@ const EMPTY_TEXT: Readonly<Record<SendFilter, string>> = {
 export function SendList() {
   const router = useRouter();
   // Anyone who can pick a template may compose: what they cannot send goes for approval.
-  const canCompose = sendAccess(useConsole().roles).people;
+  const { roles } = useConsole();
+  const canCompose = sendAccess(roles).people;
+  const canNews = newsAccess(roles).prepare;
   const view = readSendListView(useSearchParams());
   const state = useApiLoad((api, signal) => fetchSendPage(api, view, signal), `${view.status}:${view.page}`);
   const lastPage =
@@ -72,7 +75,14 @@ export function SendList() {
       <PageHeader
         title={sectionLabel('/mail-tasks')}
         description="Her gönderimin durumu alıcılarının kuyruktaki durumundan çıkar: bir alıcısı bile başarısızsa gönderim başarısızdır."
-        actions={canCompose ? <NavButton variant="primary" href={composeHref()}><Plus aria-hidden />Yeni gönderim</NavButton> : undefined}
+        actions={
+          canCompose || canNews ? (
+            <>
+              {canNews ? <NavButton variant="outline" href={newsSendHref('')}>Haberden gönder</NavButton> : null}
+              {canCompose ? <NavButton variant="primary" href={composeHref()}><Plus aria-hidden />Yeni gönderim</NavButton> : null}
+            </>
+          ) : undefined
+        }
       />
 
       <SenderPausedCheck />

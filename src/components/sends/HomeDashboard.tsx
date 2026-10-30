@@ -7,11 +7,12 @@
 
 import Link from 'next/link';
 import { AlertTriangle, ArrowRight, Send } from 'lucide-react';
-import { Button, StateCard, StatusDot } from '@skylab-kulubu/skylcn-ui';
+import { Button, Notice, StateCard, StatusDot } from '@skylab-kulubu/skylcn-ui';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { RoleGate } from '@/components/layout/RoleGate';
 import { ROLE, sectionLabel } from '@/lib/access';
 import { useApiQuery } from '@/lib/api/react';
+import { bulkHeldText } from '@/lib/send-controls';
 import {
   dailySeries,
   dayTitle,
@@ -65,6 +66,7 @@ function Summary() {
   return (
     <div className="space-y-6">
       {summary && senderPaused(summary) ? <SenderPausedNotice /> : null}
+      {summary && bulkHeldText(summary) ? <Notice tone="warning">{bulkHeldText(summary)}</Notice> : null}
 
       <section aria-label="Sayılar" className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         {summary
