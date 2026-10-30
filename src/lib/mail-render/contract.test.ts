@@ -42,6 +42,7 @@ const CONTRACTS: Record<string, string[]> = {
   "core.feedback-reminder": ["Items"],
   "core.contact-consent-confirm": ["confirmUrl"],
   "core.team-page-consent-notice": ["HideAt", "SettingsURL"],
+  "club.management-term": ["Notice"],
   "club.news": ["ReadMoreUrl", "UnsubscribeUrl"],
   "account.security-alert": [],
   "account.primary-email-changed": [],
