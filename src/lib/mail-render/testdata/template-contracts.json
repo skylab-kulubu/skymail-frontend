@@ -613,6 +613,48 @@
       "{{if eq .purpose `event_invitations`}}"
     ]
   },
+  "core.team-page-consent-notice": {
+    "subject": "Ekip sayfalarında görünürlüğün",
+    "system": true,
+    "contentSensitive": false,
+    "variables": [
+      "FirstName",
+      "Teams",
+      "HideAt",
+      "SettingsURL",
+      "Board"
+    ],
+    "requiredVariables": [
+      "HideAt",
+      "SettingsURL"
+    ],
+    "sensitiveVariables": null,
+    "sampleKeys": [
+      "Board",
+      "FirstName",
+      "HideAt",
+      "SettingsURL",
+      "Teams"
+    ],
+    "referenced": [
+      "Board",
+      "FirstName",
+      "HideAt",
+      "SettingsURL",
+      "Teams",
+      "UnsubscribeUrl"
+    ],
+    "actions": [
+      "{{.FirstName}}",
+      "{{.HideAt}}",
+      "{{.SettingsURL}}",
+      "{{.Teams}}",
+      "{{.UnsubscribeUrl}}",
+      "{{if .Board}}",
+      "{{if .FirstName}}",
+      "{{if .UnsubscribeUrl}}"
+    ]
+  },
   "account.security-alert": {
     "subject": "SKY LAB hesabında: {{.EventTitle}}",
     "system": true,

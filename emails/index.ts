@@ -27,6 +27,7 @@ import CoreEventReinstated, { meta as coreEventReinstated } from "./core-event-r
 import CoreFeedbackRequest, { meta as coreFeedbackRequest } from "./core-feedback-request";
 import CoreFeedbackReminder, { meta as coreFeedbackReminder } from "./core-feedback-reminder";
 import CoreContactConsentConfirm, { meta as coreContactConsentConfirm } from "./core-contact-consent-confirm";
+import CoreTeamPageConsentNotice, { meta as coreTeamPageConsentNotice } from "./core-team-page-consent-notice";
 
 import AccountSecurityAlert, { meta as accountSecurityAlert } from "./account-security-alert";
 import AccountPrimaryEmailChanged, { meta as accountPrimaryEmailChanged } from "./account-primary-email-changed";
@@ -75,6 +76,7 @@ export const templates: EmailTemplate[] = [
   { meta: coreFeedbackRequest, Component: CoreFeedbackRequest },
   { meta: coreFeedbackReminder, Component: CoreFeedbackReminder },
   { meta: coreContactConsentConfirm, Component: CoreContactConsentConfirm },
+  { meta: coreTeamPageConsentNotice, Component: CoreTeamPageConsentNotice },
 
   { meta: accountSecurityAlert, Component: AccountSecurityAlert },
   { meta: accountPrimaryEmailChanged, Component: AccountPrimaryEmailChanged },
