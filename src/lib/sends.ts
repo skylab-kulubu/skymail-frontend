@@ -24,8 +24,12 @@ export const RECIPIENT_PAGE_SIZE = 25;
 export type SendStatus = "failed" | "sending" | "sent";
 export type RecipientStatus = "pending" | "processing" | "sent" | "failed";
 
-/** Queue rows by status; each row is one mail to one recipient. */
-export type RecipientCounts = Readonly<Record<RecipientStatus, number>>;
+/**
+ * Queue rows by status; each row is one mail to one recipient. `cancelled`
+ * (skymail-backend, duyuru-haber 05 G4): pending recipients of a cancelled
+ * send, in failed too; absent from a backend before it.
+ */
+export type RecipientCounts = Readonly<Record<RecipientStatus, number> & { cancelled?: number }>;
 
 /**
  * A send's recipients by status, and what the suppression list did to them
@@ -80,6 +84,12 @@ export type Send = Readonly<{
    * before tracking.
    */
   tracking?: boolean;
+  /** While set, its pending recipients wait (send-controls.ts); absent from a backend before task controls. */
+  paused_at?: string | null;
+  /** `operator`: paused by hand; `failure_rate`: paused itself as its recipients failed past the threshold. */
+  paused_reason?: "operator" | "failure_rate" | null;
+  /** When the send was cancelled: its pending recipients were skipped. */
+  cancelled_at?: string | null;
 }>;
 
 /**
@@ -150,6 +160,8 @@ export type SendSummary = Readonly<{
   purpose_available?: boolean;
   /** True while `SKYMAIL_LIST_CONSENT=on`: a list's guests need their announcement consent unless the send states it is about the list's own event (send-form/purpose.ts). Absent from a backend before it. */
   list_consent_available?: boolean;
+  /** Until when sends to lists, groups and News wait because the relay throttled the account (send-controls.ts); null or absent when not held. */
+  bulk_held_until?: string | null;
   send_counts: Readonly<Record<SendStatus, number>>;
   /** Oldest first, ending today; `date` is a calendar day in `time_zone` (`YYYY-MM-DD`). */
   daily_sent: ReadonlyArray<Readonly<{ date: string; sent: number }>>;
@@ -544,10 +556,13 @@ export function recipientsLabel(total: number): string {
 /** A send's recipients in total, and the statuses among them that occur. */
 export function recipientSummary(counts: RecipientCounts): { total: number; parts: string[] } {
   const waiting = counts.pending + counts.processing;
+  const cancelled = counts.cancelled ?? 0;
+  const failed = counts.failed - cancelled;
   const parts: string[] = [];
   if (counts.sent) parts.push(`${formatCount(counts.sent)} gönderildi`);
-  if (counts.failed) parts.push(`${formatCount(counts.failed)} başarısız`);
+  if (failed) parts.push(`${formatCount(failed)} başarısız`);
   if (waiting) parts.push(`${formatCount(waiting)} bekliyor`);
+  if (cancelled) parts.push(`${formatCount(cancelled)} iptal edildi`);
   return { total: waiting + counts.sent + counts.failed, parts };
 }
 

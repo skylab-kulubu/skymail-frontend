@@ -514,13 +514,15 @@
     "variables": [
       "FirstName",
       "EventName",
-      "Items"
+      "Items",
+      "EventId"
     ],
     "requiredVariables": [
       "Items"
     ],
     "sensitiveVariables": null,
     "sampleKeys": [
+      "EventId",
       "EventName",
       "FirstName",
       "Items"
@@ -549,13 +551,15 @@
     "variables": [
       "FirstName",
       "EventName",
-      "Items"
+      "Items",
+      "EventId"
     ],
     "requiredVariables": [
       "Items"
     ],
     "sensitiveVariables": null,
     "sampleKeys": [
+      "EventId",
       "EventName",
       "FirstName",
       "Items"
