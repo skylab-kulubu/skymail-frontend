@@ -216,3 +216,37 @@ describe("a link not to be counted", () => {
     assert.ok(!("notrack" in (template.marks.link.spec.attrs ?? {})));
   });
 });
+
+// The recipient's name in a free announcement (hub ticket
+// skymail-serbest-duyuru-alici-adi 01): the one variable its editor holds,
+// with or without a fallback, in text and in a heading.
+describe("the recipient's name in the free body's editor", () => {
+  const free = getSchema(visualSchemaExtensions(FREE_BODY_ALLOWANCE));
+  const document: VisualDocument = {
+    type: "skymail.visual",
+    version: 1,
+    blocks: [
+      { type: "heading", content: [{ type: "text", text: "Merhaba " }, { type: "variable", name: "FullName" }] },
+      {
+        type: "paragraph",
+        content: [
+          { type: "text", text: "Sayın " },
+          { type: "variable", name: "FullName", fallback: "katılımcı", marks: [{ type: "bold" }] },
+          { type: "text", text: "," },
+        ],
+      },
+    ],
+  };
+
+  it("is held and given back as the same document", () => {
+    const node = free.nodeFromJSON(toEditorContent(document));
+    node.check();
+    assert.equal(JSON.stringify(fromEditorContent(node.toJSON())), JSON.stringify(document));
+  });
+
+  it("leaves a Mail template's variables as they were: no fallback", () => {
+    const back = fromEditorContent(throughSchema(EVERY_BLOCK));
+    assert.equal(JSON.stringify(back), visualSource(EVERY_BLOCK));
+    assert.ok(!JSON.stringify(back).includes("fallback"));
+  });
+});

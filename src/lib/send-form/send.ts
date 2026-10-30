@@ -26,7 +26,8 @@ import { ApiError, apiErrorMessage, asApiError } from "../api/errors";
 import { fetchList, fetchRecipientPage, isInternal, toListRow, type ListRow, type MailingList } from "../mailing-lists";
 import { authorName, fetchTemplate, type MailTemplate } from "../templates";
 import { peopleProblems, peopleReady, type PeopleCheck, type PersonRow } from "./audience";
-import { bodyVariables, fieldWarnings, usesRecipientName, variableFields, type FieldInput } from "./fields";
+import { formatCount } from "../sends";
+import { bodyVariables, fieldValues, fieldWarnings, usesRecipientName, variableFields, withRecipientName, type FieldInput, type VariableField } from "./fields";
 import { CATEGORY_REFUSALS, PURPOSE_REFUSALS, type PurposeFields } from "./purpose";
 
 /** The Template key of the free-form template a free announcement is sent with. */
@@ -94,6 +95,10 @@ export type SendWarnings = Readonly<{
   lines: readonly string[];
 }>;
 
+/** Said when a mail that greets its recipient by name goes to a Forms audience with respondents who gave none. */
+export const unnamedRespondents = (count: number) =>
+  `Forms kaynağında ${formatCount(count)} yanıtlayanın adı yok: alıcının adı yerine yedek metin gider, yedek yoksa boş kalır.`;
+
 export const NO_FREE_TEMPLATE = `Serbest duyuru template'i (${FREE_TEMPLATE_KEY}) SkyMail'de yok ya da arşivlenmiş; serbest duyuru gönderilemez.`;
 
 /** The requests a draft sends, or what keeps it from going out; and either way, what may be a slip in it. */
@@ -104,18 +109,20 @@ export function sendPlan(
   const fields = template ? variableFields(template) : [];
   const templateProblem = template ? null : draft.what === "free" ? NO_FREE_TEMPLATE : "Gönderilecek Mail template'i seç.";
   const listProblem = draft.audience === "list" && !draft.list ? "Gönderilecek mail listesini seç." : null;
-  const people =
-    draft.audience === "people" ? peopleProblems(draft.people, { nameExpected: template ? usesRecipientName(template) : false }) : null;
+  const nameExpected = template ? usesRecipientName(template, { fields, values: fieldValues(fields, draft.fields) }) : false;
+  const people = draft.audience === "people" ? peopleProblems(draft.people, { nameExpected }) : null;
   const variables = template ? bodyVariables(fields, draft.fields) : null;
 
   const fieldWarned = fieldWarnings(fields, draft.fields, { expected: draft.what === "free" ? [FREE_BODY_VARIABLE] : [] });
   const peopleWarned = people?.warnings ?? [];
+  const unnamed = draft.audience === "form" && nameExpected ? (draft.formSource?.unnamed_count ?? 0) : 0;
   const warnings: SendWarnings = {
     fields: fieldWarned,
     people: peopleWarned,
     lines: [
       ...fields.flatMap((field) => (fieldWarned[field.name] ? [`${field.label}: ${fieldWarned[field.name]}`] : [])),
       ...peopleWarned.flatMap((warning, index) => (warning ? [`${index + 1}. kişi (${draft.people[index].email.trim()}): ${warning}`] : [])),
+      ...(unnamed > 0 ? [unnamedRespondents(unnamed)] : []),
     ],
   };
 
@@ -410,7 +417,12 @@ const SAMPLE_RECIPIENT: PersonRow = { name: "Ayşe Yılmaz", email: "ayse.yilmaz
  * send carries — an empty field as nothing — and a recipient, the first
  * person named or a sample one.
  */
-export function previewValues(variables: Readonly<Record<string, string>>, recipient: PersonRow | null): Record<string, string> {
+export function previewValues(
+  variables: Readonly<Record<string, string>>,
+  recipient: PersonRow | null,
+  fields: readonly VariableField[] = [],
+): Record<string, string> {
   const person = recipient ?? SAMPLE_RECIPIENT;
-  return { ...variables, FullName: person.name, Email: person.email };
+  // The recipient's name tags, filled as the mailer fills them (recipient-name.ts).
+  return { ...withRecipientName(fields, variables, person.name), FullName: person.name, Email: person.email };
 }

@@ -9,6 +9,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { FREE_BODY_ALLOWANCE, freeBodyFromSource, renderFreeBody } from "./free-body";
+import { FALLBACK_RULE, fillRecipientNameMarkup } from "./recipient-name";
 import { buildVisual as b, visualSource, type VisualBlock, type VisualDocument, type VisualInline, type VisualMark } from "./visual-document";
 
 /**
@@ -117,6 +118,37 @@ describe("a free announcement's body", () => {
     assert.equal(html(doc(b.list(false, [[], [b.text("bir")], []]))), "<ul><li>bir</li></ul>");
   });
 
+  it("writes the recipient's name as the tag the mailer fills, and only that variable", () => {
+    assert.equal(
+      html(doc(b.paragraph([b.text("Sayın "), b.variable("FullName", [], "katılımcı"), b.text(",")]))),
+      "<p>Sayın {{or .FullName &#34;katılımcı&#34;}},</p>",
+    );
+    assert.equal(
+      html(doc(b.heading([b.variable("FullName")]), b.list(false, [[b.variable("FullName", [{ type: "bold" }])]]))),
+      "<h2>{{.FullName}}</h2><ul><li><strong>{{.FullName}}</strong></li></ul>",
+    );
+    // What the mailer then makes of it, as the preview shows it.
+    const written = html(doc(b.paragraph([b.text("Sayın "), b.variable("FullName", [], "katılımcı"), b.text(",")])));
+    assert.equal(fillRecipientNameMarkup(written, "Ayşe Yılmaz"), "<p>Sayın Ayşe Yılmaz,</p>");
+    assert.equal(fillRecipientNameMarkup(written, ""), "<p>Sayın katılımcı,</p>");
+
+    const refused = freeBodyFromSource(
+      JSON.stringify(
+        doc(
+          b.paragraph([b.variable("FullName", [], 'a"b'), b.variable("Email")]),
+          b.paragraph([{ type: "variable", name: "FullName", fallback: "" } as never]),
+        ),
+      ),
+    );
+    assert.equal(refused.ok, false);
+    assert.ok(!refused.ok);
+    assert.deepEqual(refused.problems, [
+      `blocks[0].content[0].fallback: Bu metin ad yerine yazılamaz. ${FALLBACK_RULE}`,
+      "blocks[0].content[1]: burada yalnız alıcının adı kullanılabilir",
+      "blocks[1].content[0].fallback: boş yedek yazılmaz",
+    ]);
+  });
+
   it("uses only what the server keeps: no variables, sections, images, rules or house buttons", () => {
     const refused = freeBodyFromSource(
       visualSource(
@@ -132,7 +164,7 @@ describe("a free announcement's body", () => {
     assert.deepEqual(refused, {
       ok: false,
       problems: [
-        "blocks[0].content[1]: değişken burada kullanılamaz",
+        "blocks[0].content[1]: burada yalnız alıcının adı kullanılabilir",
         'blocks[1]: "button" bloğu burada kullanılamaz',
         'blocks[2]: "image" bloğu burada kullanılamaz',
         'blocks[3]: "divider" bloğu burada kullanılamaz',
@@ -143,6 +175,7 @@ describe("a free announcement's body", () => {
       blocks: ["heading", "paragraph", "list", "quote"],
       marks: ["bold", "italic", "link"],
       variables: false,
+      recipientName: true,
       lineBreaks: true,
       subheadings: true,
       noTrackLinks: true,
