@@ -29,6 +29,7 @@ import type { MailScheme } from '@/components/mail-preview/preview-document';
 import { apiErrorMessage, asApiError } from '@/lib/api/errors';
 import { useApi, useApiLoad } from '@/lib/api/react';
 import {
+  countFor,
   countParts,
   emptyNewsDraft,
   fetchNewsAvailability,
@@ -174,7 +175,8 @@ function NewsCompose({ slug, canSend }: { slug: string; canSend: boolean }) {
     );
   }
 
-  const currentCount = count.status === 'success' ? count.data : null;
+  // The count is the settled draft's: for a moment after the audience changes it is the old one's.
+  const currentCount = count.status === 'success' ? countFor(draft, settled, count.data) : null;
   const problems = sendProblems(draft, currentCount);
   const stepIndex = preview.status !== 'success' ? 0 : !teamsChosen ? 1 : problems.length > 0 ? 3 : 5;
 

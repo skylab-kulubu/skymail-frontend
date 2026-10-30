@@ -8,6 +8,7 @@ import { describe, it } from "node:test";
 import { ApiError } from "./api/errors";
 import { json, scriptedClient, TEST_BASE_URL } from "./api/testing";
 import {
+  countFor,
   countParts,
   emptyNewsDraft,
   fetchNewsAvailability,
@@ -173,6 +174,21 @@ describe("what stops a send", () => {
     assert.match(sendProblems(ready, null)[0], /sayı/);
     assert.match(sendProblems(ready, count({ members: 0, followers: 0, total: 0 }))[0], /kimse yok/);
     assert.match(sendProblems(ready, count({}, "task-1"))[0], /zaten gönderildi/);
+  });
+});
+
+describe("the count a send reads", () => {
+  const members = { ...emptyNewsDraft("bahar-kayitlari"), statement: true };
+  const teams = { ...members, audience: { type: "teams" as const, teams: ["g1"] } };
+
+  it("is the count of the draft's audience", () => {
+    assert.deepEqual(countFor(members, { ...members, subject: "Yeni konu" }, count()), count());
+  });
+
+  it("is none while the count is an older audience's: the send waits for the new one", () => {
+    assert.equal(countFor(teams, members, count()), null);
+    assert.equal(countFor({ ...teams, audience: { type: "teams", teams: ["g1", "g2"] } }, teams, count()), null);
+    assert.match(sendProblems(teams, countFor(teams, members, count()))[0], /sayı/);
   });
 });
 

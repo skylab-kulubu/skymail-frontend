@@ -202,6 +202,15 @@ export function countParts(count: NewsSendCount): CountPart[] {
   return [...always, ...others.filter((part) => part.value > 0)];
 }
 
+/**
+ * count, when it was counted for draft's record and audience (counted is the
+ * draft it was asked for); null while it is an older audience's, so a send
+ * never goes on the number of the audience just changed.
+ */
+export function countFor(draft: NewsDraft, counted: NewsDraft, count: NewsSendCount | null): NewsSendCount | null {
+  return JSON.stringify(newsCountRequest(draft)) === JSON.stringify(newsCountRequest(counted)) ? count : null;
+}
+
 /** What stops "Şimdi gönder", in the order the form reads; empty when nothing does. */
 export function sendProblems(draft: NewsDraft, count: NewsSendCount | null): string[] {
   const problems: string[] = [];
