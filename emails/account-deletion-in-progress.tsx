@@ -10,7 +10,7 @@ export const meta: TemplateMeta = {
   contentSensitive: true,
   brand: "account",
   trigger:
-    "Keycloak (sky-account SPI), silinme sürecindeki bir hesabın adresiyle yeniden kayıt denendiğinde, o adrese.",
+    "Keycloak (sky-account SPI), giriş sayfasında \"E-postayla devam et\" ile silinme sürecindeki bir hesabın adresine kod istendiğinde, o adrese; aynı adrese saatte en çok bir. Takip edilmez, SkyMail'de kaydı kalmaz (erase_after_send).",
   variables: [],
   sensitiveVariables: [],
   requiredVariables: [],
@@ -18,8 +18,9 @@ export const meta: TemplateMeta = {
 };
 
 /**
- * Someone tried to sign up with an address whose account is being deleted.
- * The mail goes to that address only, so it tells nothing to whoever typed it.
+ * Someone asked for a sign-in code ("E-postayla devam et") with an address
+ * whose account is being deleted. The mail goes to that address only, so the
+ * page tells whoever typed it nothing.
  */
 export default function AccountDeletionInProgress() {
   return (
