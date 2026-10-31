@@ -53,10 +53,13 @@ describe("the menu", () => {
     assert.equal(sectionLabel("/mail-approvals"), "Mail onayları");
   });
 
-  it("shows the suppression list only to one who may reverse an unsubscribe", () => {
+  // GET /suppressions takes either role (skymail-backend main.go).
+  it("shows the suppression list to one who may remove a bounce or reverse an unsubscribe", () => {
     assert.ok(!hrefs(["skymail:access", "skymail:mails:read"]).includes("/suppressions"));
     assert.ok(hrefs(["skymail:access", "skymail:unsubscribes:reactivate"]).includes("/suppressions"));
-    assert.deepEqual(requiredRolesFor("/suppressions"), ["skymail:unsubscribes:reactivate"]);
+    assert.ok(hrefs(["skymail:access", "skymail:suppressions:manage"]).includes("/suppressions"));
+    assert.ok(!hrefs(["skymail:suppressions:manage"]).includes("/suppressions"));
+    assert.deepEqual(requiredRolesFor("/suppressions"), ["skymail:suppressions:manage", "skymail:unsubscribes:reactivate"]);
   });
 });
 

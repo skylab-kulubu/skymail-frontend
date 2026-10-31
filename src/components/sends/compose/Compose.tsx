@@ -168,7 +168,7 @@ export function Compose({
 
   const current = fieldValues(fields, input);
   const firstPerson = audience === 'people' ? (people.find((person) => person.email.trim() !== '') ?? null) : null;
-  const sample = previewValues(current, firstPerson && { name: firstPerson.name.trim(), email: firstPerson.email.trim() });
+  const sample = previewValues(current, firstPerson && { name: firstPerson.name.trim(), email: firstPerson.email.trim() }, fields);
   const whatLabel =
     what === 'free' ? `Serbest duyuru${current.Subject ? ` “${current.Subject}”` : ''}` : template ? `“${template.name}”` : '';
   const draftNote = template ? publishedOnlyNote(template) : null;

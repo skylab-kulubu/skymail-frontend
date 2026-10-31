@@ -21,6 +21,8 @@ export const ROLE = {
   mailsTrackingRead: "skymail:mails:tracking:read",
   /** Reverses an address's unsubscribe at the person's request, with a reason (abonelik-cikisi 04, Keycloak ticket 10). */
   unsubscribesReactivate: "skymail:unsubscribes:reactivate",
+  /** Removes a bounce from the suppression list and reads the bounce rate (skymail-bounce-isleme 08, Keycloak ticket 06). */
+  suppressionsManage: "skymail:suppressions:manage",
 } as const;
 
 export type Role = (typeof ROLE)[keyof typeof ROLE];
@@ -28,8 +30,8 @@ export type Role = (typeof ROLE)[keyof typeof ROLE];
 export type NavItem = Readonly<{
   href: string;
   label: string;
-  /** The role that opens this section; the home screen needs only access. */
-  requires?: Role;
+  /** The role that opens this section, or the roles any one of which does; the home screen needs only access. */
+  requires?: Role | readonly Role[];
 }>;
 
 /**
@@ -45,7 +47,7 @@ export const NAVIGATION: readonly NavItem[] = [
   { href: "/mailing-lists", label: "Mail listeleri", requires: ROLE.listsRead },
   { href: "/mail-tasks", label: "Gönderimler", requires: ROLE.mailsRead },
   { href: "/mail-approvals", label: "Mail onayları" },
-  { href: "/suppressions", label: "Bastırma listesi", requires: ROLE.unsubscribesReactivate },
+  { href: "/suppressions", label: "Bastırma listesi", requires: [ROLE.suppressionsManage, ROLE.unsubscribesReactivate] },
 ];
 
 export type SectionHref = "/" | "/templates" | "/mailing-lists" | "/mail-tasks" | "/mail-approvals" | "/suppressions";
@@ -65,9 +67,15 @@ export function hasRole(roles: readonly string[], role: Role): boolean {
   return hasAccess(roles) && roles.includes(role);
 }
 
+/** The roles any one of which opens a section; none beyond access when it names none. */
+function sectionRoles(item: NavItem): readonly Role[] {
+  if (!item.requires) return [];
+  return typeof item.requires === "string" ? [item.requires] : item.requires;
+}
+
 export function visibleNavigation(roles: readonly string[]): NavItem[] {
   if (!hasAccess(roles)) return [];
-  return NAVIGATION.filter((item) => !item.requires || roles.includes(item.requires));
+  return NAVIGATION.filter((item) => hasAnyRole(roles, sectionRoles(item)));
 }
 
 /** Whether the viewer decides sends submitted for approval (Mail onayı). */
@@ -99,7 +107,7 @@ export function requiredRolesFor(pathname: string): readonly Role[] {
   const section = NAVIGATION.find(
     (item) => item.href !== "/" && (pathname === item.href || pathname.startsWith(`${item.href}/`)),
   );
-  return section?.requires ? [section.requires] : [];
+  return section ? sectionRoles(section) : [];
 }
 
 /**

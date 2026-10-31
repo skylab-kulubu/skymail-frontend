@@ -482,6 +482,26 @@ describe("the Template seed's Notification types", () => {
     );
     assert.equal(ticketType.inbox?.link, "/events/{{.EventId}}");
   });
+
+  it("register the four Forms mails as required, e-mail only, system lane types", async () => {
+    const keys = ["forms.form-copy", "forms.status-changed", "forms.attempt-update", "forms.pending-reminder"];
+    for (const key of keys) {
+      const n = repoTemplates.find(({ meta }) => meta.key === key)?.meta.notification;
+      assert.deepEqual(
+        n && { required: n.required, lane: n.lane, channels: n.defaultChannels, category: n.category, inbox: n.inbox },
+        { required: true, lane: "system", channels: ["email"], category: null, inbox: undefined },
+        key,
+      );
+    }
+    const { fetch, calls } = scriptedFetch();
+    const forms = repoTemplates
+      .filter(({ meta }) => keys.includes(meta.key))
+      .map(({ meta }) => template(meta.key, meta.name, { notification: meta.notification }));
+    const { exitCode, output } = await run({ templates: forms, fetch, dryRun: true });
+    assert.equal(exitCode, 0, output);
+    assert.equal(calls.length, 0);
+    for (const key of keys) assert.match(output, new RegExp(`${key.replace(".", "\\.")}.*\\[bildirim türü\\]`));
+  });
 });
 
 describe("the seed's command line", () => {

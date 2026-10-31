@@ -28,7 +28,7 @@ describe("the feedback mails", () => {
       const { meta, html } = await rendered(key);
       assert.equal(meta.system, true);
       assert.equal(meta.contentSensitive, true);
-      assert.deepEqual(meta.variables, ["FirstName", "EventName", "Items"]);
+      assert.deepEqual(meta.variables, ["FirstName", "EventName", "Items", "EventId"]);
       assert.deepEqual((meta.requiredVariables ?? []).map(({ name }) => name), ["Items"]);
       // Beside the footer's unsubscribe link, which the mailer fills.
       const referenced = [...referencedVariables(html)].filter((name) => name !== "UnsubscribeUrl");
@@ -68,4 +68,25 @@ describe("the feedback mails", () => {
     const { plainText } = await rendered("core.feedback-reminder");
     assert.ok(plainText.includes("henüz doldurmadıysan"));
   });
+
+  for (const key of KEYS) {
+    it(`${key} is a required, system lane Notification type by e-mail and the inbox`, async () => {
+      const { meta } = await rendered(key);
+      const n = meta.notification;
+      assert.ok(n, `${key} has no Notification type`);
+      // A service mail about an Event the person attended: no preference (SPEC §5)
+      assert.deepEqual(
+        { required: n.required, lane: n.lane, channels: n.defaultChannels, category: n.category },
+        { required: true, lane: "system", channels: ["email", "inbox"], category: null },
+      );
+      // The inbox item names the Event and its forms and opens the Event in the app:
+      // the personal links stay in the mail.
+      assert.ok(n.inbox?.title.includes("{{.EventName}}"), n.inbox?.title);
+      assert.equal(n.inbox?.summary, "{{range $i, $item := .Items}}{{if $i}}, {{end}}{{$item.Title}}{{end}}");
+      assert.equal(n.inbox?.link, "/events/{{.EventId}}");
+      assert.ok(!/URL/.test(JSON.stringify(n.inbox)), "no personal link in the inbox");
+      assert.ok(typeof meta.sample.EventId === "string" && meta.sample.EventId.length > 0);
+    });
+  }
 });
+

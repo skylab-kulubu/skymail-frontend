@@ -34,6 +34,7 @@ import {
   recipientsLabel,
   recipientStatus,
   recipientSummary,
+  deliveryNotes,
   SEND_PAGE_SIZE,
   SENDER_PAUSED_TEXT,
   senderPaused,
@@ -421,6 +422,19 @@ describe("a send's recipients", () => {
       parts: ["3 bekliyor"],
     });
     assert.deepEqual(recipientSummary({ pending: 0, processing: 0, sent: 0, failed: 0 }), { total: 0, parts: [] });
+  });
+
+  // skymail-backend QueueTotals (skymail-bounce-isleme 08): undelivered is in
+  // sent, suppressed in failed, suppressed_but_sent in its status.
+  it("say what the suppression list did to them, when it did anything", () => {
+    const counts = { pending: 0, processing: 0, sent: 10, failed: 3 };
+    assert.deepEqual(deliveryNotes({ ...counts, undelivered: 2, suppressed: 3, suppressed_but_sent: 1 }), [
+      "2 ulaşmadı",
+      "3 bastırıldı",
+      "1 hesap postası bastırılmış adrese gitti",
+    ]);
+    assert.deepEqual(deliveryNotes({ ...counts, undelivered: 0, suppressed: 0, suppressed_but_sent: 0 }), []);
+    assert.deepEqual(deliveryNotes(counts), []);
   });
 
   // skymail-backend encodes a queue row's status as sqlc's NullMailQueueStatus.

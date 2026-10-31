@@ -37,12 +37,17 @@ import { formsHandoffMatches, formsRecipients, formsSourceHandoff, parseFormsHan
 import { audienceFormSource, fetchFormSource, type PreparedFormSource } from '@/lib/form-mail-source';
 import { FormSourceCard } from '../FormSourceCard';
 import { Compose } from './Compose';
+import { NewsSendForm } from '../news/NewsSendForm';
+import { readNewsSendQuery } from '@/lib/news-send';
 
 export function SendForm() {
   const params = useSearchParams();
   const from = params.get('from_approval');
   const { user } = useConsole();
   const handoff = params.has('forms_handoff') || params.get('source') === 'forms';
+  // "Haberden gönder" (duyuru-haber 08): ?source=news&slug=<slug>.
+  const news = readNewsSendQuery(params);
+  if (news) return 'problem' in news ? <NewsSendForm slug="" problem={news.problem} /> : <NewsSendForm slug={news.slug} />;
   return (
     <RoleGate role={ROLE.templatesRead}>
       {handoff

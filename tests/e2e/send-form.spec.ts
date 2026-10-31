@@ -227,6 +227,54 @@ test("a free announcement written in the Visual editor goes to a list as the all
   expect(errors).toEqual([]);
 });
 
+// AlgoLab, 2026-10-27: a free announcement greets each recipient by name
+// (hub ticket skymail-serbest-duyuru-alici-adi 01). The mailer fills the tag
+// per recipient; the preview fills it with the sample recipient's name.
+test("a free announcement greets each recipient by name, in its subject and in its body", async ({ page, skymail, signIn }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await signIn("sender");
+  const free = freeBasic(skymail);
+  const gecekodu = skymail.addList({ name: "GECEKODU katılımcıları", recipients: PARTICIPANTS });
+
+  await page.goto(`/mail-tasks/create?mail_list_id=${gecekodu}`);
+  await page.getByLabel("Konu").fill("Sayın ");
+  // The subject's own button; the body's toolbar has one too.
+  const subject = page.locator("div", { has: page.getByLabel("Konu") }).last();
+  await subject.getByRole("button", { name: "Alıcının adını ekle" }).click();
+  await page.getByLabel("Adı olmayan alıcıya").fill('kat"ılımcı');
+  await expect(page.getByText("Bu metin ad yerine yazılamaz.")).toBeVisible();
+  await page.getByLabel("Adı olmayan alıcıya").fill("katılımcı");
+  await page.getByRole("button", { name: "Ekle", exact: true }).click();
+  await expect(page.getByLabel("Konu")).toHaveValue('Sayın {{or .FullName "katılımcı"}}');
+
+  // The body's editor offers the recipient's name and no other variable.
+  await body(page).click();
+  await expect(toolbar(page).getByRole("button", { name: "Değişken ekle" })).toHaveCount(0);
+  await page.keyboard.type("Merhaba ");
+  await toolbar(page).getByRole("button", { name: "Alıcının adını ekle" }).click();
+  await page.getByRole("button", { name: "Ekle", exact: true }).click();
+  await expect(body(page).getByLabel("Alıcının adı", { exact: true })).toBeVisible();
+  await body(page).click();
+  await page.keyboard.press("End");
+  await page.keyboard.type(", kaydın alındı.");
+
+  // The preview reads as the sample recipient gets it.
+  await expect(page.getByText(/^Konu\s*Sayın Ayşe Yılmaz$/)).toBeVisible();
+  const mail = preview(page, "Gönderim önizlemesi");
+  await expect(mail.locator(".t-body p")).toHaveText("Merhaba Ayşe Yılmaz, kaydın alındı.");
+
+  await send(page).click();
+  await dialog(page).getByRole("button", { name: "Gönder", exact: true }).click();
+  await expect(page).toHaveURL(/\/mail-tasks\/show\/b1c2d3e4-/);
+  const sends = skymail.sendRequests();
+  expect(sends[0].body).toMatchObject({
+    template_id: free.id,
+    body_variables: { Subject: 'Sayın {{or .FullName "katılımcı"}}', BodyHtml: "<p>Merhaba {{.FullName}}, kaydın alındı.</p>" },
+  });
+  expect(errors).toEqual([]);
+});
+
 test("a list send that may already be open is held back until a re-send is confirmed", async ({ page, skymail, signIn }) => {
   await signIn("sender");
   freeBasic(skymail);

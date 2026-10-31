@@ -40,6 +40,7 @@ import {
   Quote,
   Redo2,
   Undo2,
+  UserRound,
   type LucideIcon,
 } from 'lucide-react';
 import { FormField } from '@/components/common/FormField';
@@ -51,8 +52,10 @@ import {
   visualDocumentVariables,
   type VisualAllowance,
 } from '@/lib/mail-render/visual-document';
+import { RECIPIENT_NAME } from '@/lib/mail-render/recipient-name';
 import { createEchoes } from './echoes';
 import { visualEditorExtensions } from './extensions';
+import { RECIPIENT_NAME_LABEL, RecipientNamePanel } from './RecipientNamePanel';
 import { fromEditorContent, toEditorContent } from './tiptap-document';
 import {
   GENERIC_WORDING,
@@ -65,7 +68,7 @@ import { Button, Notice } from '@skylab-kulubu/skylcn-ui';
 
 export type { VisualEditorWording } from './VariableField';
 
-type Panel = 'link' | 'variable' | null;
+type Panel = 'link' | 'variable' | 'recipientName' | null;
 
 /**
  * The document in the editor as source text, and the variables it uses —
@@ -288,6 +291,18 @@ function Toolbar({
     ? [{ icon: Quote, label: 'Alıntı', pressed: state.quote, onClick: () => chain().toggleWrap('blockquote').run() }]
     : [];
   const inserts: Tool[] = [
+    // A body with no other variable may still print the recipient's name (a free announcement).
+    ...(!allow.variables && allow.recipientName
+      ? [
+          {
+            icon: UserRound,
+            label: 'Alıcının adını ekle',
+            text: RECIPIENT_NAME_LABEL,
+            pressed: panel === 'recipientName',
+            onClick: () => setPanel(panel === 'recipientName' ? null : 'recipientName'),
+          },
+        ]
+      : []),
     ...(allow.variables
       ? [
           {
@@ -534,6 +549,14 @@ export function VisualEditor({
           <div className="border-b border-border bg-card p-3">
             {panel === 'link' ? (
               <LinkPanel editor={editor} onClose={() => setPanel(null)} noTrack={allow.noTrackLinks === true} />
+            ) : panel === 'recipientName' ? (
+              <RecipientNamePanel
+                onInsert={(fallback) => {
+                  editor.chain().focus().insertContent({ type: 'variable', attrs: { name: RECIPIENT_NAME, fallback } }).run();
+                  setPanel(null);
+                }}
+                onClose={() => setPanel(null)}
+              />
             ) : (
               <VariableInsertPanel
                 onInsert={(name) => {

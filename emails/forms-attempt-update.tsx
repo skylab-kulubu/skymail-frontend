@@ -12,7 +12,7 @@ export const meta: TemplateMeta = {
   contentSensitive: false,
   brand: "forms",
   trigger:
-    "forms-backend, süreli bir görevde (süre sınırlı form): görevi başlatmamış kişiye hatırlatma (reminder), ekip süreyi uzattığında (extended), süre dolduğunda cevap varsa (expired) ya da yoksa (expiredEmpty), süre dolduğunda kaydedilen cevap teslim olarak kabul edildiğinde (accepted) ya da edilmediğinde (closed) (FormMailNotifier.NotifyAttemptAsync, FormAttemptService). Gövde forms-frontend mail-templates/AttemptUpdate.jsx.",
+    "forms-backend, süreli bir görevde (süre sınırlı form): görevi başlatmamış kişiye hatırlatma (reminder), ekip süreyi uzattığında (extended), süre dolduğunda cevap varsa (expired) ya da yoksa (expiredEmpty), süre dolduğunda kaydedilen cevap teslim olarak kabul edildiğinde (accepted) ya da edilmediğinde (closed) (FormMailNotifier.NotifyAttemptAsync, FormAttemptService). Gövde forms-frontend mail-templates/AttemptUpdate.jsx. Bildirim türü kayıtlı (zorunlu, yalnız e-posta, system şeridi): core üyeye bu postayı POST /v1/notifications ile gönderecek (ADR-0075); Forms bugün /single ile gönderir.",
   // forms-backend FormMailNotifier: formTitle, formId, kind and
   // firstName/recipientName (MailNames) always; deadlineAt, minutes with its
   // text duration ("1 saat 30 dakika"), and nextFormId when set. extended
@@ -24,6 +24,10 @@ export const meta: TemplateMeta = {
     { name: "formId", reason: "Göreve ve durumuna giden bağlantının adresi; kaldırılırsa kişi göreve ulaşamaz." },
     { name: "kind", reason: "Hatırlatma, uzatma, süre bitimi ve teslim sonucu metinlerinden hangisinin gideceğini seçer; kaldırılırsa gövde boş gider." },
   ],
+  // core sends this to a member with POST /v1/notifications (ADR-0075 karar
+  // 5), which refuses a type SkyMail has no record of. By e-mail only for
+  // now: an inbox text is its own change.
+  notification: { category: null, required: true, defaultChannels: ["email"], lane: "system" },
   sample: {
     formTitle: "SKY LAB Yazılım Ekibi Teknik Görevi",
     formId: "8c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f",

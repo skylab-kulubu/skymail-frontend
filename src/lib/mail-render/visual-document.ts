@@ -22,6 +22,7 @@
  */
 
 import { isVariableName } from "./go-template";
+import { RECIPIENT_NAME, fallbackProblem } from "./recipient-name";
 
 export const VISUAL_DOCUMENT_TYPE = "skymail.visual";
 export const VISUAL_DOCUMENT_VERSION = 1;
@@ -35,8 +36,12 @@ export type VisualMark = { type: "bold" } | { type: "italic" } | { type: "link";
 
 export type VisualInline =
   | { type: "text"; text: string; marks?: VisualMark[] }
-  /** `{{.name}}` when rendered. */
-  | { type: "variable"; name: string; marks?: VisualMark[] }
+  /**
+   * `{{.name}}` when rendered. A free announcement's body holds only the
+   * recipient's name (FullName), which may have a fallback for a recipient
+   * without one: `{{or .FullName "fallback"}}` (recipient-name.ts).
+   */
+  | { type: "variable"; name: string; fallback?: string; marks?: VisualMark[] }
   /** A new line inside a paragraph or a list item. */
   | { type: "hardBreak" };
 
@@ -77,13 +82,18 @@ export type VisualMarkType = VisualMark["type"];
  * sanitizes — what survives it (free-body.ts). The reader refuses what an
  * allowance leaves out, and the editor offers only what it allows.
  * `variables` covers inline variables and a button linking to one; a
- * conditional section needs them too. `lineBreaks` is a new line inside a
- * paragraph, a list item or a quote; `subheadings` a heading of level 3.
+ * conditional section needs them too. `recipientName` is the one inline
+ * variable a body without them may print, the recipient's name, with a
+ * fallback (a free announcement: the mailer fills only that tag in it,
+ * recipient-name.ts). `lineBreaks` is a new line inside a paragraph, a list
+ * item or a quote; `subheadings` a heading of level 3.
  */
 export type VisualAllowance = Readonly<{
   blocks: readonly VisualBlockType[];
   marks: readonly VisualMarkType[];
   variables: boolean;
+  /** The recipient's name inline, with a fallback (VisualInline variable FullName). */
+  recipientName?: boolean;
   lineBreaks: boolean;
   subheadings: boolean;
   /** A link may be marked not to be counted (VisualMark notrack). */
@@ -110,6 +120,7 @@ const WHOLE_MODEL: VisualAllowance = {
   blocks: VISUAL_BLOCK_TYPES,
   marks: ["bold", "italic", "link"],
   variables: true,
+  recipientName: true,
   lineBreaks: true,
   subheadings: true,
   noTrackLinks: true,
@@ -143,7 +154,12 @@ const withMarks = (marks: readonly VisualMark[] | undefined) => (marks && marks.
 export const buildVisual = {
   document: (blocks: VisualBlock[]): VisualDocument => ({ type: VISUAL_DOCUMENT_TYPE, version: VISUAL_DOCUMENT_VERSION, blocks }),
   text: (text: string, marks?: readonly VisualMark[]): VisualInline => ({ type: "text", text, ...withMarks(marks) }),
-  variable: (name: string, marks?: readonly VisualMark[]): VisualInline => ({ type: "variable", name, ...withMarks(marks) }),
+  variable: (name: string, marks?: readonly VisualMark[], fallback?: string): VisualInline => ({
+    type: "variable",
+    name,
+    ...(fallback ? { fallback } : {}),
+    ...withMarks(marks),
+  }),
   hardBreak: (): VisualInline => ({ type: "hardBreak" }),
   heading: (content: VisualInline[], level?: 3): VisualBlock => ({ type: "heading", ...(level === 3 ? { level } : {}), content }),
   paragraph: (content: VisualInline[]): VisualBlock => ({ type: "paragraph", content }),
@@ -330,7 +346,11 @@ class Reader {
         this.problem(at, `bilinmeyen satır içi öğe ${JSON.stringify(item.type)}`);
         return;
       }
-      this.only(item, item.type === "text" ? ["type", "text", "marks"] : ["type", "name", "marks"], at);
+      this.only(
+        item,
+        item.type === "text" ? ["type", "text", "marks"] : this.allowance.recipientName ? ["type", "name", "fallback", "marks"] : ["type", "name", "marks"],
+        at,
+      );
       const marks = this.marks(item.marks, `${at}.marks`) ?? [];
       if (marks.length > 0 && !marksAllowed) {
         this.problem(at, "başlıkta biçim (kalın, italik, bağlantı) kullanılmaz");
@@ -343,12 +363,20 @@ class Reader {
         inlines.push(buildVisual.text(item.text, marks));
         return;
       }
-      if (!this.allowance.variables) {
-        this.problem(at, "değişken burada kullanılamaz");
+      const recipientName = this.allowance.recipientName === true && item.name === RECIPIENT_NAME;
+      if (!this.allowance.variables && !recipientName) {
+        this.problem(at, this.allowance.recipientName ? "burada yalnız alıcının adı kullanılabilir" : "değişken burada kullanılamaz");
         return;
       }
+      let fallback = "";
+      if (item.fallback !== undefined) {
+        const problem = typeof item.fallback !== "string" ? "yedek bir metin olmalı" : item.fallback === "" ? "boş yedek yazılmaz" : fallbackProblem(item.fallback);
+        if (!recipientName) this.problem(`${at}.fallback`, "yedek yalnız alıcının adında olur");
+        else if (problem) this.problem(`${at}.fallback`, problem);
+        else fallback = item.fallback as string;
+      }
       const name = this.variableName(item.name, `${at}.name`);
-      if (name) inlines.push(buildVisual.variable(name, marks));
+      if (name) inlines.push(buildVisual.variable(name, marks, fallback));
     });
     return inlines;
   }
