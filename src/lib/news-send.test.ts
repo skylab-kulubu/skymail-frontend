@@ -197,6 +197,7 @@ describe("errors", () => {
     assert.match(new ApiError(404, "news_send.not_found").message, /yayımlanmış/);
     assert.match(new ApiError(503, "news_send.not_enabled").message, /kapalı/);
     assert.match(new ApiError(409, "news_send.already_sent").message, /zaten/);
+    assert.match(new ApiError(409, "news_send.cancel_finishing").message, /iptal edilen gönderimin/);
     assert.match(new ApiError(429, "news_send.test_rate_limited").message, /dakikada en çok 3/);
     assert.match(new ApiError(409, "mail_task.finished").message, /bitti/);
   });
