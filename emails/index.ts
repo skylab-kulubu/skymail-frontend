@@ -27,6 +27,7 @@ import CoreEventReinstated, { meta as coreEventReinstated } from "./core-event-r
 import CoreFeedbackRequest, { meta as coreFeedbackRequest } from "./core-feedback-request";
 import CoreFeedbackReminder, { meta as coreFeedbackReminder } from "./core-feedback-reminder";
 import CoreContactConsentConfirm, { meta as coreContactConsentConfirm } from "./core-contact-consent-confirm";
+import CoreTeamPageConsentNotice, { meta as coreTeamPageConsentNotice } from "./core-team-page-consent-notice";
 
 import AccountSecurityAlert, { meta as accountSecurityAlert } from "./account-security-alert";
 import AccountPrimaryEmailChanged, { meta as accountPrimaryEmailChanged } from "./account-primary-email-changed";
@@ -44,6 +45,7 @@ import ClubTeamMembership, { meta as clubTeamMembership } from "./club-team-memb
 import ClubRoleMembership, { meta as clubRoleMembership } from "./club-role-membership";
 import ClubGroupMembership, { meta as clubGroupMembership } from "./club-group-membership";
 import ClubPrivilegeChange, { meta as clubPrivilegeChange } from "./club-privilege-change";
+import ClubManagementTerm, { meta as clubManagementTerm } from "./club-management-term";
 import ClubNews, { meta as clubNews } from "./club-news";
 
 import FormsStatusChanged, { meta as formsStatusChanged } from "./forms-status-changed";
@@ -75,6 +77,7 @@ export const templates: EmailTemplate[] = [
   { meta: coreFeedbackRequest, Component: CoreFeedbackRequest },
   { meta: coreFeedbackReminder, Component: CoreFeedbackReminder },
   { meta: coreContactConsentConfirm, Component: CoreContactConsentConfirm },
+  { meta: coreTeamPageConsentNotice, Component: CoreTeamPageConsentNotice },
 
   { meta: accountSecurityAlert, Component: AccountSecurityAlert },
   { meta: accountPrimaryEmailChanged, Component: AccountPrimaryEmailChanged },
@@ -92,6 +95,7 @@ export const templates: EmailTemplate[] = [
   { meta: clubRoleMembership, Component: ClubRoleMembership },
   { meta: clubGroupMembership, Component: ClubGroupMembership },
   { meta: clubPrivilegeChange, Component: ClubPrivilegeChange },
+  { meta: clubManagementTerm, Component: ClubManagementTerm },
   { meta: clubNews, Component: ClubNews },
 
   { meta: formsStatusChanged, Component: FormsStatusChanged },

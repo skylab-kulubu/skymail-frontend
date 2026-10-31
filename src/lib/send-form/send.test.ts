@@ -37,12 +37,15 @@ import {
   sendToPeople,
   sendToFormSource,
   templateChoices,
+  unnamedRespondents,
   whyNotFound,
   type PersonOutcome,
   type SendDraft,
   type SingleSendRequest,
 } from "./send";
 import { approvalRequest } from "../mail-approvals/edit";
+import { NAME_EXPECTED } from "./audience";
+import { variableFields } from "./fields";
 import { directSend, sendAccess } from "./access";
 import { ROLE } from "../access";
 
@@ -502,5 +505,37 @@ describe("what the form offers and shows", () => {
       Email: "ayse@ornek.com",
     });
     assert.deepEqual(previewValues({}, null), { FullName: "Ayşe Yılmaz", Email: "ayse.yilmaz@example.com" });
+  });
+
+  it("previews the recipient's name in a free announcement as the mailer fills it", () => {
+    const fields = variableFields(FREE);
+    const values = { Subject: "{{.FullName}}, kaydın alındı", Heading: "", BodyHtml: "<p>Sayın {{or .FullName &#34;katılımcı&#34;}},</p>" };
+    assert.deepEqual(previewValues(values, { name: "Ali Kaya", email: "ali@ornek.com" }, fields), {
+      Subject: "Ali Kaya, kaydın alındı",
+      Heading: "",
+      BodyHtml: "<p>Sayın Ali Kaya,</p>",
+      FullName: "Ali Kaya",
+      Email: "ali@ornek.com",
+    });
+    assert.equal(previewValues(values, { name: "", email: "x@ornek.com" }, fields).BodyHtml, "<p>Sayın katılımcı,</p>");
+    assert.equal(previewValues(values, null, fields).Subject, "Ayşe Yılmaz, kaydın alındı");
+  });
+
+  it("says who has no name when a free announcement greets by name", () => {
+    const named = { values: { Subject: "Sayın {{.FullName}}" }, rich: {} };
+    const people = sendPlan(
+      draft({ what: "free", template: FREE, fields: named, audience: "people", list: null, people: [{ name: "", email: "a@ornek.com" }] }),
+    );
+    assert.deepEqual(people.warnings.people, [NAME_EXPECTED]);
+
+    const source = { id: "a16bec36-7243-4bb7-82dd-c3c4a2315a78", form_id: LIST_ID, form_title: "Kayıt", recipient_count: 40, unnamed_count: 3, prepared_at: "2026-10-17T00:00:00Z" };
+    const form = sendPlan(draft({ what: "free", template: FREE, fields: named, audience: "form", formSource: source, list: null }));
+    assert.ok(form.warnings.lines.includes(unnamedRespondents(3)));
+    const unnamedLine = (fields: SendDraft["fields"]) =>
+      sendPlan(draft({ what: "free", template: FREE, fields, audience: "form", formSource: source, list: null })).warnings.lines.some((line) =>
+        line.startsWith("Forms kaynağında"),
+      );
+    assert.equal(unnamedLine({ values: { Subject: "Duyuru" }, rich: {} }), false);
+    assert.equal(unnamedLine(named), true);
   });
 });

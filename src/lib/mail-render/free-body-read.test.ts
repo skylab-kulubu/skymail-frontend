@@ -24,6 +24,20 @@ function html(document: VisualDocument): string {
 }
 
 describe("reading a free announcement's body back", () => {
+  it("gives the recipient's name back as the name, its fallback with it", () => {
+    const document = b.document([
+      b.heading([b.text("Merhaba "), b.variable("FullName")]),
+      b.paragraph([b.text("Sayın "), b.variable("FullName", [], "katılımcı"), b.text(", "), b.variable("FullName", [bold])]),
+    ]);
+    const read = readFreeBody(html(document));
+    assert.equal(read.exact, true);
+    assert.deepEqual(read.document, document);
+    // Typed as text, or written by the server's allow-list, it is the name too.
+    assert.deepEqual(readFreeBody('<p>Sayın {{or .FullName "katılımcı"}}, {{.Email}}</p>').document.blocks, [
+      b.paragraph([b.text("Sayın "), b.variable("FullName", [], "katılımcı"), b.text(", {{.Email}}")]),
+    ]);
+  });
+
   it("gives every block, level, mark and line break the renderer writes", () => {
     const document = b.document([
       b.heading([b.text("Başvurular açıldı")]),

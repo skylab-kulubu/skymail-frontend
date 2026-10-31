@@ -514,13 +514,15 @@
     "variables": [
       "FirstName",
       "EventName",
-      "Items"
+      "Items",
+      "EventId"
     ],
     "requiredVariables": [
       "Items"
     ],
     "sensitiveVariables": null,
     "sampleKeys": [
+      "EventId",
       "EventName",
       "FirstName",
       "Items"
@@ -549,13 +551,15 @@
     "variables": [
       "FirstName",
       "EventName",
-      "Items"
+      "Items",
+      "EventId"
     ],
     "requiredVariables": [
       "Items"
     ],
     "sensitiveVariables": null,
     "sampleKeys": [
+      "EventId",
       "EventName",
       "FirstName",
       "Items"
@@ -611,6 +615,48 @@
       "{{else if eq .purpose `promotional`}}",
       "{{if .UnsubscribeUrl}}",
       "{{if eq .purpose `event_invitations`}}"
+    ]
+  },
+  "core.team-page-consent-notice": {
+    "subject": "Ekip sayfalarında görünürlüğün",
+    "system": true,
+    "contentSensitive": false,
+    "variables": [
+      "FirstName",
+      "Teams",
+      "HideAt",
+      "SettingsURL",
+      "Board"
+    ],
+    "requiredVariables": [
+      "HideAt",
+      "SettingsURL"
+    ],
+    "sensitiveVariables": null,
+    "sampleKeys": [
+      "Board",
+      "FirstName",
+      "HideAt",
+      "SettingsURL",
+      "Teams"
+    ],
+    "referenced": [
+      "Board",
+      "FirstName",
+      "HideAt",
+      "SettingsURL",
+      "Teams",
+      "UnsubscribeUrl"
+    ],
+    "actions": [
+      "{{.FirstName}}",
+      "{{.HideAt}}",
+      "{{.SettingsURL}}",
+      "{{.Teams}}",
+      "{{.UnsubscribeUrl}}",
+      "{{if .Board}}",
+      "{{if .FirstName}}",
+      "{{if .UnsubscribeUrl}}"
     ]
   },
   "account.security-alert": {
@@ -1226,6 +1272,65 @@
       "{{if eq .Change `member-added`}}",
       "{{if eq .Change `member-removed`}}",
       "{{if eq .Root `board`}}"
+    ]
+  },
+  "club.management-term": {
+    "subject": "{{if eq .Notice `expired-list`}}Süresi dolan yönetim üyelikleri{{else if eq .Notice `weekly-summary`}}Haftalık özet: süresi dolmuş yönetim üyelikleri{{else if eq .Self `yes`}}Yönetim görevinin süresi doluyor{{else}}Bir yönetim üyeliğinin süresi doluyor{{end}}",
+    "system": true,
+    "contentSensitive": false,
+    "variables": [
+      "Notice",
+      "DaysLeft",
+      "Self",
+      "SubjectName",
+      "GroupName",
+      "GroupId",
+      "Role",
+      "EndsAt",
+      "Count",
+      "Items"
+    ],
+    "requiredVariables": [
+      "Notice"
+    ],
+    "sensitiveVariables": null,
+    "sampleKeys": [
+      "Count",
+      "DaysLeft",
+      "EndsAt",
+      "GroupId",
+      "GroupName",
+      "Items",
+      "Notice",
+      "Role",
+      "Self",
+      "SubjectName"
+    ],
+    "referenced": [
+      "Count",
+      "EndsAt",
+      "GroupId",
+      "GroupName",
+      "Items",
+      "Notice",
+      "Role",
+      "Self",
+      "SubjectName"
+    ],
+    "actions": [
+      "{{.Count}}",
+      "{{.EndsAt}}",
+      "{{.GroupId}}",
+      "{{.GroupName}}",
+      "{{.Items}}",
+      "{{.SubjectName}}",
+      "{{else if eq .Notice `weekly-summary`}}",
+      "{{if .GroupId}}",
+      "{{if .SubjectName}}",
+      "{{if eq .Notice `expired-list`}}",
+      "{{if eq .Role `team-leaders`}}",
+      "{{if eq .Self `no`}}",
+      "{{if eq .Self `yes`}}"
     ]
   },
   "club.news": {

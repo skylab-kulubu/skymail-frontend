@@ -19,6 +19,8 @@ import {
   linkAddressProblem,
 } from '@/lib/mail-render/visual-document';
 import { colors, darkColors } from '../../../emails/theme';
+import { RECIPIENT_NAME } from '@/lib/mail-render/recipient-name';
+import { RECIPIENT_NAME_LABEL } from './RecipientNamePanel';
 import { VariableField, useVisualEditor } from './VariableField';
 import { Button, FilterPills } from '@skylab-kulubu/skylcn-ui';
 
@@ -269,14 +271,21 @@ export function ConditionalView({ node, updateAttributes, deleteNode, editor, se
 }
 
 export function VariableView({ node }: ReactNodeViewProps) {
+  const { allow } = useVisualEditor();
   const name = node.attrs.name as string;
+  const fallback = (node.attrs.fallback as string | undefined) ?? '';
+  // Where the recipient's name is the one variable (a free announcement), it is said in words.
+  const shown =
+    allow.recipientName && !allow.variables && name === RECIPIENT_NAME
+      ? `${RECIPIENT_NAME_LABEL}${fallback ? ` · yoksa: ${fallback}` : ''}`
+      : name;
   return (
     <NodeViewWrapper
       as="span"
-      aria-label={`Değişken ${name}`}
+      aria-label={shown === name ? `Değişken ${name}` : shown}
       className="border-skylab-400/40 bg-skylab-500/10 text-skylab-300 mx-px inline-block rounded border px-1 font-mono text-[0.85em] leading-snug"
     >
-      {name}
+      {shown}
     </NodeViewWrapper>
   );
 }

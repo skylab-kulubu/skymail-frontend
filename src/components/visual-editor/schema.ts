@@ -18,6 +18,7 @@ import { Extension, Node, mergeAttributes, type Extensions } from "@tiptap/core"
 import { ListItem } from "@tiptap/extension-list";
 import StarterKit from "@tiptap/starter-kit";
 import { NO_TRACK_ATTRIBUTE } from "@/lib/mail-render/free-body";
+import { RECIPIENT_NAME, recipientNameTag } from "@/lib/mail-render/recipient-name";
 import { linkAddressProblem, type VisualAllowance, type VisualBlockType } from "@/lib/mail-render/visual-document";
 
 /** A text attribute kept in a data-* attribute, so a block copied within the editor keeps it. */
@@ -38,21 +39,21 @@ export const HeadingNode = Node.create({
   renderHTML: ({ HTMLAttributes }) => ["h2", mergeAttributes(HTMLAttributes), 0],
 });
 
-/** A variable in running text, `{{.name}}` when rendered. */
+/** As a variable reads in text: `{{.name}}`, the recipient's name with its fallback as its tag. */
+const variableText = (attrs: Record<string, unknown>) =>
+  attrs.name === RECIPIENT_NAME ? recipientNameTag(String(attrs.fallback ?? "")) : `{{.${attrs.name as string}}}`;
+
+/** A variable in running text, `{{.name}}` when rendered; the recipient's name may have a fallback. */
 export const VariableNode = Node.create({
   name: "variable",
   group: "inline",
   inline: true,
   atom: true,
   selectable: true,
-  addAttributes: () => ({ name: dataAttribute("name", "") }),
+  addAttributes: () => ({ name: dataAttribute("name", ""), fallback: dataAttribute("fallback", "") }),
   parseHTML: () => [{ tag: "span[data-variable]" }],
-  renderHTML: ({ node, HTMLAttributes }) => [
-    "span",
-    mergeAttributes(HTMLAttributes, { "data-variable": "" }),
-    `{{.${node.attrs.name as string}}}`,
-  ],
-  renderText: ({ node }) => `{{.${node.attrs.name as string}}}`,
+  renderHTML: ({ node, HTMLAttributes }) => ["span", mergeAttributes(HTMLAttributes, { "data-variable": "" }), variableText(node.attrs)],
+  renderText: ({ node }) => variableText(node.attrs),
 });
 
 /**
@@ -232,17 +233,19 @@ export const LinkNoTrack = Extension.create({
 });
 
 export function visualSchemaExtensions(allowance: VisualAllowance): Extensions {
+  // A free announcement's body has the recipient's name and no other variable.
+  const inlineVariables = allowance.variables || allowance.recipientName === true;
   const blocks = (Object.keys(BLOCK_NODES) as (keyof typeof BLOCK_NODES)[])
     .filter((type) => allowance.blocks.includes(type) && (type !== "conditional" || allowance.variables))
     .map((type) =>
       type === "heading"
-        ? (allowance.subheadings ? LeveledHeading : HeadingNode).extend({ content: allowance.variables ? "(text | variable)*" : "text*" })
+        ? (allowance.subheadings ? LeveledHeading : HeadingNode).extend({ content: inlineVariables ? "(text | variable)*" : "text*" })
         : BLOCK_NODES[type],
     );
   return [
     basics(allowance),
     ...(allowance.blocks.includes("list") ? [ListItemNode] : []),
-    ...(allowance.variables ? [VariableNode] : []),
+    ...(inlineVariables ? [VariableNode] : []),
     ...(allowance.noTrackLinks && allowance.marks.includes("link") ? [LinkNoTrack] : []),
     ...blocks,
   ];

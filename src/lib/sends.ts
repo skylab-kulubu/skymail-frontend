@@ -24,8 +24,22 @@ export const RECIPIENT_PAGE_SIZE = 25;
 export type SendStatus = "failed" | "sending" | "sent";
 export type RecipientStatus = "pending" | "processing" | "sent" | "failed";
 
-/** Queue rows by status; each row is one mail to one recipient. */
-export type RecipientCounts = Readonly<Record<RecipientStatus, number>>;
+/**
+ * Queue rows by status; each row is one mail to one recipient. `cancelled`
+ * (skymail-backend, duyuru-haber 05 G4): pending recipients of a cancelled
+ * send, in failed too; absent from a backend before it.
+ */
+export type RecipientCounts = Readonly<Record<RecipientStatus, number> & { cancelled?: number }>;
+
+/**
+ * A send's recipients by status, and what the suppression list did to them
+ * (skymail-backend QueueTotals; missing from an older backend): undelivered
+ * were sent and a report said the address does not exist (in sent);
+ * suppressed were never sent (in failed); suppressed_but_sent were account
+ * mail sent to a suppressed address anyway, flagged (in their status).
+ */
+export type SendRecipientCounts = RecipientCounts &
+  Readonly<Partial<Record<"undelivered" | "suppressed" | "suppressed_but_sent", number>>>;
 
 /** Who a send went to. Fields that do not apply to the kind are null. */
 export type SendAudience = Readonly<{
@@ -55,7 +69,7 @@ export type Send = Readonly<{
   mail_list_name: string | null;
   audience: SendAudience;
   status: SendStatus;
-  recipient_counts: RecipientCounts;
+  recipient_counts: SendRecipientCounts;
   /**
    * Whether the viewer may open the send's content (skymail-backend, sent mail
    * content): its recipients' mails as they were sent. Missing from a backend
@@ -70,6 +84,12 @@ export type Send = Readonly<{
    * before tracking.
    */
   tracking?: boolean;
+  /** While set, its pending recipients wait (send-controls.ts); absent from a backend before task controls. */
+  paused_at?: string | null;
+  /** `operator`: paused by hand; `failure_rate`: paused itself as its recipients failed past the threshold. */
+  paused_reason?: "operator" | "failure_rate" | null;
+  /** When the send was cancelled: its pending recipients were skipped. */
+  cancelled_at?: string | null;
 }>;
 
 /**
@@ -140,6 +160,8 @@ export type SendSummary = Readonly<{
   purpose_available?: boolean;
   /** True while `SKYMAIL_LIST_CONSENT=on`: a list's guests need their announcement consent unless the send states it is about the list's own event (send-form/purpose.ts). Absent from a backend before it. */
   list_consent_available?: boolean;
+  /** Until when sends to lists, groups and News wait because the relay throttled the account (send-controls.ts); null or absent when not held. */
+  bulk_held_until?: string | null;
   send_counts: Readonly<Record<SendStatus, number>>;
   /** Oldest first, ending today; `date` is a calendar day in `time_zone` (`YYYY-MM-DD`). */
   daily_sent: ReadonlyArray<Readonly<{ date: string; sent: number }>>;
@@ -534,11 +556,23 @@ export function recipientsLabel(total: number): string {
 /** A send's recipients in total, and the statuses among them that occur. */
 export function recipientSummary(counts: RecipientCounts): { total: number; parts: string[] } {
   const waiting = counts.pending + counts.processing;
+  const cancelled = counts.cancelled ?? 0;
+  const failed = counts.failed - cancelled;
   const parts: string[] = [];
   if (counts.sent) parts.push(`${formatCount(counts.sent)} gönderildi`);
-  if (counts.failed) parts.push(`${formatCount(counts.failed)} başarısız`);
+  if (failed) parts.push(`${formatCount(failed)} başarısız`);
   if (waiting) parts.push(`${formatCount(waiting)} bekliyor`);
+  if (cancelled) parts.push(`${formatCount(cancelled)} iptal edildi`);
   return { total: waiting + counts.sent + counts.failed, parts };
+}
+
+/** "2 ulaşmadı", "3 bastırıldı", "1 hesap postası bastırılmış adrese gitti": only what happened. */
+export function deliveryNotes(counts: SendRecipientCounts): string[] {
+  const notes: string[] = [];
+  if (counts.undelivered) notes.push(`${formatCount(counts.undelivered)} ulaşmadı`);
+  if (counts.suppressed) notes.push(`${formatCount(counts.suppressed)} bastırıldı`);
+  if (counts.suppressed_but_sent) notes.push(`${formatCount(counts.suppressed_but_sent)} hesap postası bastırılmış adrese gitti`);
+  return notes;
 }
 
 const QUEUE_GRACE_MS = 60_000;

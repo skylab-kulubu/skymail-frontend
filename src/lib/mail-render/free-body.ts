@@ -20,9 +20,13 @@
  * would reach the recipient as `{{.X}}`; an image and a rule would be
  * dropped, and a house button would arrive as a plain link (free.basic has
  * its own button fields). Widening the server's allow-list is a decision of
- * its own.
+ * its own. The one exception is the recipient's name: the mailer fills
+ * `{{.FullName}}` and `{{or .FullName "fallback"}}` in the body's text
+ * (recipient-name.ts), so the body may hold that variable, written as that
+ * tag, and no other.
  */
 import { goUrlString, parseGoUrl } from "./go-url";
+import { recipientNameTag } from "./recipient-name";
 import {
   parseVisualSource,
   readVisualDocument,
@@ -36,6 +40,7 @@ export const FREE_BODY_ALLOWANCE: VisualAllowance = {
   blocks: ["heading", "paragraph", "list", "quote"],
   marks: ["bold", "italic", "link"],
   variables: false,
+  recipientName: true,
   lineBreaks: true,
   subheadings: true,
   noTrackLinks: true,
@@ -83,9 +88,9 @@ export function renderFreeBody(document: VisualDocument): FreeBody {
 
   // A link inside, then italic, then bold: the Visual render's order.
   const inline = (node: VisualInline, path: string): string => {
-    // The allowance has no variables: an inline is text or a line break.
-    if (node.type !== "text") return node.type === "hardBreak" ? "<br>" : "";
-    let content = escapeHtml(node.text);
+    // The allowance's one variable is the recipient's name, written as its tag.
+    if (node.type === "hardBreak") return "<br>";
+    let content = escapeHtml(node.type === "text" ? node.text : recipientNameTag(node.fallback));
     const marks = node.marks ?? [];
     const address = marks.find((mark) => mark.type === "link");
     if (address) {

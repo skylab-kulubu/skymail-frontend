@@ -13,6 +13,7 @@
  * shown to no one as HTML, and the server sanitises what is sent.
  */
 import { renderFreeBody } from "./free-body";
+import { RECIPIENT_NAME, splitRecipientNameTags } from "./recipient-name";
 import { buildVisual, linkAddressProblem, type VisualBlock, type VisualDocument, type VisualInline, type VisualMark } from "./visual-document";
 
 export type FreeBodyRead = Readonly<{
@@ -113,7 +114,14 @@ export function readFreeBody(html: string): FreeBodyRead {
       const target = line();
       const applied = marks();
       if (target.heading && applied.length > 0) lost = true;
-      target.content.push(buildVisual.text(value, target.heading ? [] : applied));
+      // The recipient's name tags are the name again, the way the editor wrote them.
+      for (const piece of splitRecipientNameTags(value)) {
+        target.content.push(
+          "tag" in piece
+            ? buildVisual.variable(RECIPIENT_NAME, target.heading ? [] : applied, piece.fallback)
+            : buildVisual.text(piece.text, target.heading ? [] : applied),
+        );
+      }
       continue;
     }
     if (rawTag === undefined) continue; // a comment

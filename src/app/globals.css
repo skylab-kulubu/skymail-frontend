@@ -20,11 +20,14 @@
 @import '@skylab-kulubu/skylcn-ui/sources/card.css';
 @import '@skylab-kulubu/skylcn-ui/sources/charts.css';
 @import '@skylab-kulubu/skylcn-ui/sources/dialog.css';
+@import '@skylab-kulubu/skylcn-ui/sources/display-extra.css';
 @import '@skylab-kulubu/skylcn-ui/sources/feedback.css';
 @import '@skylab-kulubu/skylcn-ui/sources/field.css';
+@import '@skylab-kulubu/skylcn-ui/sources/form-extra.css';
 @import '@skylab-kulubu/skylcn-ui/sources/menu.css';
 @import '@skylab-kulubu/skylcn-ui/sources/page-header.css';
 @import '@skylab-kulubu/skylcn-ui/sources/pagination.css';
+@import '@skylab-kulubu/skylcn-ui/sources/segmented-control.css';
 @import '@skylab-kulubu/skylcn-ui/sources/select.css';
 @import '@skylab-kulubu/skylcn-ui/sources/state-card.css';
 @import '@skylab-kulubu/skylcn-ui/sources/switch.css';
