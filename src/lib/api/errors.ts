@@ -117,6 +117,7 @@ const BY_CODE: ReadonlyMap<string, string> = new Map([
   ["news_send.teams_invalid", "Tüm üyelere gönderimde ekip seçilmez; ekiplere gönderimde en az bir ekip seç."],
   ["news_send.team_unknown", "Seçilen gruplardan biri bir ekip değil."],
   ["news_send.already_sent", "Bu haber bu kitleye zaten gönderildi."],
+  ["news_send.cancel_finishing", "Bu kitleye iptal edilen gönderimin son postaları hâlâ gidiyor. Birkaç dakika sonra yeniden dene; yalnız almamış olanlara gider."],
   ["news_send.no_recipients", "Bu kitlede gönderilecek kimse yok."],
   ["news_send.commercial_statement_required", "Beyan kutusunu işaretle."],
   ["news_send.slug_too_long", "Haber adresi (slug) çok uzun."],
