@@ -1,6 +1,5 @@
 import * as React from "react";
 import { Context, Paragraph, Shell, Small, Title } from "./theme";
-import { end, ifSet, v } from "./go";
 import type { TemplateMeta } from "./types";
 
 export const meta: TemplateMeta = {
@@ -10,22 +9,17 @@ export const meta: TemplateMeta = {
   system: true,
   contentSensitive: true,
   brand: "account",
-  trigger: "Account center, anonimleştirme tamamlandığında. Bu, bu adrese gönderdiğimiz son postadır.",
-  variables: ["CompletedAt", "RetainedDataNote"],
+  trigger:
+    "core-backend hesap silme işçisi, silme tamamlandığında, kişinin silinmeden önce okunan her adresine bir kez (ACCOUNT_DELETION_NOTICES=on). Bu adrese giden son postadır. Takip edilmez, SkyMail'de kaydı kalmaz (erase_after_send).",
+  variables: [],
   sensitiveVariables: [],
-  // Nothing yet: no service sends it.
   requiredVariables: [],
-  sample: {
-    CompletedAt: "29.09.2026",
-    RetainedDataNote:
-      "Katılım kayıtların ve düzenlenmiş sertifikaların, doğrulanabilir kalmaları için kimliğinden koparılarak saklanıyor.",
-  },
+  sample: {},
 };
 
 /**
- * No call to action: there is no account left to act on. The mail exists so the
- * person has a record that the deletion finished, and so a deletion that
- * finished without them asking is visible.
+ * The outcome of the person's application (KVKK art. 13). No call to action:
+ * there is no account left to act on.
  */
 export default function AccountDeletionCompleted() {
   return (
@@ -33,14 +27,7 @@ export default function AccountDeletionCompleted() {
       <Context tone="neutral">Hesap silme</Context>
       <Title>Hesabın Silindi</Title>
 
-      <Paragraph>
-        SKY LAB hesabın{ifSet("CompletedAt")} {v("CompletedAt")} tarihinde{end} silindi ve kişisel bilgilerin
-        sistemlerimizden kaldırıldı.
-      </Paragraph>
-
-      {ifSet("RetainedDataNote")}
-      <Paragraph>{v("RetainedDataNote")}</Paragraph>
-      {end}
+      <Paragraph>Hesabın ve verilerin silindi.</Paragraph>
 
       <Small style={{ marginTop: "24px" }}>Bu işlemi sen istemediysen info@yildizskylab.com adresine yaz.</Small>
     </Shell>

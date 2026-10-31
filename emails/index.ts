@@ -33,6 +33,7 @@ import AccountSecurityAlert, { meta as accountSecurityAlert } from "./account-se
 import AccountPrimaryEmailChanged, { meta as accountPrimaryEmailChanged } from "./account-primary-email-changed";
 import AccountDeletionRequested, { meta as accountDeletionRequested } from "./account-deletion-requested";
 import AccountDeletionCompleted, { meta as accountDeletionCompleted } from "./account-deletion-completed";
+import AccountDeletionInProgress, { meta as accountDeletionInProgress } from "./account-deletion-in-progress";
 
 import EventTicketCreated, { meta as eventTicketCreated } from "./event-ticket-created";
 import EventReminder, { meta as eventReminder } from "./event-reminder";
@@ -83,6 +84,7 @@ export const templates: EmailTemplate[] = [
   { meta: accountPrimaryEmailChanged, Component: AccountPrimaryEmailChanged },
   { meta: accountDeletionRequested, Component: AccountDeletionRequested },
   { meta: accountDeletionCompleted, Component: AccountDeletionCompleted },
+  { meta: accountDeletionInProgress, Component: AccountDeletionInProgress },
 
   { meta: eventTicketCreated, Component: EventTicketCreated },
   { meta: eventReminder, Component: EventReminder },
