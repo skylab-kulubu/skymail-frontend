@@ -22,7 +22,9 @@ const REASON_LIMIT = 300;
  * service that sends it (ticket 08's table). A variable belongs here only if
  * the sender always passes it and the mail cannot work without it: the
  * Keycloak provider sends keycloak.generic's link as "" for event mails, so it
- * has none; core's welcome has no action; nothing sends the account mails yet.
+ * has none; core's welcome has no action; core's deletion notice always passes its
+ * Deadline (core-backend internal/account/deletion_notices.go); nothing sends
+ * the other account mails yet.
  * Changing a contract is changing this list, deliberately.
  */
 const CONTRACTS: Record<string, string[]> = {
@@ -46,8 +48,9 @@ const CONTRACTS: Record<string, string[]> = {
   "club.news": ["ReadMoreUrl", "UnsubscribeUrl"],
   "account.security-alert": [],
   "account.primary-email-changed": [],
-  "account.deletion-requested": [],
+  "account.deletion-requested": ["Deadline"],
   "account.deletion-completed": [],
+  "account.deletion-in-progress": [],
   "forms.status-changed": ["formTitle", "status"],
   "forms.attempt-update": ["formTitle", "formId", "kind"],
   "forms.form-copy": ["formTitle", "answers"],

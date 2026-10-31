@@ -33,6 +33,7 @@ const BRAND_OF: Record<string, Brand> = {
   "account.primary-email-changed": "account",
   "account.deletion-requested": "account",
   "account.deletion-completed": "account",
+  "account.deletion-in-progress": "account",
   "event.ticket-created": "skylab",
   "event.reminder": "skylab",
   "event.updated": "skylab",

@@ -34,8 +34,9 @@ zaman verdiği değişkenler kullanılır.
 | Ekip Sayfası İzni Bildirimi 🔒 | `core.team-page-consent-notice` | Ekip sayfalarında görünürlüğün | `FirstName`, `Teams`, `HideAt`, `SettingsURL`, `Board` |
 | Hesap Güvenlik Bildirimi 🔒 🙈 | `account.security-alert` | SKY LAB hesabında: {{.EventTitle}} | `EventTitle`, `EventDetail`, `OccurredAt`, `DeviceLabel`, `IpAddress`, `Location`, `SecureAccountUrl` |
 | Birincil E-posta Değişti (eski adrese) 🔒 🙈 | `account.primary-email-changed` | SKY LAB hesabının e-posta adresi değişti | `OldEmail`, `NewEmail`, `OccurredAt`, `SecureAccountUrl` |
-| Hesap Silme Talebi Alındı 🔒 🙈 | `account.deletion-requested` | Hesap silme talebini aldık | `RequestedAt`, `CompletesAt`, `CancelUrl` |
-| Hesap Silindi 🔒 🙈 | `account.deletion-completed` | SKY LAB hesabın silindi | `CompletedAt`, `RetainedDataNote` |
+| Hesap Silme Talebi Alındı 🔒 🙈 | `account.deletion-requested` | Hesap silme talebin alındı | `Deadline` |
+| Hesap Silindi 🔒 🙈 | `account.deletion-completed` | SKY LAB hesabın silindi | — |
+| Hesap Silme Sürüyor (kayıt denemesi) 🔒 🙈 | `account.deletion-in-progress` | Bu adresin hesabı siliniyor | — |
 | Etkinlik · Bilet Oluşturuldu 🙈 | `event.ticket-created` | {{.EventName}} biletin hazır | `EventName`, `EventDate`, `Venue`, `TicketQrUrl`, `TicketCode`, `OwnerTeam`, `EventUrl` |
 | Etkinlik · Hatırlatma 🙈 | `event.reminder` | Yarın: {{.EventName}} | `EventName`, `StartsAt`, `Venue`, `TicketQrUrl`, `MapUrl` |
 | Etkinlik · Güncellendi | `event.updated` | {{.EventName}} etkinliğinde değişiklik var | `EventName`, `ChangeSummary`, `NewStartsAt`, `NewVenue`, `EventUrl` |
@@ -77,8 +78,9 @@ zaman verdiği değişkenler kullanılır.
 - **Ekip Sayfası İzni Bildirimi** (`core.team-page-consent-notice`) — core-backend, `core-backend team-page-notice -apply` komutuyla, ekip sayfası izninin geçişi başlarken (TEAM_PAGE_CONSENT_GRACE_UNTIL) bir kez: herkese açık bir ekip sayfasında listelenen ve izin konusunda karar vermemiş her üyeye tek posta (birden çok ekip tek postada). İşlem postası, tercih okumaz (docs/team-page-consent.md, ekip-yetki-devri 21).
 - **Hesap Güvenlik Bildirimi** (`account.security-alert`) — Account center / sky-account SPI, hesapta güvenlikle ilgili bir şey değiştiğinde: parola değişti, geçiş anahtarı eklendi/silindi, doğrulama uygulaması eklendi/kaldırıldı, yeni cihazdan giriş, tüm oturumlar kapatıldı, kullanıcı adı değişti, kişisel e-posta eklendi/kaldırıldı.
 - **Birincil E-posta Değişti (eski adrese)** (`account.primary-email-changed`) — Account center, birincil e-posta değiştiğinde — ESKİ adrese gider. Yeni adres zaten doğrulama postası aldığı için bu, değişikliği kaçıran kişiye tek uyarıdır.
-- **Hesap Silme Talebi Alındı** (`account.deletion-requested`) — Account center, kişi hesabını sildiğinde. Erişim anında kapanır, kişisel veriler sonra anonimleştirilir (ADR-0042). ACCOUNT_ERASURE_MODE açıldığında devreye girer.
-- **Hesap Silindi** (`account.deletion-completed`) — Account center, anonimleştirme tamamlandığında. Bu, bu adrese gönderdiğimiz son postadır.
+- **Hesap Silme Talebi Alındı** (`account.deletion-requested`) — core-backend hesap silme işçisi, kişinin kendi silme talebinde SkyMail silmesinden hemen sonra, kişinin her adresine bir kez (ACCOUNT_DELETION_NOTICES=on). Takip edilmez, SkyMail'de kaydı kalmaz (erase_after_send).
+- **Hesap Silindi** (`account.deletion-completed`) — core-backend hesap silme işçisi, silme tamamlandığında, kişinin silinmeden önce okunan her adresine bir kez (ACCOUNT_DELETION_NOTICES=on). Bu adrese giden son postadır. Takip edilmez, SkyMail'de kaydı kalmaz (erase_after_send).
+- **Hesap Silme Sürüyor (kayıt denemesi)** (`account.deletion-in-progress`) — Keycloak (sky-account SPI), silinme sürecindeki bir hesabın adresiyle yeniden kayıt denendiğinde, o adrese.
 - **Etkinlik · Bilet Oluşturuldu** (`event.ticket-created`) — core-backend, Member apply / Guest apply / Apply-for-other bir Ticket yazdığında, yayında ve bitmemiş bir etkinlikte (TICKET_CREATED_NOTIFICATION=on; docs/ticket-created-notification.md). Üyeye bildirim olarak (POST /v1/notifications: kutu + e-posta), konuğa yalnız bu e-posta. core bugün TicketQrUrl, TicketCode ve EventUrl göndermez; satırları boşsa görünmez.
 - **Etkinlik · Hatırlatma** (`event.reminder`) — Etkinlikten bir gün önce, bileti olan herkese. NOT: zamanlayıcı ve gönderim kodu henüz yazılmadı; konu satırı T-1 varsayıyor.
 - **Etkinlik · Güncellendi** (`event.updated`) — Etkinliğin saati veya yeri değiştiğinde, bileti olan herkese. NOT: gönderim kodu henüz yazılmadı.

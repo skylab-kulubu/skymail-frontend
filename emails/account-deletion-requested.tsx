@@ -1,44 +1,46 @@
 import * as React from "react";
-import { Context, Cta, Paragraph, Shell, Small, Strong, Title } from "./theme";
-import { end, ifSet, v } from "./go";
+import { Context, Paragraph, Shell, Small, Strong, Title } from "./theme";
+import { v } from "./go";
 import type { TemplateMeta } from "./types";
 
 export const meta: TemplateMeta = {
   key: "account.deletion-requested",
   name: "Hesap Silme Talebi Alındı",
-  subject: "Hesap silme talebini aldık",
+  subject: "Hesap silme talebin alındı",
   system: true,
   contentSensitive: true,
   brand: "account",
   trigger:
-    "Account center, kişi hesabını sildiğinde. Erişim anında kapanır, kişisel veriler sonra anonimleştirilir (ADR-0042). ACCOUNT_ERASURE_MODE açıldığında devreye girer.",
-  variables: ["RequestedAt", "CompletesAt", "CancelUrl"],
-  sensitiveVariables: ["CancelUrl"],
-  // Nothing yet: no service sends it. Its sender declares the contract (CancelUrl, likely).
-  requiredVariables: [],
+    "core-backend hesap silme işçisi, kişinin kendi silme talebinde SkyMail silmesinden hemen sonra, kişinin her adresine bir kez (ACCOUNT_DELETION_NOTICES=on). Takip edilmez, SkyMail'de kaydı kalmaz (erase_after_send).",
+  variables: ["Deadline"],
+  sensitiveVariables: [],
+  requiredVariables: [
+    {
+      name: "Deadline",
+      reason: "Silmenin son günü (talep + 30 gün, GG.AA.YYYY); KVKK başvurusuna verilen cevabın kendisi. core her gönderimde verir.",
+    },
+  ],
   sample: {
-    RequestedAt: "22.09.2026 16:30",
-    CompletesAt: "29.09.2026",
-    CancelUrl: "https://my.yildizskylab.com/silme-talebi/iptal?token=ornek",
+    Deadline: "30.11.2026",
   },
 };
 
+/**
+ * The answer to the person's application (KVKK art. 13): it was received and
+ * by when it is done. Deletion has no undo, so there is no call to action.
+ */
 export default function AccountDeletionRequested() {
   return (
-    <Shell preview="SKY LAB hesap silme talebini aldık." brand="account" reason={null}>
-      <Context tone="wait">
-        Hesap silme{ifSet("RequestedAt")} · {v("RequestedAt")}{end}
-      </Context>
-      <Title>Silme Talebini Aldık</Title>
+    <Shell preview="Hesap silme talebin alındı." brand="account" reason={null}>
+      <Context tone="wait">Hesap silme</Context>
+      <Title>Silme Talebin Alındı</Title>
 
       <Paragraph>
-        Hesabına erişim kapatıldı. Kişisel bilgilerin {ifSet("CompletesAt")}<Strong>{v("CompletesAt")}</Strong> tarihine
-        kadar {end}silinecek; katılım kayıtların ve sertifikaların kimliğinden ayrılarak saklanır.
+        Hesap silme talebin alındı. Verilerin en geç 30 gün içinde (son tarih <Strong>{v("Deadline")}</Strong>) bütün
+        hizmetlerden silinecek.
       </Paragraph>
 
-      {ifSet("CancelUrl")}
-      <Cta href={v("CancelUrl")}>Silme Talebimi Geri Al</Cta>
-      {end}
+      <Paragraph>Bu işlem geri alınamaz.</Paragraph>
 
       <Small style={{ marginTop: "24px" }}>Bu talebi sen yapmadıysan info@yildizskylab.com adresine yaz.</Small>
     </Shell>
