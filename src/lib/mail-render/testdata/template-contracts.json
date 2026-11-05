@@ -742,61 +742,47 @@
     ]
   },
   "account.deletion-requested": {
-    "subject": "Hesap silme talebini aldık",
+    "subject": "Hesap silme talebin alındı",
     "system": true,
     "contentSensitive": true,
     "variables": [
-      "RequestedAt",
-      "CompletesAt",
-      "CancelUrl"
+      "Deadline"
     ],
-    "requiredVariables": [],
-    "sensitiveVariables": [
-      "CancelUrl"
+    "requiredVariables": [
+      "Deadline"
     ],
+    "sensitiveVariables": [],
     "sampleKeys": [
-      "CancelUrl",
-      "CompletesAt",
-      "RequestedAt"
+      "Deadline"
     ],
     "referenced": [
-      "CancelUrl",
-      "CompletesAt",
-      "RequestedAt"
+      "Deadline"
     ],
     "actions": [
-      "{{.CancelUrl}}",
-      "{{.CompletesAt}}",
-      "{{.RequestedAt}}",
-      "{{if .CancelUrl}}",
-      "{{if .CompletesAt}}",
-      "{{if .RequestedAt}}"
+      "{{.Deadline}}"
     ]
   },
   "account.deletion-completed": {
     "subject": "SKY LAB hesabın silindi",
     "system": true,
     "contentSensitive": true,
-    "variables": [
-      "CompletedAt",
-      "RetainedDataNote"
-    ],
+    "variables": [],
     "requiredVariables": [],
     "sensitiveVariables": [],
-    "sampleKeys": [
-      "CompletedAt",
-      "RetainedDataNote"
-    ],
-    "referenced": [
-      "CompletedAt",
-      "RetainedDataNote"
-    ],
-    "actions": [
-      "{{.CompletedAt}}",
-      "{{.RetainedDataNote}}",
-      "{{if .CompletedAt}}",
-      "{{if .RetainedDataNote}}"
-    ]
+    "sampleKeys": [],
+    "referenced": [],
+    "actions": []
+  },
+  "account.deletion-in-progress": {
+    "subject": "Bu adresin hesabı siliniyor",
+    "system": true,
+    "contentSensitive": true,
+    "variables": [],
+    "requiredVariables": [],
+    "sensitiveVariables": [],
+    "sampleKeys": [],
+    "referenced": [],
+    "actions": []
   },
   "event.ticket-created": {
     "subject": "{{.EventName}} biletin hazır",
