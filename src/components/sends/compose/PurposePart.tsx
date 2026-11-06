@@ -6,7 +6,7 @@
 // purpose.
 
 import type { ReactNode } from 'react';
-import { FilterPills, Select } from '@skylab-kulubu/skylcn-ui';
+import { FilterPills, Notice, Select } from '@skylab-kulubu/skylcn-ui';
 import type { ListRow } from '@/lib/mailing-lists';
 import {
   CLUB,
@@ -17,8 +17,10 @@ import {
   PURPOSE_OPTIONS,
   SOURCE_OPTIONS,
   TRANSACTIONAL_STATEMENT,
+  guestsSkippedNote,
   ownEventOffered,
   purposeChoosable,
+  purposeFields,
   purposeOf,
   sourceOf,
   teamOptions,
@@ -72,6 +74,7 @@ export function PurposePart({
   const team = choice.team || source !== CLUB;
   const teams = teamOptions(lists);
   const set = (change: Partial<PurposeChoice>) => onChoice({ ...choice, ...change });
+  const guestsNote = guestsSkippedNote(purposeFields(choice, audience, list, listConsent), audience, list, listConsent);
 
   return (
     <div className="space-y-3">
@@ -120,6 +123,7 @@ export function PurposePart({
               {OWN_EVENT_STATEMENT}
             </Statement>
           ) : null}
+          {guestsNote ? <Notice tone="info">{guestsNote}</Notice> : null}
         </>
       )}
       {problem ? <p role="alert" className="text-xs text-destructive">{problem}</p> : null}
