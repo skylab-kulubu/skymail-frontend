@@ -91,7 +91,7 @@ export const OWN_EVENT_STATEMENT = "Bu posta listenin oluşturulduğu etkinlik y
 export const COMMERCIAL_STATEMENT = "Postanın asıl amacı tanıtım değildir. Kısa sponsor teşekkürü ve logo serbesttir.";
 
 /** KVKK notice s6 §5.14 (hub tickets kvkk-s6-yayin-oncesi 23, 24): what the dispatcher writes `suppressed: no_announcement_consent`, in words. */
-export const GUESTS_SKIPPED = "Hesabı olmayan ve duyuru izni vermemiş alıcılar atlanır.";
+export const GUESTS_SKIPPED = "Hesabı olmayan ve geçerli duyuru izni bulunmayan alıcılar atlanır.";
 
 /** The API's refusals of a send's purpose or category (skymail-backend #99; category_unknown, commercial_statement_required: ticket 09); api/errors.ts words each. */
 export const PURPOSE_REFUSALS: ReadonlySet<string> = new Set([

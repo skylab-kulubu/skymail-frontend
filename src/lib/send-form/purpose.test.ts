@@ -94,6 +94,7 @@ describe("a send's purpose", () => {
 
   it("says a duyuru skips the guests without consent, and how to send one about their application", () => {
     const duyuru = { purpose: "duyuru" };
+    assert.equal(GUESTS_SKIPPED, "Hesabı olmayan ve geçerli duyuru izni bulunmayan alıcılar atlanır.");
     const withHint = `${GUESTS_SKIPPED} Posta başvuruyla ilgiliyse “Başvuruyla ilgili bilgi”yi seçin.`;
     assert.equal(guestsSkippedNote(duyuru, "people", null, true), withHint);
     assert.equal(guestsSkippedNote(duyuru, "form", null, true), withHint);
