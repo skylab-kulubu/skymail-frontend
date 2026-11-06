@@ -4,6 +4,7 @@ import { apiErrorFromResponse } from "../api/errors";
 import { approvalRequest, composePrefill } from "../mail-approvals/edit";
 import {
   COMMERCIAL_STATEMENT,
+  GUESTS_SKIPPED,
   OWN_EVENT_STATEMENT,
   PURPOSE_REFUSALS,
   PURPOSE_START,
@@ -11,6 +12,7 @@ import {
   approvalPurposeText,
   categoryOf,
   categoryTeam,
+  guestsSkippedNote,
   listConsentAvailable,
   ownEventText,
   ownEventOffered,
@@ -88,6 +90,24 @@ describe("a send's purpose", () => {
     assert.equal(listConsentAvailable({ list_consent_available: true }), true);
     assert.equal(listConsentAvailable({}), false);
     assert.equal(purposeChoiceOf({ purpose: "duyuru", category: "club:duyuru", commercial_content_absent: true, own_event_statement: true }).ownEvent, true);
+  });
+
+  it("says a duyuru skips the guests without consent, and how to send one about their application", () => {
+    const duyuru = { purpose: "duyuru" };
+    const withHint = `${GUESTS_SKIPPED} Posta başvuruyla ilgiliyse “Başvuruyla ilgili bilgi”yi seçin.`;
+    assert.equal(guestsSkippedNote(duyuru, "people", null, true), withHint);
+    assert.equal(guestsSkippedNote(duyuru, "form", null, true), withHint);
+    assert.equal(guestsSkippedNote(duyuru, "list", internal, true), GUESTS_SKIPPED);
+  });
+
+  it("says nothing of guests when none is skipped", () => {
+    const duyuru = { purpose: "duyuru" };
+    assert.equal(guestsSkippedNote(duyuru, "people", null, false), null);
+    assert.equal(guestsSkippedNote({ purpose: "islem" }, "people", null, true), null);
+    assert.equal(guestsSkippedNote({ purpose: null }, "people", null, true), null);
+    assert.equal(guestsSkippedNote(duyuru, "list", group, true), null);
+    assert.equal(guestsSkippedNote(duyuru, "list", null, true), null);
+    assert.equal(guestsSkippedNote({ purpose: "duyuru", own_event_statement: true }, "list", internal, true), null);
   });
 
   it("does not go without the statement its purpose needs, nor without a team once Ekip is picked", () => {
