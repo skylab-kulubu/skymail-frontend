@@ -90,6 +90,9 @@ export const OWN_EVENT_STATEMENT = "Bu posta listenin oluşturulduğu etkinlik y
 /** KVKK notice s6 §5.10: a short sponsor thanks or logo is not promotion. The same words as duyuru-haber 08's send from a news item. */
 export const COMMERCIAL_STATEMENT = "Postanın asıl amacı tanıtım değildir. Kısa sponsor teşekkürü ve logo serbesttir.";
 
+/** KVKK notice s6 §5.14 (hub tickets kvkk-s6-yayin-oncesi 23, 24): what the dispatcher writes `suppressed: no_announcement_consent`, in words. */
+export const GUESTS_SKIPPED = "Hesabı olmayan ve geçerli duyuru izni bulunmayan alıcılar atlanır.";
+
 /** The API's refusals of a send's purpose or category (skymail-backend #99; category_unknown, commercial_statement_required: ticket 09); api/errors.ts words each. */
 export const PURPOSE_REFUSALS: ReadonlySet<string> = new Set([
   "mail_task.purpose_not_allowed",
@@ -120,6 +123,19 @@ export function listConsentAvailable(mode: Readonly<{ list_consent_available?: b
 /** Whether the own event box is shown: a list or a group, while the backend holds a list's guests to their consent. */
 export function ownEventOffered(audience: PurposeAudience, listConsent: boolean): boolean {
   return audience === "list" && listConsent;
+}
+
+/**
+ * What the form and the confirmation say of the guests a duyuru skips, while
+ * the backend holds them to their announcement consent; null when none is
+ * skipped: an islem, a Keycloak group (its members have accounts) or a list's
+ * mail about its own event. Those who choose the purpose are told how to send
+ * one about an application.
+ */
+export function guestsSkippedNote(fields: StoredPurpose, audience: PurposeAudience, list: Pick<ListRow, "external"> | null, listConsent: boolean): string | null {
+  if (!listConsent || fields.purpose !== "duyuru" || fields.own_event_statement === true) return null;
+  if (audience === "list") return list && !list.external ? GUESTS_SKIPPED : null;
+  return `${GUESTS_SKIPPED} Posta başvuruyla ilgiliyse “${PURPOSE_LABEL.islem}”yi seçin.`;
 }
 
 /** Whether the sender chooses the purpose: to people and to a Forms source's respondents; a list or a group gets a duyuru. */
