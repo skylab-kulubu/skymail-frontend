@@ -481,6 +481,14 @@ describe("the Template seed's Notification types", () => {
       { required: true, lane: "system", channels: ["email", "inbox"], category: null },
     );
     assert.equal(ticketType.inbox?.link, "/events/{{.EventId}}");
+    // core-backend tells Ticket holders of an Event's new time or place
+    // (EVENT_UPDATED_NOTIFICATION): a required type, like the ticket.
+    const updatedType = typed.find(({ meta }) => meta.key === "event.updated")?.meta.notification;
+    assert.deepEqual(
+      updatedType && { required: updatedType.required, lane: updatedType.lane, channels: updatedType.defaultChannels, category: updatedType.category },
+      { required: true, lane: "system", channels: ["email", "inbox"], category: null },
+    );
+    assert.equal(updatedType?.inbox?.link, "/events/{{.EventId}}");
   });
 
   it("register the four Forms mails as required, e-mail only, system lane types", async () => {
