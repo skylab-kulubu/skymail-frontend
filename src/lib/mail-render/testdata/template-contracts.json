@@ -889,6 +889,7 @@
       "EventName",
       "ChangeSummary",
       "NewStartsAt",
+      "NewEndsAt",
       "NewVenue",
       "EventUrl"
     ],
@@ -898,6 +899,7 @@
       "ChangeSummary",
       "EventName",
       "EventUrl",
+      "NewEndsAt",
       "NewStartsAt",
       "NewVenue"
     ],
@@ -905,6 +907,7 @@
       "ChangeSummary",
       "EventName",
       "EventUrl",
+      "NewEndsAt",
       "NewStartsAt",
       "NewVenue",
       "UnsubscribeUrl"
@@ -913,11 +916,13 @@
       "{{.ChangeSummary}}",
       "{{.EventName}}",
       "{{.EventUrl}}",
+      "{{.NewEndsAt}}",
       "{{.NewStartsAt}}",
       "{{.NewVenue}}",
       "{{.UnsubscribeUrl}}",
       "{{if .ChangeSummary}}",
       "{{if .EventUrl}}",
+      "{{if .NewEndsAt}}",
       "{{if .NewStartsAt}}",
       "{{if .NewVenue}}",
       "{{if .UnsubscribeUrl}}"
