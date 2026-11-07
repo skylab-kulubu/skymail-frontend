@@ -258,6 +258,7 @@ export function Compose({
       progress={sending.progress}
       submitting={submitting.busy}
       trackingAlways={trackingMode.available && trackingMode.always}
+      listConsent={trackingMode.listConsent}
       teams={lists}
       onCancel={() => setConfirming(null)}
       onConfirm={(chosen) => void confirm(chosen)}

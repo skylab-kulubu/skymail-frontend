@@ -8,7 +8,7 @@ import { formatCount } from '@/lib/sends';
 import { peopleSentApart, type PersonRow } from '@/lib/send-form/audience';
 import type { Retry, SendPlan } from '@/lib/send-form/send';
 import { untrackedCount, untrackedRecipientsNote } from '@/lib/send-form/tracking';
-import { ownEventText, purposeText, statementText, teamNames, type StoredPurpose } from '@/lib/send-form/purpose';
+import { guestsSkippedNote, ownEventText, purposeText, statementText, teamNames, type StoredPurpose } from '@/lib/send-form/purpose';
 import type { Progress } from './use-sending';
 import { Notice } from '@skylab-kulubu/skylcn-ui';
 
@@ -43,6 +43,7 @@ export function ConfirmSend({
   progress,
   submitting = false,
   trackingAlways = false,
+  listConsent = false,
   teams = [],
   onCancel,
   onConfirm,
@@ -59,6 +60,8 @@ export function ConfirmSend({
   submitting?: boolean;
   /** SkyMail tracks every send (tracking_always): a Forms source's too, which asks for nothing. */
   trackingAlways?: boolean;
+  /** The backend holds guests to their announcement consent (list_consent_available). */
+  listConsent?: boolean;
   /** The lists the form offers, for a team category's name. */
   teams?: readonly ListRow[];
   onCancel: () => void;
@@ -94,6 +97,7 @@ export function ConfirmSend({
   const purpose = purposeOf ? purposeText(purposeOf, teamNames(teams)) : null;
   const statement = purposeOf ? statementText(purposeOf) : null;
   const ownEvent = purposeOf ? ownEventText(purposeOf) : null;
+  const guestsNote = plan && purposeOf ? guestsSkippedNote(purposeOf, plan.kind, list, listConsent) : null;
   return (
     <PanelDialog isOpen={confirming !== null} onClose={busy ? () => {} : onCancel} title={title}>
       {confirming?.kind === 'retryPeople' ? (
@@ -146,6 +150,11 @@ export function ConfirmSend({
               </div>
             ) : null}
           </dl>
+          {guestsNote ? (
+            <div className="mt-3">
+              <Notice tone="info">{guestsNote}</Notice>
+            </div>
+          ) : null}
           {confirming?.kind === 'resendList' ? (
             <div className="mt-3">
               <Notice tone="warning">
