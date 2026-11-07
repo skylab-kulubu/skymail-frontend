@@ -275,7 +275,7 @@ function checkAdvice({ canSeeSends }: Checking): string {
 }
 
 /** A failed send in plain words, and whether trying again is safe: to a list, or to one person. */
-export function sendFailure(error: unknown, to: "list" | "person", checking: Checking): SendFailure {
+export function sendFailure(error: unknown, to: "list" | "person" | "form", checking: Checking): SendFailure {
   const refusal = asApiError(error);
   const { status } = refusal;
   // core's preferences could not be read (ticket 09): nothing was queued, so it may be sent again as it is.
@@ -297,7 +297,9 @@ export function sendFailure(error: unknown, to: "list" | "person", checking: Che
       reason:
         to === "list"
           ? "Bu hesap bir mail listesine gönderemez: skymail:mails:write rolü gerekiyor."
-          : "Bu hesap mail gönderemez: skymail:mails:send ya da skymail:mails:write rolü gerekiyor.",
+          : to === "form"
+            ? "Bu hesap Forms yanıtlayanlarına doğrudan gönderemez: skymail:mails:write rolü gerekiyor. “Onaya sun…” ile onaya sunabilirsin."
+            : "Bu hesap mail gönderemez: skymail:mails:send ya da skymail:mails:write rolü gerekiyor.",
     };
   }
   if (status === 404) {
@@ -411,6 +413,11 @@ export function publishedOnlyNote(template: Pick<MailTemplate, "drafts">): strin
 
 /** Who the preview reads as when no person is named: the mailer fills these per recipient. */
 const SAMPLE_RECIPIENT: PersonRow = { name: "Ayşe Yılmaz", email: "ayse.yilmaz@example.com" };
+
+/** The sample recipient's name when the preview reads as them (no person named), for its "örnek alıcı" label; else null. */
+export function sampleRecipientName(recipient: PersonRow | null): string | null {
+  return recipient ? null : SAMPLE_RECIPIENT.name;
+}
 
 /**
  * The values the preview fills the published body with: exactly what the

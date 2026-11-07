@@ -105,7 +105,7 @@ export function useSending({ canSeeSends }: { canSeeSends: boolean }) {
       const refusal = asApiError(error);
       const failure = refusal.code.startsWith('form_source.') || refusal.status === 404
         ? { kind: 'final' as const, reason: refusal.status === 404 ? 'Forms kaynağı veya Mail template bulunamadı. Forms’tan yeniden hazırla.' : apiErrorMessage(refusal) }
-        : sendFailure(error, 'person', { canSeeSends });
+        : sendFailure(error, 'form', { canSeeSends });
       setListFailure(failure.kind === 'uncertain'
         ? { kind: 'uncertain', reason: 'Gönderim açılmış olabilir. Aynı içerikle yeniden denersen sunucu aynı gönderimi döndürür; alıcı kaynağı ikinci kez kullanılamaz.' }
         : failure);

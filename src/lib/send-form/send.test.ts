@@ -31,6 +31,7 @@ import {
   publishedOnlyNote,
   repeatsUncertainSend,
   retryOf,
+  sampleRecipientName,
   sendFailure,
   sendPlan,
   sendToList,
@@ -120,10 +121,11 @@ describe("a persistent Forms audience", () => {
     assert.equal(approvalRequest(manual.plan, { lists: false }).ok, false);
     assert.equal(sendPlan(draft({ audience: "form", list: null })).ok, false);
   });
-  it("uses send|write and template-read, without requiring list-read", () => {
-    for (const role of [ROLE.mailsSend, ROLE.mailsWrite]) assert.equal(directSend(sendAccess([ROLE.access, ROLE.templatesRead, role]), "form"), true);
+  it("uses write and template-read, without requiring list-read", () => {
+    assert.equal(directSend(sendAccess([ROLE.access, ROLE.templatesRead, ROLE.mailsWrite]), "form"), true);
+    assert.equal(directSend(sendAccess([ROLE.access, ROLE.templatesRead, ROLE.mailsSend]), "form"), false);
     assert.equal(directSend(sendAccess([ROLE.access, ROLE.templatesRead]), "form"), false);
-    assert.equal(directSend(sendAccess([ROLE.access, ROLE.mailsSend]), "form"), false);
+    assert.equal(directSend(sendAccess([ROLE.access, ROLE.mailsWrite]), "form"), false);
   });
 });
 
@@ -337,6 +339,10 @@ describe("a failed send, in plain words", () => {
       kind: "final",
       reason: "Bu hesap mail gönderemez: skymail:mails:send ya da skymail:mails:write rolü gerekiyor.",
     });
+    assert.deepEqual(sendFailure(new ApiError(403, "server.forbidden"), "form", person), {
+      kind: "final",
+      reason: "Bu hesap Forms yanıtlayanlarına doğrudan gönderemez: skymail:mails:write rolü gerekiyor. “Onaya sun…” ile onaya sunabilirsin.",
+    });
     assert.deepEqual(sendFailure(new ApiError(404, "server.not_found"), "person", person), {
       kind: "final",
       reason: "Mail template arşivlenmiş ya da artık yok; arşivlenmiş bir template gönderilmez.",
@@ -505,6 +511,12 @@ describe("what the form offers and shows", () => {
       Email: "ayse@ornek.com",
     });
     assert.deepEqual(previewValues({}, null), { FullName: "Ayşe Yılmaz", Email: "ayse.yilmaz@example.com" });
+  });
+
+  it("names the sample recipient for its label only when no person is named", () => {
+    assert.equal(sampleRecipientName(null), "Ayşe Yılmaz");
+    assert.equal(sampleRecipientName({ name: "Ali Kaya", email: "ali@ornek.com" }), null);
+    assert.equal(sampleRecipientName({ name: "", email: "x@ornek.com" }), null);
   });
 
   it("previews the recipient's name in a free announcement as the mailer fills it", () => {

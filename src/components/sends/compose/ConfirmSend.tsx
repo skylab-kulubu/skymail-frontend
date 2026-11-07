@@ -6,6 +6,7 @@ import type { ApprovalRequest } from '@/lib/mail-approvals/edit';
 import type { ListRow } from '@/lib/mailing-lists';
 import { formatCount } from '@/lib/sends';
 import { peopleSentApart, type PersonRow } from '@/lib/send-form/audience';
+import { confirmTitle } from '@/lib/send-form/confirm';
 import type { Retry, SendPlan } from '@/lib/send-form/send';
 import { untrackedCount, untrackedRecipientsNote } from '@/lib/send-form/tracking';
 import { guestsSkippedNote, ownEventText, purposeText, statementText, teamNames, type StoredPurpose } from '@/lib/send-form/purpose';
@@ -67,16 +68,7 @@ export function ConfirmSend({
   onCancel: () => void;
   onConfirm: (confirming: Confirming) => void;
 }) {
-  const title =
-    confirming?.kind === 'resendList'
-      ? 'Listeye yeniden gönder'
-      : confirming?.kind === 'retryPeople'
-        ? 'Kişilere yeniden gönder'
-        : confirming?.kind === 'submit'
-          ? confirming.resubmit
-            ? 'Yeniden onaya sun'
-            : 'Onaya sun'
-          : 'Gönderimi onayla';
+  const title = confirmTitle(confirming?.kind ?? 'send', { resubmit: confirming?.kind === 'submit' && confirming.resubmit });
   const people =
     (confirming?.kind === 'send' || confirming?.kind === 'submit') && confirming.plan.kind === 'people'
       ? confirming.plan.requests.map((request) => ({ name: request.recipient_full_name, email: request.recipient_email }))
