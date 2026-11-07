@@ -1,8 +1,8 @@
 /**
  * What the send form (`/mail-tasks/create`, ticket 16) offers the person
  * looking at it, by the roles skymail-backend checks (main.go): a send to a
- * mailing list needs `mails:write`, a send to one person `mails:send` or
- * `mails:write`. What the viewer may not send they submit for approval
+ * mailing list or to a Forms source's respondents needs `mails:write`, a send
+ * to one person `mails:send` or `mails:write`. What the viewer may not send they submit for approval
  * (ticket 20): to a list, or to 1..100 people as one request (ticket 22);
  * `POST /mail_approvals` asks for read access to what it submits. Either way the form
  * sends a Mail template, so it needs `templates:read` to offer anything, and
@@ -19,8 +19,8 @@ export type SendAccess = Readonly<{
   list: boolean;
   /** People can be named: `templates:read`. */
   people: boolean;
-  /** What goes at once rather than for approval: a list with `mails:write`, people with `mails:send` or `mails:write`. */
-  send: Readonly<{ list: boolean; people: boolean }>;
+  /** What goes at once rather than for approval: a list or a Forms source with `mails:write`, people with `mails:send` or `mails:write`. */
+  send: Readonly<{ list: boolean; people: boolean; form: boolean }>;
   /** The new send's page, and the send list, open (`mails:read`). */
   detail: boolean;
   /** Why a list is not offered while people are. */
@@ -41,7 +41,7 @@ export function sendAccess(roles: readonly string[]): SendAccess {
   return {
     list,
     people: templates,
-    send: { list: list && write, people: templates && sendsPeople },
+    send: { list: list && write, people: templates && sendsPeople, form: templates && write },
     detail: hasRole(roles, ROLE.mailsRead),
     listNote,
   };
@@ -49,7 +49,7 @@ export function sendAccess(roles: readonly string[]): SendAccess {
 
 /** Whether a send to `audience` goes at once; if not, it is submitted for approval. */
 export function directSend(access: SendAccess, audience: "list" | "people" | "form"): boolean {
-  return audience === "list" ? access.send.list : access.send.people;
+  return audience === "people" ? access.send.people : access.send[audience];
 }
 
 /**
@@ -59,7 +59,7 @@ export function directSend(access: SendAccess, audience: "list" | "people" | "fo
  * once.
  */
 export function approvalNote(access: SendAccess, audience: "list" | "people" | "form", { resubmit = false }: { resubmit?: boolean } = {}): string | null {
-  if (audience === "form") return resubmit || directSend(access, audience) ? null : "Bu hesap doğrudan mail gönderemez: sabit Forms alıcıları onaya sunulur; bir onaycı onaylayınca gönderilir.";
+  if (audience === "form") return resubmit || directSend(access, audience) ? null : `Bu hesap Forms yanıtlayanlarına doğrudan gönderemez (${ROLE.mailsWrite} rolü gerekiyor): sabit Forms alıcıları onaya sunulur; bir onaycı onaylayınca gönderilir.`;
   if (resubmit) return audience === "people" ? PEOPLE_LIMIT_NOTE : null;
   if (directSend(access, audience)) return null;
   return audience === "list"

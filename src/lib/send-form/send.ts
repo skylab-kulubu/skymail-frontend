@@ -412,6 +412,11 @@ export function publishedOnlyNote(template: Pick<MailTemplate, "drafts">): strin
 /** Who the preview reads as when no person is named: the mailer fills these per recipient. */
 const SAMPLE_RECIPIENT: PersonRow = { name: "Ayşe Yılmaz", email: "ayse.yilmaz@example.com" };
 
+/** The sample recipient's name when the preview reads as them (no person named), for its "örnek alıcı" label; else null. */
+export function sampleRecipientName(recipient: PersonRow | null): string | null {
+  return recipient ? null : SAMPLE_RECIPIENT.name;
+}
+
 /**
  * The values the preview fills the published body with: exactly what the
  * send carries — an empty field as nothing — and a recipient, the first

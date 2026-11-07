@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Badge } from '@skylab-kulubu/skylcn-ui';
 import { MailFrame, SchemeToggle, SubjectPreview } from '@/components/mail-preview/MailPreview';
 import type { SampleValues } from '@/lib/mail-render/preview';
 import type { MailScheme } from '@/components/mail-preview/preview-document';
@@ -9,9 +10,10 @@ import type { MailTemplate } from '@/lib/templates';
 /**
  * The mail as it goes out: the template's published body and subject — what
  * is sent — filled with this send's values, in either mail theme. The frame
- * is sandboxed with no flags (MailFrame): nothing in a body runs.
+ * is sandboxed with no flags (MailFrame): nothing in a body runs. With no
+ * person named it reads as a sample recipient (`sampleName`), labelled as one.
  */
-export function SendPreview({ template, sample }: { template: MailTemplate | null; sample: SampleValues }) {
+export function SendPreview({ template, sample, sampleName = null }: { template: MailTemplate | null; sample: SampleValues; sampleName?: string | null }) {
   const [scheme, setScheme] = useState<MailScheme>('light');
   return (
     <section aria-labelledby="send-preview-heading" className="min-w-0 space-y-3">
@@ -26,6 +28,14 @@ export function SendPreview({ template, sample }: { template: MailTemplate | nul
           <p className="text-xs text-subtle-foreground">
             Yayımlanmış sürüm, bu gönderimin değerleriyle: boş bir alan mailde de boş. Alıcının adı ve adresi her alıcı için doldurulur.
           </p>
+          {sampleName ? (
+            <p className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              {sampleName}
+              <Badge tone="neutral" size="xs">
+                örnek alıcı
+              </Badge>
+            </p>
+          ) : null}
           <SubjectPreview subject={template.subject} sample={sample} />
           <MailFrame title="Gönderim önizlemesi" html={template.html_content} sample={sample} scheme={scheme} className="h-[70vh] min-h-[420px]" />
         </>

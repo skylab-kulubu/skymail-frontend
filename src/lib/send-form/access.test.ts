@@ -1,7 +1,7 @@
 /**
  * Who may send what (ticket 16), as skymail-backend decides it: a send to a
- * mailing list needs `mails:write`, a send to one person `mails:send` or
- * `mails:write` (main.go). Anyone who can use SkyMail may submit a send for
+ * mailing list or to a Forms source needs `mails:write`, a send to one person
+ * `mails:send` or `mails:write` (main.go). Anyone who can use SkyMail may submit a send for
  * approval instead (ticket 20, `POST /mail_approvals`). The form reads Mail
  * templates to offer one and lists to pick one, so it needs their read roles
  * whichever way the send goes. The page itself is gated by RoleGate
@@ -19,7 +19,7 @@ describe("what the send form offers", () => {
     assert.deepEqual(sendAccess(roles(ROLE.templatesRead, ROLE.listsRead, ROLE.mailsWrite, ROLE.mailsRead)), {
       list: true,
       people: true,
-      send: { list: true, people: true },
+      send: { list: true, people: true, form: true },
       detail: true,
       listNote: null,
     });
@@ -27,19 +27,19 @@ describe("what the send form offers", () => {
 
   it("sends only to people with mails:send, and offers a list for approval", () => {
     const access = sendAccess(roles(ROLE.templatesRead, ROLE.listsRead, ROLE.mailsSend));
-    assert.deepEqual(access, { list: true, people: true, send: { list: false, people: true }, detail: false, listNote: null });
+    assert.deepEqual(access, { list: true, people: true, send: { list: false, people: true, form: false }, detail: false, listNote: null });
   });
 
   it("offers a list and people for approval to someone who reads templates and lists and sends nothing", () => {
     const access = sendAccess(roles(ROLE.templatesRead, ROLE.listsRead));
-    assert.deepEqual(access, { list: true, people: true, send: { list: false, people: false }, detail: false, listNote: null });
+    assert.deepEqual(access, { list: true, people: true, send: { list: false, people: false, form: false }, detail: false, listNote: null });
   });
 
   it("does not offer a list it cannot show, and says why", () => {
     const writer = sendAccess(roles(ROLE.templatesRead, ROLE.mailsWrite));
     assert.equal(writer.list, false);
     assert.equal(writer.people, true);
-    assert.deepEqual(writer.send, { list: false, people: true });
+    assert.deepEqual(writer.send, { list: false, people: true, form: true });
     assert.equal(writer.listNote, "Mail listelerini görmek için skymail:lists:read rolü gerekiyor; bu hesapla kişilere gönderebilirsin.");
     const member = sendAccess(roles(ROLE.templatesRead));
     assert.equal(member.listNote, "Mail listelerini görmek için skymail:lists:read rolü gerekiyor; bu hesapla kişilere gönderimi onaya sunabilirsin.");
@@ -49,7 +49,7 @@ describe("what the send form offers", () => {
     assert.deepEqual(sendAccess(roles(ROLE.listsRead, ROLE.mailsWrite)), {
       list: false,
       people: false,
-      send: { list: false, people: false },
+      send: { list: false, people: false, form: false },
       detail: false,
       listNote: null,
     });
@@ -65,6 +65,18 @@ describe("whether the audience chosen is sent at once or submitted for approval"
     const member = sendAccess(roles(ROLE.templatesRead, ROLE.listsRead));
     assert.equal(directSend(member, "people"), false);
     assert.equal(directSend(member, "list"), false);
+  });
+
+  // Forms respondents are a bulk audience like a list: mails:send, which opens
+  // single mails, submits them for approval.
+  it("sends to Forms respondents at once only with mails:write", () => {
+    assert.equal(directSend(sendAccess(roles(ROLE.templatesRead, ROLE.mailsWrite)), "form"), true);
+    const sender = sendAccess(roles(ROLE.templatesRead, ROLE.listsRead, ROLE.mailsSend));
+    assert.equal(directSend(sender, "form"), false);
+    assert.equal(
+      approvalNote(sender, "form"),
+      "Bu hesap Forms yanıtlayanlarına doğrudan gönderemez (skymail:mails:write rolü gerekiyor): sabit Forms alıcıları onaya sunulur; bir onaycı onaylayınca gönderilir.",
+    );
   });
 });
 

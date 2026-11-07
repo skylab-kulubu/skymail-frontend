@@ -54,7 +54,7 @@ const listRadio = (page: Page, name: string) =>
 const body = (page: Page) => page.getByRole("textbox", { name: "Gövde" });
 const toolbar = (page: Page) => page.getByRole("toolbar", { name: "Visual editör araçları" });
 const send = (page: Page) => page.getByRole("button", { name: "Gönder…", exact: true });
-const dialog = (page: Page, name = "Gönderimi onayla") => page.getByRole("dialog", { name });
+const dialog = (page: Page, name = "Şimdi gönder (onaysız)") => page.getByRole("dialog", { name });
 
 async function typeWith(page: Page, mark: "Kalın" | "İtalik", text: string) {
   await toolbar(page).getByRole("button", { name: mark }).click();
