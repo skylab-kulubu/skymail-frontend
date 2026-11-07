@@ -47,9 +47,15 @@ export function sendAccess(roles: readonly string[]): SendAccess {
   };
 }
 
-/** Whether a send to `audience` goes at once; if not, it is submitted for approval. */
-export function directSend(access: SendAccess, audience: "list" | "people" | "form"): boolean {
-  return audience === "people" ? access.send.people : access.send[audience];
+/**
+ * Whether a send to `audience` goes at once; if not, it is submitted for
+ * approval. People a legacy Forms transfer added (`legacyForms`, Eski aktarım:
+ * Forms' fallback when SkyMail cannot prepare a source) are Forms respondents,
+ * a bulk audience: as a Forms source, they go at once only with `mails:write`.
+ */
+export function directSend(access: SendAccess, audience: "list" | "people" | "form", { legacyForms = false }: { legacyForms?: boolean } = {}): boolean {
+  if (audience === "people") return legacyForms ? access.send.form : access.send.people;
+  return access.send[audience];
 }
 
 /**
@@ -58,10 +64,16 @@ export function directSend(access: SendAccess, audience: "list" | "people" | "fo
  * goes for approval whoever makes it: only the latter. Null when it goes at
  * once.
  */
-export function approvalNote(access: SendAccess, audience: "list" | "people" | "form", { resubmit = false }: { resubmit?: boolean } = {}): string | null {
+export function approvalNote(
+  access: SendAccess,
+  audience: "list" | "people" | "form",
+  { resubmit = false, legacyForms = false }: { resubmit?: boolean; legacyForms?: boolean } = {},
+): string | null {
   if (audience === "form") return resubmit || directSend(access, audience) ? null : `Bu hesap Forms yanıtlayanlarına doğrudan gönderemez (${ROLE.mailsWrite} rolü gerekiyor): sabit Forms alıcıları onaya sunulur; bir onaycı onaylayınca gönderilir.`;
   if (resubmit) return audience === "people" ? PEOPLE_LIMIT_NOTE : null;
-  if (directSend(access, audience)) return null;
+  if (directSend(access, audience, { legacyForms })) return null;
+  if (audience === "people" && legacyForms)
+    return `Bu hesap Forms yanıtlayanlarına doğrudan gönderemez (${ROLE.mailsWrite} rolü gerekiyor): gönderim onaya sunulur, bir onaycı onaylayınca her kişiye ayrı gider. ${PEOPLE_LIMIT_NOTE}`;
   return audience === "list"
     ? `Bu hesap bir mail listesine doğrudan gönderemez (${ROLE.mailsWrite} rolü gerekiyor): gönderim onaya sunulur, bir onaycı onaylayınca gider.`
     : `Bu hesap mail gönderemez (${ROLE.mailsSend} ya da ${ROLE.mailsWrite} rolü gerekiyor): gönderim onaya sunulur, bir onaycı onaylayınca her kişiye ayrı gider. ${PEOPLE_LIMIT_NOTE}`;

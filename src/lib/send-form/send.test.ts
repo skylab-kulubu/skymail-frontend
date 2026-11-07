@@ -339,6 +339,10 @@ describe("a failed send, in plain words", () => {
       kind: "final",
       reason: "Bu hesap mail gönderemez: skymail:mails:send ya da skymail:mails:write rolü gerekiyor.",
     });
+    assert.deepEqual(sendFailure(new ApiError(403, "server.forbidden"), "form", person), {
+      kind: "final",
+      reason: "Bu hesap Forms yanıtlayanlarına doğrudan gönderemez: skymail:mails:write rolü gerekiyor. “Onaya sun…” ile onaya sunabilirsin.",
+    });
     assert.deepEqual(sendFailure(new ApiError(404, "server.not_found"), "person", person), {
       kind: "final",
       reason: "Mail template arşivlenmiş ya da artık yok; arşivlenmiş bir template gönderilmez.",

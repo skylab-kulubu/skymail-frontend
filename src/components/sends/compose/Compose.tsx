@@ -93,6 +93,7 @@ export function Compose({
   mode = NEW,
   prefill = null,
   intro,
+  legacyForms = false,
 }: {
   access: SendAccess;
   templates: MailTemplate[];
@@ -102,6 +103,8 @@ export function Compose({
   prefill?: ComposePrefill | null;
   /** Said under the header: what the form was filled from, and why. */
   intro?: ReactNode;
+  /** The people came from a legacy Forms transfer (Eski aktarım): sent at once only as a Forms source is (directSend). */
+  legacyForms?: boolean;
 }) {
   const presetListId = useSearchParams().get('mail_list_id');
   const preset = presetListId ? (lists.find((list) => list.id === presetListId) ?? null) : null;
@@ -176,10 +179,10 @@ export function Compose({
   const draftNote = template ? publishedOnlyNote(template) : null;
   const busy = sending.progress !== null || submitting.busy;
   // A resubmission only goes for approval; anything else goes at once where the viewer may send it.
-  const direct = !resubmit && directSend(access, audience);
+  const direct = !resubmit && directSend(access, audience, { legacyForms });
   const forApproval = check.ok ? approvalRequest(check.plan, { lists: access.list }) : null;
   const approvalProblem = intent === 'submit' && attempts > 0 && forApproval && !forApproval.ok ? forApproval.problem : null;
-  const audienceNote = approvalNote(access, audience, { resubmit: resubmit !== null });
+  const audienceNote = approvalNote(access, audience, { resubmit: resubmit !== null, legacyForms });
   const refusal = submitting.failure ? refusalNow(submitting.failure, people) : null;
   // A refused category is said under the picker, whichever action it came from.
   const categoryRefusal = (code: string | undefined, text: string) => (code && CATEGORY_REFUSALS.has(code) ? text : null);

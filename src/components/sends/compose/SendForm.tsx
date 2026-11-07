@@ -202,7 +202,7 @@ function ComposeCatalog({ from, forms, formSource }: { from: From | null; forms?
     </Notice>} />;
   if (forms) {
     return (
-      <Compose access={access} templates={templates} lists={lists}
+      <Compose access={access} templates={templates} lists={lists} legacyForms
         prefill={{ what: freeTemplate(templates) ? 'free' : 'template', templateId: null, audience: 'people', listId: null, people: forms.recipients, values: {}, rich: {}, notes: [] }}
         intro={<Notice tone="info">
           Eski aktarım: “{forms.formTitle}” formundan {forms.recipients.length} kişi eklendi; bu gönderimde kalıcı Forms bağlantısı tutulmaz. Arşivlenen, geçici ve düzeltme istenen yanıtlar dahil değildir.

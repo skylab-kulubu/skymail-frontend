@@ -78,6 +78,22 @@ describe("whether the audience chosen is sent at once or submitted for approval"
       "Bu hesap Forms yanıtlayanlarına doğrudan gönderemez (skymail:mails:write rolü gerekiyor): sabit Forms alıcıları onaya sunulur; bir onaycı onaylayınca gönderilir.",
     );
   });
+
+  // Forms' fallback when SkyMail cannot prepare a source puts the respondents
+  // among people (Eski aktarım); they are still Forms respondents.
+  it("sends people a legacy Forms transfer added at once only with mails:write", () => {
+    const sender = sendAccess(roles(ROLE.templatesRead, ROLE.listsRead, ROLE.mailsSend));
+    assert.equal(directSend(sender, "people"), true);
+    assert.equal(directSend(sender, "people", { legacyForms: true }), false);
+    assert.equal(
+      approvalNote(sender, "people", { legacyForms: true }),
+      "Bu hesap Forms yanıtlayanlarına doğrudan gönderemez (skymail:mails:write rolü gerekiyor): gönderim onaya sunulur, bir onaycı onaylayınca her kişiye ayrı gider. Onaya en çok 100 kişi sunulur.",
+    );
+    const writer = sendAccess(roles(ROLE.templatesRead, ROLE.mailsWrite));
+    assert.equal(directSend(writer, "people", { legacyForms: true }), true);
+    assert.equal(approvalNote(writer, "people", { legacyForms: true }), null);
+    assert.equal(directSend(sender, "list", { legacyForms: true }), false);
+  });
 });
 
 describe("what the form says when a send goes for approval", () => {
