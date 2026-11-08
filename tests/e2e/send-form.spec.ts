@@ -408,7 +408,7 @@ test("who may send what: people only with mails:send, who is told to ask about a
 
   await signIn("individual");
   await page.goto(`/mail-tasks/create?mail_list_id=${gecekodu}`);
-  await expect(page.getByText("Bu bağlantı bir mail listesine gönderim için, ama bu hesap mail listelerini göremiyor (skymail:lists:read)")).toBeVisible();
+  await expect(page.getByText("Bu bağlantı bir mail listesine gönderim için, ama bu hesap mail listelerini göremez: kişileri aşağıda ekleyebilirsin.")).toBeVisible();
   await expect(page.getByText("Bu hesap mail listelerini göremez; kişilere gönderebilirsin.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Mail listesi" })).toHaveCount(0);
   expect(skymail.requests.some((request) => request.path.startsWith("/mailing_lists"))).toBe(false);

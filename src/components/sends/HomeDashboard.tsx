@@ -9,11 +9,11 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { AlertTriangle, ArrowRight, Lock, Send } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Send } from 'lucide-react';
 import { Button, Notice, StateCard, StatusDot } from '@skylab-kulubu/skylcn-ui';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { useConsole } from '@/components/layout/ConsoleContext';
-import { homeView, sectionLabel } from '@/lib/access';
+import { homeScreen, homeView, sectionLabel } from '@/lib/access';
 import { useApiQuery } from '@/lib/api/react';
 import { bulkHeldText } from '@/lib/send-controls';
 import {
@@ -29,6 +29,7 @@ import {
   type SendSummary,
 } from '@/lib/sends';
 import { ComposerHome } from './ComposerHome';
+import { HomeLock } from './HomeLock';
 import { DailySentChart } from './DailySentChart';
 import { SectionTitle } from './SectionTitle';
 import { SendItem } from './SendItem';
@@ -39,28 +40,14 @@ const DAYS = 30;
 const RECENT = 5;
 
 export function HomeDashboard() {
-  const { roles } = useConsole();
-  // The home screen needs only skymail:access; its summary needs mails:read.
-  const view = homeView(roles);
-  if (view === 'composer') return <ComposerHome />;
-  return (
-    <div className="space-y-6">
-      <PageHeader title={sectionLabel('/')} description="Kulübün gönderdiği mailler bir bakışta." />
-      {view === 'summary' ? <Summary /> : <NothingToDo />}
-    </div>
-  );
-}
-
-/**
- * One who can neither read the sends nor compose one. As RoleGate does, the
- * token is refreshed once before saying so: a role may have been granted
- * after it was issued, and the answer then shows the screen it opens.
- */
-function NothingToDo() {
-  const { confirmRoles } = useConsole();
+  const { roles, confirmRoles } = useConsole();
   const [confirmed, setConfirmed] = useState(false);
+  // The home screen needs only skymail:access; its summary needs mails:read.
+  // One who can do neither has the token refreshed once before the lock.
+  const needsCheck = homeView(roles) === 'none';
 
   useEffect(() => {
+    if (!needsCheck || confirmed) return;
     let current = true;
     void confirmRoles().then(() => {
       if (current) setConfirmed(true);
@@ -68,16 +55,15 @@ function NothingToDo() {
     return () => {
       current = false;
     };
-  }, [confirmRoles]);
+  }, [needsCheck, confirmed, confirmRoles]);
 
-  if (!confirmed) return null;
+  const screen = homeScreen(roles, { confirmed });
+  if (screen === 'composer') return <ComposerHome />;
   return (
-    <StateCard
-      icon={Lock}
-      tone="warning"
-      title="Gönderim yetkin yok"
-      description="Mail hazırlamak ya da onaya sunmak için kulüp yönetimine başvur."
-    />
+    <div className="space-y-6">
+      <PageHeader title={sectionLabel('/')} description="Kulübün gönderdiği mailler bir bakışta." />
+      {screen === 'summary' ? <Summary /> : screen === 'checking' ? null : <HomeLock approver={screen === 'lockedApprover'} />}
+    </div>
   );
 }
 

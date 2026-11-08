@@ -5,7 +5,7 @@
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { ROLE, activeNavHref, hasAccess, hasAnyRole, homeView, isApprover, requiredRolesFor, sectionLabel, visibleNavigation } from "./access";
+import { ROLE, activeNavHref, hasAccess, hasAnyRole, homeScreen, homeView, isApprover, requiredRolesFor, sectionLabel, visibleNavigation } from "./access";
 
 const hrefs = (roles: string[]) => visibleNavigation(roles).map((item) => item.href);
 
@@ -132,6 +132,30 @@ describe("the home screen", () => {
   it("says there is nothing to do only to one who can neither read the sends nor compose", () => {
     assert.equal(homeView([ROLE.access]), "none");
     assert.equal(homeView([ROLE.access, ROLE.listsRead]), "none");
+  });
+});
+
+describe("the home screen once the token is checked", () => {
+  // Before the lock, the token is refreshed once: a role granted after it was
+  // issued opens the screen it gives instead.
+  it("waits for the check before saying there is nothing to do", () => {
+    assert.equal(homeScreen([ROLE.access], { confirmed: false }), "checking");
+    assert.equal(homeScreen([ROLE.access], { confirmed: true }), "locked");
+  });
+
+  it("shows what a refreshed token opens", () => {
+    assert.equal(homeScreen([ROLE.access, ROLE.templatesRead], { confirmed: true }), "composer");
+    assert.equal(homeScreen([ROLE.access, ROLE.mailsRead], { confirmed: true }), "summary");
+  });
+
+  it("needs no check for one who can read the sends or compose", () => {
+    assert.equal(homeScreen([ROLE.access, ROLE.mailsRead], { confirmed: false }), "summary");
+    assert.equal(homeScreen([ROLE.access, ROLE.templatesRead], { confirmed: false }), "composer");
+  });
+
+  // An approver with nothing else decides requests: the lock leads there.
+  it("locks an approver who can do nothing else with a way to the mail approvals", () => {
+    assert.equal(homeScreen([ROLE.access, ROLE.mailsApprove], { confirmed: true }), "lockedApprover");
   });
 });
 

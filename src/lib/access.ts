@@ -106,6 +106,22 @@ export function homeView(roles: readonly string[]): "summary" | "composer" | "no
   return hasRole(roles, ROLE.templatesRead) ? "composer" : "none";
 }
 
+/**
+ * The home screen once the token's roles are known: `homeView`, except that
+ * one who can do neither waits for the token to be refreshed once (a role
+ * may have been granted after it was issued) before the lock shows; and an
+ * approver's lock leads to the mail approvals, which they can decide.
+ */
+export function homeScreen(
+  roles: readonly string[],
+  { confirmed }: { confirmed: boolean },
+): "summary" | "composer" | "checking" | "locked" | "lockedApprover" {
+  const view = homeView(roles);
+  if (view !== "none") return view;
+  if (!confirmed) return "checking";
+  return isApprover(roles) ? "lockedApprover" : "locked";
+}
+
 /** Whether the viewer decides sends submitted for approval (Mail onayı). */
 export function isApprover(roles: readonly string[]): boolean {
   return hasRole(roles, ROLE.mailsApprove);

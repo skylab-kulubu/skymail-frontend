@@ -12,9 +12,10 @@ import { Button, StateCard } from '@skylab-kulubu/skylcn-ui';
 import { NavButton } from '@/components/common/NavButton';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { ApprovalRow } from '@/components/mail-approvals/ApprovalList';
-import { sectionLabel } from '@/lib/access';
+import { useConsole } from '@/components/layout/ConsoleContext';
+import { isApprover, sectionLabel } from '@/lib/access';
 import { useApiLoad } from '@/lib/api/react';
-import { APPROVAL_LIST_PATH, fetchOwnApprovals } from '@/lib/mail-approvals/approvals';
+import { approvalListHref, fetchOwnApprovals } from '@/lib/mail-approvals/approvals';
 import { composeHref } from '@/lib/sends';
 import { SectionTitle } from './SectionTitle';
 
@@ -25,7 +26,7 @@ export function ComposerHome() {
     <div className="space-y-6">
       <PageHeader
         title={sectionLabel('/')}
-        description="Yeni bir gönderim hazırla; onaylanınca gider."
+        description="Yeni bir gönderim hazırla, onaya sunduklarını buradan izle."
         actions={
           <NavButton variant="primary" href={composeHref()}>
             <Plus aria-hidden />
@@ -39,6 +40,11 @@ export function ComposerHome() {
 }
 
 function OwnRequests() {
+  const { roles } = useConsole();
+  // All of the viewer's own requests, whatever their state: an approver's
+  // list otherwise opens on everyone's pending ones.
+  const approver = isApprover(roles);
+  const allOwn = approvalListHref({ state: 'all', mine: true, page: 1 }, { approver });
   const state = useApiLoad((api, signal) => fetchOwnApprovals(api, RECENT, signal), 'own-approvals');
   const now = new Date();
 
@@ -48,7 +54,7 @@ function OwnRequests() {
         id="own-requests-title"
         aside={
           <Link
-            href={APPROVAL_LIST_PATH}
+            href={allOwn}
             className="text-2xs inline-flex items-center gap-1 font-medium text-muted-foreground transition-colors hover:text-secondary-foreground"
           >
             Tümünü gör
