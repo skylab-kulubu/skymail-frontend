@@ -80,6 +80,13 @@ describe("the sender of their own send without the recipients", () => {
     assert.doesNotMatch(TRACKING_COUNTS_ONLY_TEXT, /skymail|tracking|:read/i);
   });
 
+  it("speaks of per-person opens and clicks, not the recipient list", () => {
+    // skymail:mails:read still sees the recipients and their delivery status
+    // in the queue; only per-person opens and clicks need the tracking role.
+    assert.match(TRACKING_COUNTS_ONLY_TEXT, /Kişi bazında açılma ve tıklama/);
+    assert.doesNotMatch(TRACKING_COUNTS_ONLY_TEXT, /Alıcı listesi/);
+  });
+
   it("anyone else sees the counts alone", () => {
     const words = body("none");
     assert.match(words, /Takip edilen 40/);

@@ -81,8 +81,11 @@ export type TrackingSummary = Readonly<{
 /** What the report says in place of counts withheld from the reader. */
 export const TRACKING_WITHHELD_TEXT = "Bu gönderimin sayıları kişiye dair bilgi sayılır; yalnız takip yetkisi olanlar görür.";
 
-/** What the sender reads under the counts of their own send, in place of the recipients (ADR-0074 addendum 2026-11-08). */
-export const TRACKING_COUNTS_ONLY_TEXT = "Alıcı listesi yalnız takip yetkisi olanlara açık; gönderen toplam sayıları görür.";
+/**
+ * What the sender reads under the counts of their own send (ADR-0074 addendum 2026-11-08).
+ * Only per-person opens and clicks are withheld; skymail:mails:read still sees the recipients in the queue.
+ */
+export const TRACKING_COUNTS_ONLY_TEXT = "Kişi bazında açılma ve tıklama yalnız takip yetkisi olanlara açık.";
 
 export type TrackingRecipientLink = Readonly<{ link_id: number; clicks: number; last_clicked_at: string }>;
 
