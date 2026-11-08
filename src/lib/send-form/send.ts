@@ -271,7 +271,7 @@ export function repeatsUncertainSend(draft: Pick<SendDraft, "audience" | "templa
 function checkAdvice({ canSeeSends }: Checking): string {
   return canSeeSends
     ? "Yeniden göndermeden önce Gönderimler listesine bak: orada görünüyorsa açılmıştır."
-    : "Gönderimleri görme yetkin (skymail:mails:read) yok: yeniden göndermeden önce bu yetkisi olan birine gönderimin açılıp açılmadığını sor.";
+    : "Gönderimleri görme yetkin yok: yeniden göndermeden önce bu yetkisi olan birine gönderimin açılıp açılmadığını sor.";
 }
 
 /** A failed send in plain words, and whether trying again is safe: to a list, or to one person. */
@@ -296,10 +296,10 @@ export function sendFailure(error: unknown, to: "list" | "person" | "form", chec
       kind: "final",
       reason:
         to === "list"
-          ? "Bu hesap bir mail listesine gönderemez: skymail:mails:write rolü gerekiyor."
+          ? "Mail listesine doğrudan gönderme yetkin yok."
           : to === "form"
-            ? "Bu hesap Forms yanıtlayanlarına doğrudan gönderemez: skymail:mails:write rolü gerekiyor. “Onaya sun…” ile onaya sunabilirsin."
-            : "Bu hesap mail gönderemez: skymail:mails:send ya da skymail:mails:write rolü gerekiyor.",
+            ? "Forms yanıtlayanlarına doğrudan gönderme yetkin yok. “Onaya sun…” ile onaya sunabilirsin."
+            : "Doğrudan mail gönderme yetkin yok.",
     };
   }
   if (status === 404) {

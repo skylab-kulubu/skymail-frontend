@@ -333,15 +333,15 @@ describe("a failed send, in plain words", () => {
   it("is final when refused: a missing role, an archived template, an address that is not one, a body the server refused", () => {
     assert.deepEqual(sendFailure(new ApiError(403, "server.forbidden"), "list", person), {
       kind: "final",
-      reason: "Bu hesap bir mail listesine gönderemez: skymail:mails:write rolü gerekiyor.",
+      reason: "Mail listesine doğrudan gönderme yetkin yok.",
     });
     assert.deepEqual(sendFailure(new ApiError(403, "server.forbidden"), "person", person), {
       kind: "final",
-      reason: "Bu hesap mail gönderemez: skymail:mails:send ya da skymail:mails:write rolü gerekiyor.",
+      reason: "Doğrudan mail gönderme yetkin yok.",
     });
     assert.deepEqual(sendFailure(new ApiError(403, "server.forbidden"), "form", person), {
       kind: "final",
-      reason: "Bu hesap Forms yanıtlayanlarına doğrudan gönderemez: skymail:mails:write rolü gerekiyor. “Onaya sun…” ile onaya sunabilirsin.",
+      reason: "Forms yanıtlayanlarına doğrudan gönderme yetkin yok. “Onaya sun…” ile onaya sunabilirsin.",
     });
     assert.deepEqual(sendFailure(new ApiError(404, "server.not_found"), "person", person), {
       kind: "final",
@@ -374,7 +374,7 @@ describe("a failed send, in plain words", () => {
     assert.deepEqual(sendFailure(new ApiError(503, "server.service_unavailable"), "person", { canSeeSends: false }), {
       kind: "uncertain",
       reason:
-        "Sunucu bir hatayla yanıt verdi (HTTP 503). Bu kişiye gönderim açılmış olabilir. Gönderimleri görme yetkin (skymail:mails:read) yok: yeniden göndermeden önce bu yetkisi olan birine gönderimin açılıp açılmadığını sor.",
+        "Sunucu bir hatayla yanıt verdi (HTTP 503). Bu kişiye gönderim açılmış olabilir. Gönderimleri görme yetkin yok: yeniden göndermeden önce bu yetkisi olan birine gönderimin açılıp açılmadığını sor.",
     });
   });
 

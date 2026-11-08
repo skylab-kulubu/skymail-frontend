@@ -180,7 +180,7 @@ function StateCell({ item, now }: { item: ApprovalItem; now: Date }) {
 }
 
 /** One request as a phone reads it: the template, who and to whom, the deadline and the state. */
-function ApprovalRow({ item, now }: { item: ApprovalItem; now: Date }) {
+export function ApprovalRow({ item, now }: { item: ApprovalItem; now: Date }) {
   const href = approvalHref(item.id);
   return (
     <li className="group/row relative transition-colors hover:bg-accent">

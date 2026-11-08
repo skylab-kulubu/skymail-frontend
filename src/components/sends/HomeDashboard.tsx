@@ -4,13 +4,16 @@
 // days as an area chart and the last five sends, all from one summary call.
 // The layout and the pieces follow SkyForms' dashboard (forms-frontend
 // `src/app/admin/page.js`): stat tiles, a trend section, a recent-items list.
+// One who may not read the sends but may compose one (a team leader) gets
+// ComposerHome instead; the lock only one who can do neither.
 
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { AlertTriangle, ArrowRight, Send } from 'lucide-react';
 import { Button, Notice, StateCard, StatusDot } from '@skylab-kulubu/skylcn-ui';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { RoleGate } from '@/components/layout/RoleGate';
-import { ROLE, sectionLabel } from '@/lib/access';
+import { useConsole } from '@/components/layout/ConsoleContext';
+import { homeScreen, homeView, sectionLabel } from '@/lib/access';
 import { useApiQuery } from '@/lib/api/react';
 import { bulkHeldText } from '@/lib/send-controls';
 import {
@@ -25,6 +28,8 @@ import {
   type Send as SendRecord,
   type SendSummary,
 } from '@/lib/sends';
+import { ComposerHome } from './ComposerHome';
+import { HomeLock } from './HomeLock';
 import { DailySentChart } from './DailySentChart';
 import { SectionTitle } from './SectionTitle';
 import { SendItem } from './SendItem';
@@ -35,13 +40,29 @@ const DAYS = 30;
 const RECENT = 5;
 
 export function HomeDashboard() {
+  const { roles, confirmRoles } = useConsole();
+  const [confirmed, setConfirmed] = useState(false);
+  // The home screen needs only skymail:access; its summary needs mails:read.
+  // One who can do neither has the token refreshed once before the lock.
+  const needsCheck = homeView(roles) === 'none';
+
+  useEffect(() => {
+    if (!needsCheck || confirmed) return;
+    let current = true;
+    void confirmRoles().then(() => {
+      if (current) setConfirmed(true);
+    });
+    return () => {
+      current = false;
+    };
+  }, [needsCheck, confirmed, confirmRoles]);
+
+  const screen = homeScreen(roles, { confirmed });
+  if (screen === 'composer') return <ComposerHome />;
   return (
     <div className="space-y-6">
       <PageHeader title={sectionLabel('/')} description="Kulübün gönderdiği mailler bir bakışta." />
-      {/* The home screen needs only skymail:access; its summary needs mails:read. */}
-      <RoleGate role={ROLE.mailsRead}>
-        <Summary />
-      </RoleGate>
+      {screen === 'summary' ? <Summary /> : screen === 'checking' ? null : <HomeLock approver={screen === 'lockedApprover'} />}
     </div>
   );
 }

@@ -326,7 +326,7 @@ export function Compose({
         <Notice tone="warning">
           {access.list
             ? 'Bağlantıdaki mail listesi bulunamadı: arşivlenmiş ya da artık yok. Aşağıdan bir liste seç.'
-            : 'Bu bağlantı bir mail listesine gönderim için, ama bu hesap mail listelerini göremiyor (skymail:lists:read): kişileri aşağıda ekleyebilirsin.'}
+            : 'Bu bağlantı bir mail listesine gönderim için, ama bu hesap mail listelerini göremez: kişileri aşağıda ekleyebilirsin.'}
         </Notice>
       ) : null}
 

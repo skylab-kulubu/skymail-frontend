@@ -40,9 +40,9 @@ describe("what the send form offers", () => {
     assert.equal(writer.list, false);
     assert.equal(writer.people, true);
     assert.deepEqual(writer.send, { list: false, people: true, form: true });
-    assert.equal(writer.listNote, "Mail listelerini görmek için skymail:lists:read rolü gerekiyor; bu hesapla kişilere gönderebilirsin.");
+    assert.equal(writer.listNote, "Bu hesap mail listelerini göremez; kişilere gönderebilirsin.");
     const member = sendAccess(roles(ROLE.templatesRead));
-    assert.equal(member.listNote, "Mail listelerini görmek için skymail:lists:read rolü gerekiyor; bu hesapla kişilere gönderimi onaya sunabilirsin.");
+    assert.equal(member.listNote, "Bu hesap mail listelerini göremez; kişilere gönderimi onaya sunabilirsin.");
   });
 
   it("offers nothing without a template to send", () => {
@@ -75,7 +75,7 @@ describe("whether the audience chosen is sent at once or submitted for approval"
     assert.equal(directSend(sender, "form"), false);
     assert.equal(
       approvalNote(sender, "form"),
-      "Bu hesap Forms yanıtlayanlarına doğrudan gönderemez (skymail:mails:write rolü gerekiyor): sabit Forms alıcıları onaya sunulur; bir onaycı onaylayınca gönderilir.",
+      "Forms yanıtlayanlarına doğrudan gönderme yetkin yok: sabit Forms alıcıları onaya sunulur; bir onaycı onaylayınca gönderilir.",
     );
   });
 
@@ -87,7 +87,7 @@ describe("whether the audience chosen is sent at once or submitted for approval"
     assert.equal(directSend(sender, "people", { legacyForms: true }), false);
     assert.equal(
       approvalNote(sender, "people", { legacyForms: true }),
-      "Bu hesap Forms yanıtlayanlarına doğrudan gönderemez (skymail:mails:write rolü gerekiyor): gönderim onaya sunulur, bir onaycı onaylayınca her kişiye ayrı gider. Onaya en çok 100 kişi sunulur.",
+      "Forms yanıtlayanlarına doğrudan gönderme yetkin yok: gönderim onaya sunulur, bir onaycı onaylayınca her kişiye ayrı gider. Onaya en çok 100 kişi sunulur.",
     );
     const writer = sendAccess(roles(ROLE.templatesRead, ROLE.mailsWrite));
     assert.equal(directSend(writer, "people", { legacyForms: true }), true);
@@ -101,11 +101,11 @@ describe("what the form says when a send goes for approval", () => {
     const member = sendAccess(roles(ROLE.templatesRead, ROLE.listsRead));
     assert.equal(
       approvalNote(member, "list"),
-      "Bu hesap bir mail listesine doğrudan gönderemez (skymail:mails:write rolü gerekiyor): gönderim onaya sunulur, bir onaycı onaylayınca gider.",
+      "Mail listesine doğrudan gönderme yetkin yok: gönderim onaya sunulur, bir onaycı onaylayınca gider.",
     );
     assert.equal(
       approvalNote(member, "people"),
-      "Bu hesap mail gönderemez (skymail:mails:send ya da skymail:mails:write rolü gerekiyor): gönderim onaya sunulur, bir onaycı onaylayınca her kişiye ayrı gider. Onaya en çok 100 kişi sunulur.",
+      "Doğrudan gönderme yetkin yok: gönderim onaya sunulur, bir onaycı onaylayınca her kişiye ayrı gider. Onaya en çok 100 kişi sunulur.",
     );
   });
 

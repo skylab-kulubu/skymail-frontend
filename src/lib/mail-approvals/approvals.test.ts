@@ -27,6 +27,7 @@ import {
   eventActorName,
   eventLabel,
   fetchApprovalPage,
+  fetchOwnApprovals,
   notificationNote,
   pendingCount,
   previewFailureNote,
@@ -104,6 +105,14 @@ describe("the list's view", () => {
 
     await fetchApprovalPage(api, { state: "all", mine: true, page: 1 }, { approver: false });
     assert.equal(calls[2].url, `${TEST_BASE_URL}/mail_approvals?mine=true&_start=0&_end=${APPROVAL_PAGE_SIZE}`);
+  });
+
+  // The home screen of one who does not read the send list (a team leader).
+  it("asks for the viewer's own latest requests, whoever they are", async () => {
+    const { api, calls } = scriptedClient(json(200, [{ id: ID }], { "X-Total-Count": "7" }));
+    const page = await fetchOwnApprovals(api, 5);
+    assert.equal(calls[0].url, `${TEST_BASE_URL}/mail_approvals?mine=true&_start=0&_end=5`);
+    assert.equal(page.total, 7);
   });
 
   it("counts what waits for an approver from the list's total", async () => {
