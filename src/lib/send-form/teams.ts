@@ -55,10 +55,10 @@ export type TeamAudiences =
 
 export const NO_TEAMS: TeamAudiences = { status: "ready", teams: [] };
 
-/** The answers that mean "no Team mail for this viewer": off (404), not allowed (401, 403). */
-const NONE: ReadonlySet<number> = new Set([401, 403, 404]);
+/** An answer that may change if asked again: none at all, a timeout, too many requests, a server error (core's 503 among them). */
+const unavailable = (status: number) => status === 0 || status === 408 || status === 429 || status >= 500;
 
-/** The viewer's Teams; never throws. A refusal reads as none, anything else as unavailable. */
+/** The viewer's Teams; never throws. A refusal (off 404, not allowed 401/403, any other 4xx) reads as none; no answer or a server error as unavailable. */
 export async function fetchTeamAudiences(api: ApiClient, signal?: AbortSignal): Promise<TeamAudiences> {
   try {
     const answer = await api.get<{ teams?: TeamAudience[] | null }>("/me/team_audiences", { signal });
@@ -66,7 +66,7 @@ export async function fetchTeamAudiences(api: ApiClient, signal?: AbortSignal): 
   } catch (error) {
     if (signal?.aborted) throw error;
     const refusal = asApiError(error);
-    if (NONE.has(refusal.status)) return NO_TEAMS;
+    if (!unavailable(refusal.status)) return NO_TEAMS;
     return { status: "unavailable", message: teamsUnavailableText(refusal.code) };
   }
 }
@@ -144,7 +144,10 @@ export function teamsWords(teams: readonly Pick<TeamAudience, "display_name" | "
 export const TEAM_PURPOSE_TEXT = "Duyuru · Ekip duyurusu (her ekip kendi kategorisiyle)";
 
 /** Said under the fixed purpose. */
-export const TEAM_PURPOSE_NOTE = "Ekibin duyurularını kapatan üyeye gitmez. Alıcıların adreslerini görmezsin, yalnız sayıyı.";
+export const TEAM_PURPOSE_NOTE = "Ekibin duyurularını kapatan üyeye gitmez.";
+
+/** Said to one who cannot read lists (`lists:read`): the Leader sees counts, never addresses (ADR 0067 addendum). */
+export const TEAM_ADDRESSES_NOTE = "Alıcıların adreslerini görmezsin, yalnız sayıyı.";
 
 /** Said beside the Team audience: it always goes for approval. */
 export const TEAM_APPROVAL_NOTE = "Ekip postası onaya sunulur: bir onaycı onaylayınca seçtiğin ekiplerin üyelerine gider.";

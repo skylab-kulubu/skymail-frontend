@@ -58,7 +58,8 @@ function forbiddenSubmission(error: ApiError): string {
   if (roles.length === 1 && roles[0] === ROLE.listsRead) {
     return `Bu hesap mail listesine onaya sunamaz; kişilere onaya sunabilirsin.`;
   }
-  return `Onaya sunmak için ${roles.join(" ve ")} ${roles.length === 1 ? "rolü" : "rolleri"} gerekiyor.`;
+  if (roles.includes(ROLE.templatesRead)) return "Bu hesap Mail template okuyamadığı için onaya sunamaz. Erişime ihtiyacın varsa kulüp yönetimine başvur.";
+  return "Onaya sunma yetkin yok. Erişime ihtiyacın varsa kulüp yönetimine başvur.";
 }
 
 type FieldError = Readonly<{ field: string; code: string; params?: Readonly<Record<string, unknown>> }>;
@@ -258,7 +259,7 @@ export function approvalRefusal(thrown: unknown, action: ApprovalActionName): Ap
   if (error.status === 0 || error.status >= 500) return unanswered(error, action);
   if (error.status === 403) {
     if (SUBMISSIONS.includes(action)) return say(forbiddenSubmission(error));
-    return say(APPROVER_ACTIONS.includes(action) ? `Bu işlem için ${ROLE.mailsApprove} rolü gerekiyor.` : error.message);
+    return say(APPROVER_ACTIONS.includes(action) ? "Bu işlem için onaycı yetkin yok." : error.message);
   }
   if (error.status === 404) return say("İstek bulunamadı: yok ya da görme yetkin yok.");
   if (error.code === "validation.error" && action === "reject") return say("Ret gerekçesi boş olamaz.");

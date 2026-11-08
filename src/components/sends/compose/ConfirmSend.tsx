@@ -88,9 +88,7 @@ export function ConfirmSend({
       ? plan.request.tracking === true
       : plan.kind === 'people'
         ? plan.requests.some((request) => request.tracking === true)
-        : plan.kind === 'team'
-          ? false
-          : trackingAlways);
+        : trackingAlways);
   const untrackedNote = plan && tracked ? untrackedRecipientsNote(untrackedCount(plan, list, size)) : null;
   const purposeOf: StoredPurpose | null = plan === null || plan.kind === 'team' ? null : plan.kind === 'people' ? (plan.requests[0] ?? null) : plan.request;
   // A Team request's purpose is fixed: duyuru, each Team with its own category.

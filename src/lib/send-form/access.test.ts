@@ -10,7 +10,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { ROLE } from "../access";
-import { approvalNote, defaultAudience, directSend, sendAccess } from "./access";
+import { approvalNote, defaultAudience, directSend, formAudience, sendAccess } from "./access";
 
 const roles = (...granted: string[]) => [ROLE.access, ...granted];
 
@@ -158,6 +158,29 @@ describe("the Team audience", () => {
     assert.equal(directSend(writer, "team"), false);
     assert.match(approvalNote(writer, "team") ?? "", /onaya sunulur/);
     assert.match(approvalNote(writer, "team", { resubmit: true }) ?? "", /onaya sunulur/);
+  });
+});
+
+// Inceleme takibi (#162): a Team audience with no Team to pick never holds the form.
+describe("the audience the form shows", () => {
+  const member = sendAccess(roles(ROLE.templatesRead, ROLE.listsRead));
+  const person = sendAccess(roles(ROLE.templatesRead));
+
+  it("is the one chosen, else the start, which is Ekibim once Teams come", () => {
+    assert.equal(formAudience(null, { access: member, presetList: false, teams: 0 }), "list");
+    assert.equal(formAudience(null, { access: member, presetList: false, teams: 2 }), "team");
+    assert.equal(formAudience("people", { access: member, presetList: false, teams: 2 }), "people");
+    assert.equal(formAudience("team", { access: member, presetList: false, teams: 2 }), "team");
+  });
+
+  it("falls back from Teams to the start when there is no Team (switch off, core not answering, leadership over)", () => {
+    assert.equal(formAudience("team", { access: member, presetList: false, teams: 0 }), "list");
+    assert.equal(formAudience("team", { access: person, presetList: false, teams: 0 }), "people");
+  });
+
+  it("keeps the team seat on its Teams", () => {
+    assert.equal(formAudience(null, { access: sendAccess([]), presetList: false, teams: 0, teamSeat: true }), "team");
+    assert.equal(formAudience("people", { access: sendAccess([]), presetList: false, teams: 1, teamSeat: true }), "team");
   });
 });
 

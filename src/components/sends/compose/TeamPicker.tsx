@@ -10,6 +10,7 @@
 import { useId, type ReactNode } from 'react';
 import { COMMERCIAL_STATEMENT } from '@/lib/send-form/purpose';
 import {
+  TEAM_ADDRESSES_NOTE,
   TEAM_PURPOSE_NOTE,
   TEAM_PURPOSE_TEXT,
   coveredTeams,
@@ -126,11 +127,14 @@ export function TeamPurpose({
   onCommercialAbsent,
   problem,
   disabled,
+  addressesNote = true,
 }: {
   commercialAbsent: boolean;
   onCommercialAbsent: (checked: boolean) => void;
   problem: string | null;
   disabled: boolean;
+  /** Say the sender sees no address: not to one who reads lists, who does. */
+  addressesNote?: boolean;
 }): ReactNode {
   return (
     <div className="space-y-3">
@@ -138,7 +142,7 @@ export function TeamPurpose({
         <span className="text-xs text-subtle-foreground">Amaç: </span>
         {TEAM_PURPOSE_TEXT}
       </p>
-      <p className="text-xs text-subtle-foreground">{TEAM_PURPOSE_NOTE}</p>
+      <p className="text-xs text-subtle-foreground">{addressesNote ? `${TEAM_PURPOSE_NOTE} ${TEAM_ADDRESSES_NOTE}` : TEAM_PURPOSE_NOTE}</p>
       <label className="flex cursor-pointer items-start gap-2 text-sm text-foreground">
         <input
           type="checkbox"

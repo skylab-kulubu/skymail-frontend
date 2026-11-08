@@ -330,7 +330,15 @@ export function composePrefill(
     lists,
     access,
     teams = [],
-  }: { templates: readonly MailTemplate[]; lists: readonly ListRow[]; access: SendAccess; teams?: readonly TeamAudience[] },
+    teamsUnavailable = false,
+  }: {
+    templates: readonly MailTemplate[];
+    lists: readonly ListRow[];
+    access: SendAccess;
+    teams?: readonly TeamAudience[];
+    /** The Teams could not be read now (core did not answer): not the same as leading none. */
+    teamsUnavailable?: boolean;
+  },
 ): ComposePrefill {
   const notes: string[] = [];
   const template = templates.find((candidate) => candidate.id === approval.template.id) ?? null;
@@ -343,12 +351,19 @@ export function composePrefill(
   const formSource = audienceFormSource(approval.audience);
   const asked = approval.team_ids ?? [];
   if (asked.length > 0) {
-    // A Team request stays one: the Teams the viewer still leads are picked, the others said.
+    // A Team request stays one: the Teams the viewer still leads are picked, the others said. With no
+    // Team to pick at all the form falls back to its own start (formAudience), and says why.
     audience = "team";
     const led = new Set(teams.map((team) => team.id.toLowerCase()));
     teamIds = teams.filter((team) => asked.some((id) => id.toLowerCase() === team.id.toLowerCase())).map((team) => team.id);
     const lost = asked.filter((id) => !led.has(id.toLowerCase())).length;
-    if (lost > 0) {
+    if (teams.length === 0) {
+      notes.push(
+        teamsUnavailable
+          ? "İstek ekiplere gidiyordu, ama ekiplerin şu an okunamadı. Biraz sonra yeniden dene ya da başka bir kitle seç."
+          : "İstek ekiplere gidiyordu, ama şu an gönderebileceğin bir ekip yok. Başka bir kitle seç.",
+      );
+    } else if (lost > 0) {
       notes.push(
         teamIds.length === 0
           ? "İsteğin ekiplerinin artık lideri görünmüyorsun. Bir ekip seç."

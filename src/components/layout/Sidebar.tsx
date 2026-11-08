@@ -37,6 +37,7 @@ import { useApiLoad } from '@/lib/api/react';
 import { signOutOfKeycloak } from '@/lib/auth/actions';
 import { displayPersonName } from '@/lib/chrome-role';
 import { clubConsoles } from '@/lib/club-consoles';
+import { TEAM_SEAT_SEND_LABEL, TEAM_SEAT_SEND_PATH } from '@/lib/chrome-breadcrumbs';
 import { APPROVAL_LIST_PATH, pendingCount } from '@/lib/mail-approvals/approvals';
 import { onApprovalsChanged } from '@/lib/mail-approvals/changes';
 
@@ -49,8 +50,6 @@ const NAV_ICON = {
   '/mail-approvals': ClipboardCheck,
   '/suppressions': Ban,
 } as const;
-
-export const TEAM_SEAT_SEND = 'Ekibime gönder';
 
 /** How many requests wait for an approver; null for anyone else, or while it is not known. */
 function usePendingApprovals(approver: boolean): number | null {
@@ -105,7 +104,7 @@ export function Sidebar() {
   const { roles, user, config, teamSeat } = useConsole();
   // A Leader without skymail:access: the send form is "Ekibime gönder", their Teams only.
   const items = visibleNavigation(roles, { teamSeat: teamSeat !== null }).map((item) =>
-    teamSeat !== null && item.href === '/mail-tasks/create' ? { ...item, label: TEAM_SEAT_SEND } : item,
+    teamSeat !== null && item.href === TEAM_SEAT_SEND_PATH ? { ...item, label: TEAM_SEAT_SEND_LABEL } : item,
   );
   const activeHref = activeNavHref(pathname, items);
   const pendingApprovals = usePendingApprovals(isApprover(roles));

@@ -34,6 +34,7 @@ import type { ListRow } from '@/lib/mailing-lists';
 import { sendAccess } from '@/lib/send-form/access';
 import { fetchSendableLists, fetchSendableTemplates, freeTemplate } from '@/lib/send-form/send';
 import { fetchFreeTemplate, fetchTeamAudiences, teamsOf } from '@/lib/send-form/teams';
+import { TEAM_SEAT_SEND_LABEL } from '@/lib/chrome-breadcrumbs';
 import type { MailTemplate } from '@/lib/templates';
 import { formsHandoffMatches, formsRecipients, formsSourceHandoff, parseFormsHandoff, type FormsRecipients } from '@/lib/forms-handoff';
 import { audienceFormSource, fetchFormSource, type PreparedFormSource } from '@/lib/form-mail-source';
@@ -53,6 +54,10 @@ export function SendForm() {
   const from = params.get('from_approval');
   const { user } = useConsole();
   const seat = useTeamSeat();
+  // The tab says what the team seat's form is; the page's metadata names the send form for everyone.
+  useEffect(() => {
+    if (seat) document.title = `${TEAM_SEAT_SEND_LABEL} · İletişim`;
+  }, [seat]);
   if (seat) return <ComposeCatalog from={from ? { kind: 'copy', id: from } : null} />;
   const handoff = params.has('forms_handoff') || params.get('source') === 'forms';
   // "Haberden gönder" (duyuru-haber 08): ?source=news&slug=<slug>.
@@ -175,22 +180,28 @@ function ComposeCatalog({ from, forms, formSource }: { from: From | null; forms?
   const { roles, user } = useConsole();
   const seat = useTeamSeat();
   const access = sendAccess(roles);
-  // The Teams the viewer leads (ekip-postasi 05), read beside the templates; the team seat sends free.basic only.
+  // The team seat sends free.basic only.
   const catalog = useApiLoad(
     async (api, signal) => {
-      const [templates, lists, approval, teams] = await Promise.all([
+      const [templates, lists, approval] = await Promise.all([
         seat
           ? fetchFreeTemplate(api, signal).then((free): MailTemplate[] => (free ? [free] : []))
           : fetchSendableTemplates(api, signal),
         access.list ? fetchSendableLists(api, signal) : Promise.resolve<ListRow[]>([]),
         from ? fetchApproval(api, from.id, signal) : Promise.resolve(null),
-        fetchTeamAudiences(api, signal),
       ]);
-      return { templates, lists, approval, teams };
+      return { templates, lists, approval };
     },
     `${seat ? 'seat' : access.list ? 'templates+lists' : 'templates'}:${from?.kind ?? ''}:${from?.id ?? ''}`,
   );
-  if (catalog.status === 'loading') return <StateCard loading title="Template'ler ve listeler yükleniyor" />;
+  // The Teams the viewer leads (ekip-postasi 05), on their own: the form does not wait for them (core may be slow),
+  // except where it has nothing without them — the team seat, and a Team request filled in again.
+  const teamsLoad = useApiLoad((api, signal) => fetchTeamAudiences(api, signal), `team-audiences:${user.sub ?? ''}`);
+  const teamsAnswer = teamsLoad.status === 'success' ? teamsLoad.data : null;
+  const teamRequest = catalog.status === 'success' && (catalog.data.approval?.team_ids?.length ?? 0) > 0;
+  if (catalog.status === 'loading' || ((seat || teamRequest) && teamsLoad.status === 'loading')) {
+    return <StateCard loading title="Template'ler ve listeler yükleniyor" />;
+  }
   if (catalog.status === 'error') {
     if (from && catalog.error.status === 404) {
       return (
@@ -211,8 +222,8 @@ function ComposeCatalog({ from, forms, formSource }: { from: From | null; forms?
   }
 
   const { templates, lists, approval } = catalog.data;
-  const teams = teamsOf(catalog.data.teams);
-  const teamsUnavailable = catalog.data.teams.status === 'unavailable' ? catalog.data.teams.message : null;
+  const teams = teamsAnswer ? teamsOf(teamsAnswer) : [];
+  const teamsUnavailable = teamsAnswer?.status === 'unavailable' ? teamsAnswer.message : null;
   if (seat && teams.length === 0) {
     return (
       <StateCard
@@ -221,7 +232,7 @@ function ComposeCatalog({ from, forms, formSource }: { from: From | null; forms?
         title={teamsUnavailable ? 'Ekiplerin okunamadı' : 'Gönderebileceğin bir ekip yok'}
         description={teamsUnavailable ?? 'Şu an lideri olduğun bir ekip görünmüyor.'}
       >
-        <Button variant="outline" onClick={() => void catalog.reload()}>
+        <Button variant="outline" onClick={() => void teamsLoad.reload()}>
           Tekrar dene
         </Button>
       </StateCard>
@@ -230,7 +241,7 @@ function ComposeCatalog({ from, forms, formSource }: { from: From | null; forms?
   const team = {
     teams,
     teamSeat: seat,
-    onTeamsRefused: () => void catalog.reload(),
+    onTeamsRefused: () => void teamsLoad.reload(),
     // Said only to one who cannot pick a list: a Leader likely; an operator is not told every time core is slow.
     teamsUnavailable: access.list ? null : teamsUnavailable,
   };
@@ -279,7 +290,7 @@ function ComposeCatalog({ from, forms, formSource }: { from: From | null; forms?
   }
 
   const source = from.kind === 'resubmit' ? resubmission(approval) : approval;
-  const prefill = composePrefill(source, { templates, lists, access, teams });
+  const prefill = composePrefill(source, { templates, lists, access, teams, teamsUnavailable: teamsUnavailable !== null });
   return (
     <Compose
       access={access}

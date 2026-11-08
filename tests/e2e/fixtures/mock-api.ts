@@ -806,6 +806,9 @@ export class MockSkymail {
       return this.approvalRoute(method, path, body, query, personOf(profile), can);
     }
 
+    // Ekip postası (skymail-backend #128): off unless a test turns it on, as SKYMAIL_TEAM_SEND is.
+    if (method === "GET" && path === "/me/team_audiences") return refuse(404, "team_mail.off");
+
     const templateMatch = /^\/templates\/([^/]+)$/.exec(path);
     const requiredMatch = /^\/templates\/([^/]+)\/required-variables(?:\/([^/]+))?$/.exec(path);
     const versionMatch = /^\/templates\/([^/]+)\/versions\/([^/]+)(?:\/(publish|discard|restore))?$/.exec(path);

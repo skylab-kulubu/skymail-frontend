@@ -150,6 +150,8 @@ export function trackingAsked({
  */
 export function untrackedCount(plan: SendPlan, list: Pick<ListRow, "external"> | null, size: number | null): number | null {
   if (plan.kind === "list") return list?.external ? 0 : size;
+  // A Team's members are Keycloak accounts, as a group's are.
+  if (plan.kind === "team") return 0;
   return null;
 }
 

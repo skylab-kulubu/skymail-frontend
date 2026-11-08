@@ -84,6 +84,22 @@ export function approvalNote(
 }
 
 /**
+ * The audience the form shows: the one the sender (or the request the form
+ * was filled from) chose, else where it starts (defaultAudience). Teams with
+ * no Team to pick — the switch off, core not answering, the leadership over —
+ * fall back there too, so the form never sits on an empty Ekibim; the team
+ * seat has nothing else and stays on its Teams.
+ */
+export function formAudience<A extends "list" | "people" | "form" | "team">(
+  chosen: A | null,
+  { access, presetList, teams, teamSeat = false }: { access: SendAccess; presetList: boolean; teams: number; teamSeat?: boolean },
+): A | "list" | "people" | "team" {
+  if (teamSeat) return "team";
+  if (chosen === null || (chosen === "team" && teams === 0)) return defaultAudience(access, { presetList, teams: teams > 0 });
+  return chosen;
+}
+
+/**
  * The audience the form starts on: a list a link names (`presetList`) when
  * the viewer can pick one; else the Teams they lead (`teams`); else one they send to at once — a list with
  * `mails:write`, people with `mails:send` — so the form's main action is a

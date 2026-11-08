@@ -47,7 +47,7 @@ describe("a refused approval action", () => {
   });
 
   it("names the missing role, or who alone may do it", () => {
-    assert.equal(approvalRefusal(refusal(403, "server.forbidden"), "approve").text, "Bu işlem için skymail:mails:approve rolü gerekiyor.");
+    assert.equal(approvalRefusal(refusal(403, "server.forbidden"), "approve").text, "Bu işlem için onaycı yetkin yok.");
     assert.equal(approvalRefusal(refusal(403, "mail_approval.not_submitter"), "accept").text, "Bu işlemi yalnız isteği sunan yapabilir.");
     assert.equal(approvalRefusal(refusal(404, "server.not_found"), "approve").text, "İstek bulunamadı: yok ya da görme yetkin yok.");
   });
@@ -122,16 +122,21 @@ describe("a refused approval action", () => {
 
 describe("a refused submission", () => {
   // The screens already ask for templates:read (and lists:read to pick a list); the API holds the same rule (ticket 21).
-  it("names the roles the API says are missing", () => {
+  it("says what the missing roles keep from the viewer, in plain words without a role name", () => {
     const forbidden = (roles: string[]) => refusal(403, "server.forbidden", { missing_roles: roles });
     assert.deepEqual(approvalRefusal(forbidden(["skymail:templates:read"]), "submit"), {
-      text: "Onaya sunmak için skymail:templates:read rolü gerekiyor.",
+      text: "Bu hesap Mail template okuyamadığı için onaya sunamaz. Erişime ihtiyacın varsa kulüp yönetimine başvur.",
       reload: false,
     });
     assert.equal(
       approvalRefusal(forbidden(["skymail:templates:read", "skymail:lists:read"]), "resubmit").text,
-      "Onaya sunmak için skymail:templates:read ve skymail:lists:read rolleri gerekiyor.",
+      "Bu hesap Mail template okuyamadığı için onaya sunamaz. Erişime ihtiyacın varsa kulüp yönetimine başvur.",
     );
+    assert.equal(
+      approvalRefusal(forbidden(["skymail:access"]), "submit").text,
+      "Onaya sunma yetkin yok. Erişime ihtiyacın varsa kulüp yönetimine başvur.",
+    );
+    assert.doesNotMatch(approvalRefusal(forbidden(["skymail:access"]), "submit").text, /skymail:/);
     assert.equal(
       approvalRefusal(forbidden(["skymail:lists:read"]), "submit").text,
       "Bu hesap mail listesine onaya sunamaz; kişilere onaya sunabilirsin.",

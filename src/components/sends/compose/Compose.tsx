@@ -24,7 +24,7 @@ import { approvalRequest, type ComposePrefill } from '@/lib/mail-approvals/edit'
 import { refusalNow, withRefusedRows } from '@/lib/mail-approvals/refusals';
 import type { ListRow } from '@/lib/mailing-lists';
 import { SEND_LIST_PATH, formatCount } from '@/lib/sends';
-import { approvalNote, defaultAudience, directSend, type SendAccess } from '@/lib/send-form/access';
+import { approvalNote, directSend, formAudience, type SendAccess } from '@/lib/send-form/access';
 import { fieldValues, variableFields } from '@/lib/send-form/fields';
 import {
   audienceSize,
@@ -61,11 +61,10 @@ import { VariableFields } from './VariableFields';
 import { WhatPart, type What } from './WhatPart';
 import { NavButton } from '@/components/common/NavButton';
 import { TeamPurpose } from './TeamPicker';
+import { TEAM_SEAT_SEND_LABEL } from '@/lib/chrome-breadcrumbs';
 
 export const SEND_FORM_TITLE = 'Yeni gönderim';
 
-/** The form's title for a Leader without skymail:access (ekip-postasi 06). */
-export const TEAM_SEAT_TITLE = 'Ekibime gönder';
 
 const NO_TEAMS: readonly TeamAudience[] = [];
 
@@ -134,14 +133,14 @@ export function Compose({
   const [templateId, setTemplateId] = useState<string | null>(prefill?.templateId ?? null);
   const [values, setValues] = useState<Record<string, string>>(prefill?.values ?? {});
   const [rich, setRich] = useState<Record<string, string>>(prefill?.rich ?? {});
-  const [audience, setAudience] = useState<Audience>(
-    teamSeat ? 'team' : (prefill?.audience ?? defaultAudience(access, { presetList: presetListId !== null, teams: teams.length > 0 })),
-  );
+  // The audience the sender (or the request) chose; until then, and for Teams with none to pick, where the form starts.
+  // The Teams load beside the form: Ekibim becomes the start once they come, unless the sender chose already.
+  const [chosenAudience, setAudience] = useState<Audience | null>(prefill?.audience ?? null);
+  const audience: Audience = formAudience(chosenAudience, { access, presetList: presetListId !== null, teams: teams.length, teamSeat });
   // The Teams picked as the sender picked them; a Sub-team under a picked Team is dropped when the request is made.
-  // One Team is picked for a Leader of one.
-  const [pickedTeams, setPickedTeams] = useState<Set<string>>(
-    () => new Set(prefill?.teamIds ?? (teams.length === 1 ? [teams[0].id] : [])),
-  );
+  // Until the sender picks, one Team is picked for a Leader of one.
+  const [picked, setPickedTeams] = useState<Set<string> | null>(() => (prefill?.teamIds ? new Set(prefill.teamIds) : null));
+  const pickedTeams = useMemo(() => picked ?? new Set(teams.length === 1 ? [teams[0].id] : []), [picked, teams]);
   const [listId, setListId] = useState<string | null>(prefill ? prefill.listId : (preset?.id ?? null));
   const [people, setPeople] = useState<PersonEntry[]>(() =>
     prefill && prefill.people.length > 0 ? prefill.people.map((person) => personEntry(person)) : [personEntry()],
@@ -222,13 +221,15 @@ export function Compose({
   // Teams the API says the viewer does not lead now leave the picker, and the Teams are read again.
   const refusedTeams = submitting.failure?.teamIds;
   const teamsRefused = useRef(onTeamsRefused);
+  const pickedNow = useRef(pickedTeams);
   useEffect(() => {
     teamsRefused.current = onTeamsRefused;
+    pickedNow.current = pickedTeams;
   });
   useEffect(() => {
     if (!refusedTeams || refusedTeams.length === 0) return;
     const gone = new Set(refusedTeams.map((id) => id.toLowerCase()));
-    setPickedTeams((previous) => new Set([...previous].filter((id) => !gone.has(id.toLowerCase()))));
+    setPickedTeams(new Set([...pickedNow.current].filter((id) => !gone.has(id.toLowerCase()))));
     teamsRefused.current?.();
   }, [refusedTeams]);
   // A refused category is said under the picker, whichever action it came from.
@@ -359,7 +360,7 @@ export function Compose({
   return (
     <div ref={rootRef} className="space-y-6">
       <PageHeader
-        title={resubmit ? 'İsteği yeniden sun' : teamSeat ? TEAM_SEAT_TITLE : SEND_FORM_TITLE}
+        title={resubmit ? 'İsteği yeniden sun' : teamSeat ? TEAM_SEAT_SEND_LABEL : SEND_FORM_TITLE}
         description={
           teamSeat
             ? resubmit
@@ -436,6 +437,7 @@ export function Compose({
                 onCommercialAbsent={(checked) => setPurposeChoice((previous) => ({ ...previous, commercialAbsent: checked }))}
                 problem={attempts > 0 ? purposeBlock : null}
                 disabled={busy}
+                addressesNote={!access.list}
               />
             ) : purposeShown ? (
               <PurposePart

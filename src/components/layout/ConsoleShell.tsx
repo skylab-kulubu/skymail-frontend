@@ -37,7 +37,7 @@ export function ConsoleShell({ children, roles, user, config, refreshRoles, team
           // Keeps the collapsed choice people made before the move to skylcn-ui
           storageKey="skylab.mail.sidebar-collapsed"
           sidebar={<Sidebar />}
-          header={<Breadcrumbs items={shellCrumbs(pathname)} />}
+          header={<Breadcrumbs items={shellCrumbs(pathname, { teamSeat: teamSeat !== null })} />}
         >
           <RoleGate>{children}</RoleGate>
         </AppShell>

@@ -382,9 +382,14 @@ describe("the send form filled from a request", () => {
     const one = composePrefill(request, { templates: [FREE], lists: [], access: seat, teams: [team("algo")] });
     assert.deepEqual(one.teamIds, ["algo"]);
     assert.deepEqual(one.notes, ["İsteğin 1 ekibinin artık lideri görünmüyorsun; seçimden çıkarıldı."]);
+    const other = composePrefill(request, { templates: [FREE], lists: [], access: seat, teams: [team("other")] });
+    assert.deepEqual(other.teamIds, []);
+    assert.deepEqual(other.notes, ["İsteğin ekiplerinin artık lideri görünmüyorsun. Bir ekip seç."]);
+    // No Team at all: the form falls back to its start (formAudience); core not answering is said as that.
     const none = composePrefill(request, { templates: [FREE], lists: [], access: seat });
-    assert.deepEqual(none.teamIds, []);
-    assert.deepEqual(none.notes, ["İsteğin ekiplerinin artık lideri görünmüyorsun. Bir ekip seç."]);
+    assert.deepEqual(none.notes, ["İstek ekiplere gidiyordu, ama şu an gönderebileceğin bir ekip yok. Başka bir kitle seç."]);
+    const unread = composePrefill(request, { templates: [FREE], lists: [], access: seat, teamsUnavailable: true });
+    assert.deepEqual(unread.notes, ["İstek ekiplere gidiyordu, ama ekiplerin şu an okunamadı. Biraz sonra yeniden dene ya da başka bir kitle seç."]);
     assert.equal(composePrefill(approval({ team_ids: [] }), { templates: [FREE], lists, access: member }).audience, "list");
   });
 

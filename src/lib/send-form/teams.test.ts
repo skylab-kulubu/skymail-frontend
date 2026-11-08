@@ -61,6 +61,13 @@ describe("the Teams the viewer leads", () => {
     assert.match(answer.status === "unavailable" ? answer.message : "", /liderliğin şu an doğrulanamadı/);
   });
 
+  it("reads any other refusal as none, and a server error or no answer as unavailable", async () => {
+    const refused = scriptedClient(json(400, { code: "validation.error" }));
+    assert.deepEqual(await fetchTeamAudiences(refused.api), { status: "ready", teams: [] });
+    const broken = scriptedClient(json(500, { code: "server.internal_server_error" }));
+    assert.equal((await fetchTeamAudiences(broken.api)).status, "unavailable");
+  });
+
   it("names a Team by its Turkish name, else its code, else its path", () => {
     assert.equal(teamName({ display_name: { tr: "Web Lab" }, code: "WEBLAB", path: "/UYELER/ARGE/WEBLAB" }), "Web Lab");
     assert.equal(teamName({ display_name: null, code: "WEBLAB", path: "/UYELER/ARGE/WEBLAB" }), "WEBLAB");
