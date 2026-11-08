@@ -134,7 +134,7 @@ describe("a refused submission", () => {
     );
     assert.equal(
       approvalRefusal(forbidden(["skymail:lists:read"]), "submit").text,
-      "Bir mail listesine onaya sunmak için skymail:lists:read rolü de gerekiyor; kişilere onaya sunabilirsin.",
+      "Bu hesap mail listesine onaya sunamaz; kişilere onaya sunabilirsin.",
     );
     assert.equal(approvalRefusal(refusal(403, "server.forbidden"), "submit").text, "Bu işlem için yetkin yok.");
   });
@@ -215,7 +215,7 @@ describe("a refused submission", () => {
     assert.deepEqual(refusalNow(beyond, rows), { text: "SkyMail bazı adresleri kabul etmedi.", rows: null });
     const forbidden = submissionRefusal(refusal(403, "server.forbidden", { missing_roles: ["skymail:lists:read"] }), "resubmit", rows);
     assert.deepEqual(refusalNow(forbidden, []), {
-      text: "Bir mail listesine onaya sunmak için skymail:lists:read rolü de gerekiyor; kişilere onaya sunabilirsin.",
+      text: "Bu hesap mail listesine onaya sunamaz; kişilere onaya sunabilirsin.",
       rows: null,
     });
     assert.equal(submissionRefusal(new ApiError(0, "network"), "submit", rows).reload, false);

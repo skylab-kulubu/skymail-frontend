@@ -39,10 +39,13 @@ export type NavItem = Readonly<{
  * `/mail-tasks/create`; the approval mails to `/mail-approvals/show/:id`.
  * The mail approvals need nothing beyond access: anyone may submit, and the
  * API lists each viewer what they may see — an approver everyone's, anyone
- * else their own.
+ * else their own. Yeni gönderim is the send form, for whoever may compose
+ * one (`templates:read`, send-form/access.ts): a team leader holds only that
+ * and access, and has no send list to reach it from.
  */
 export const NAVIGATION: readonly NavItem[] = [
   { href: "/", label: "Ana sayfa" },
+  { href: "/mail-tasks/create", label: "Yeni gönderim", requires: ROLE.templatesRead },
   { href: "/templates", label: "Mail template'ler", requires: ROLE.templatesRead },
   { href: "/mailing-lists", label: "Mail listeleri", requires: ROLE.listsRead },
   { href: "/mail-tasks", label: "Gönderimler", requires: ROLE.mailsRead },
@@ -50,7 +53,7 @@ export const NAVIGATION: readonly NavItem[] = [
   { href: "/suppressions", label: "Bastırma listesi", requires: [ROLE.suppressionsManage, ROLE.unsubscribesReactivate] },
 ];
 
-export type SectionHref = "/" | "/templates" | "/mailing-lists" | "/mail-tasks" | "/mail-approvals" | "/suppressions";
+export type SectionHref = "/" | "/mail-tasks/create" | "/templates" | "/mailing-lists" | "/mail-tasks" | "/mail-approvals" | "/suppressions";
 
 /** A section's label, for the menu, the breadcrumbs, the tab title and the page header. */
 export function sectionLabel(href: SectionHref): string {
@@ -76,6 +79,31 @@ function sectionRoles(item: NavItem): readonly Role[] {
 export function visibleNavigation(roles: readonly string[]): NavItem[] {
   if (!hasAccess(roles)) return [];
   return NAVIGATION.filter((item) => hasAnyRole(roles, sectionRoles(item)));
+}
+
+/**
+ * The menu item the address sits under: the most specific one, so the send
+ * form lights Yeni gönderim rather than Gönderimler as well. The home screen
+ * only at `/`; none for an address no item covers.
+ */
+export function activeNavHref(pathname: string, items: readonly NavItem[]): string | null {
+  let active: string | null = null;
+  for (const { href } of items) {
+    const under = href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
+    if (under && (active === null || href.length > active.length)) active = href;
+  }
+  return active;
+}
+
+/**
+ * What the home screen shows: the send summary to one who reads the send
+ * list (`mails:read`); to one who may compose a send but not read the list —
+ * a team leader — a way to a new send and their own requests; and that there
+ * is nothing here only to one who can do neither.
+ */
+export function homeView(roles: readonly string[]): "summary" | "composer" | "none" {
+  if (hasRole(roles, ROLE.mailsRead)) return "summary";
+  return hasRole(roles, ROLE.templatesRead) ? "composer" : "none";
 }
 
 /** Whether the viewer decides sends submitted for approval (Mail onayı). */

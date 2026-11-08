@@ -29,10 +29,10 @@ import {
   useTheme,
   type ThemePreference,
 } from '@skylab-kulubu/skylcn-ui';
-import { Ban, ChevronRight, ClipboardCheck, FileText, Home, List, LogOut, Palette, Send, UserRound } from 'lucide-react';
+import { Ban, ChevronRight, ClipboardCheck, FileText, Home, List, LogOut, Palette, Send, SquarePen, UserRound } from 'lucide-react';
 import { DeveloperCredit } from '@/components/auth/DeveloperCredit';
 import { useConsole } from '@/components/layout/ConsoleContext';
-import { isApprover, navLabel, visibleNavigation } from '@/lib/access';
+import { activeNavHref, isApprover, navLabel, visibleNavigation } from '@/lib/access';
 import { useApiLoad } from '@/lib/api/react';
 import { signOutOfKeycloak } from '@/lib/auth/actions';
 import { displayPersonName } from '@/lib/chrome-role';
@@ -42,6 +42,7 @@ import { onApprovalsChanged } from '@/lib/mail-approvals/changes';
 
 const NAV_ICON = {
   '/': Home,
+  '/mail-tasks/create': SquarePen,
   '/templates': FileText,
   '/mailing-lists': List,
   '/mail-tasks': Send,
@@ -58,11 +59,6 @@ function usePendingApprovals(approver: boolean): number | null {
   const { reload } = count;
   useEffect(() => (approver ? onApprovalsChanged(() => void reload()) : undefined), [approver, reload]);
   return count.status === 'success' ? count.data : null;
-}
-
-function isActive(pathname: string, href: string): boolean {
-  if (href === '/') return pathname === '/';
-  return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 /** The count after Mail onayları; screen readers hear "(n bekleyen)" with the link's name. */
@@ -106,6 +102,7 @@ export function Sidebar() {
   const pathname = usePathname() || '/';
   const { roles, user, config } = useConsole();
   const items = visibleNavigation(roles);
+  const activeHref = activeNavHref(pathname, items);
   const pendingApprovals = usePendingApprovals(isApprover(roles));
   const { collapsed } = useSidebar();
   const fullName = user.name ? displayPersonName(user.name) : 'Kullanıcı';
@@ -124,7 +121,7 @@ export function Sidebar() {
                 href={item.href}
                 label={navLabel(item.label, waiting, collapsed)}
                 icon={NAV_ICON[item.href as keyof typeof NAV_ICON] ?? ChevronRight}
-                active={isActive(pathname, item.href)}
+                active={item.href === activeHref}
                 badge={waiting > 0 ? <PendingBadge count={waiting} /> : undefined}
               />
             );

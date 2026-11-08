@@ -87,7 +87,7 @@ test("a member who sends nothing submits from the send form, held to the Require
 
   await page.goto(`/mail-tasks/create?mail_list_id=${gecekodu}`);
   await expect(listRadio(page, "GECEKODU katılımcıları")).toBeChecked();
-  await expect(page.getByText("Bu hesap bir mail listesine doğrudan gönderemez (skymail:mails:write rolü gerekiyor)")).toBeVisible();
+  await expect(page.getByText("Mail listesine doğrudan gönderme yetkin yok")).toBeVisible();
   await expect(page.getByRole("button", { name: "Gönder…", exact: true })).toHaveCount(0);
 
   // A Required variable left empty keeps it from going for approval, as it would a send.
@@ -380,6 +380,21 @@ test("a request to one person reads as one, and approving it opens one send", as
   await expect(dialog(page, "Onayla ve gönder")).toContainText("Ali Can <ali@ornek.com>");
   await dialog(page, "Onayla ve gönder").getByRole("button", { name: "Onayla ve gönder" }).click();
   await expect(decision(page).getByRole("link", { name: "Gönderimi gör" })).toHaveAttribute("href", /\/mail-tasks\/show\/b1c2d3e4-/);
+});
+
+// A team leader composes and submits for approval but does not read the
+// send list: the home screen leads to a new send and lists their requests.
+test("one who may compose but not read the sends finds a new send and their own requests at home", async ({ page, skymail, signIn }) => {
+  await signIn("member");
+  submitted(skymail);
+
+  await page.goto("/");
+  await expect(page.getByText("Bu sayfayı görme yetkin yok")).toHaveCount(0);
+  await expect(menu(page).getByRole("link", { name: "Yeni gönderim" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Onaya sunduklarım" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Serbest Gönderim" }).first()).toBeVisible();
+  await page.getByRole("button", { name: "Yeni gönderim" }).click();
+  await expect(page).toHaveURL("/mail-tasks/create");
 });
 
 test("on the icon rail Mail onayları still says how many requests wait", async ({ page, skymail, signIn }) => {

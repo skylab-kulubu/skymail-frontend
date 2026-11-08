@@ -236,6 +236,11 @@ export function fetchApprovalPage(
   });
 }
 
+/** The viewer's own latest `count` requests, in the list's order: the home screen of one who does not read the send list. */
+export function fetchOwnApprovals(api: ApiClient, count: number, signal?: AbortSignal): Promise<ApiPage<ApprovalItem>> {
+  return api.getPage<ApprovalItem>("/mail_approvals", { query: { mine: true, ...pageRange(1, count) }, signal });
+}
+
 /** How many requests wait for an approver: the pending list's total, null when the answer does not say. */
 export async function pendingCount(api: ApiClient, signal?: AbortSignal): Promise<number | null> {
   const page = await api.getPage<ApprovalItem>("/mail_approvals", { query: { state: "pending", ...pageRange(1, 1) }, signal });

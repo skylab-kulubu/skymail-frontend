@@ -4,13 +4,16 @@
 // days as an area chart and the last five sends, all from one summary call.
 // The layout and the pieces follow SkyForms' dashboard (forms-frontend
 // `src/app/admin/page.js`): stat tiles, a trend section, a recent-items list.
+// One who may not read the sends but may compose one (a team leader) gets
+// ComposerHome instead; the lock only one who can do neither.
 
 import Link from 'next/link';
-import { AlertTriangle, ArrowRight, Send } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { AlertTriangle, ArrowRight, Lock, Send } from 'lucide-react';
 import { Button, Notice, StateCard, StatusDot } from '@skylab-kulubu/skylcn-ui';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { RoleGate } from '@/components/layout/RoleGate';
-import { ROLE, sectionLabel } from '@/lib/access';
+import { useConsole } from '@/components/layout/ConsoleContext';
+import { homeView, sectionLabel } from '@/lib/access';
 import { useApiQuery } from '@/lib/api/react';
 import { bulkHeldText } from '@/lib/send-controls';
 import {
@@ -25,6 +28,7 @@ import {
   type Send as SendRecord,
   type SendSummary,
 } from '@/lib/sends';
+import { ComposerHome } from './ComposerHome';
 import { DailySentChart } from './DailySentChart';
 import { SectionTitle } from './SectionTitle';
 import { SendItem } from './SendItem';
@@ -35,14 +39,45 @@ const DAYS = 30;
 const RECENT = 5;
 
 export function HomeDashboard() {
+  const { roles } = useConsole();
+  // The home screen needs only skymail:access; its summary needs mails:read.
+  const view = homeView(roles);
+  if (view === 'composer') return <ComposerHome />;
   return (
     <div className="space-y-6">
       <PageHeader title={sectionLabel('/')} description="Kulübün gönderdiği mailler bir bakışta." />
-      {/* The home screen needs only skymail:access; its summary needs mails:read. */}
-      <RoleGate role={ROLE.mailsRead}>
-        <Summary />
-      </RoleGate>
+      {view === 'summary' ? <Summary /> : <NothingToDo />}
     </div>
+  );
+}
+
+/**
+ * One who can neither read the sends nor compose one. As RoleGate does, the
+ * token is refreshed once before saying so: a role may have been granted
+ * after it was issued, and the answer then shows the screen it opens.
+ */
+function NothingToDo() {
+  const { confirmRoles } = useConsole();
+  const [confirmed, setConfirmed] = useState(false);
+
+  useEffect(() => {
+    let current = true;
+    void confirmRoles().then(() => {
+      if (current) setConfirmed(true);
+    });
+    return () => {
+      current = false;
+    };
+  }, [confirmRoles]);
+
+  if (!confirmed) return null;
+  return (
+    <StateCard
+      icon={Lock}
+      tone="warning"
+      title="Gönderim yetkin yok"
+      description="Mail hazırlamak ya da onaya sunmak için kulüp yönetimine başvur."
+    />
   );
 }
 

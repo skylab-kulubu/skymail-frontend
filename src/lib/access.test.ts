@@ -5,7 +5,7 @@
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { ROLE, hasAccess, hasAnyRole, isApprover, requiredRolesFor, sectionLabel, visibleNavigation } from "./access";
+import { ROLE, activeNavHref, hasAccess, hasAnyRole, homeView, isApprover, requiredRolesFor, sectionLabel, visibleNavigation } from "./access";
 
 const hrefs = (roles: string[]) => visibleNavigation(roles).map((item) => item.href);
 
@@ -17,7 +17,7 @@ describe("the menu", () => {
   });
 
   it("adds each section for its read role", () => {
-    assert.deepEqual(hrefs(["skymail:access", "skymail:templates:read"]), ["/", "/templates", "/mail-approvals"]);
+    assert.deepEqual(hrefs(["skymail:access", "skymail:templates:read"]), ["/", "/mail-tasks/create", "/templates", "/mail-approvals"]);
     assert.deepEqual(hrefs(["skymail:access", "skymail:lists:read"]), ["/", "/mailing-lists", "/mail-approvals"]);
     assert.deepEqual(hrefs(["skymail:access", "skymail:mails:read"]), ["/", "/mail-tasks", "/mail-approvals"]);
   });
@@ -25,8 +25,16 @@ describe("the menu", () => {
   it("shows every section to someone with every read role, in a fixed order", () => {
     assert.deepEqual(
       hrefs(["skymail:mails:read", "skymail:lists:read", "skymail:templates:read", "skymail:access"]),
-      ["/", "/templates", "/mailing-lists", "/mail-tasks", "/mail-approvals"],
+      ["/", "/mail-tasks/create", "/templates", "/mailing-lists", "/mail-tasks", "/mail-approvals"],
     );
+  });
+
+  // A team leader holds access and templates:read only (ALGOLAB today): the
+  // menu itself leads to the send form, not only the mail approvals' button.
+  it("offers the send form to whoever may compose one, templates:read", () => {
+    assert.ok(hrefs(["skymail:access", "skymail:templates:read"]).includes("/mail-tasks/create"));
+    assert.ok(!hrefs(["skymail:access"]).includes("/mail-tasks/create"));
+    assert.ok(!hrefs(["skymail:access", "skymail:mails:write"]).includes("/mail-tasks/create"));
   });
 
   it("does not count a write role as permission to read the list", () => {
@@ -47,7 +55,7 @@ describe("the menu", () => {
         "skymail:lists:read",
         "skymail:mails:read",
       ]).map((item) => item.label),
-      ["Ana sayfa", "Mail template'ler", "Mail listeleri", "Gönderimler", "Mail onayları"],
+      ["Ana sayfa", "Yeni gönderim", "Mail template'ler", "Mail listeleri", "Gönderimler", "Mail onayları"],
     );
     assert.equal(sectionLabel("/mailing-lists"), "Mail listeleri");
     assert.equal(sectionLabel("/mail-approvals"), "Mail onayları");
@@ -88,6 +96,42 @@ describe("a page opened by its address", () => {
   it("needs nothing beyond access on the home screen or an unknown address", () => {
     assert.deepEqual(requiredRolesFor("/"), []);
     assert.deepEqual(requiredRolesFor("/templatesx"), []);
+  });
+});
+
+describe("the menu's current section", () => {
+  const all = visibleNavigation([ROLE.access, ROLE.templatesRead, ROLE.listsRead, ROLE.mailsRead]);
+
+  it("is the most specific section the address sits under", () => {
+    assert.equal(activeNavHref("/mail-tasks/create", all), "/mail-tasks/create");
+    assert.equal(activeNavHref("/mail-tasks", all), "/mail-tasks");
+    assert.equal(activeNavHref("/mail-tasks/show/abc", all), "/mail-tasks");
+    assert.equal(activeNavHref("/templates/edit/1", all), "/templates");
+  });
+
+  it("is the home screen only at its own address, and none for an unknown one", () => {
+    assert.equal(activeNavHref("/", all), "/");
+    assert.equal(activeNavHref("/nowhere", all), null);
+    assert.equal(activeNavHref("/mail-tasksx", all), null);
+  });
+});
+
+describe("the home screen", () => {
+  it("shows the send summary to one who reads the send list", () => {
+    assert.equal(homeView([ROLE.access, ROLE.mailsRead]), "summary");
+    assert.equal(homeView([ROLE.access, ROLE.mailsRead, ROLE.templatesRead]), "summary");
+  });
+
+  // A team leader (access + templates:read) composes and submits for
+  // approval: their home leads there and lists their own requests.
+  it("leads one who may compose but not read the send list to a new send and their own requests", () => {
+    assert.equal(homeView([ROLE.access, ROLE.templatesRead]), "composer");
+    assert.equal(homeView([ROLE.access, ROLE.templatesRead, ROLE.mailsSend]), "composer");
+  });
+
+  it("says there is nothing to do only to one who can neither read the sends nor compose", () => {
+    assert.equal(homeView([ROLE.access]), "none");
+    assert.equal(homeView([ROLE.access, ROLE.listsRead]), "none");
   });
 });
 

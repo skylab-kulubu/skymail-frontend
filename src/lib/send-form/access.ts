@@ -36,8 +36,8 @@ export function sendAccess(roles: readonly string[]): SendAccess {
     !templates || list
       ? null
       : sendsPeople
-        ? `Mail listelerini görmek için ${ROLE.listsRead} rolü gerekiyor; bu hesapla kişilere gönderebilirsin.`
-        : `Mail listelerini görmek için ${ROLE.listsRead} rolü gerekiyor; bu hesapla kişilere gönderimi onaya sunabilirsin.`;
+        ? `Bu hesap mail listelerini göremez; kişilere gönderebilirsin.`
+        : `Bu hesap mail listelerini göremez; kişilere gönderimi onaya sunabilirsin.`;
   return {
     list,
     people: templates,
@@ -69,14 +69,14 @@ export function approvalNote(
   audience: "list" | "people" | "form",
   { resubmit = false, legacyForms = false }: { resubmit?: boolean; legacyForms?: boolean } = {},
 ): string | null {
-  if (audience === "form") return resubmit || directSend(access, audience) ? null : `Bu hesap Forms yanıtlayanlarına doğrudan gönderemez (${ROLE.mailsWrite} rolü gerekiyor): sabit Forms alıcıları onaya sunulur; bir onaycı onaylayınca gönderilir.`;
+  if (audience === "form") return resubmit || directSend(access, audience) ? null : `Forms yanıtlayanlarına doğrudan gönderme yetkin yok: sabit Forms alıcıları onaya sunulur; bir onaycı onaylayınca gönderilir.`;
   if (resubmit) return audience === "people" ? PEOPLE_LIMIT_NOTE : null;
   if (directSend(access, audience, { legacyForms })) return null;
   if (audience === "people" && legacyForms)
-    return `Bu hesap Forms yanıtlayanlarına doğrudan gönderemez (${ROLE.mailsWrite} rolü gerekiyor): gönderim onaya sunulur, bir onaycı onaylayınca her kişiye ayrı gider. ${PEOPLE_LIMIT_NOTE}`;
+    return `Forms yanıtlayanlarına doğrudan gönderme yetkin yok: gönderim onaya sunulur, bir onaycı onaylayınca her kişiye ayrı gider. ${PEOPLE_LIMIT_NOTE}`;
   return audience === "list"
-    ? `Bu hesap bir mail listesine doğrudan gönderemez (${ROLE.mailsWrite} rolü gerekiyor): gönderim onaya sunulur, bir onaycı onaylayınca gider.`
-    : `Bu hesap mail gönderemez (${ROLE.mailsSend} ya da ${ROLE.mailsWrite} rolü gerekiyor): gönderim onaya sunulur, bir onaycı onaylayınca her kişiye ayrı gider. ${PEOPLE_LIMIT_NOTE}`;
+    ? `Mail listesine doğrudan gönderme yetkin yok: gönderim onaya sunulur, bir onaycı onaylayınca gider.`
+    : `Doğrudan gönderme yetkin yok: gönderim onaya sunulur, bir onaycı onaylayınca her kişiye ayrı gider. ${PEOPLE_LIMIT_NOTE}`;
 }
 
 /**
