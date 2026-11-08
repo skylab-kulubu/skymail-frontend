@@ -10,7 +10,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { ROLE } from "../access";
-import { approvalNote, defaultAudience, directSend, sendAccess } from "./access";
+import { approvalNote, defaultAudience, directSend, formAudience, pinAudience, sendAccess } from "./access";
 
 const roles = (...granted: string[]) => [ROLE.access, ...granted];
 
@@ -143,3 +143,65 @@ describe("the audience the form starts on", () => {
     assert.equal(defaultAudience(sendAccess(roles(ROLE.templatesRead, ROLE.mailsSend)), { presetList: true }), "people");
   });
 });
+
+// Ekip postası (ekip-postasi 05): a Leader's Teams are the form's first audience, and always go for approval.
+describe("the Team audience", () => {
+  it("is where the form starts for a Leader, unless a link names a list they can pick", () => {
+    assert.equal(defaultAudience(sendAccess(roles(ROLE.templatesRead)), { presetList: false, teams: true }), "team");
+    assert.equal(defaultAudience(sendAccess(roles(ROLE.templatesRead, ROLE.listsRead, ROLE.mailsWrite)), { presetList: false, teams: true }), "team");
+    assert.equal(defaultAudience(sendAccess(roles(ROLE.templatesRead, ROLE.listsRead)), { presetList: true, teams: true }), "list");
+    assert.equal(defaultAudience(sendAccess(roles(ROLE.templatesRead)), { presetList: true, teams: true }), "team");
+  });
+
+  it("is never sent at once, and says so", () => {
+    const writer = sendAccess(roles(ROLE.templatesRead, ROLE.listsRead, ROLE.mailsWrite, ROLE.mailsSend));
+    assert.equal(directSend(writer, "team"), false);
+    assert.match(approvalNote(writer, "team") ?? "", /onaya sunulur/);
+    assert.match(approvalNote(writer, "team", { resubmit: true }) ?? "", /onaya sunulur/);
+  });
+});
+
+// Inceleme takibi (#162): a Team audience with no Team to pick never holds the form.
+describe("the audience the form shows", () => {
+  const member = sendAccess(roles(ROLE.templatesRead, ROLE.listsRead));
+  const person = sendAccess(roles(ROLE.templatesRead));
+
+  it("is the one chosen, else the start, which is Ekibim once Teams come", () => {
+    assert.equal(formAudience(null, { access: member, presetList: false, teams: 0 }), "list");
+    assert.equal(formAudience(null, { access: member, presetList: false, teams: 2 }), "team");
+    assert.equal(formAudience("people", { access: member, presetList: false, teams: 2 }), "people");
+    assert.equal(formAudience("team", { access: member, presetList: false, teams: 2 }), "team");
+  });
+
+  it("falls back from Teams to the start when there is no Team (switch off, core not answering, leadership over)", () => {
+    assert.equal(formAudience("team", { access: member, presetList: false, teams: 0 }), "list");
+    assert.equal(formAudience("team", { access: person, presetList: false, teams: 0 }), "people");
+  });
+
+  it("keeps the team seat on its Teams", () => {
+    assert.equal(formAudience(null, { access: sendAccess([]), presetList: false, teams: 0, teamSeat: true }), "team");
+    assert.equal(formAudience("people", { access: sendAccess([]), presetList: false, teams: 1, teamSeat: true }), "team");
+  });
+});
+
+// Son bakış (#162): the Teams load beside the form; what the sender already chose stays.
+describe("the audience once the sender acts", () => {
+  const member = sendAccess(roles(ROLE.templatesRead, ROLE.listsRead));
+
+  it("stays on the list or people the sender worked on when the Teams come later", () => {
+    const shownBefore = formAudience(null, { access: member, presetList: false, teams: 0 });
+    assert.equal(shownBefore, "list");
+    const pinned = pinAudience(null, shownBefore);
+    assert.equal(formAudience(pinned, { access: member, presetList: false, teams: 2 }), "list");
+    assert.equal(formAudience(pinAudience(null, "people"), { access: member, presetList: false, teams: 2 }), "people");
+  });
+
+  it("moves to Ekibim when the Teams come only while the sender has done nothing", () => {
+    assert.equal(formAudience(null, { access: member, presetList: false, teams: 2 }), "team");
+  });
+
+  it("keeps an audience already chosen", () => {
+    assert.equal(pinAudience("team", "list"), "team");
+  });
+});
+

@@ -13,7 +13,7 @@ import { AlertTriangle, ArrowRight, Send } from 'lucide-react';
 import { Button, Notice, StateCard, StatusDot } from '@skylab-kulubu/skylcn-ui';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { useConsole } from '@/components/layout/ConsoleContext';
-import { homeScreen, homeView, sectionLabel } from '@/lib/access';
+import { hasAccess, homeScreen, homeView, sectionLabel } from '@/lib/access';
 import { useApiQuery } from '@/lib/api/react';
 import { bulkHeldText } from '@/lib/send-controls';
 import {
@@ -40,11 +40,13 @@ const DAYS = 30;
 const RECENT = 5;
 
 export function HomeDashboard() {
-  const { roles, confirmRoles } = useConsole();
+  const { roles, confirmRoles, teamSeat } = useConsole();
   const [confirmed, setConfirmed] = useState(false);
   // The home screen needs only skymail:access; its summary needs mails:read.
   // One who can do neither has the token refreshed once before the lock.
-  const needsCheck = homeView(roles) === 'none';
+  // A Leader without skymail:access (the team seat) sends to their Teams.
+  const seat = teamSeat !== null && !hasAccess(roles);
+  const needsCheck = !seat && homeView(roles) === 'none';
 
   useEffect(() => {
     if (!needsCheck || confirmed) return;
@@ -58,6 +60,7 @@ export function HomeDashboard() {
   }, [needsCheck, confirmed, confirmRoles]);
 
   const screen = homeScreen(roles, { confirmed });
+  if (seat) return <ComposerHome teamSeat />;
   if (screen === 'composer') return <ComposerHome />;
   return (
     <div className="space-y-6">

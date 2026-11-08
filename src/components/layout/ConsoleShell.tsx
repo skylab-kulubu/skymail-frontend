@@ -15,6 +15,7 @@ import { Sidebar } from './Sidebar';
 import { ApiProvider } from '@/lib/api/react';
 import { shellCrumbs } from '@/lib/chrome-breadcrumbs';
 import type { PublicConfig } from '@/lib/runtime-config';
+import type { TeamAudience } from '@/lib/send-form/teams';
 
 type ConsoleShellProps = Readonly<{
   children: ReactNode;
@@ -23,18 +24,20 @@ type ConsoleShellProps = Readonly<{
   config: PublicConfig;
   /** The refreshRoles server action, from the layout. */
   refreshRoles: RefreshRoles;
+  /** A Leader without skymail:access: their Teams (TeamSeatGate). */
+  teamSeat?: readonly TeamAudience[] | null;
 }>;
 
-export function ConsoleShell({ children, roles, user, config, refreshRoles }: ConsoleShellProps) {
+export function ConsoleShell({ children, roles, user, config, refreshRoles, teamSeat = null }: ConsoleShellProps) {
   const pathname = usePathname() || '/';
   return (
-    <ConsoleProvider roles={roles} user={user} config={config} refreshRoles={refreshRoles}>
+    <ConsoleProvider roles={roles} user={user} config={config} teamSeat={teamSeat} refreshRoles={refreshRoles}>
       <ApiProvider baseUrl={config.apiUrl}>
         <AppShell
           // Keeps the collapsed choice people made before the move to skylcn-ui
           storageKey="skylab.mail.sidebar-collapsed"
           sidebar={<Sidebar />}
-          header={<Breadcrumbs items={shellCrumbs(pathname)} />}
+          header={<Breadcrumbs items={shellCrumbs(pathname, { teamSeat: teamSeat !== null })} />}
         >
           <RoleGate>{children}</RoleGate>
         </AppShell>

@@ -29,6 +29,7 @@ import { peopleProblems, peopleReady, type PeopleCheck, type PersonRow } from ".
 import { formatCount } from "../sends";
 import { bodyVariables, fieldValues, fieldWarnings, usesRecipientName, variableFields, withRecipientName, type FieldInput, type VariableField } from "./fields";
 import { CATEGORY_REFUSALS, PURPOSE_REFUSALS, type PurposeFields } from "./purpose";
+import { teamProblem, type TeamAudience } from "./teams";
 
 /** The Template key of the free-form template a free announcement is sent with. */
 export const FREE_TEMPLATE_KEY = "free.basic";
@@ -57,6 +58,18 @@ export type SingleSendRequest = {
   tracking?: boolean;
 } & Partial<PurposeFields>;
 
+/**
+ * A request for approval to Teams (ekip-postasi 05): the purpose and each
+ * Team's category are the server's; the form says only that it is not
+ * promotion.
+ */
+export type TeamApprovalRequest = {
+  template_id: string;
+  team_ids: string[];
+  body_variables: Record<string, string>;
+  commercial_content_absent: true;
+};
+
 /** The list a send goes to, as the form knows it. */
 export type ChosenList = Pick<ListRow, "id" | "name" | "external">;
 
@@ -67,9 +80,11 @@ export type SendDraft = Readonly<{
   /** The template chosen, or free.basic for a free announcement; null when there is none. */
   template: MailTemplate | null;
   fields: FieldInput;
-  audience: "list" | "people" | "form";
+  audience: "list" | "people" | "form" | "team";
   formSource?: FormSource | null;
   list: ChosenList | null;
+  /** The Teams a Team request goes to (teams.ts requestTeams): covered Sub-teams already left out. */
+  teams?: readonly TeamAudience[];
   people: readonly PersonRow[];
   /** Open and click tracking: true when the form offered its box (tracking.ts trackingOffered) and it is ticked, or while SkyMail tracks every send (trackingAsked). A list or people send asks for it. */
   tracking?: boolean;
@@ -77,12 +92,19 @@ export type SendDraft = Readonly<{
   purpose?: PurposeFields | null;
 }>;
 
-export type SendPlan = { kind: "list"; request: ListSendRequest } | { kind: "people"; requests: SingleSendRequest[] } | { kind: "form"; request: FormSourceSendRequest; source: FormSource };
+export type SendPlan =
+  | { kind: "list"; request: ListSendRequest }
+  | { kind: "people"; requests: SingleSendRequest[] }
+  | { kind: "form"; request: FormSourceSendRequest; source: FormSource }
+  /** Teams go only for approval. */
+  | { kind: "team"; request: TeamApprovalRequest; teams: readonly TeamAudience[] };
 
 /** What keeps a draft from going out, by part of the form. */
 export type SendProblems = Readonly<{
   template: string | null;
   list: string | null;
+  /** Why the Teams cannot go: none picked, or too many. Null unless the audience is Teams. */
+  teams?: string | null;
   /** Null unless the audience is people. */
   people: PeopleCheck | null;
   fields: Readonly<Record<string, string>>;
@@ -127,14 +149,29 @@ export function sendPlan(
   };
 
   const sourceProblem = draft.audience === "form" && !draft.formSource ? "Forms kaynağı kullanılamıyor. Forms'tan yeniden hazırla." : null;
-  if (!template || !variables?.ok || listProblem || sourceProblem || (people && !peopleReady(people))) {
+  const teamsProblem = draft.audience === "team" ? teamProblem(draft.teams ?? []) : null;
+  if (!template || !variables?.ok || listProblem || sourceProblem || teamsProblem || (people && !peopleReady(people))) {
     return {
       ok: false,
-      problems: { template: templateProblem, list: listProblem ?? sourceProblem, people, fields: variables && !variables.ok ? variables.problems : {} },
+      problems: {
+        template: templateProblem,
+        list: listProblem ?? sourceProblem,
+        ...(draft.audience === "team" ? { teams: teamsProblem } : {}),
+        people,
+        fields: variables && !variables.ok ? variables.problems : {},
+      },
       warnings,
     };
   }
   const body_variables = variables.variables;
+  if (draft.audience === "team") {
+    const teams = draft.teams ?? [];
+    return {
+      ok: true,
+      plan: { kind: "team", teams, request: { template_id: template.id, team_ids: teams.map((team) => team.id), body_variables, commercial_content_absent: true } },
+      warnings,
+    };
+  }
   const purpose = draft.purpose ?? {};
   if (draft.audience === "form") return {
     ok: true, plan: { kind: "form", source: draft.formSource!, request: { template_id: template.id, form_source_id: draft.formSource!.id, body_variables, ...purpose } }, warnings,
