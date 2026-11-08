@@ -56,7 +56,7 @@ function forbiddenSubmission(error: ApiError): string {
   const roles = missingRoles(error);
   if (roles.length === 0) return error.message;
   if (roles.length === 1 && roles[0] === ROLE.listsRead) {
-    return `Bir mail listesine onaya sunmak için ${ROLE.listsRead} rolü de gerekiyor; kişilere onaya sunabilirsin.`;
+    return `Bu hesap mail listesine onaya sunamaz; kişilere onaya sunabilirsin.`;
   }
   return `Onaya sunmak için ${roles.join(" ve ")} ${roles.length === 1 ? "rolü" : "rolleri"} gerekiyor.`;
 }

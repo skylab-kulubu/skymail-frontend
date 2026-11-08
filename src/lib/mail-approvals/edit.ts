@@ -280,7 +280,7 @@ export function approvalRequest(plan: SendPlan, { lists }: { lists: boolean }): 
   if (count > APPROVAL_PEOPLE_LIMIT) {
     const crowd = lists
       ? "Daha kalabalık bir gönderim için bir mail listesi seç."
-      : `Daha kalabalık bir gönderim bir mail listesine gider: listeleri görmek için ${ROLE.listsRead} rolü gerekiyor.`;
+      : `Daha kalabalık bir gönderim bir mail listesine gider; bu hesap mail listelerini göremez.`;
     return { ok: false, problem: `Onaya en çok ${APPROVAL_PEOPLE_LIMIT} kişi sunulur; burada ${count} kişi var. ${crowd}` };
   }
   const [first] = plan.requests;
@@ -348,7 +348,7 @@ export function composePrefill(
   } else {
     const name = audienceLabel(approval.audience).name;
     if (!access.list) {
-      notes.push(`İstek “${name}” listesine gidiyordu; bu hesap mail listelerini göremiyor (skymail:lists:read). Bir kişi seç.`);
+      notes.push(`İstek “${name}” listesine gidiyordu; bu hesap mail listelerini göremez. Bir kişi seç.`);
     } else {
       audience = "list";
       listId = lists.find((list) => list.id === approval.audience.mail_list_id)?.id ?? null;

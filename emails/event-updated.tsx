@@ -11,17 +11,33 @@ export const meta: TemplateMeta = {
   contentSensitive: false,
   brand: "skylab",
   trigger:
-    "Etkinliğin saati veya yeri değiştiğinde, bileti olan herkese. NOT: gönderim kodu henüz yazılmadı.",
-  variables: ["EventName", "ChangeSummary", "NewStartsAt", "NewVenue", "EventUrl"],
+    "core-backend, yayındaki ve bitmemiş bir etkinliğin başlangıcı, bitişi ya da yeri değişince, ilk değişiklikten 15 dakika sonra (aradaki değişiklikler tek bildirimde), bileti olan herkese (EVENT_UPDATED_NOTIFICATION=on; docs/event-updated-notification.md). Üyeye bildirim olarak (POST /v1/notifications: kutu + e-posta), konuğa yalnız bu e-posta. Değerler gönderim anındaki etkinliktir; core bugün EventUrl göndermez, düğme boşsa görünmez.",
+  variables: ["EventName", "ChangeSummary", "NewStartsAt", "NewEndsAt", "NewVenue", "EventUrl"],
+  notification: {
+    category: null,
+    required: true,
+    defaultChannels: ["email", "inbox"],
+    lane: "system",
+    // core always sends EventId, EventName, ChangeSummary, NewStartsAt and
+    // NewEndsAt (empty without a time) and NewVenue: the inbox text reads
+    // only those.
+    inbox: {
+      title: `${v("EventName")} etkinliğinde değişiklik var`,
+      summary: `${v("ChangeSummary")} ${ifSet("NewStartsAt")}${v("NewStartsAt")} · ${end}${v("NewVenue")}`,
+      link: `/events/${v("EventId")}`,
+    },
+  },
   sample: {
     EventName: "GECEKODU 2026",
-    ChangeSummary: "Etkinlik bir gün ileri alındı ve salon değişti.",
-    NewStartsAt: "13 Nisan 2026, 10:00",
+    ChangeSummary: "Etkinliğin saati ve yeri değişti.",
+    NewStartsAt: "13.04.2026 10:00",
+    NewEndsAt: "13.04.2026 18:00",
     NewVenue: "YTÜ Davutpaşa Kampüsü, Kongre Merkezi",
     EventUrl: "https://skyl.app/gecekodu",
   },
 };
 
+/** The Event as it is now: every row is today's value, ChangeSummary says which one moved. */
 export default function EventUpdated() {
   return (
     <Shell preview={`${v("EventName")} etkinliğinde değişiklik var.`} brand="skylab" reason={null}>
@@ -38,12 +54,15 @@ export default function EventUpdated() {
 
       <Rows>
         {ifSet("NewStartsAt")}
-        <RowItem label="Yeni başlangıç">{v("NewStartsAt")}</RowItem>
+        <RowItem label="Başlangıç">{v("NewStartsAt")}</RowItem>
+        {end}
+        {ifSet("NewEndsAt")}
+        <RowItem label="Bitiş">{v("NewEndsAt")}</RowItem>
         {end}
         {ifSet("NewVenue")}
-        <RowItem label="Yeni yer">{v("NewVenue")}</RowItem>
-        <RowsEnd />
+        <RowItem label="Yer">{v("NewVenue")}</RowItem>
         {end}
+        <RowsEnd />
       </Rows>
 
       {ifSet("EventUrl")}
