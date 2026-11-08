@@ -17,6 +17,7 @@ import {
   recipientBadges,
   sendTracked,
   seriesHasEvents,
+  trackingPeopleView,
   shareOf,
   skipReasonLabel,
   trackingSeries,
@@ -42,8 +43,16 @@ describe("who sees the recipients one by one", () => {
     assert.equal(mayReadTrackingRecipients([...READER, ROLE.mailsTrackingRead], SOMEONE, { sent_by: SENDER }), true);
   });
 
-  it("the send's own sender sees their own without the role", () => {
+  it("an older backend that does not say: the send's own sender sees their own without the role", () => {
     assert.equal(mayReadTrackingRecipients(READER, SENDER, { sent_by: SENDER }), true);
+    assert.equal(mayReadTrackingRecipients(READER, SENDER, { sent_by: SENDER }, {}), true);
+    assert.equal(mayReadTrackingRecipients(READER, SENDER, { sent_by: SENDER }, null), true);
+  });
+
+  it("the backend decides when it says (recipients_readable): the sender sees counts only by default", () => {
+    assert.equal(mayReadTrackingRecipients(READER, SENDER, { sent_by: SENDER }, { recipients_readable: false }), false);
+    assert.equal(mayReadTrackingRecipients(READER, SENDER, { sent_by: SENDER }, { recipients_readable: true }), true);
+    assert.equal(mayReadTrackingRecipients([...READER, ROLE.mailsTrackingRead], SOMEONE, { sent_by: SENDER }, { recipients_readable: true }), true);
   });
 
   it("anyone else gets the counts only", () => {
@@ -54,6 +63,25 @@ describe("who sees the recipients one by one", () => {
 
   it("the role counts only with skymail:access", () => {
     assert.equal(mayReadTrackingRecipients([ROLE.mailsTrackingRead], SOMEONE, { sent_by: SENDER }), false);
+  });
+});
+
+describe("what the section shows under the counts", () => {
+  const live = { retained: false, withheld: false };
+  it("the recipients to whom the backend gives them", () => {
+    assert.equal(trackingPeopleView(READER, SENDER, { sent_by: SENDER }, { ...live, recipients_readable: true }), "people");
+    assert.equal(trackingPeopleView([...READER, ROLE.mailsTrackingRead], SOMEONE, { sent_by: SENDER }, { ...live, recipients_readable: true }), "people");
+  });
+
+  it("to the sender of their own send without them, the counts-only line", () => {
+    assert.equal(trackingPeopleView(READER, SENDER, { sent_by: SENDER }, { ...live, recipients_readable: false }), "counts_only");
+  });
+
+  it("nothing more to anyone else, after 90 days, or when the counts are withheld", () => {
+    assert.equal(trackingPeopleView(READER, SOMEONE, { sent_by: SENDER }, { ...live, recipients_readable: false }), "none");
+    assert.equal(trackingPeopleView(READER, null, { sent_by: SENDER }, { ...live, recipients_readable: false }), "none");
+    assert.equal(trackingPeopleView(READER, SENDER, { sent_by: SENDER }, { retained: true, recipients_readable: true }), "none");
+    assert.equal(trackingPeopleView(READER, SENDER, { sent_by: SENDER }, { retained: false, withheld: true, recipients_readable: false }), "none");
   });
 });
 
