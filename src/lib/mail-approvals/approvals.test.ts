@@ -20,6 +20,8 @@ import {
   approvalHref,
   approvalListHref,
   approvalPreviewHref,
+  approvalResultFacts,
+  approvalResultNote,
   copyApprovalHref,
   deadlineHint,
   decidedOwnRequest,
@@ -426,5 +428,47 @@ describe("whether a request asks for tracking", () => {
     assert.equal(approvalTracking({ tracking: false, state: "pending", deadline_at: "2026-10-20T12:00:00Z", audience: list }, null, { always: true, now }), null);
     // Not always, as before.
     assert.equal(approvalTracking({ tracking: false, state: "pending", deadline_at: later, audience: list }, ordinary, { now }), "Kapalı");
+  });
+});
+
+describe("an approved request's result", () => {
+  const base = { sent: 1532, skipped: 3, failed: 1, pending: 0, tracking: null, tracking_withheld: false };
+  it("lists sent, skipped and failed, pending only while there are any", () => {
+    assert.deepEqual(approvalResultFacts(base), [
+      { term: "Gönderildi", value: "1.532" },
+      { term: "Atlandı", value: "3" },
+      { term: "Başarısız", value: "1" },
+    ]);
+    assert.deepEqual(approvalResultFacts({ ...base, sent: 0, skipped: 0, failed: 0, pending: 4 })?.map((f) => `${f.term} ${f.value}`), [
+      "Gönderildi 0",
+      "Atlandı 0",
+      "Başarısız 0",
+      "Bekliyor 4",
+    ]);
+    assert.equal(approvalResultNote(base), null);
+  });
+  it("adds the summed opens and clicks when they are given", () => {
+    const facts = approvalResultFacts({ ...base, tracking: { tracked_recipients: 1200, opened: 640, clicked: 85 } });
+    assert.deepEqual(facts?.slice(3), [
+      { term: "Takip edilen", value: "1.200" },
+      { term: "Açılma görülen", value: "640" },
+      { term: "Tıklayan", value: "85" },
+    ]);
+  });
+  it("says why withheld opens and clicks are missing, naming no role", () => {
+    const withheld = { ...base, tracking_withheld: true };
+    assert.equal(approvalResultFacts(withheld)?.length, 3);
+    const note = approvalResultNote(withheld);
+    assert.ok(note && note.startsWith("Açılma ve tıklama sayıları") && !/skymail:|tracking:read|YK|DK|ADMIN/.test(note), note ?? "");
+  });
+  it("shows no tracking line and no note when the backend could not read them", () => {
+    const unread = { ...base, tracking: null, tracking_withheld: false };
+    assert.deepEqual(approvalResultFacts(unread)?.map((f) => f.term), ["Gönderildi", "Atlandı", "Başarısız"]);
+    assert.equal(approvalResultNote(unread), null);
+  });
+  it("shows no block without a result: a request not approved, or an older backend", () => {
+    assert.equal(approvalResultFacts(undefined), null);
+    assert.equal(approvalResultFacts(null), null);
+    assert.equal(approvalResultNote(undefined), null);
   });
 });

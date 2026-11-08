@@ -35,6 +35,8 @@ import {
   APPROVAL_LIST_PATH,
   approvalAudience,
   approvalHref,
+  approvalResultFacts,
+  approvalResultNote,
   copyApprovalHref,
   deadlineHint,
   eventActorName,
@@ -334,6 +336,8 @@ function ApprovalView({
         {tracking ? <Fact term="Takip">{tracking}</Fact> : null}
       </dl>
 
+      <Result approval={approval} />
+
       <Recipients approval={approval} />
 
       <PreviewSection approval={approval} />
@@ -370,6 +374,30 @@ function Fact({ term, children, className = '' }: { term: string; children: Reac
       <dt className="text-2xs text-subtle-foreground">{term}</dt>
       <dd className="mt-1 min-w-0 text-sm text-secondary-foreground">{children}</dd>
     </div>
+  );
+}
+
+/**
+ * How the approved request's sends went, in numbers only (hub ticket
+ * ekip-postasi 09): what its submitter sees without the send screens. Nothing
+ * when the backend gives no result (not approved, or an older backend).
+ */
+function Result({ approval }: { approval: MailApproval }) {
+  const facts = approvalResultFacts(approval.result);
+  if (!facts) return null;
+  const note = approvalResultNote(approval.result);
+  return (
+    <section aria-labelledby="result-title">
+      <SectionTitle id="result-title">Sonuç</SectionTitle>
+      <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {facts.map((fact) => (
+          <Fact key={fact.term} term={fact.term}>
+            <span className="tabular-nums">{fact.value}</span>
+          </Fact>
+        ))}
+      </dl>
+      {note ? <p className="mt-2 text-xs text-subtle-foreground">{note}</p> : null}
+    </section>
   );
 }
 
