@@ -28,7 +28,8 @@
 import type { ApiClient, ApiPage } from "../api/client";
 import { pageRange, readPage, viewHref } from "../list-view";
 import { isErasedSubject, personLabel, recipientLabel, samePerson } from "../people";
-import { SEND_LIST_PATH, audienceLabel, type AudienceLabel, type SendAudience } from "../sends";
+import { SEND_LIST_PATH, audienceLabel, formatCount, type AudienceLabel, type SendAudience } from "../sends";
+import { TRACKING_WITHHELD_TEXT } from "../tracking-report";
 import { templateTrackable, type TrackableTemplate, type TrackingAudience } from "../send-form/tracking";
 import type { StoredPurpose } from "../send-form/purpose";
 
@@ -147,6 +148,25 @@ export type ApprovalPreview = Readonly<{
   rendered_for: ApprovalRecipient;
 }>;
 
+/**
+ * How an approved request's sends went, in totals only (skymail-backend
+ * `handlers.MailApprovalResult`, hub ticket ekip-postasi 09): its submitter
+ * reads it without the send screens' role. No person is in it; a request to
+ * people has one total. `tracking` sums the opens and clicks of its tracked
+ * sends, null when none was tracked or the counts are withheld
+ * (`tracking_withheld`: fewer than 10 tracked, by the send report's rule).
+ */
+export type ApprovalResult = Readonly<{
+  sent: number;
+  /** Never sent, by rule: a suppressed address, a category turned off, an inactive account, a cancelled send. */
+  skipped: number;
+  failed: number;
+  /** Still queued or being sent. */
+  pending: number;
+  tracking: Readonly<{ tracked_recipients: number; opened: number; clicked: number }> | null;
+  tracking_withheld: boolean;
+}>;
+
 /** A request whole (`handlers.MailApproval`). */
 export type MailApproval = ApprovalItem &
   Readonly<{
@@ -159,6 +179,8 @@ export type MailApproval = ApprovalItem &
     history: readonly ApprovalEvent[] | null;
     /** On the answer to an action. */
     notification?: ApprovalNotification;
+    /** Only on an approved request's read, and absent from a backend before it. */
+    result?: ApprovalResult;
   }>;
 
 // ---------------------------------------------------------------------------
@@ -448,4 +470,33 @@ export function notificationNote(notification: ApprovalNotification | undefined 
   if (!notification?.problem) return null;
   const say = NOTIFICATION_PROBLEM.get(notification.problem);
   return say ? say(notification) : `Bildirim maili herkese gitmedi (${notification.problem}).`;
+}
+
+/**
+ * The result's numbers as the request's page lists them: sent, skipped and
+ * failed always, pending while there are any, and the summed opens and
+ * clicks when they are given. Null without a result (any request not
+ * approved, or an older backend): the page shows no block.
+ */
+export function approvalResultFacts(result: ApprovalResult | undefined | null): ReadonlyArray<Readonly<{ term: string; value: string }>> | null {
+  if (!result) return null;
+  const facts = [
+    { term: "Gitti", value: formatCount(result.sent) },
+    { term: "Atlandı", value: formatCount(result.skipped) },
+    { term: "Hata", value: formatCount(result.failed) },
+  ];
+  if (result.pending > 0) facts.push({ term: "Bekliyor", value: formatCount(result.pending) });
+  if (result.tracking) {
+    facts.push(
+      { term: "Takip edilen", value: formatCount(result.tracking.tracked_recipients) },
+      { term: "Açılma görülen", value: formatCount(result.tracking.opened) },
+      { term: "Tıklayan", value: formatCount(result.tracking.clicked) },
+    );
+  }
+  return facts;
+}
+
+/** What the result says in place of opens and clicks withheld from the reader; null otherwise. */
+export function approvalResultNote(result: ApprovalResult | undefined | null): string | null {
+  return result?.tracking_withheld ? TRACKING_WITHHELD_TEXT : null;
 }
