@@ -243,7 +243,7 @@ describe("what an action's notification says", () => {
   it("says who was not told, and why, in words", () => {
     assert.equal(
       notificationNote({ template_key: "mail.approval-requested", notified: 0, problem: "no_approvers" }),
-      "Onaycılara bildirim gitmedi: skymail:mails:approve rolü olan ve e-posta adresi bilinen kimse yok. İstek yine de bekliyor; bir onaycıya haber ver.",
+      "Onaycılara bildirim gitmedi: e-posta adresi bilinen bir onaycı yok. İstek yine de bekliyor; bir onaycıya haber ver.",
     );
     assert.equal(
       notificationNote({ template_key: "mail.approval-requested", notified: 0, problem: "approver_lookup_failed" }),
@@ -297,6 +297,19 @@ describe("who a request goes to", () => {
     assert.deepEqual(approvalAudience({ audience: toMany, recipients: PEOPLE }, 3).name, "Ali Can, zeynep@ornek.com, Mert Demir");
     assert.equal(approvalAudience({ audience: toMany, recipients: PEOPLE }, 3).more, 1);
     assert.equal(approvalAudience({ audience: toMany, recipients: PEOPLE.slice(0, 2) }).more, 0);
+  });
+
+  it("says a Team request by its first Team and how many more", () => {
+    const toTeam: ApprovalItem["audience"] = { ...nobody, kind: "mailing_list", mail_list_id: "web", name: "WEBLAB", source: "keycloak" };
+    assert.deepEqual(approvalAudience({ audience: toTeam, recipients: [], team_ids: ["web", "algo", "front"] }), {
+      kind: "team",
+      name: "WEBLAB",
+      detail: "Ekip postası",
+      listId: null,
+      more: 2,
+    });
+    assert.equal(approvalAudience({ audience: { ...toTeam, name: null }, recipients: [], team_ids: ["web"] }).name, "Ekip");
+    assert.equal(approvalAudience({ audience: toTeam, recipients: [], team_ids: [] }).kind, "group");
   });
 
   it("says whose name the preview reads with, and that everyone gets their own", () => {

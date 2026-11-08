@@ -4,6 +4,7 @@ import { formatClubTime } from '@/lib/format';
 import { decidedOwnRequest, eventActorName, eventLabel, type ApprovalChange, type MailApproval } from '@/lib/mail-approvals/approvals';
 import { valueText } from '@/lib/mail-approvals/edit';
 import type { VariableField } from '@/lib/send-form/fields';
+import { namedTeams, teamIdsIn, type TeamNames } from '@/lib/send-form/teams';
 import { SendsLink } from './ApprovalParts';
 
 function short(text: string | null): string {
@@ -11,9 +12,14 @@ function short(text: string | null): string {
   return text.length > 140 ? `${text.slice(0, 140)}…` : text;
 }
 
-function ChangeLine({ change, fields }: { change: ApprovalChange; fields: readonly VariableField[] }) {
+function ChangeLine({ change, fields, teamName }: { change: ApprovalChange; fields: readonly VariableField[]; teamName: TeamNames }) {
   if (change.field === 'template') return <li>Mail template&apos;in şimdi yayımlanmış sürümüne bağlandı.</li>;
-  if (change.field === 'audience') return <li>Kitle değişti.</li>;
+  if (change.field === 'audience') {
+    // A Team request's Teams an approval took out (skymail-backend #128).
+    const after = new Set(teamIdsIn(change.after).map((id) => id.toLowerCase()));
+    const out = teamIdsIn(change.before).filter((id) => !after.has(id.toLowerCase()));
+    return <li>{out.length > 0 ? `Gönderimden çıkarılan ekipler: ${namedTeams(out, teamName)}.` : 'Kitle değişti.'}</li>;
+  }
   const field = fields.find((candidate) => candidate.name === change.name);
   const kind = field?.kind ?? 'text';
   return (
@@ -31,7 +37,16 @@ function ChangeLine({ change, fields }: { change: ApprovalChange; fields: readon
  * never is, as everyone erased has the one subject. The event that sent
  * it names only the first send; each person's is beside them on the page.
  */
-export function ApprovalHistory({ approval, fields }: { approval: MailApproval; fields: readonly VariableField[] }) {
+export function ApprovalHistory({
+  approval,
+  fields,
+  teamName = () => null,
+}: {
+  approval: MailApproval;
+  fields: readonly VariableField[];
+  /** A Team request's Teams by name. */
+  teamName?: TeamNames;
+}) {
   const events = [...(approval.history ?? [])].sort((a, b) => a.seq - b.seq);
   if (events.length === 0) return <p className="text-xs text-subtle-foreground">Kayıt yok.</p>;
   return (
@@ -60,7 +75,7 @@ export function ApprovalHistory({ approval, fields }: { approval: MailApproval; 
             {event.changes && event.changes.length > 0 ? (
               <ul className="list-disc space-y-0.5 pl-4 text-xs text-muted-foreground">
                 {event.changes.map((change, index) => (
-                  <ChangeLine key={`${change.field}:${change.name ?? index}`} change={change} fields={fields} />
+                  <ChangeLine key={`${change.field}:${change.name ?? index}`} change={change} fields={fields} teamName={teamName} />
                 ))}
               </ul>
             ) : null}

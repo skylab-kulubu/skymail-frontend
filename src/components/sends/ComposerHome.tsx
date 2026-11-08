@@ -21,16 +21,21 @@ import { SectionTitle } from './SectionTitle';
 
 const RECENT = 5;
 
-export function ComposerHome() {
+/** `teamSeat`: a Leader without skymail:access, who sends only to their Teams (ekip-postasi 06). */
+export function ComposerHome({ teamSeat = false }: { teamSeat?: boolean }) {
   return (
     <div className="space-y-6">
       <PageHeader
         title={sectionLabel('/')}
-        description="Yeni bir gönderim hazırla, onaya sunduklarını buradan izle."
+        description={
+          teamSeat
+            ? 'Ekiplerine duyuru hazırla, onaya sunduklarını buradan izle.'
+            : 'Yeni bir gönderim hazırla, onaya sunduklarını buradan izle.'
+        }
         actions={
           <NavButton variant="primary" href={composeHref()}>
             <Plus aria-hidden />
-            Yeni gönderim
+            {teamSeat ? 'Ekibime gönder' : 'Yeni gönderim'}
           </NavButton>
         }
       />

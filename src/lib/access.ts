@@ -76,9 +76,22 @@ function sectionRoles(item: NavItem): readonly Role[] {
   return typeof item.requires === "string" ? [item.requires] : item.requires;
 }
 
-export function visibleNavigation(roles: readonly string[]): NavItem[] {
-  if (!hasAccess(roles)) return [];
+/**
+ * The menu. A Leader without skymail:access (`teamSeat`, ekip-postasi 06)
+ * gets the home screen, the send form (their Teams only) and their own
+ * requests: nothing else of SkyMail answers them.
+ */
+export function visibleNavigation(roles: readonly string[], { teamSeat = false }: { teamSeat?: boolean } = {}): NavItem[] {
+  if (!hasAccess(roles)) return teamSeat ? NAVIGATION.filter((item) => TEAM_SEAT_SECTIONS.includes(item.href)) : [];
   return NAVIGATION.filter((item) => hasAnyRole(roles, sectionRoles(item)));
+}
+
+/** What a Leader without skymail:access reaches (skymail-backend registerTeamMailRoutes). */
+const TEAM_SEAT_SECTIONS: readonly string[] = ["/", "/mail-tasks/create", "/mail-approvals"];
+
+/** Whether a Leader without skymail:access may open `pathname`: the home screen, the send form, and their requests. */
+export function teamSeatAllows(pathname: string): boolean {
+  return pathname === "/" || pathname === "/mail-tasks/create" || pathname === "/mail-approvals" || pathname.startsWith("/mail-approvals/");
 }
 
 /**

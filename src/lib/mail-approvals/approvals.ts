@@ -25,7 +25,6 @@
  * The approval mails link here: `/mail-approvals/show/:id`, `#preview` for the
  * preview.
  */
-import { ROLE } from "../access";
 import type { ApiClient, ApiPage } from "../api/client";
 import { pageRange, readPage, viewHref } from "../list-view";
 import { isErasedSubject, personLabel, recipientLabel, samePerson } from "../people";
@@ -121,6 +120,12 @@ export type ApprovalItem = Readonly<{
   last_event: ApprovalEvent | null;
   /** It asked for open and click tracking and may get it. Absent from a backend before tracking. */
   tracking?: boolean;
+  /**
+   * Ekip postası (skymail-backend #128): the Teams it goes to, in path order;
+   * empty for any other request, absent from a backend before Team mail. Its
+   * `audience` is then the first Team's group.
+   */
+  team_ids?: readonly string[];
 }> &
   /** Its purpose, category and statements (send-form/purpose.ts); null or absent before the backend took them. */
   StoredPurpose;
@@ -260,10 +265,14 @@ export const recipientName = (person: ApprovalRecipient) => recipientLabel(perso
 /**
  * Who a request goes to, as the list and the request's page say it: a list
  * or a group as a send's; one person by name and address; several by the
- * first `shown` of them, and how many more.
+ * first `shown` of them, and how many more; Teams by the first and how many
+ * more.
  */
-export function approvalAudience(item: Pick<ApprovalItem, "audience" | "recipients">, shown = 2): AudienceLabel {
+export function approvalAudience(item: Pick<ApprovalItem, "audience" | "recipients" | "team_ids">, shown = 2): AudienceLabel {
   if (item.audience.kind === "form") return audienceLabel(item.audience);
+  const teams = item.team_ids ?? [];
+  // A Team request: its first Team by the group's name (the audience is that group), and how many more.
+  if (teams.length > 0) return { kind: "team", name: item.audience.name?.trim() || "Ekip", detail: "Ekip postası", listId: null, more: teams.length - 1 };
   const people = item.recipients;
   if (people.length === 0) return audienceLabel(item.audience);
   if (people.length === 1) {
@@ -390,7 +399,7 @@ const NOTIFICATION_PROBLEM: ReadonlyMap<string, (notification: ApprovalNotificat
   [
     "no_approvers",
     () =>
-      `Onaycılara bildirim gitmedi: ${ROLE.mailsApprove} rolü olan ve e-posta adresi bilinen kimse yok. İstek yine de bekliyor; bir onaycıya haber ver.`,
+      "Onaycılara bildirim gitmedi: e-posta adresi bilinen bir onaycı yok. İstek yine de bekliyor; bir onaycıya haber ver.",
   ],
   [
     "approver_lookup_failed",

@@ -24,7 +24,7 @@ import { approvalRequest, type ComposePrefill } from '@/lib/mail-approvals/edit'
 import { refusalNow, withRefusedRows } from '@/lib/mail-approvals/refusals';
 import type { ListRow } from '@/lib/mailing-lists';
 import { SEND_LIST_PATH, formatCount } from '@/lib/sends';
-import { approvalNote, defaultAudience, directSend, type SendAccess } from '@/lib/send-form/access';
+import { approvalNote, directSend, formAudience, pinAudience, type SendAccess } from '@/lib/send-form/access';
 import { fieldValues, variableFields } from '@/lib/send-form/fields';
 import {
   audienceSize,
@@ -47,9 +47,10 @@ import {
   trackingOffered,
 } from '@/lib/send-form/tracking';
 import { CATEGORY_REFUSALS, PURPOSE_START, purposeFields, purposeProblem, type PurposeChoice } from '@/lib/send-form/purpose';
+import { requestTeams, teamsWords, type TeamAudience } from '@/lib/send-form/teams';
 import type { MailTemplate } from '@/lib/templates';
 import { AudiencePart, type Audience } from './AudiencePart';
-import { ConfirmSend, type Confirming } from './ConfirmSend';
+import { ConfirmSend, confirmedSend, type Confirming } from './ConfirmSend';
 import { PeopleSummary } from './PeopleSummary';
 import { PurposePart } from './PurposePart';
 import { personEntry, type PersonEntry } from './PeopleEditor';
@@ -59,8 +60,13 @@ import { useSubmitting } from './use-submitting';
 import { VariableFields } from './VariableFields';
 import { WhatPart, type What } from './WhatPart';
 import { NavButton } from '@/components/common/NavButton';
+import { TeamPurpose } from './TeamPicker';
+import { TEAM_SEAT_SEND_LABEL } from '@/lib/chrome-breadcrumbs';
 
 export const SEND_FORM_TITLE = 'Yeni gönderim';
+
+
+const NO_TEAMS: readonly TeamAudience[] = [];
 
 /**
  * What the form is for: a new send; a new one filled from a request for
@@ -94,6 +100,10 @@ export function Compose({
   prefill = null,
   intro,
   legacyForms = false,
+  teams = NO_TEAMS,
+  teamSeat = false,
+  onTeamsRefused,
+  teamsUnavailable = null,
 }: {
   access: SendAccess;
   templates: MailTemplate[];
@@ -105,17 +115,32 @@ export function Compose({
   intro?: ReactNode;
   /** The people came from a legacy Forms transfer (Eski aktarım): sent at once only as a Forms source is (directSend). */
   legacyForms?: boolean;
+  /** The Teams the viewer leads (ekip-postasi 05): Ekibim is offered while there are any. */
+  teams?: readonly TeamAudience[];
+  /** A Leader without skymail:access: Ekibim only, a free announcement only (ekip-postasi 06). */
+  teamSeat?: boolean;
+  /** The API said the viewer no longer leads some Teams picked: read the Teams again. */
+  onTeamsRefused?: () => void;
+  /** Why the Teams could not be read (core did not answer): said under the audience. */
+  teamsUnavailable?: string | null;
 }) {
   const presetListId = useSearchParams().get('mail_list_id');
   const preset = presetListId ? (lists.find((list) => list.id === presetListId) ?? null) : null;
   const free = freeTemplate(templates);
   const choices = useMemo(() => templateChoices(templates), [templates]);
 
-  const [what, setWhat] = useState<What>(prefill?.what ?? (free ? 'free' : 'template'));
+  const [what, setWhat] = useState<What>(teamSeat ? 'free' : (prefill?.what ?? (free ? 'free' : 'template')));
   const [templateId, setTemplateId] = useState<string | null>(prefill?.templateId ?? null);
   const [values, setValues] = useState<Record<string, string>>(prefill?.values ?? {});
   const [rich, setRich] = useState<Record<string, string>>(prefill?.rich ?? {});
-  const [audience, setAudience] = useState<Audience>(prefill?.audience ?? defaultAudience(access, { presetList: presetListId !== null }));
+  // The audience the sender (or the request) chose; until then, and for Teams with none to pick, where the form starts.
+  // The Teams load beside the form: Ekibim becomes the start once they come, unless the sender chose already.
+  const [chosenAudience, setAudience] = useState<Audience | null>(prefill?.audience ?? null);
+  const audience: Audience = formAudience(chosenAudience, { access, presetList: presetListId !== null, teams: teams.length, teamSeat });
+  // The Teams picked as the sender picked them; a Sub-team under a picked Team is dropped when the request is made.
+  // Until the sender picks, one Team is picked for a Leader of one.
+  const [picked, setPickedTeams] = useState<Set<string> | null>(() => (prefill?.teamIds ? new Set(prefill.teamIds) : null));
+  const pickedTeams = useMemo(() => picked ?? new Set(teams.length === 1 ? [teams[0].id] : []), [picked, teams]);
   const [listId, setListId] = useState<string | null>(prefill ? prefill.listId : (preset?.id ?? null));
   const [people, setPeople] = useState<PersonEntry[]>(() =>
     prefill && prefill.people.length > 0 ? prefill.people.map((person) => personEntry(person)) : [personEntry()],
@@ -136,6 +161,8 @@ export function Compose({
   const template = what === 'free' ? free : (choices.find((choice) => choice.id === templateId) ?? null);
   const fields = useMemo(() => (template ? variableFields(template) : []), [template]);
   const list = audience === 'list' ? (lists.find((candidate) => candidate.id === listId) ?? null) : null;
+  const team = audience === 'team';
+  const chosenTeams = useMemo(() => requestTeams(pickedTeams, teams), [pickedTeams, teams]);
   const input = { values, rich };
   const formSource = prefill?.formSource ?? null;
   // While the mode loads or fails, the box stays hidden. While SkyMail tracks every send
@@ -148,15 +175,22 @@ export function Compose({
   const trackingShown = trackingOffered({ ...trackingMode, audience, template });
   const tracking = trackingAsked({ mode: trackingMode, audience, template, ticked: trackingTicked });
   // A template that may not be tracked to this audience clears the box: going back to one that may does not tick it again.
-  const untrackable = template !== null && audience !== 'form' && !templateTrackable(template, audience);
+  const untrackable = template !== null && audience !== 'form' && audience !== 'team' && !templateTrackable(template, audience);
   useEffect(() => {
     if (untrackable) setTrackingTicked(false);
   }, [untrackable]);
   // With an older backend, or SKYMAIL_MAIL_PURPOSE off, the form says and sends nothing of it.
-  const purposeShown = trackingMode.purpose;
+  // Team mail's purpose is the server's, always shown fixed; only its statement is the sender's.
+  const purposeShown = trackingMode.purpose && !team;
   const purpose = purposeShown ? purposeFields(purposeChoice, audience, list, trackingMode.listConsent) : null;
-  const purposeBlock = purposeShown ? purposeProblem(purposeChoice, audience, list) : null;
-  const draft = { what, template, fields: input, audience, list, people, formSource, tracking, purpose };
+  const purposeBlock = team
+    ? purposeChoice.commercialAbsent
+      ? null
+      : 'Tanıtım beyanını işaretle.'
+    : purposeShown
+      ? purposeProblem(purposeChoice, audience, list)
+      : null;
+  const draft = { what, template, fields: input, audience, list, people, formSource, tracking, purpose, teams: chosenTeams };
   const check = sendPlan(draft);
   const problems = attempts > 0 && !check.ok ? check.problems : null;
   const held = repeatsUncertainSend(draft, sending.uncertain);
@@ -184,6 +218,20 @@ export function Compose({
   const approvalProblem = intent === 'submit' && attempts > 0 && forApproval && !forApproval.ok ? forApproval.problem : null;
   const audienceNote = approvalNote(access, audience, { resubmit: resubmit !== null, legacyForms });
   const refusal = submitting.failure ? refusalNow(submitting.failure, people) : null;
+  // Teams the API says the viewer does not lead now leave the picker, and the Teams are read again.
+  const refusedTeams = submitting.failure?.teamIds;
+  const teamsRefused = useRef(onTeamsRefused);
+  const pickedNow = useRef(pickedTeams);
+  useEffect(() => {
+    teamsRefused.current = onTeamsRefused;
+    pickedNow.current = pickedTeams;
+  });
+  useEffect(() => {
+    if (!refusedTeams || refusedTeams.length === 0) return;
+    const gone = new Set(refusedTeams.map((id) => id.toLowerCase()));
+    setPickedTeams(new Set([...pickedNow.current].filter((id) => !gone.has(id.toLowerCase()))));
+    teamsRefused.current?.();
+  }, [refusedTeams]);
   // A refused category is said under the picker, whichever action it came from.
   const categoryRefusal = (code: string | undefined, text: string) => (code && CATEGORY_REFUSALS.has(code) ? text : null);
   const categoryProblem =
@@ -197,7 +245,7 @@ export function Compose({
     if (busy || held) return;
     setIntent('send');
     setAttempts((count) => count + 1);
-    if (check.ok && !purposeBlock) setConfirming({ kind: 'send', plan: check.plan });
+    if (check.ok && !purposeBlock) setConfirming({ kind: 'send', plan: check.plan, list, what: whatLabel });
   }
 
   function submitForApproval() {
@@ -207,7 +255,7 @@ export function Compose({
     if (!check.ok || !forApproval?.ok || purposeBlock) return;
     // The API's last refusal, and the rows it marked, stand until another submission is on its way.
     submitting.clear();
-    setConfirming({ kind: 'submit', plan: check.plan, request: forApproval.request, resubmit: resubmit !== null });
+    setConfirming({ kind: 'submit', plan: check.plan, request: forApproval.request, resubmit: resubmit !== null, list, what: whatLabel });
   }
 
   /** Enter in a field does what the form's first action does. */
@@ -215,7 +263,8 @@ export function Compose({
 
   /** Who it goes to, as the request's page says it. */
   function audienceWords(chosen: Extract<Confirming, { kind: 'submit' }>) {
-    if (chosen.plan.kind === 'list') return `“${list?.name ?? ''}” listesine`;
+    if (chosen.plan.kind === 'list') return `“${chosen.list?.name ?? ''}” listesine`;
+    if (chosen.plan.kind === 'team') return teamsWords(chosen.plan.teams);
     if (chosen.plan.kind === 'form') return `“${chosen.plan.source.form_title}” formunun ${formatCount(chosen.plan.source.recipient_count)} yanıtlayanına`;
     const { requests } = chosen.plan;
     return requests.length === 1 ? `${requests[0].recipient_email} adresine` : `${formatCount(requests.length)} kişiye`;
@@ -223,22 +272,24 @@ export function Compose({
 
   function resendList() {
     setAttempts((count) => count + 1);
-    if (check.ok && check.plan.kind === 'list') setConfirming({ kind: 'resendList', plan: check.plan });
+    if (check.ok && check.plan.kind === 'list' && list) setConfirming({ kind: 'resendList', plan: check.plan, list, what: whatLabel });
   }
 
   async function confirm(chosen: Confirming) {
     if (chosen.kind === 'submit') {
       const said = resubmit
-        ? `Yeniden onaya sunuldu: ${whatLabel}, ${audienceWords(chosen)}. 7 günlük süre yeniden başladı.`
-        : `Onaya sunuldu: ${whatLabel}, ${audienceWords(chosen)}. Bir onaycı onaylayınca gönderilir.`;
+        ? `Yeniden onaya sunuldu: ${chosen.what}, ${audienceWords(chosen)}. 7 günlük süre yeniden başladı.`
+        : `Onaya sunuldu: ${chosen.what}, ${audienceWords(chosen)}. Bir onaycı onaylayınca gönderilir.`;
       const went = await submitting.submit(chosen.request, { resubmitId: resubmit?.id ?? null, said, people });
       if (!went) setConfirming(null);
       return;
     }
-    if (chosen.kind === 'retryPeople') await sending.retryPeople(chosen.retry.requests);
-    else if (chosen.plan.kind === 'list') await sending.toList(chosen.plan.request, list!, whatLabel);
-    else if (chosen.plan.kind === 'form') await sending.toFormSource(chosen.plan.request, chosen.plan.source.form_title, whatLabel);
-    else await sending.toPeople(chosen.plan.requests, whatLabel);
+    // The send the dialog opened with: a list or audience changed behind it does not reach it.
+    const action = confirmedSend(chosen);
+    if (action?.kind === 'retry') await sending.retryPeople(action.requests);
+    else if (action?.kind === 'list') await sending.toList(action.request, action.list, action.what);
+    else if (action?.kind === 'form') await sending.toFormSource(action.request, action.formTitle, action.what);
+    else if (action?.kind === 'people') await sending.toPeople(action.requests, action.what);
     setConfirming(null);
   }
 
@@ -265,6 +316,7 @@ export function Compose({
       trackingAlways={trackingMode.available && trackingMode.always}
       listConsent={trackingMode.listConsent}
       teams={lists}
+      teamsText={confirming && 'plan' in confirming && confirming.plan.kind === 'team' ? teamsWords(confirming.plan.teams) : null}
       onCancel={() => setConfirming(null)}
       onConfirm={(chosen) => void confirm(chosen)}
     />
@@ -305,12 +357,18 @@ export function Compose({
 
   const failure = sending.listFailure;
   const sendsAnything = access.send.list || access.send.people;
+  // The team seat writes a free announcement only: no template to pick.
+  const number = (part: number) => (teamSeat ? part - 1 : part);
   return (
     <div ref={rootRef} className="space-y-6">
       <PageHeader
-        title={resubmit ? 'İsteği yeniden sun' : SEND_FORM_TITLE}
+        title={resubmit ? 'İsteği yeniden sun' : teamSeat ? TEAM_SEAT_SEND_LABEL : SEND_FORM_TITLE}
         description={
-          resubmit
+          teamSeat
+            ? resubmit
+              ? 'Duyuruyu ya da ekipleri değiştirip yeniden onaya sun; 7 günlük süre yeniden başlar.'
+              : 'Ekiplerine bir duyuru yaz ve onaya sun: bir onaycı onaylayınca ekip üyelerine gider.'
+            : resubmit
             ? audience === 'form'
               ? "Mail template'ini ve içeriği düzenleyip aynı sabit Forms alıcılarıyla yeniden onaya sun. Alıcıları yenilemek için Forms'tan yeni bir istek hazırla."
               : "Değişkenleri, Mail template'i ya da kitleyi değiştirip yeniden onaya sun. Yeniden sunulan istek template'in şimdi yayımlanmış sürümüyle gider ve 7 günlük süre yeniden başlar."
@@ -322,7 +380,7 @@ export function Compose({
 
       {intro}
 
-      {!prefill && presetListId && !preset ? (
+      {!teamSeat && !prefill && presetListId && !preset ? (
         <Notice tone="warning">
           {access.list
             ? 'Bağlantıdaki mail listesi bulunamadı: arşivlenmiş ya da artık yok. Aşağıdan bir liste seç.'
@@ -333,39 +391,64 @@ export function Compose({
       <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         {/* Not a <form>: the Visual editor holds forms of its own (a link's address), and forms do not nest. */}
         <div className="min-w-0 space-y-8">
-          <Part id="send-what" title="1. Ne gönderilecek">
-            <WhatPart
-              what={what}
-              onWhat={setWhat}
-              free={free}
-              choices={choices}
-              templateId={templateId}
-              onTemplate={setTemplateId}
-              problem={problems?.template ?? null}
-              draftNote={draftNote}
-            />
-          </Part>
+          {teamSeat ? (
+            free ? null : <Notice tone="warning">{problems?.template ?? 'Serbest duyuru şu an hazırlanamıyor: çerçevesi SkyMail\'de yok.'}</Notice>
+          ) : (
+            <Part id="send-what" title="1. Ne gönderilecek">
+              <WhatPart
+                what={what}
+                onWhat={setWhat}
+                free={free}
+                choices={choices}
+                templateId={templateId}
+                onTemplate={setTemplateId}
+                problem={problems?.template ?? null}
+                draftNote={draftNote}
+              />
+            </Part>
+          )}
 
-          <Part id="send-to" title="2. Kime">
+          <Part id="send-to" title={`${number(2)}. Kime`}>
             <AudiencePart
               access={access}
               audience={audience}
               onAudience={setAudience}
               lists={lists}
               listId={listId}
-              onList={setListId}
+              onList={(id) => {
+                // The sender chose: Teams arriving later no longer move the audience.
+                setAudience(pinAudience(chosenAudience, audience));
+                setListId(id);
+              }}
               list={list}
               size={sizeKnown}
               listProblem={problems?.list ?? null}
               people={people}
-              onPeople={setPeople}
+              onPeople={(rows) => {
+                setAudience(pinAudience(chosenAudience, audience));
+                setPeople(rows);
+              }}
               peopleCheck={withRefusedRows(problems?.people ?? null, refusal?.rows ?? null)}
               peopleWarnings={check.warnings.people}
               onSend={submit}
               formSource={formSource}
+              teams={teams}
+              pickedTeams={pickedTeams}
+              onPickedTeams={setPickedTeams}
+              teamsProblem={problems?.teams ?? null}
+              disabled={busy}
             />
             {audienceNote ? <Notice tone="info">{audienceNote}</Notice> : null}
-            {purposeShown ? (
+            {teamsUnavailable && teams.length === 0 ? <Notice tone="warning">{teamsUnavailable}</Notice> : null}
+            {team ? (
+              <TeamPurpose
+                commercialAbsent={purposeChoice.commercialAbsent}
+                onCommercialAbsent={(checked) => setPurposeChoice((previous) => ({ ...previous, commercialAbsent: checked }))}
+                problem={attempts > 0 ? purposeBlock : null}
+                disabled={busy}
+                addressesNote={!access.list}
+              />
+            ) : purposeShown ? (
               <PurposePart
                 choice={purposeChoice}
                 onChoice={setPurposeChoice}
@@ -393,7 +476,7 @@ export function Compose({
           </Part>
 
           {template ? (
-            <Part id="send-fields" title={what === 'free' ? '3. Duyuru' : '3. Değişkenler'}>
+            <Part id="send-fields" title={what === 'free' ? `${number(3)}. Duyuru` : `${number(3)}. Değişkenler`}>
               {fields.length === 0 ? (
                 <p className="text-xs text-subtle-foreground">Bu template doldurulacak bir değişken kullanmıyor.</p>
               ) : (
@@ -450,7 +533,7 @@ export function Compose({
             cancel={
               <NavButton
                 variant="outline"
-                href={mode.kind === 'new' ? (access.detail ? SEND_LIST_PATH : '/') : approvalHref(mode.approval.id)}
+                href={mode.kind === 'new' ? (access.detail && !teamSeat ? SEND_LIST_PATH : '/') : approvalHref(mode.approval.id)}
                 disabled={busy}
               >
                 İptal
