@@ -24,7 +24,7 @@ import { approvalRequest, type ComposePrefill } from '@/lib/mail-approvals/edit'
 import { refusalNow, withRefusedRows } from '@/lib/mail-approvals/refusals';
 import type { ListRow } from '@/lib/mailing-lists';
 import { SEND_LIST_PATH, formatCount } from '@/lib/sends';
-import { approvalNote, directSend, formAudience, type SendAccess } from '@/lib/send-form/access';
+import { approvalNote, directSend, formAudience, pinAudience, type SendAccess } from '@/lib/send-form/access';
 import { fieldValues, variableFields } from '@/lib/send-form/fields';
 import {
   audienceSize,
@@ -50,7 +50,7 @@ import { CATEGORY_REFUSALS, PURPOSE_START, purposeFields, purposeProblem, type P
 import { requestTeams, teamsWords, type TeamAudience } from '@/lib/send-form/teams';
 import type { MailTemplate } from '@/lib/templates';
 import { AudiencePart, type Audience } from './AudiencePart';
-import { ConfirmSend, type Confirming } from './ConfirmSend';
+import { ConfirmSend, confirmedSend, type Confirming } from './ConfirmSend';
 import { PeopleSummary } from './PeopleSummary';
 import { PurposePart } from './PurposePart';
 import { personEntry, type PersonEntry } from './PeopleEditor';
@@ -245,7 +245,7 @@ export function Compose({
     if (busy || held) return;
     setIntent('send');
     setAttempts((count) => count + 1);
-    if (check.ok && !purposeBlock) setConfirming({ kind: 'send', plan: check.plan });
+    if (check.ok && !purposeBlock) setConfirming({ kind: 'send', plan: check.plan, list, what: whatLabel });
   }
 
   function submitForApproval() {
@@ -255,7 +255,7 @@ export function Compose({
     if (!check.ok || !forApproval?.ok || purposeBlock) return;
     // The API's last refusal, and the rows it marked, stand until another submission is on its way.
     submitting.clear();
-    setConfirming({ kind: 'submit', plan: check.plan, request: forApproval.request, resubmit: resubmit !== null });
+    setConfirming({ kind: 'submit', plan: check.plan, request: forApproval.request, resubmit: resubmit !== null, list, what: whatLabel });
   }
 
   /** Enter in a field does what the form's first action does. */
@@ -263,7 +263,7 @@ export function Compose({
 
   /** Who it goes to, as the request's page says it. */
   function audienceWords(chosen: Extract<Confirming, { kind: 'submit' }>) {
-    if (chosen.plan.kind === 'list') return `“${list?.name ?? ''}” listesine`;
+    if (chosen.plan.kind === 'list') return `“${chosen.list?.name ?? ''}” listesine`;
     if (chosen.plan.kind === 'team') return teamsWords(chosen.plan.teams);
     if (chosen.plan.kind === 'form') return `“${chosen.plan.source.form_title}” formunun ${formatCount(chosen.plan.source.recipient_count)} yanıtlayanına`;
     const { requests } = chosen.plan;
@@ -272,22 +272,24 @@ export function Compose({
 
   function resendList() {
     setAttempts((count) => count + 1);
-    if (check.ok && check.plan.kind === 'list') setConfirming({ kind: 'resendList', plan: check.plan });
+    if (check.ok && check.plan.kind === 'list' && list) setConfirming({ kind: 'resendList', plan: check.plan, list, what: whatLabel });
   }
 
   async function confirm(chosen: Confirming) {
     if (chosen.kind === 'submit') {
       const said = resubmit
-        ? `Yeniden onaya sunuldu: ${whatLabel}, ${audienceWords(chosen)}. 7 günlük süre yeniden başladı.`
-        : `Onaya sunuldu: ${whatLabel}, ${audienceWords(chosen)}. Bir onaycı onaylayınca gönderilir.`;
+        ? `Yeniden onaya sunuldu: ${chosen.what}, ${audienceWords(chosen)}. 7 günlük süre yeniden başladı.`
+        : `Onaya sunuldu: ${chosen.what}, ${audienceWords(chosen)}. Bir onaycı onaylayınca gönderilir.`;
       const went = await submitting.submit(chosen.request, { resubmitId: resubmit?.id ?? null, said, people });
       if (!went) setConfirming(null);
       return;
     }
-    if (chosen.kind === 'retryPeople') await sending.retryPeople(chosen.retry.requests);
-    else if (chosen.plan.kind === 'list') await sending.toList(chosen.plan.request, list!, whatLabel);
-    else if (chosen.plan.kind === 'form') await sending.toFormSource(chosen.plan.request, chosen.plan.source.form_title, whatLabel);
-    else if (chosen.plan.kind === 'people') await sending.toPeople(chosen.plan.requests, whatLabel);
+    // The send the dialog opened with: a list or audience changed behind it does not reach it.
+    const action = confirmedSend(chosen);
+    if (action?.kind === 'retry') await sending.retryPeople(action.requests);
+    else if (action?.kind === 'list') await sending.toList(action.request, action.list, action.what);
+    else if (action?.kind === 'form') await sending.toFormSource(action.request, action.formTitle, action.what);
+    else if (action?.kind === 'people') await sending.toPeople(action.requests, action.what);
     setConfirming(null);
   }
 
@@ -413,12 +415,19 @@ export function Compose({
               onAudience={setAudience}
               lists={lists}
               listId={listId}
-              onList={setListId}
+              onList={(id) => {
+                // The sender chose: Teams arriving later no longer move the audience.
+                setAudience(pinAudience(chosenAudience, audience));
+                setListId(id);
+              }}
               list={list}
               size={sizeKnown}
               listProblem={problems?.list ?? null}
               people={people}
-              onPeople={setPeople}
+              onPeople={(rows) => {
+                setAudience(pinAudience(chosenAudience, audience));
+                setPeople(rows);
+              }}
               peopleCheck={withRefusedRows(problems?.people ?? null, refusal?.rows ?? null)}
               peopleWarnings={check.warnings.people}
               onSend={submit}

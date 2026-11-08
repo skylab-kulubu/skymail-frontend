@@ -7,7 +7,7 @@ import type { ListRow } from '@/lib/mailing-lists';
 import { formatCount } from '@/lib/sends';
 import { peopleSentApart, type PersonRow } from '@/lib/send-form/audience';
 import { confirmTitle } from '@/lib/send-form/confirm';
-import type { Retry, SendPlan } from '@/lib/send-form/send';
+import type { FormSourceSendRequest, ListSendRequest, Retry, SendPlan, SingleSendRequest } from '@/lib/send-form/send';
 import { untrackedCount, untrackedRecipientsNote } from '@/lib/send-form/tracking';
 import { COMMERCIAL_STATEMENT, guestsSkippedNote, ownEventText, purposeText, statementText, teamNames, type StoredPurpose } from '@/lib/send-form/purpose';
 import { TEAM_PURPOSE_TEXT } from '@/lib/send-form/teams';
@@ -18,13 +18,32 @@ import { Notice } from '@skylab-kulubu/skylcn-ui';
  * What the dialog is asked to confirm: a send; a send to a list again when
  * the last one may already be open; sending again to people, some of whom
  * may already have the mail; or a send submitted — or resubmitted — for
- * approval (ticket 20).
+ * approval (ticket 20). Each holds what the form said when the dialog
+ * opened — the plan, the list and what goes — so a change made behind the
+ * open dialog (another audience, another list) never reaches the send.
  */
 export type Confirming =
-  | { kind: 'send'; plan: SendPlan }
-  | { kind: 'resendList'; plan: Extract<SendPlan, { kind: 'list' }> }
+  | { kind: 'send'; plan: SendPlan; list: ListRow | null; what: string }
+  | { kind: 'resendList'; plan: Extract<SendPlan, { kind: 'list' }>; list: ListRow; what: string }
   | { kind: 'retryPeople'; retry: Retry }
-  | { kind: 'submit'; plan: SendPlan; request: ApprovalRequest; resubmit: boolean };
+  | { kind: 'submit'; plan: SendPlan; request: ApprovalRequest; resubmit: boolean; list: ListRow | null; what: string };
+
+/** What a confirmed send does, from the dialog's own copy of the form: null for a list send that names no list. */
+export type ConfirmedSend =
+  | { kind: 'list'; request: ListSendRequest; list: ListRow; what: string }
+  | { kind: 'form'; request: FormSourceSendRequest; formTitle: string; what: string }
+  | { kind: 'people'; requests: readonly SingleSendRequest[]; what: string }
+  | { kind: 'retry'; requests: readonly SingleSendRequest[] };
+
+export function confirmedSend(chosen: Exclude<Confirming, { kind: 'submit' }>): ConfirmedSend | null {
+  if (chosen.kind === 'retryPeople') return { kind: 'retry', requests: chosen.retry.requests };
+  const { plan, what } = chosen;
+  if (plan.kind === 'list') return chosen.list ? { kind: 'list', request: plan.request, list: chosen.list, what } : null;
+  if (plan.kind === 'form') return { kind: 'form', request: plan.request, formTitle: plan.source.form_title, what };
+  if (plan.kind === 'people') return { kind: 'people', requests: plan.requests, what };
+  // Teams go only for approval.
+  return null;
+}
 
 const person = ({ name, email }: PersonRow) => (name ? `${name} <${email}>` : email);
 
@@ -37,9 +56,9 @@ function audienceText(list: ListRow | null, size: number | null) {
 /** The last word before a send opens: what goes, to whom, how many, and anything that may be a slip or a duplicate. */
 export function ConfirmSend({
   confirming,
-  what,
-  list,
-  size,
+  what: formWhat,
+  list: formList,
+  size: formSize,
   draftNote,
   warnings,
   progress,
@@ -73,6 +92,11 @@ export function ConfirmSend({
   onConfirm: (confirming: Confirming) => void;
 }) {
   const title = confirmTitle(confirming?.kind ?? 'send', { resubmit: confirming?.kind === 'submit' && confirming.resubmit });
+  // What the dialog opened with, not what the form holds now.
+  const opened = confirming && confirming.kind !== 'retryPeople' ? confirming : null;
+  const list = opened ? opened.list : formList;
+  const what = opened ? opened.what : formWhat;
+  const size = list?.id === formList?.id ? formSize : null;
   const people =
     (confirming?.kind === 'send' || confirming?.kind === 'submit') && confirming.plan.kind === 'people'
       ? confirming.plan.requests.map((request) => ({ name: request.recipient_full_name, email: request.recipient_email }))

@@ -100,6 +100,15 @@ export function formAudience<A extends "list" | "people" | "form" | "team">(
 }
 
 /**
+ * The audience to keep once the sender acts on the one shown (picks a list,
+ * edits people): what they chose, else the one they see, so Teams that load
+ * later do not move the form to Ekibim under them.
+ */
+export function pinAudience<A extends string>(chosen: A | null, shown: A): A {
+  return chosen ?? shown;
+}
+
+/**
  * The audience the form starts on: a list a link names (`presetList`) when
  * the viewer can pick one; else the Teams they lead (`teams`); else one they send to at once — a list with
  * `mails:write`, people with `mails:send` — so the form's main action is a

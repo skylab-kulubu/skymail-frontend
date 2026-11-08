@@ -10,7 +10,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { ROLE } from "../access";
-import { approvalNote, defaultAudience, directSend, formAudience, sendAccess } from "./access";
+import { approvalNote, defaultAudience, directSend, formAudience, pinAudience, sendAccess } from "./access";
 
 const roles = (...granted: string[]) => [ROLE.access, ...granted];
 
@@ -181,6 +181,27 @@ describe("the audience the form shows", () => {
   it("keeps the team seat on its Teams", () => {
     assert.equal(formAudience(null, { access: sendAccess([]), presetList: false, teams: 0, teamSeat: true }), "team");
     assert.equal(formAudience("people", { access: sendAccess([]), presetList: false, teams: 1, teamSeat: true }), "team");
+  });
+});
+
+// Son bakış (#162): the Teams load beside the form; what the sender already chose stays.
+describe("the audience once the sender acts", () => {
+  const member = sendAccess(roles(ROLE.templatesRead, ROLE.listsRead));
+
+  it("stays on the list or people the sender worked on when the Teams come later", () => {
+    const shownBefore = formAudience(null, { access: member, presetList: false, teams: 0 });
+    assert.equal(shownBefore, "list");
+    const pinned = pinAudience(null, shownBefore);
+    assert.equal(formAudience(pinned, { access: member, presetList: false, teams: 2 }), "list");
+    assert.equal(formAudience(pinAudience(null, "people"), { access: member, presetList: false, teams: 2 }), "people");
+  });
+
+  it("moves to Ekibim when the Teams come only while the sender has done nothing", () => {
+    assert.equal(formAudience(null, { access: member, presetList: false, teams: 2 }), "team");
+  });
+
+  it("keeps an audience already chosen", () => {
+    assert.equal(pinAudience("team", "list"), "team");
   });
 });
 
