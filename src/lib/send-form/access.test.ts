@@ -143,3 +143,21 @@ describe("the audience the form starts on", () => {
     assert.equal(defaultAudience(sendAccess(roles(ROLE.templatesRead, ROLE.mailsSend)), { presetList: true }), "people");
   });
 });
+
+// Ekip postası (ekip-postasi 05): a Leader's Teams are the form's first audience, and always go for approval.
+describe("the Team audience", () => {
+  it("is where the form starts for a Leader, unless a link names a list they can pick", () => {
+    assert.equal(defaultAudience(sendAccess(roles(ROLE.templatesRead)), { presetList: false, teams: true }), "team");
+    assert.equal(defaultAudience(sendAccess(roles(ROLE.templatesRead, ROLE.listsRead, ROLE.mailsWrite)), { presetList: false, teams: true }), "team");
+    assert.equal(defaultAudience(sendAccess(roles(ROLE.templatesRead, ROLE.listsRead)), { presetList: true, teams: true }), "list");
+    assert.equal(defaultAudience(sendAccess(roles(ROLE.templatesRead)), { presetList: true, teams: true }), "team");
+  });
+
+  it("is never sent at once, and says so", () => {
+    const writer = sendAccess(roles(ROLE.templatesRead, ROLE.listsRead, ROLE.mailsWrite, ROLE.mailsSend));
+    assert.equal(directSend(writer, "team"), false);
+    assert.match(approvalNote(writer, "team") ?? "", /onaya sunulur/);
+    assert.match(approvalNote(writer, "team", { resubmit: true }) ?? "", /onaya sunulur/);
+  });
+});
+

@@ -88,16 +88,26 @@ function invalidSubmission(error: ApiError): string | null {
   if (found("recipients", "duplicate")) {
     return "SkyMail aynı adresi iki kez buldu; büyük ve küçük harfle yazılmışı da aynı adres sayılır. Her adresi bir kez yaz.";
   }
-  if (found("mail_list_id", "exactly_one_of")) return "Onaya ya bir mail listesi ya da kişiler sunulur: birini seç.";
+  if (found("mail_list_id", "exactly_one_of") || found("team_ids", "exactly_one_of")) return "Onaya ya bir mail listesi, ya kişiler ya da ekipler sunulur: birini seç.";
+  const manyTeams = found("team_ids", "max_length");
+  if (manyTeams) return `Bir istekte en çok ${Number(manyTeams.params?.max) || 50} ekip olur.`;
   return null;
 }
 
 /** What the API found wrong with an address it was sent; a duplicate names the address it repeats. */
 type RefusedAddress = Readonly<{ problem: "missing" }> | Readonly<{ problem: "invalid" }> | Readonly<{ problem: "duplicate"; first: string }>;
 
+/** The Teams a 403 `team_mail.not_leader` names (`params.team_ids`). */
+function notLedTeams(error: ApiError): string[] {
+  const ids = error.params?.team_ids;
+  return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === "string" && id !== "") : [];
+}
+
 /** A refused submission: in words, and — when it named people — what it found, by the address as sent. */
 /** `code`: the API's, when the refusal names no row (the form puts a category's refusal under the category). */
-export type SubmissionRefusal = ApprovalRefusal & Readonly<{ addresses: ReadonlyMap<string, RefusedAddress> | null; code?: string }>;
+/** `teamIds`: the Teams a Team request named that the submitter does not lead now (403 `team_mail.not_leader`). */
+export type SubmissionRefusal = ApprovalRefusal &
+  Readonly<{ addresses: ReadonlyMap<string, RefusedAddress> | null; code?: string; teamIds?: readonly string[] }>;
 
 const address = (row: PersonRow) => row.email.trim();
 
@@ -122,7 +132,15 @@ export function submissionRefusal(thrown: unknown, action: "submit" | "resubmit"
           : { problem: "invalid" },
     );
   }
-  if (addresses.size === 0) return { ...approvalRefusal(thrown, action), addresses: null, ...(error.code ? { code: error.code } : {}) };
+  if (addresses.size === 0) {
+    const teamIds = error.code === "team_mail.not_leader" ? notLedTeams(error) : [];
+    return {
+      ...approvalRefusal(thrown, action),
+      addresses: null,
+      ...(error.code ? { code: error.code } : {}),
+      ...(teamIds.length > 0 ? { teamIds } : {}),
+    };
+  }
   return { text: "SkyMail bazı adresleri kabul etmedi: işaretli kişileri düzelt.", reload: false, addresses };
 }
 
@@ -217,6 +235,25 @@ export function approvalRefusal(thrown: unknown, action: ApprovalActionName): Ap
     // core's preferences could not be read at the approval (skymail-backend, abonelik-cikisi 09): nothing was queued and the request is as it was.
     case "mail_task.preference_unavailable":
       return say("İletişim tercihleri şu an okunamıyor; gönderim açılmadı. Birkaç dakika sonra yeniden dene.");
+    // Ekip postası (skymail-backend #128).
+    case "team_mail.not_leader":
+      return say("Seçtiğin ekiplerden bazılarının artık lideri görünmüyorsun. Ekip listesi yenilendi; seçimini gözden geçirip yeniden sun.");
+    case "team_mail.free_announcement_only":
+      return say("Ekibine yalnız serbest duyuru gönderebilirsin; Mail template seçilemez.");
+    case "team_mail.purpose_fixed":
+      return say("Ekip postası her zaman duyurudur ve her ekip kendi kategorisiyle gider; amaç ve kategori değiştirilemez.");
+    case "team_mail.off":
+      return say("Ekip postası şu an kapalı.");
+    case "team_mail.leadership_unavailable":
+      return say(
+        SUBMISSIONS.includes(action)
+          ? "Ekip liderliğin şu an doğrulanamadı; istek sunulmadı. Birkaç saniye sonra yeniden dene."
+          : "Sunanın ekip liderliği şu an doğrulanamadı; istek olduğu gibi bekliyor, gönderilmedi. Birkaç saniye sonra yeniden dene.",
+      );
+    case "mail_approval.team_leadership_lost":
+      return again("Sunan artık seçilen ekiplerin hiçbirinin lideri değil: istek gönderilmeden reddedildi.");
+    case "mail_approval.team_mail_off":
+      return say("Ekip postası şu an kapalı: istek olduğu gibi bekliyor, gönderilmedi.");
   }
   if (error.status === 0 || error.status >= 500) return unanswered(error, action);
   if (error.status === 403) {

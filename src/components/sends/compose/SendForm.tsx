@@ -24,7 +24,7 @@ import { PrefillIntro } from '@/components/mail-approvals/PrefillIntro';
 import { Button, Notice, StateCard } from '@skylab-kulubu/skylcn-ui';
 import { useConsole } from '@/components/layout/ConsoleContext';
 import { RoleGate } from '@/components/layout/RoleGate';
-import { ROLE } from '@/lib/access';
+import { ROLE, hasAccess } from '@/lib/access';
 import { useApi, useApiLoad } from '@/lib/api/react';
 import { apiErrorMessage } from '@/lib/api/errors';
 import { approvalViewer, viewerActions } from '@/lib/mail-approvals/actions';
@@ -33,6 +33,8 @@ import { composePrefill, resubmission } from '@/lib/mail-approvals/edit';
 import type { ListRow } from '@/lib/mailing-lists';
 import { sendAccess } from '@/lib/send-form/access';
 import { fetchSendableLists, fetchSendableTemplates, freeTemplate } from '@/lib/send-form/send';
+import { fetchFreeTemplate, fetchTeamAudiences, teamsOf } from '@/lib/send-form/teams';
+import type { MailTemplate } from '@/lib/templates';
 import { formsHandoffMatches, formsRecipients, formsSourceHandoff, parseFormsHandoff, type FormsRecipients } from '@/lib/forms-handoff';
 import { audienceFormSource, fetchFormSource, type PreparedFormSource } from '@/lib/form-mail-source';
 import { FormSourceCard } from '../FormSourceCard';
@@ -40,10 +42,18 @@ import { Compose } from './Compose';
 import { NewsSendForm } from '../news/NewsSendForm';
 import { readNewsSendQuery } from '@/lib/news-send';
 
+/** A Leader without skymail:access (ekip-postasi 06): their Teams and a free announcement only. */
+function useTeamSeat(): boolean {
+  const { roles, teamSeat } = useConsole();
+  return teamSeat !== null && !hasAccess(roles);
+}
+
 export function SendForm() {
   const params = useSearchParams();
   const from = params.get('from_approval');
   const { user } = useConsole();
+  const seat = useTeamSeat();
+  if (seat) return <ComposeCatalog from={from ? { kind: 'copy', id: from } : null} />;
   const handoff = params.has('forms_handoff') || params.get('source') === 'forms';
   // "Haberden gönder" (duyuru-haber 08): ?source=news&slug=<slug>.
   const news = readNewsSendQuery(params);
@@ -149,6 +159,8 @@ function FormsCompose({ query }: { query: string }) {
 
 /** A rejected or declined request, edited and submitted again. */
 export function ResubmitForm({ id }: { id: string }) {
+  const seat = useTeamSeat();
+  if (seat) return <ComposeCatalog from={{ kind: 'resubmit', id }} />;
   return (
     <RoleGate role={ROLE.templatesRead}>
       <ComposeCatalog from={{ kind: 'resubmit', id }} />
@@ -161,17 +173,22 @@ type From = Readonly<{ kind: 'copy' | 'resubmit'; id: string }>;
 /** The templates and lists to pick from, and the request the form is filled from, loaded once. */
 function ComposeCatalog({ from, forms, formSource }: { from: From | null; forms?: FormsRecipients; formSource?: PreparedFormSource }) {
   const { roles, user } = useConsole();
+  const seat = useTeamSeat();
   const access = sendAccess(roles);
+  // The Teams the viewer leads (ekip-postasi 05), read beside the templates; the team seat sends free.basic only.
   const catalog = useApiLoad(
     async (api, signal) => {
-      const [templates, lists, approval] = await Promise.all([
-        fetchSendableTemplates(api, signal),
+      const [templates, lists, approval, teams] = await Promise.all([
+        seat
+          ? fetchFreeTemplate(api, signal).then((free): MailTemplate[] => (free ? [free] : []))
+          : fetchSendableTemplates(api, signal),
         access.list ? fetchSendableLists(api, signal) : Promise.resolve<ListRow[]>([]),
         from ? fetchApproval(api, from.id, signal) : Promise.resolve(null),
+        fetchTeamAudiences(api, signal),
       ]);
-      return { templates, lists, approval };
+      return { templates, lists, approval, teams };
     },
-    `${access.list ? 'templates+lists' : 'templates'}:${from?.kind ?? ''}:${from?.id ?? ''}`,
+    `${seat ? 'seat' : access.list ? 'templates+lists' : 'templates'}:${from?.kind ?? ''}:${from?.id ?? ''}`,
   );
   if (catalog.status === 'loading') return <StateCard loading title="Template'ler ve listeler yükleniyor" />;
   if (catalog.status === 'error') {
@@ -194,7 +211,30 @@ function ComposeCatalog({ from, forms, formSource }: { from: From | null; forms?
   }
 
   const { templates, lists, approval } = catalog.data;
-  if (formSource) return <Compose access={access} templates={templates} lists={lists}
+  const teams = teamsOf(catalog.data.teams);
+  const teamsUnavailable = catalog.data.teams.status === 'unavailable' ? catalog.data.teams.message : null;
+  if (seat && teams.length === 0) {
+    return (
+      <StateCard
+        icon={AlertTriangle}
+        tone="warning"
+        title={teamsUnavailable ? 'Ekiplerin okunamadı' : 'Gönderebileceğin bir ekip yok'}
+        description={teamsUnavailable ?? 'Şu an lideri olduğun bir ekip görünmüyor.'}
+      >
+        <Button variant="outline" onClick={() => void catalog.reload()}>
+          Tekrar dene
+        </Button>
+      </StateCard>
+    );
+  }
+  const team = {
+    teams,
+    teamSeat: seat,
+    onTeamsRefused: () => void catalog.reload(),
+    // Said only to one who cannot pick a list: a Leader likely; an operator is not told every time core is slow.
+    teamsUnavailable: access.list ? null : teamsUnavailable,
+  };
+  if (formSource) return <Compose access={access} templates={templates} lists={lists} {...team}
     prefill={{ what: freeTemplate(templates) ? 'free' : 'template', templateId: null, audience: 'form', formSource, listId: null, people: [], values: {}, rich: {}, notes: [] }}
     intro={<Notice tone="info">Forms kaynağı doğrulandı. Yeni yanıtlar bu gönderimin alıcılarını değiştirmez.
       {formSource.skipped_count > 0 && ` Kullanılabilir e-postası olmayan ${formSource.skipped_count} yanıt atlandı.`}
@@ -202,7 +242,7 @@ function ComposeCatalog({ from, forms, formSource }: { from: From | null; forms?
     </Notice>} />;
   if (forms) {
     return (
-      <Compose access={access} templates={templates} lists={lists} legacyForms
+      <Compose access={access} templates={templates} lists={lists} legacyForms {...team}
         prefill={{ what: freeTemplate(templates) ? 'free' : 'template', templateId: null, audience: 'people', listId: null, people: forms.recipients, values: {}, rich: {}, notes: [] }}
         intro={<Notice tone="info">
           Eski aktarım: “{forms.formTitle}” formundan {forms.recipients.length} kişi eklendi; bu gönderimde kalıcı Forms bağlantısı tutulmaz. Arşivlenen, geçici ve düzeltme istenen yanıtlar dahil değildir.
@@ -213,7 +253,7 @@ function ComposeCatalog({ from, forms, formSource }: { from: From | null; forms?
       />
     );
   }
-  if (!from || !approval) return <Compose access={access} templates={templates} lists={lists} />;
+  if (!from || !approval) return <Compose access={access} templates={templates} lists={lists} {...team} />;
   if (from.kind === 'copy' && approval.audience.kind === 'form') {
     return <StateCard icon={AlertTriangle} tone="warning" title="Forms alıcılarını yeniden hazırla" description="Önceki isteğin kaynağı yeniden kullanılamaz. Formun yanıtlarından yeni bir gönderim hazırla.">
       <FormSourceCopy audience={approval.audience} />
@@ -239,12 +279,13 @@ function ComposeCatalog({ from, forms, formSource }: { from: From | null; forms?
   }
 
   const source = from.kind === 'resubmit' ? resubmission(approval) : approval;
-  const prefill = composePrefill(source, { templates, lists, access });
+  const prefill = composePrefill(source, { templates, lists, access, teams });
   return (
     <Compose
       access={access}
       templates={templates}
       lists={lists}
+      {...team}
       mode={{ kind: from.kind, approval }}
       prefill={prefill}
       intro={<PrefillIntro approval={approval} mode={from.kind} notes={prefill.notes} />}

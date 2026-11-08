@@ -102,6 +102,14 @@ const BY_CODE: ReadonlyMap<string, string> = new Map([
   ["mail_task.category_unknown", "Bu grup bir ekip değil; kulüp genelini ya da bir ekip seç."],
   ["mail_task.preference_unavailable", "İletişim tercihleri şu an okunamıyor. Birkaç dakika sonra yeniden dene."],
   ["mail_task.commercial_statement_required", "Duyuru için tanıtım beyanını işaretle."],
+  // Ekip postası (skymail-backend #128).
+  ["team_mail.off", "Ekip postası şu an kapalı."],
+  ["team_mail.not_leader", "Seçtiğin ekiplerden bazılarının artık lideri görünmüyorsun."],
+  ["team_mail.free_announcement_only", "Ekibine yalnız serbest duyuru gönderebilirsin."],
+  ["team_mail.purpose_fixed", "Ekip postası her zaman ekip duyurusudur; amaç ve kategori değiştirilemez."],
+  ["team_mail.leadership_unavailable", "Ekip liderliğin şu an doğrulanamadı. Birkaç saniye sonra yeniden dene."],
+  ["mail_approval.team_leadership_lost", "Sunan artık seçilen ekiplerin hiçbirinin lideri değil: istek gönderilmeden reddedildi."],
+  ["mail_approval.team_mail_off", "Ekip postası şu an kapalı: istek olduğu gibi bekliyor."],
   // The suppression list's unsubscribes (abonelik-cikisi 02/04, skymail-backend #98).
   ["suppression.reason_required", "Gerekçe tek satır ve 10–500 karakter olmalı."],
   ["suppression.reason_has_address", "Gerekçeye adres yazma."],

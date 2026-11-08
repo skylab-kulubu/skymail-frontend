@@ -51,9 +51,10 @@ const EMPTY_TEXT: Readonly<Record<ApprovalFilter, string>> = {
 
 export function ApprovalList() {
   const router = useRouter();
-  const { roles } = useConsole();
+  const { roles, teamSeat } = useConsole();
   const approver = isApprover(roles);
-  const canCompose = sendAccess(roles).people;
+  // A Leader without skymail:access composes to their Teams.
+  const canCompose = sendAccess(roles).people || teamSeat !== null;
   const view = readApprovalListView(useSearchParams(), { approver });
   const state = useApiLoad(
     (api, signal) => fetchApprovalPage(api, view, { approver }, signal),

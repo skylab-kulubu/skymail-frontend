@@ -16,7 +16,6 @@
  *  - What an edit changed, variable by variable, is shown before it is sent
  *    or returned, and to the submitter a returned edit waits on.
  */
-import { ROLE } from "../access";
 import { freeBodyFromSource } from "../mail-render/free-body";
 import { readFreeBody } from "../mail-render/free-body-read";
 import { visualSource, type VisualInline } from "../mail-render/visual-document";
@@ -33,7 +32,8 @@ import {
   type VariableField,
 } from "../send-form/fields";
 import { purposeChoiceOf, type PurposeChoice, type PurposeFields } from "../send-form/purpose";
-import { FREE_BODY_VARIABLE, FREE_TEMPLATE_KEY, type SendPlan } from "../send-form/send";
+import { FREE_BODY_VARIABLE, FREE_TEMPLATE_KEY, type SendPlan, type TeamApprovalRequest } from "../send-form/send";
+import type { TeamAudience } from "../send-form/teams";
 import { audienceLabel } from "../sends";
 import type { ApiClient } from "../api/client";
 import { audienceFormSource, type FormSource } from "../form-mail-source";
@@ -93,7 +93,7 @@ export function pinnedSourceNote(pinned: PinnedSource): string | null {
     case "loading":
       return "Mailin iki hâli hazırlanıyor…";
     case "noRole":
-      return `Mailin iki hâlini yan yana görmek için ${ROLE.templatesRead} rolü gerekiyor; değişen değişkenler yukarıda.`;
+      return "Mailin iki hâli burada yan yana gösterilemiyor; değişen değişkenler yukarıda.";
     case "unreadable":
       return "Mail template'in bu isteğin bağlı olduğu sürümü okunamadı; mailin iki hâli yan yana gösterilemiyor. Değişen değişkenler yukarıda.";
   }
@@ -261,13 +261,15 @@ export function resubmission<T extends Pick<MailApproval, "state" | "body_variab
 // ---------------------------------------------------------------------------
 // A submission from the send form
 
-/** `POST /mail_approvals` and `…/resubmit`: the send form's request, to a list or to people. */
-export type ApprovalRequest = (
-  | { template_id: string; mail_list_id: string; body_variables: Record<string, string>; tracking?: boolean }
-  | { template_id: string; form_source_id: string; body_variables: Record<string, string> }
-  | { template_id: string; recipients: ApprovalRecipient[]; body_variables: Record<string, string>; tracking?: boolean }
-) &
-  Partial<PurposeFields>;
+/** `POST /mail_approvals` and `…/resubmit`: the send form's request, to a list, to people, to a Forms source or to Teams. */
+export type ApprovalRequest =
+  | ((
+      | { template_id: string; mail_list_id: string; body_variables: Record<string, string>; tracking?: boolean }
+      | { template_id: string; form_source_id: string; body_variables: Record<string, string> }
+      | { template_id: string; recipients: ApprovalRecipient[]; body_variables: Record<string, string>; tracking?: boolean }
+    ) &
+      Partial<PurposeFields>)
+  | TeamApprovalRequest;
 
 /**
  * A send plan as one request for approval: its people — each of the form's
@@ -275,7 +277,7 @@ export type ApprovalRequest = (
  * are pointed to a list; `lists` says whether the viewer can pick one.
  */
 export function approvalRequest(plan: SendPlan, { lists }: { lists: boolean }): { ok: true; request: ApprovalRequest } | { ok: false; problem: string } {
-  if (plan.kind === "list" || plan.kind === "form") return { ok: true, request: plan.request };
+  if (plan.kind === "list" || plan.kind === "form" || plan.kind === "team") return { ok: true, request: plan.request };
   const count = plan.requests.length;
   if (count > APPROVAL_PEOPLE_LIMIT) {
     const crowd = lists
@@ -304,9 +306,11 @@ export function approvalRequest(plan: SendPlan, { lists }: { lists: boolean }): 
 export type ComposePrefill = Readonly<{
   what: "template" | "free";
   templateId: string | null;
-  audience: "list" | "people" | "form";
+  audience: "list" | "people" | "form" | "team";
   formSource?: FormSource | null;
   listId: string | null;
+  /** A Team request's Teams the viewer still leads. */
+  teamIds?: string[];
   people: PersonRow[];
   values: Record<string, string>;
   rich: Record<string, string>;
@@ -320,8 +324,13 @@ export type ComposePrefill = Readonly<{
 
 export function composePrefill(
   approval: Pick<MailApproval, "template" | "audience" | "recipients" | "body_variables" | "tracking"> &
-    Partial<Pick<MailApproval, "purpose" | "category" | "transactional_statement" | "commercial_content_absent" | "own_event_statement">>,
-  { templates, lists, access }: { templates: readonly MailTemplate[]; lists: readonly ListRow[]; access: SendAccess },
+    Partial<Pick<MailApproval, "purpose" | "category" | "transactional_statement" | "commercial_content_absent" | "own_event_statement" | "team_ids">>,
+  {
+    templates,
+    lists,
+    access,
+    teams = [],
+  }: { templates: readonly MailTemplate[]; lists: readonly ListRow[]; access: SendAccess; teams?: readonly TeamAudience[] },
 ): ComposePrefill {
   const notes: string[] = [];
   const template = templates.find((candidate) => candidate.id === approval.template.id) ?? null;
@@ -330,8 +339,23 @@ export function composePrefill(
   let audience: ComposePrefill["audience"] = "people";
   let listId: string | null = null;
   let people: PersonRow[] = [];
+  let teamIds: string[] | undefined;
   const formSource = audienceFormSource(approval.audience);
-  if (approval.audience.kind === "form") {
+  const asked = approval.team_ids ?? [];
+  if (asked.length > 0) {
+    // A Team request stays one: the Teams the viewer still leads are picked, the others said.
+    audience = "team";
+    const led = new Set(teams.map((team) => team.id.toLowerCase()));
+    teamIds = teams.filter((team) => asked.some((id) => id.toLowerCase() === team.id.toLowerCase())).map((team) => team.id);
+    const lost = asked.filter((id) => !led.has(id.toLowerCase())).length;
+    if (lost > 0) {
+      notes.push(
+        teamIds.length === 0
+          ? "İsteğin ekiplerinin artık lideri görünmüyorsun. Bir ekip seç."
+          : `İsteğin ${lost} ekibinin artık lideri görünmüyorsun; seçimden çıkarıldı.`,
+      );
+    }
+  } else if (approval.audience.kind === "form") {
     audience = "form";
     if (!formSource) notes.push("Forms kaynağı artık kullanılamıyor. Formun yanıtlarından yeni bir gönderim hazırla.");
   } else if (approval.audience.kind !== "mailing_list") {
@@ -376,6 +400,7 @@ export function composePrefill(
     audience,
     ...(approval.audience.kind === "form" ? { formSource } : {}),
     listId,
+    ...(teamIds ? { teamIds } : {}),
     people,
     values,
     rich,

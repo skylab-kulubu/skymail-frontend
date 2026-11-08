@@ -11,6 +11,7 @@
  */
 import { ROLE, hasRole } from "../access";
 import { APPROVAL_PEOPLE_LIMIT } from "../mail-approvals/approvals";
+import { TEAM_APPROVAL_NOTE } from "./teams";
 
 const PEOPLE_LIMIT_NOTE = `Onaya en çok ${APPROVAL_PEOPLE_LIMIT} kişi sunulur.`;
 
@@ -53,7 +54,9 @@ export function sendAccess(roles: readonly string[]): SendAccess {
  * Forms' fallback when SkyMail cannot prepare a source) are Forms respondents,
  * a bulk audience: as a Forms source, they go at once only with `mails:write`.
  */
-export function directSend(access: SendAccess, audience: "list" | "people" | "form", { legacyForms = false }: { legacyForms?: boolean } = {}): boolean {
+export function directSend(access: SendAccess, audience: "list" | "people" | "form" | "team", { legacyForms = false }: { legacyForms?: boolean } = {}): boolean {
+  // Team mail always goes for approval (ADR 0067 addendum).
+  if (audience === "team") return false;
   if (audience === "people") return legacyForms ? access.send.form : access.send.people;
   return access.send[audience];
 }
@@ -66,9 +69,10 @@ export function directSend(access: SendAccess, audience: "list" | "people" | "fo
  */
 export function approvalNote(
   access: SendAccess,
-  audience: "list" | "people" | "form",
+  audience: "list" | "people" | "form" | "team",
   { resubmit = false, legacyForms = false }: { resubmit?: boolean; legacyForms?: boolean } = {},
 ): string | null {
+  if (audience === "team") return TEAM_APPROVAL_NOTE;
   if (audience === "form") return resubmit || directSend(access, audience) ? null : `Forms yanıtlayanlarına doğrudan gönderme yetkin yok: sabit Forms alıcıları onaya sunulur; bir onaycı onaylayınca gönderilir.`;
   if (resubmit) return audience === "people" ? PEOPLE_LIMIT_NOTE : null;
   if (directSend(access, audience, { legacyForms })) return null;
@@ -81,12 +85,17 @@ export function approvalNote(
 
 /**
  * The audience the form starts on: a list a link names (`presetList`) when
- * the viewer can pick one; else one they send to at once — a list with
+ * the viewer can pick one; else the Teams they lead (`teams`); else one they send to at once — a list with
  * `mails:write`, people with `mails:send` — so the form's main action is a
  * send; else, for someone who sends nothing, a list if they can pick one.
  */
-export function defaultAudience(access: SendAccess, { presetList }: { presetList: boolean }): "list" | "people" {
+export function defaultAudience(
+  access: SendAccess,
+  { presetList, teams = false }: { presetList: boolean; teams?: boolean },
+): "list" | "people" | "team" {
   if (presetList && access.list) return "list";
+  // A Leader's Teams come first (ekip-postasi 05): what they send is their Team's announcement.
+  if (teams) return "team";
   if (access.send.list) return "list";
   if (access.send.people) return "people";
   return access.list ? "list" : "people";

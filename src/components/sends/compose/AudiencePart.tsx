@@ -9,13 +9,19 @@ import { ChoiceList, type Choice } from './ChoiceList';
 import { PeopleEditor, type PersonEntry } from './PeopleEditor';
 import type { FormSource } from '@/lib/form-mail-source';
 import { FormSourceCard } from '../FormSourceCard';
+import type { TeamAudience } from '@/lib/send-form/teams';
+import { TeamPicker } from './TeamPicker';
 
-export type Audience = 'list' | 'people' | 'form';
+export type Audience = 'list' | 'people' | 'form' | 'team';
 
-const AUDIENCE_OPTIONS: ReadonlyArray<{ value: Audience; label: string }> = [
-  { value: 'list', label: 'Mail listesi' },
-  { value: 'people', label: 'Kişiler' },
-];
+/** The audiences the form offers, in order: the Leader's Teams (ekip-postasi 05), a list, people. */
+function audienceOptions(access: SendAccess, teams: boolean): Array<{ value: Audience; label: string }> {
+  return [
+    ...(teams ? [{ value: 'team' as const, label: 'Ekibim' }] : []),
+    ...(access.list ? [{ value: 'list' as const, label: 'Mail listesi' }] : []),
+    ...(access.people ? [{ value: 'people' as const, label: 'Kişiler' }] : []),
+  ];
+}
 
 /** A mailing list as the picker says it: by name, with its Harici tag and group, or as an internal list. */
 function listChoice(list: ListRow): Choice {
@@ -33,7 +39,7 @@ function sizeText(list: ListRow, size: number | null | undefined): string {
   return list.external ? `${formatCount(size)} üye. E-posta adresi olmayan üyeye gönderilmez.` : `${formatCount(size)} alıcı.`;
 }
 
-/** Who it goes to: a mailing list or Keycloak group with its size, or people one by one. */
+/** Who it goes to: the Leader's Teams, a mailing list or Keycloak group with its size, or people one by one. */
 export function AudiencePart({
   access,
   audience,
@@ -50,6 +56,11 @@ export function AudiencePart({
   peopleWarnings,
   onSend,
   formSource,
+  teams = [],
+  pickedTeams,
+  onPickedTeams,
+  teamsProblem = null,
+  disabled = false,
 }: {
   access: SendAccess;
   audience: Audience;
@@ -67,18 +78,26 @@ export function AudiencePart({
   peopleWarnings: readonly (string | null)[];
   onSend: () => void;
   formSource?: FormSource | null;
+  /** The Teams the viewer leads; none: no Ekibim. */
+  teams?: readonly TeamAudience[];
+  pickedTeams: ReadonlySet<string>;
+  onPickedTeams: (picked: Set<string>) => void;
+  teamsProblem?: string | null;
+  disabled?: boolean;
 }) {
   if (audience === 'form') return formSource
     ? <FormSourceCard source={formSource} />
     : <Notice tone="danger">Forms kaynağı kullanılamıyor. Forms'tan yeniden hazırla.</Notice>;
+  const options = audienceOptions(access, teams.length > 0);
   return (
     <>
-      {access.list ? (
-        <FilterPills aria-label="Kime" value={audience} onValueChange={onAudience} options={AUDIENCE_OPTIONS} />
-      ) : (
-        <Notice tone="info">{access.listNote}</Notice>
-      )}
-      {audience === 'list' ? (
+      {options.length > 1 ? (
+        <FilterPills aria-label="Kime" value={audience} onValueChange={onAudience} options={options} />
+      ) : null}
+      {!access.list && teams.length === 0 && access.listNote ? <Notice tone="info">{access.listNote}</Notice> : null}
+      {audience === 'team' ? (
+        <TeamPicker teams={teams} picked={pickedTeams} onPicked={onPickedTeams} error={teamsProblem} disabled={disabled} />
+      ) : audience === 'list' ? (
         <>
           <ChoiceList
             legend="Mail listesi"

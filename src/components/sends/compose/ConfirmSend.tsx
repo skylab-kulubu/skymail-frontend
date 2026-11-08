@@ -9,7 +9,8 @@ import { peopleSentApart, type PersonRow } from '@/lib/send-form/audience';
 import { confirmTitle } from '@/lib/send-form/confirm';
 import type { Retry, SendPlan } from '@/lib/send-form/send';
 import { untrackedCount, untrackedRecipientsNote } from '@/lib/send-form/tracking';
-import { guestsSkippedNote, ownEventText, purposeText, statementText, teamNames, type StoredPurpose } from '@/lib/send-form/purpose';
+import { COMMERCIAL_STATEMENT, guestsSkippedNote, ownEventText, purposeText, statementText, teamNames, type StoredPurpose } from '@/lib/send-form/purpose';
+import { TEAM_PURPOSE_TEXT } from '@/lib/send-form/teams';
 import type { Progress } from './use-sending';
 import { Notice } from '@skylab-kulubu/skylcn-ui';
 
@@ -46,6 +47,7 @@ export function ConfirmSend({
   trackingAlways = false,
   listConsent = false,
   teams = [],
+  teamsText = null,
   onCancel,
   onConfirm,
 }: {
@@ -65,6 +67,8 @@ export function ConfirmSend({
   listConsent?: boolean;
   /** The lists the form offers, for a team category's name. */
   teams?: readonly ListRow[];
+  /** A Team request (ekip-postasi 05): whom it goes to, in words. */
+  teamsText?: string | null;
   onCancel: () => void;
   onConfirm: (confirming: Confirming) => void;
 }) {
@@ -77,19 +81,23 @@ export function ConfirmSend({
   const submission = confirming?.kind === 'submit';
   const source = (confirming?.kind === 'send' || confirming?.kind === 'submit') && confirming.plan.kind === 'form' ? confirming.plan.source : null;
   const plan = confirming?.kind === 'send' || confirming?.kind === 'submit' || confirming?.kind === 'resendList' ? confirming.plan : null;
+  const toTeams = plan?.kind === 'team';
   const tracked =
     plan !== null &&
     (plan.kind === 'list'
       ? plan.request.tracking === true
       : plan.kind === 'people'
         ? plan.requests.some((request) => request.tracking === true)
-        : trackingAlways);
+        : plan.kind === 'team'
+          ? false
+          : trackingAlways);
   const untrackedNote = plan && tracked ? untrackedRecipientsNote(untrackedCount(plan, list, size)) : null;
-  const purposeOf: StoredPurpose | null = plan === null ? null : plan.kind === 'people' ? (plan.requests[0] ?? null) : plan.request;
-  const purpose = purposeOf ? purposeText(purposeOf, teamNames(teams)) : null;
-  const statement = purposeOf ? statementText(purposeOf) : null;
+  const purposeOf: StoredPurpose | null = plan === null || plan.kind === 'team' ? null : plan.kind === 'people' ? (plan.requests[0] ?? null) : plan.request;
+  // A Team request's purpose is fixed: duyuru, each Team with its own category.
+  const purpose = toTeams ? TEAM_PURPOSE_TEXT : purposeOf ? purposeText(purposeOf, teamNames(teams)) : null;
+  const statement = toTeams ? COMMERCIAL_STATEMENT : purposeOf ? statementText(purposeOf) : null;
   const ownEvent = purposeOf ? ownEventText(purposeOf) : null;
-  const guestsNote = plan && purposeOf ? guestsSkippedNote(purposeOf, plan.kind, list, listConsent) : null;
+  const guestsNote = plan && plan.kind !== 'team' && purposeOf ? guestsSkippedNote(purposeOf, plan.kind, list, listConsent) : null;
   return (
     <PanelDialog isOpen={confirming !== null} onClose={busy ? () => {} : onCancel} title={title}>
       {confirming?.kind === 'retryPeople' ? (
@@ -116,7 +124,7 @@ export function ConfirmSend({
             <div>
               <dt className="text-xs text-subtle-foreground">Kime</dt>
               <dd className="break-words text-foreground">
-                {source ? `“${source.form_title}” formunun ${formatCount(source.recipient_count)} yanıtlayanı (sabit alıcılar)` : submission && people.length === 1
+                {toTeams ? teamsText : source ? `“${source.form_title}” formunun ${formatCount(source.recipient_count)} yanıtlayanı (sabit alıcılar)` : submission && people.length === 1
                   ? person(people[0])
                   : people.length > 0
                     ? peopleSentApart(people.length)

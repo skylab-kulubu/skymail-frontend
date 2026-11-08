@@ -50,6 +50,8 @@ const NAV_ICON = {
   '/suppressions': Ban,
 } as const;
 
+export const TEAM_SEAT_SEND = 'Ekibime gönder';
+
 /** How many requests wait for an approver; null for anyone else, or while it is not known. */
 function usePendingApprovals(approver: boolean): number | null {
   const count = useApiLoad(
@@ -100,8 +102,11 @@ function SidebarCredit() {
 
 export function Sidebar() {
   const pathname = usePathname() || '/';
-  const { roles, user, config } = useConsole();
-  const items = visibleNavigation(roles);
+  const { roles, user, config, teamSeat } = useConsole();
+  // A Leader without skymail:access: the send form is "Ekibime gönder", their Teams only.
+  const items = visibleNavigation(roles, { teamSeat: teamSeat !== null }).map((item) =>
+    teamSeat !== null && item.href === '/mail-tasks/create' ? { ...item, label: TEAM_SEAT_SEND } : item,
+  );
   const activeHref = activeNavHref(pathname, items);
   const pendingApprovals = usePendingApprovals(isApprover(roles));
   const { collapsed } = useSidebar();

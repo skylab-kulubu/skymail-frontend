@@ -112,16 +112,18 @@ export function trackingOffered({
 }: {
   available: boolean;
   always?: boolean;
-  audience: "list" | "people" | "form";
+  audience: "list" | "people" | "form" | "team";
   template: TrackableTemplate | null;
 }): boolean {
-  return available && !always && audience !== "form" && template !== null && templateTrackable(template, audience);
+  // Team mail (ekip-postasi 05) carries no tracking choice: its request has no such field.
+  if (audience === "form" || audience === "team") return false;
+  return available && !always && template !== null && templateTrackable(template, audience);
 }
 
 /**
  * Whether the send asks for tracking: a list or people send while SkyMail
  * tracks every one, whatever its template and with no box; otherwise only
- * when the box is offered and ticked. A Forms send never asks.
+ * when the box is offered and ticked. A Forms send and a Team request never ask.
  */
 export function trackingAsked({
   mode,
@@ -130,11 +132,11 @@ export function trackingAsked({
   ticked,
 }: {
   mode: Pick<TrackingMode, "available" | "always">;
-  audience: "list" | "people" | "form";
+  audience: "list" | "people" | "form" | "team";
   template: TrackableTemplate | null;
   ticked: boolean;
 }): boolean {
-  if (audience === "form") return false;
+  if (audience === "form" || audience === "team") return false;
   if (mode.available && mode.always) return true;
   return ticked && trackingOffered({ available: mode.available, audience, template });
 }
