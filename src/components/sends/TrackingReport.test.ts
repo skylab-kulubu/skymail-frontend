@@ -9,8 +9,15 @@ import { describe, it } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { SkylcnProvider } from "@skylab-kulubu/skylcn-ui";
-import { TRACKING_CAVEAT, TRACKING_EXPIRED_TEXT, TRACKING_WITHHELD_TEXT, type TrackingRecipientPage, type TrackingSummary } from "@/lib/tracking-report";
-import { TrackingOverview, TrackingRecipientsView } from "./TrackingReport";
+import {
+  TRACKING_CAVEAT,
+  TRACKING_COUNTS_ONLY_TEXT,
+  TRACKING_EXPIRED_TEXT,
+  TRACKING_WITHHELD_TEXT,
+  type TrackingRecipientPage,
+  type TrackingSummary,
+} from "@/lib/tracking-report";
+import { TrackingBody, TrackingOverview, TrackingRecipientsView } from "./TrackingReport";
 
 const render = (element: ReturnType<typeof createElement>) =>
   renderToStaticMarkup(createElement(SkylcnProvider, { locale: "tr", children: element }));
@@ -52,6 +59,32 @@ describe("counts withheld from the reader", () => {
 
   it("shows the counts as before when the backend does not say", () => {
     assert.doesNotMatch(text(render(createElement(TrackingOverview, { summary: SUMMARY }))), new RegExp(TRACKING_WITHHELD_TEXT.slice(0, 20)));
+  });
+});
+
+describe("the sender of their own send without the recipients", () => {
+  // skymail-backend: SKYMAIL_SENDER_SEES_RECIPIENTS off (the default), the
+  // sender reads the counts only (ADR-0074 addendum 2026-11-08).
+  const body = (people: "counts_only" | "none") =>
+    text(render(createElement(TrackingBody, { summary: { ...SUMMARY, recipients_readable: false }, people, sendId: "b1c2d3e4-0000-4000-8000-000000000001" })));
+
+  it("sees the counts and a line in place of the recipients", () => {
+    const words = body("counts_only");
+    assert.match(words, /Takip edilen 40/);
+    assert.match(words, /Tıklayan 9/);
+    assert.match(words, new RegExp(TRACKING_COUNTS_ONLY_TEXT.replace(/[.;]/g, "\\$&")));
+    assert.doesNotMatch(words, /Kişiler|İlk gerçek açılma|deneme/);
+  });
+
+  it("names no role", () => {
+    assert.doesNotMatch(TRACKING_COUNTS_ONLY_TEXT, /skymail|tracking|:read/i);
+  });
+
+  it("anyone else sees the counts alone", () => {
+    const words = body("none");
+    assert.match(words, /Takip edilen 40/);
+    assert.doesNotMatch(words, new RegExp(TRACKING_COUNTS_ONLY_TEXT.slice(0, 20)));
+    assert.doesNotMatch(words, /Kişiler/);
   });
 });
 

@@ -2,10 +2,11 @@
 
 // A tracked send's opens and clicks (hub ticket iletisim-servisi 15b): one
 // caveat, the counts, the hours and days after the send, the links, and to
-// those who may see them (skymail:mails:tracking:read, or the send's own
-// sender) the recipients one by one. Everyone else gets the counts only, and
-// the page never asks for the people. A year after the last mail went out only
-// the kept totals remain.
+// those who may see them (skymail:mails:tracking:read; the send's own sender
+// only while SkyMail's switch reopens it, ADR-0074 addendum 2026-11-08) the
+// recipients one by one. Everyone else gets the counts only, and the page
+// never asks for the people; the sender reads a line saying so. 90 days
+// after the last mail went out only the kept totals remain.
 
 import { useState } from 'react';
 import { AlertTriangle, Clock } from 'lucide-react';
@@ -22,7 +23,6 @@ import {
   fetchTrackingRecipients,
   fetchTrackingSummary,
   linkLabel,
-  mayReadTrackingRecipients,
   noLikelyOpenText,
   recipientBadges,
   SERIES_LABELS,
@@ -30,10 +30,12 @@ import {
   shareOf,
   skipReasonLabel,
   TRACKING_CAVEAT,
+  TRACKING_COUNTS_ONLY_TEXT,
   TRACKING_EXPIRED_TEXT,
   TRACKING_WITHHELD_TEXT,
   TRACKING_FILTERS,
   TRACKING_PAGE_SIZE,
+  trackingPeopleView,
   trackingSeries,
   untrackedParts,
   type TrackingAggregate,
@@ -49,7 +51,6 @@ import { SectionTitle } from './SectionTitle';
 export function TrackingSection({ send }: { send: Send }) {
   const { roles, user } = useConsole();
   const summary = useApiLoad((api, signal) => fetchTrackingSummary(api, send.id, signal), send.id);
-  const people = mayReadTrackingRecipients(roles, user.sub, send);
 
   if (summary.status === 'success' && !summary.data.tracking_requested) return null;
 
@@ -65,15 +66,41 @@ export function TrackingSection({ send }: { send: Send }) {
           </Button>
         </StateCard>
       ) : (
-        <>
-          <TrackingOverview summary={summary.data} />
-          {people && !summary.data.retained ? (
-            <TrackingRecipients sendId={send.id} links={summary.data.report?.clicks_by_link ?? []} />
-          ) : null}
-        </>
+        <TrackingBody
+          summary={summary.data}
+          people={trackingPeopleView(roles, user.sub, send, summary.data)}
+          sendId={send.id}
+        />
       )}
     </section>
   );
+}
+
+/** The counts, then the recipients one by one, or to the sender of their own send the line that they see the counts only. */
+export function TrackingBody({
+  summary,
+  people,
+  sendId,
+}: {
+  summary: TrackingSummary;
+  people: ReturnType<typeof trackingPeopleView>;
+  sendId: string;
+}) {
+  return (
+    <>
+      <TrackingOverview summary={summary} />
+      {people === 'people' ? (
+        <TrackingRecipients sendId={sendId} links={summary.report?.clicks_by_link ?? []} />
+      ) : people === 'counts_only' ? (
+        <TrackingCountsOnly />
+      ) : null}
+    </>
+  );
+}
+
+/** In place of the recipients for the sender of their own send. */
+export function TrackingCountsOnly() {
+  return <p className="text-sm text-subtle-foreground">{TRACKING_COUNTS_ONLY_TEXT}</p>;
 }
 
 /** The caveat, the counts, the series and the links; after a year the kept totals only. */
@@ -205,8 +232,9 @@ function TrackingRecipients({ sendId, links }: { sendId: string; links: readonly
       </Notice>
     );
   }
-  // The API decides who sees people; a refusal leaves the counts alone.
-  if (state.status === 'error' && state.error.status === 403) return null;
+  // The API decides who sees people; a refusal (the switch turned off since
+  // the summary was read) leaves the counts and says so.
+  if (state.status === 'error' && state.error.status === 403) return <TrackingCountsOnly />;
 
   return (
     <div className="space-y-3">
