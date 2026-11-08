@@ -334,7 +334,7 @@ describe("a submission from the send form", () => {
     assert.deepEqual(approvalRequest(planOf(draft({ audience: "people", list: null, people: crowd(101) })), { lists: false }), {
       ok: false,
       problem:
-        "Onaya en çok 100 kişi sunulur; burada 101 kişi var. Daha kalabalık bir gönderim bir mail listesine gider: listeleri görmek için skymail:lists:read rolü gerekiyor.",
+        "Onaya en çok 100 kişi sunulur; burada 101 kişi var. Daha kalabalık bir gönderim bir mail listesine gider; bu hesap mail listelerini göremez.",
     });
   });
 });
@@ -465,7 +465,7 @@ describe("the send form filled from a request", () => {
 
     const blind = composePrefill(approval(), { templates: [FREE], lists: [], access: sendAccess([ROLE.access, ROLE.templatesRead]) });
     assert.equal(blind.audience, "people");
-    assert.deepEqual(blind.notes, ["İstek “GECEKODU katılımcıları” listesine gidiyordu; bu hesap mail listelerini göremiyor (skymail:lists:read). Bir kişi seç."]);
+    assert.deepEqual(blind.notes, ["İstek “GECEKODU katılımcıları” listesine gidiyordu; bu hesap mail listelerini göremez. Bir kişi seç."]);
 
     const odd = composePrefill(approval({ body_variables: { ...SUBMITTED, BodyHtml: "<div>x</div>" } }), { templates: [FREE], lists, access: member });
     assert.deepEqual(odd.notes, ["Gövde Visual editöre birebir aktarılamadı: gönderilmeden önce bak."]);
