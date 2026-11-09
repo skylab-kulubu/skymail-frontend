@@ -47,7 +47,7 @@ describe("a refused approval action", () => {
   });
 
   it("names the missing role, or who alone may do it", () => {
-    assert.equal(approvalRefusal(refusal(403, "server.forbidden"), "approve").text, "Bu işlem için skymail:mails:approve rolü gerekiyor.");
+    assert.equal(approvalRefusal(refusal(403, "server.forbidden"), "approve").text, "Bu işlem için onaycı yetkin yok.");
     assert.equal(approvalRefusal(refusal(403, "mail_approval.not_submitter"), "accept").text, "Bu işlemi yalnız isteği sunan yapabilir.");
     assert.equal(approvalRefusal(refusal(404, "server.not_found"), "approve").text, "İstek bulunamadı: yok ya da görme yetkin yok.");
   });
@@ -122,16 +122,21 @@ describe("a refused approval action", () => {
 
 describe("a refused submission", () => {
   // The screens already ask for templates:read (and lists:read to pick a list); the API holds the same rule (ticket 21).
-  it("names the roles the API says are missing", () => {
+  it("says what the missing roles keep from the viewer, in plain words without a role name", () => {
     const forbidden = (roles: string[]) => refusal(403, "server.forbidden", { missing_roles: roles });
     assert.deepEqual(approvalRefusal(forbidden(["skymail:templates:read"]), "submit"), {
-      text: "Onaya sunmak için skymail:templates:read rolü gerekiyor.",
+      text: "Bu hesap Mail template okuyamadığı için onaya sunamaz. Erişime ihtiyacın varsa kulüp yönetimine başvur.",
       reload: false,
     });
     assert.equal(
       approvalRefusal(forbidden(["skymail:templates:read", "skymail:lists:read"]), "resubmit").text,
-      "Onaya sunmak için skymail:templates:read ve skymail:lists:read rolleri gerekiyor.",
+      "Bu hesap Mail template okuyamadığı için onaya sunamaz. Erişime ihtiyacın varsa kulüp yönetimine başvur.",
     );
+    assert.equal(
+      approvalRefusal(forbidden(["skymail:access"]), "submit").text,
+      "Onaya sunma yetkin yok. Erişime ihtiyacın varsa kulüp yönetimine başvur.",
+    );
+    assert.doesNotMatch(approvalRefusal(forbidden(["skymail:access"]), "submit").text, /skymail:/);
     assert.equal(
       approvalRefusal(forbidden(["skymail:lists:read"]), "submit").text,
       "Bu hesap mail listesine onaya sunamaz; kişilere onaya sunabilirsin.",
@@ -159,7 +164,7 @@ describe("a refused submission", () => {
         invalid({ field: "mail_list_id", code: "exactly_one_of", params: { fields: ["mail_list_id", "recipients"] } }),
         "submit",
       ).text,
-      "Onaya ya bir mail listesi ya da kişiler sunulur: birini seç.",
+      "Onaya ya bir mail listesi, ya kişiler ya da ekipler sunulur: birini seç.",
     );
     assert.equal(approvalRefusal(invalid({ field: "template_id", code: "required" }), "submit").text, "Gönderilen bilgiler geçersiz. Alanları kontrol edip tekrar dene.");
   });
@@ -234,5 +239,46 @@ describe("a refused submission", () => {
     const own = { rows: [{}], none: true };
     assert.equal(withRefusedRows(own, null), own);
     assert.equal(withRefusedRows(null, null), null);
+  });
+});
+
+// Ekip postası (skymail-backend #128): the Leader's submissions, and the approver's decisions on them.
+describe("a refused Team request", () => {
+  it("names the Teams the submitter does not lead now, for the form to take them out", () => {
+    const refused = submissionRefusal(refusal(403, "team_mail.not_leader", { team_ids: ["a", "b"] }), "submit", []);
+    assert.deepEqual(refused.teamIds, ["a", "b"]);
+    assert.equal(refused.code, "team_mail.not_leader");
+    assert.match(refused.text, /artık lideri görünmüyorsun/);
+    assert.equal(submissionRefusal(refusal(403, "server.forbidden", { missing_roles: ["skymail:access"] }), "submit", []).teamIds, undefined);
+  });
+
+  it("says a free announcement only, a fixed purpose, the switch off and core not answering in plain words", () => {
+    assert.match(approvalRefusal(refusal(403, "team_mail.free_announcement_only"), "submit").text, /yalnız serbest duyuru/);
+    assert.match(approvalRefusal(refusal(400, "team_mail.purpose_fixed"), "resubmit").text, /amaç ve kategori değiştirilemez/);
+    assert.match(approvalRefusal(refusal(404, "team_mail.off"), "submit").text, /Ekip postası şu an kapalı/);
+    assert.deepEqual(approvalRefusal(refusal(503, "team_mail.leadership_unavailable"), "submit"), {
+      text: "Ekip liderliğin şu an doğrulanamadı; istek sunulmadı. Birkaç saniye sonra yeniden dene.",
+      reload: false,
+    });
+    assert.deepEqual(approvalRefusal(refusal(503, "team_mail.leadership_unavailable"), "approve"), {
+      text: "Sunanın ekip liderliği şu an doğrulanamadı; istek olduğu gibi bekliyor, gönderilmedi. Birkaç saniye sonra yeniden dene.",
+      reload: false,
+    });
+  });
+
+  it("reads the request again when the approval found the submitter leads none of its Teams, and says the switch is off", () => {
+    assert.deepEqual(approvalRefusal(refusal(409, "mail_approval.team_leadership_lost"), "approve"), {
+      text: "Sunan artık seçilen ekiplerin hiçbirinin lideri değil: istek gönderilmeden reddedildi.",
+      reload: true,
+    });
+    assert.deepEqual(approvalRefusal(refusal(409, "mail_approval.team_mail_off"), "accept"), {
+      text: "Ekip postası şu an kapalı: istek olduğu gibi bekliyor, gönderilmedi.",
+      reload: false,
+    });
+  });
+
+  it("says how many Teams a request takes", () => {
+    const tooMany = refusal(400, "validation.error", { errors: [{ field: "team_ids", code: "max_length", params: { max: 50 } }] });
+    assert.equal(approvalRefusal(tooMany, "submit").text, "Bir istekte en çok 50 ekip olur.");
   });
 });

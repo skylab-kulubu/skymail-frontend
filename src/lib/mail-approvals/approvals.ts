@@ -25,11 +25,10 @@
  * The approval mails link here: `/mail-approvals/show/:id`, `#preview` for the
  * preview.
  */
-import { ROLE } from "../access";
 import type { ApiClient, ApiPage } from "../api/client";
 import { pageRange, readPage, viewHref } from "../list-view";
 import { isErasedSubject, personLabel, recipientLabel, samePerson } from "../people";
-import { SEND_LIST_PATH, audienceLabel, type AudienceLabel, type SendAudience } from "../sends";
+import { RECIPIENT_STATUS_LABEL, SEND_LIST_PATH, audienceLabel, formatCount, type AudienceLabel, type SendAudience } from "../sends";
 import { templateTrackable, type TrackableTemplate, type TrackingAudience } from "../send-form/tracking";
 import type { StoredPurpose } from "../send-form/purpose";
 
@@ -121,6 +120,12 @@ export type ApprovalItem = Readonly<{
   last_event: ApprovalEvent | null;
   /** It asked for open and click tracking and may get it. Absent from a backend before tracking. */
   tracking?: boolean;
+  /**
+   * Ekip postası (skymail-backend #128): the Teams it goes to, in path order;
+   * empty for any other request, absent from a backend before Team mail. Its
+   * `audience` is then the first Team's group.
+   */
+  team_ids?: readonly string[];
 }> &
   /** Its purpose, category and statements (send-form/purpose.ts); null or absent before the backend took them. */
   StoredPurpose;
@@ -142,6 +147,26 @@ export type ApprovalPreview = Readonly<{
   rendered_for: ApprovalRecipient;
 }>;
 
+/**
+ * How an approved request's sends went, in totals only (skymail-backend
+ * `handlers.MailApprovalResult`, hub ticket ekip-postasi 09): its submitter
+ * reads it without the send screens' role. No person is in it; a request to
+ * people has one total. `tracking` sums the opens and clicks of its tracked
+ * sends, null when none was tracked, when the counts are withheld
+ * (`tracking_withheld`: fewer than 10 tracked, by the send report's rule), or
+ * when the backend could not read them in time (`tracking_withheld` false).
+ */
+export type ApprovalResult = Readonly<{
+  sent: number;
+  /** Never sent, by rule: a suppressed address, a category turned off, an inactive account, a cancelled send. */
+  skipped: number;
+  failed: number;
+  /** Still queued or being sent. */
+  pending: number;
+  tracking: Readonly<{ tracked_recipients: number; opened: number; clicked: number }> | null;
+  tracking_withheld: boolean;
+}>;
+
 /** A request whole (`handlers.MailApproval`). */
 export type MailApproval = ApprovalItem &
   Readonly<{
@@ -154,6 +179,8 @@ export type MailApproval = ApprovalItem &
     history: readonly ApprovalEvent[] | null;
     /** On the answer to an action. */
     notification?: ApprovalNotification;
+    /** Only on an approved request's read, and absent from a backend before it. */
+    result?: ApprovalResult;
   }>;
 
 // ---------------------------------------------------------------------------
@@ -260,10 +287,14 @@ export const recipientName = (person: ApprovalRecipient) => recipientLabel(perso
 /**
  * Who a request goes to, as the list and the request's page say it: a list
  * or a group as a send's; one person by name and address; several by the
- * first `shown` of them, and how many more.
+ * first `shown` of them, and how many more; Teams by the first and how many
+ * more.
  */
-export function approvalAudience(item: Pick<ApprovalItem, "audience" | "recipients">, shown = 2): AudienceLabel {
+export function approvalAudience(item: Pick<ApprovalItem, "audience" | "recipients" | "team_ids">, shown = 2): AudienceLabel {
   if (item.audience.kind === "form") return audienceLabel(item.audience);
+  const teams = item.team_ids ?? [];
+  // A Team request: its first Team by the group's name (the audience is that group), and how many more.
+  if (teams.length > 0) return { kind: "team", name: item.audience.name?.trim() || "Ekip", detail: "Ekip postası", listId: null, more: teams.length - 1 };
   const people = item.recipients;
   if (people.length === 0) return audienceLabel(item.audience);
   if (people.length === 1) {
@@ -390,7 +421,7 @@ const NOTIFICATION_PROBLEM: ReadonlyMap<string, (notification: ApprovalNotificat
   [
     "no_approvers",
     () =>
-      `Onaycılara bildirim gitmedi: ${ROLE.mailsApprove} rolü olan ve e-posta adresi bilinen kimse yok. İstek yine de bekliyor; bir onaycıya haber ver.`,
+      "Onaycılara bildirim gitmedi: e-posta adresi bilinen bir onaycı yok. İstek yine de bekliyor; bir onaycıya haber ver.",
   ],
   [
     "approver_lookup_failed",
@@ -439,4 +470,41 @@ export function notificationNote(notification: ApprovalNotification | undefined 
   if (!notification?.problem) return null;
   const say = NOTIFICATION_PROBLEM.get(notification.problem);
   return say ? say(notification) : `Bildirim maili herkese gitmedi (${notification.problem}).`;
+}
+
+/**
+ * What the result says in place of opens and clicks withheld from the reader.
+ * Only they are withheld: the delivery numbers above it stand.
+ */
+export const RESULT_TRACKING_WITHHELD_TEXT =
+  "Açılma ve tıklama sayıları kişiye dair bilgi sayılır; yalnız takip yetkisi olanlar görür.";
+
+/**
+ * The result's numbers as the request's page lists them, with the words of a
+ * send's recipient statuses: sent, skipped and failed always, pending while
+ * there are any, and the summed opens and clicks when they are given (not
+ * when withheld, nor when the backend could not read them: tracking null). Null without a result (any request not
+ * approved, or an older backend): the page shows no block.
+ */
+export function approvalResultFacts(result: ApprovalResult | undefined | null): ReadonlyArray<Readonly<{ term: string; value: string }>> | null {
+  if (!result) return null;
+  const facts = [
+    { term: RECIPIENT_STATUS_LABEL.sent, value: formatCount(result.sent) },
+    { term: "Atlandı", value: formatCount(result.skipped) },
+    { term: RECIPIENT_STATUS_LABEL.failed, value: formatCount(result.failed) },
+  ];
+  if (result.pending > 0) facts.push({ term: RECIPIENT_STATUS_LABEL.pending, value: formatCount(result.pending) });
+  if (result.tracking) {
+    facts.push(
+      { term: "Takip edilen", value: formatCount(result.tracking.tracked_recipients) },
+      { term: "Açılma görülen", value: formatCount(result.tracking.opened) },
+      { term: "Tıklayan", value: formatCount(result.tracking.clicked) },
+    );
+  }
+  return facts;
+}
+
+/** What the result says in place of opens and clicks withheld from the reader; null otherwise. */
+export function approvalResultNote(result: ApprovalResult | undefined | null): string | null {
+  return result?.tracking_withheld ? RESULT_TRACKING_WITHHELD_TEXT : null;
 }

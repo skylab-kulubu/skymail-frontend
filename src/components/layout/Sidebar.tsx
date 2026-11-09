@@ -37,6 +37,7 @@ import { useApiLoad } from '@/lib/api/react';
 import { signOutOfKeycloak } from '@/lib/auth/actions';
 import { displayPersonName } from '@/lib/chrome-role';
 import { clubConsoles } from '@/lib/club-consoles';
+import { TEAM_SEAT_SEND_LABEL, TEAM_SEAT_SEND_PATH } from '@/lib/chrome-breadcrumbs';
 import { APPROVAL_LIST_PATH, pendingCount } from '@/lib/mail-approvals/approvals';
 import { onApprovalsChanged } from '@/lib/mail-approvals/changes';
 
@@ -100,8 +101,11 @@ function SidebarCredit() {
 
 export function Sidebar() {
   const pathname = usePathname() || '/';
-  const { roles, user, config } = useConsole();
-  const items = visibleNavigation(roles);
+  const { roles, user, config, teamSeat } = useConsole();
+  // A Leader without skymail:access: the send form is "Ekibime gönder", their Teams only.
+  const items = visibleNavigation(roles, { teamSeat: teamSeat !== null }).map((item) =>
+    teamSeat !== null && item.href === TEAM_SEAT_SEND_PATH ? { ...item, label: TEAM_SEAT_SEND_LABEL } : item,
+  );
   const activeHref = activeNavHref(pathname, items);
   const pendingApprovals = usePendingApprovals(isApprover(roles));
   const { collapsed } = useSidebar();

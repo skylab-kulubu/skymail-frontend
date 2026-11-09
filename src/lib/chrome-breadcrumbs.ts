@@ -8,6 +8,10 @@ export const CHROME_CRUMB_LABELS: Readonly<Record<string, string>> = Object.from
   NAVIGATION.map((item) => [item.href, item.label]),
 );
 
+/** The team seat's send form: its address and its name in the menu, the trail and the tab. */
+export const TEAM_SEAT_SEND_PATH = '/mail-tasks/create';
+export const TEAM_SEAT_SEND_LABEL = 'Ekibime gönder';
+
 export type ChromeCrumb = Readonly<{
   href: string;
   label: string;
@@ -63,7 +67,9 @@ export function chromeCrumbs(pathname: string): ChromeCrumb[] {
  * address (Detay, Düzenle, Sürüm geçmişi) names the record's page instead of
  * the id's "Kayıt".
  */
-export function shellCrumbs(pathname: string): { href: string; label: string }[] {
+export function shellCrumbs(pathname: string, { teamSeat = false }: { teamSeat?: boolean } = {}): { href: string; label: string }[] {
+  // A Leader without skymail:access (ekip-postasi 06): the send form is "Ekibime gönder", and Gönderimler is not theirs.
+  if (teamSeat && pathname === TEAM_SEAT_SEND_PATH) return [{ href: TEAM_SEAT_SEND_PATH, label: TEAM_SEAT_SEND_LABEL }];
   const crumbs = chromeCrumbs(pathname);
   const last = crumbs[crumbs.length - 1];
   const beforeLast = crumbs[crumbs.length - 2];

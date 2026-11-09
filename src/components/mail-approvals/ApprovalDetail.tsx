@@ -29,10 +29,14 @@ import { fetchTemplate } from '@/lib/templates';
 import { fetchTrackingMode } from '@/lib/send-form/tracking';
 import { approvalPurposeText, categoryTeam, ownEventText, statementText } from '@/lib/send-form/purpose';
 import { fetchList } from '@/lib/mailing-lists';
+import { TEAM_PURPOSE_TEXT, droppedTeamIds, namedTeams } from '@/lib/send-form/teams';
+import { fetchTeamNames, teamNamesOf } from '@/lib/mail-approvals/team-names';
 import {
   APPROVAL_LIST_PATH,
   approvalAudience,
   approvalHref,
+  approvalResultFacts,
+  approvalResultNote,
   copyApprovalHref,
   deadlineHint,
   eventActorName,
@@ -155,6 +159,17 @@ function ApprovalView({
   // Unread (no role, gone, an error): the id stays.
   const teamName = team.status === 'success' && team.data ? team.data.name : null;
 
+  // A Team request (ekip-postasi 05): its Teams, and the ones an approval took out, by name.
+  const teamIds = useMemo(() => approval.team_ids ?? [], [approval.team_ids]);
+  const dropped = useMemo(() => droppedTeamIds(approval.history), [approval.history]);
+  const firstTeam = teamIds.length > 0 ? approval.audience.mail_list_id : null;
+  const teamNames = useApiLoad(
+    (client, signal) =>
+      fetchTeamNames(client, [...teamIds, ...dropped], { known: firstTeam ? { [firstTeam]: approval.audience.name } : {}, canReadLists }, signal),
+    `team-names:${canReadLists}:${teamIds.join(',')}:${dropped.join(',')}:${approval.audience.name ?? ''}`,
+  );
+  const nameOfTeam = teamNamesOf(teamNames.status === 'success' ? teamNames.data : null);
+
   const [started, setEditing] = useState<Editing | null>(null);
   // An edit shows only while the request can still be edited: one that moved on under it (reloaded after a refusal) drops it.
   const editing = started && actions.actions.includes('edit') ? started : null;
@@ -221,13 +236,17 @@ function ApprovalView({
     always: trackingMode.status === 'success' && trackingMode.data.available && trackingMode.data.always,
   });
   // The approver reads the purpose, category and statement as submitted; a list or group request is a duyuru.
-  const purpose = approvalPurposeText(
-    { ...approval, audienceKind: approval.audience.kind },
-    {
-      available: trackingMode.status === 'success' && trackingMode.data.purpose,
-      team: (id) => (id.toLowerCase() === groupId ? approval.audience.name : id.toLowerCase() === otherTeam ? teamName : null),
-    },
-  );
+  // A Team request's purpose is fixed: duyuru, each Team with its own category.
+  const purpose =
+    teamIds.length > 0
+      ? TEAM_PURPOSE_TEXT
+      : approvalPurposeText(
+          { ...approval, audienceKind: approval.audience.kind },
+          {
+            available: trackingMode.status === 'success' && trackingMode.data.purpose,
+            team: (id) => (id.toLowerCase() === groupId ? approval.audience.name : id.toLowerCase() === otherTeam ? teamName : null),
+          },
+        );
   const statement = statementText(approval);
   const ownEvent = ownEventText(approval);
   const warnings = editing && edit?.ok ? fieldWarnings(fields.filter((field) => edit.changed.includes(field.name)), editing.current) : {};
@@ -279,6 +298,14 @@ function ApprovalView({
         <Fact term="Kitle" className="col-span-2 sm:col-span-1">
           <Audience audience={audience} />
         </Fact>
+        {teamIds.length > 0 ? (
+          <Fact term="Ekipler" className="col-span-2">
+            <span className="block whitespace-normal">{namedTeams(teamIds, nameOfTeam)}</span>
+            {dropped.length > 0 ? (
+              <span className="text-2xs block whitespace-normal text-subtle-foreground">Onayda çıkarılan: {namedTeams(dropped, nameOfTeam)}</span>
+            ) : null}
+          </Fact>
+        ) : null}
         <Fact term="Alıcılar">
           <span className="tabular-nums">
             {approval.recipient_count === null ? 'Bilinmiyor' : approval.recipient_count === 0 ? 'Alıcı yok' : `${formatCount(approval.recipient_count)} alıcı`}
@@ -309,6 +336,8 @@ function ApprovalView({
         {tracking ? <Fact term="Takip">{tracking}</Fact> : null}
       </dl>
 
+      <Result approval={approval} />
+
       <Recipients approval={approval} />
 
       <PreviewSection approval={approval} />
@@ -320,7 +349,7 @@ function ApprovalView({
 
       <section aria-labelledby="history-title">
         <SectionTitle id="history-title">Geçmiş</SectionTitle>
-        <ApprovalHistory approval={approval} fields={fields} />
+        <ApprovalHistory approval={approval} fields={fields} teamName={nameOfTeam} />
       </section>
 
       <DecisionDialog
@@ -345,6 +374,30 @@ function Fact({ term, children, className = '' }: { term: string; children: Reac
       <dt className="text-2xs text-subtle-foreground">{term}</dt>
       <dd className="mt-1 min-w-0 text-sm text-secondary-foreground">{children}</dd>
     </div>
+  );
+}
+
+/**
+ * How the approved request's sends went, in numbers only (hub ticket
+ * ekip-postasi 09): what its submitter sees without the send screens. Nothing
+ * when the backend gives no result (not approved, or an older backend).
+ */
+function Result({ approval }: { approval: MailApproval }) {
+  const facts = approvalResultFacts(approval.result);
+  if (!facts) return null;
+  const note = approvalResultNote(approval.result);
+  return (
+    <section aria-labelledby="result-title">
+      <SectionTitle id="result-title">Sonuç</SectionTitle>
+      <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {facts.map((fact) => (
+          <Fact key={fact.term} term={fact.term}>
+            <span className="tabular-nums">{fact.value}</span>
+          </Fact>
+        ))}
+      </dl>
+      {note ? <p className="mt-2 text-xs text-subtle-foreground">{note}</p> : null}
+    </section>
   );
 }
 

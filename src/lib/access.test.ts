@@ -5,7 +5,7 @@
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { ROLE, activeNavHref, hasAccess, hasAnyRole, homeScreen, homeView, isApprover, requiredRolesFor, sectionLabel, visibleNavigation } from "./access";
+import { ROLE, activeNavHref, hasAccess, hasAnyRole, homeScreen, homeView, isApprover, requiredRolesFor, sectionLabel, teamSeatAllows, visibleNavigation } from "./access";
 
 const hrefs = (roles: string[]) => visibleNavigation(roles).map((item) => item.href);
 
@@ -174,5 +174,28 @@ describe("any of some roles", () => {
     assert.equal(hasAnyRole([ROLE.access, ROLE.mailsRead], [ROLE.mailsSend, ROLE.mailsWrite]), false);
     assert.equal(hasAnyRole([ROLE.mailsSend], [ROLE.mailsSend]), false);
     assert.equal(hasAnyRole([ROLE.access], []), true);
+  });
+});
+
+// A Leader without skymail:access (ekip-postasi 06): SkyMail's team chain
+// answers them only for Team mail, the free announcement and their requests.
+describe("the team seat", () => {
+  it("shows the home screen, the send form and the mail approvals, whatever other SkyMail role the token carries", () => {
+    const seat = (roles: string[]) => visibleNavigation(roles, { teamSeat: true }).map((item) => item.href);
+    assert.deepEqual(seat([]), ["/", "/mail-tasks/create", "/mail-approvals"]);
+    assert.deepEqual(seat([ROLE.mailsApprove, ROLE.listsRead]), ["/", "/mail-tasks/create", "/mail-approvals"]);
+    assert.deepEqual(visibleNavigation([ROLE.mailsApprove]), []);
+  });
+
+  it("keeps a viewer with access on their roles' menu", () => {
+    assert.deepEqual(
+      visibleNavigation([ROLE.access], { teamSeat: true }).map((item) => item.href),
+      ["/", "/mail-approvals"],
+    );
+  });
+
+  it("opens only those pages", () => {
+    for (const path of ["/", "/mail-tasks/create", "/mail-approvals", "/mail-approvals/show/1", "/mail-approvals/edit/1"]) assert.ok(teamSeatAllows(path), path);
+    for (const path of ["/templates", "/mail-tasks", "/mail-tasks/show/1", "/mailing-lists", "/suppressions"]) assert.ok(!teamSeatAllows(path), path);
   });
 });

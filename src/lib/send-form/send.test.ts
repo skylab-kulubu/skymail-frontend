@@ -551,3 +551,43 @@ describe("what the form offers and shows", () => {
     assert.equal(unnamedLine(named), true);
   });
 });
+
+// Ekip postası (ekip-postasi 05): a request for approval naming Teams; the purpose and categories are the server's.
+describe("a Team request", () => {
+  const team = (id: string) => ({
+    id,
+    path: `/UYELER/ARGE/${id}`,
+    code: id,
+    display_name: { tr: id },
+    parent_id: null,
+    depth: 0,
+    category: `team:${id}:duyuru`,
+    recipient_count: 3,
+  });
+
+  it("names the Teams, the template and the variables, and says the mail is not promotion", () => {
+    const check = sendPlan(draft({ audience: "team", list: null, teams: [team("web"), team("algo")] }));
+    assert.equal(check.ok, true);
+    if (!check.ok) return;
+    assert.equal(check.plan.kind, "team");
+    assert.deepEqual(check.plan.kind === "team" ? check.plan.request : null, {
+      template_id: "7e3a1c00-0000-4000-8000-000000000001",
+      team_ids: ["web", "algo"],
+      body_variables: { EventName: "GECEKODU", DetailsUrl: "https://skyl.app/gecekodu" },
+      commercial_content_absent: true,
+    });
+    assert.deepEqual(approvalRequest(check.plan, { lists: false }), { ok: true, request: check.plan.kind === "team" ? check.plan.request : null });
+  });
+
+  it("does not go without a Team, and never carries tracking or a purpose", () => {
+    const none = sendPlan(draft({ audience: "team", list: null, teams: [], tracking: true, purpose: { purpose: "duyuru", category: "club:duyuru" } }));
+    assert.equal(none.ok, false);
+    assert.equal(none.ok ? null : none.problems.teams, "En az bir ekip seç.");
+    const one = sendPlan(draft({ audience: "team", list: null, teams: [team("web")], tracking: true, purpose: { purpose: "duyuru", category: "club:duyuru" } }));
+    assert.ok(one.ok && one.plan.kind === "team" && !("tracking" in one.plan.request) && !("purpose" in one.plan.request));
+  });
+
+  it("goes only for approval, whatever the viewer may send", () => {
+    assert.equal(directSend(sendAccess([ROLE.access, ROLE.templatesRead, ROLE.listsRead, ROLE.mailsWrite]), "team"), false);
+  });
+});
