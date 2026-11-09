@@ -6,6 +6,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState, type R
 import { hasRole, type Role } from '@/lib/access';
 import { createRoleSync, sameRoles, type RoleSync } from '@/lib/auth/role-sync';
 import type { PublicConfig } from '@/lib/runtime-config';
+import type { TeamAudience } from '@/lib/send-form/teams';
 
 export type ConsoleUser = Readonly<{
   name?: string | null;
@@ -18,6 +19,12 @@ type ConsoleContextValue = Readonly<{
   roles: readonly string[];
   user: ConsoleUser;
   config: PublicConfig;
+  /**
+   * A Leader without skymail:access (ekip-postasi 06): the Teams they lead,
+   * as the layout's check read them. Null for anyone with access. They get
+   * the team seat: their Teams, a free announcement and their own requests.
+   */
+  teamSeat: readonly TeamAudience[] | null;
   /**
    * Refreshes the token now and resolves to the roles held afterwards; at most
    * once a minute (role-sync.ts). RoleGate asks before it says no.
@@ -103,12 +110,17 @@ export function ConsoleProvider({
   roles: rendered,
   user,
   config,
+  teamSeat = null,
   refreshRoles,
-}: Omit<ConsoleContextValue, 'confirmRoles'> & { refreshRoles: RefreshRoles; children: ReactNode }) {
+}: Omit<ConsoleContextValue, 'confirmRoles' | 'teamSeat'> & {
+  teamSeat?: readonly TeamAudience[] | null;
+  refreshRoles: RefreshRoles;
+  children: ReactNode;
+}) {
   const [roles, sync] = useLiveRoles(rendered, refreshRoles);
   const value = useMemo(
-    () => ({ roles, user, config, confirmRoles: sync.confirm }),
-    [roles, user, config, sync],
+    () => ({ roles, user, config, teamSeat, confirmRoles: sync.confirm }),
+    [roles, user, config, teamSeat, sync],
   );
   return <ConsoleContext.Provider value={value}>{children}</ConsoleContext.Provider>;
 }

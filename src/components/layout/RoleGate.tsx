@@ -5,7 +5,7 @@ import { Lock } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { StateCard } from '@skylab-kulubu/skylcn-ui';
 import { useConsole } from '@/components/layout/ConsoleContext';
-import { hasAnyRole, requiredRolesFor, type Role } from '@/lib/access';
+import { hasAccess, hasAnyRole, requiredRolesFor, teamSeatAllows, type Role } from '@/lib/access';
 
 /**
  * A page opened by its address — a bookmark, a link from superadmin — that
@@ -24,9 +24,11 @@ import { hasAnyRole, requiredRolesFor, type Role } from '@/lib/access';
  */
 export function RoleGate({ role, children }: { role?: Role | readonly Role[]; children: ReactNode }) {
   const pathname = usePathname() || '/';
-  const { roles, confirmRoles } = useConsole();
+  const { roles, confirmRoles, teamSeat } = useConsole();
   const required: readonly Role[] = role === undefined ? requiredRolesFor(pathname) : typeof role === 'string' ? [role] : role;
-  const allowed = hasAnyRole(roles, required);
+  // A Leader without skymail:access opens only Team mail's pages; a page's own role gate is not theirs to pass.
+  const seat = teamSeat !== null && !hasAccess(roles);
+  const allowed = seat ? role === undefined && teamSeatAllows(pathname) : hasAnyRole(roles, required);
   // The page and roles a fresh token has already said no to.
   const asked = `${pathname} ${required.join(' ')}`;
   const [confirmed, setConfirmed] = useState<string | null>(null);
@@ -49,7 +51,11 @@ export function RoleGate({ role, children }: { role?: Role | readonly Role[]; ch
         icon={Lock}
         tone="warning"
         title="Bu sayfayı görme yetkin yok"
-        description={`Bu sayfa için ${required.join(' ya da ')} rolü gerekiyor. Erişime ihtiyacın varsa kulüp yönetimine başvur.`}
+        description={
+          seat
+            ? 'Buradan yalnız ekiplerine duyuru hazırlayabilir ve onaya sunduklarını izleyebilirsin.'
+            : `Bu sayfa için ${required.join(' ya da ')} rolü gerekiyor. Erişime ihtiyacın varsa kulüp yönetimine başvur.`
+        }
       />
     );
   }

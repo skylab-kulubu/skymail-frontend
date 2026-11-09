@@ -497,9 +497,10 @@ export function dayTitle(date: string): string {
 export type AudienceLabel = Readonly<{
   /**
    * An internal mailing list, a Keycloak group (shown as Harici), the one
-   * recipient of a single send, or the people of a Mail onayı request.
+   * recipient of a single send, the people of a Mail onayı request, or
+   * the Teams of a Team mail request (`name` the first, `more` the rest).
    */
-  kind: "list" | "group" | "person" | "people" | "form";
+  kind: "list" | "group" | "person" | "people" | "form" | "team";
   name: string;
   detail: string | null;
   /** The mailing list to link to, for a list or a group. */
@@ -516,6 +517,7 @@ const UNNAMED: Readonly<Record<AudienceLabel["kind"], string>> = {
   person: "Tek kişi",
   people: "Kişiler",
   form: "Forms formu",
+  team: "Ekip",
 };
 
 /** Who a send went to. A Keycloak group Keycloak could not name gets a label instead of its name. */

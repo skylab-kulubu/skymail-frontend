@@ -83,6 +83,18 @@ describe("the trail in the shell header", () => {
     ]);
   });
 
+  it("names the team seat's send form Ekibime gönder, without Gönderimler", () => {
+    assert.deepEqual(trail("/mail-tasks/create"), [
+      ["Gönderimler", "/mail-tasks"],
+      ["Yeni gönderim", "/mail-tasks/create"],
+    ]);
+    assert.deepEqual(
+      shellCrumbs("/mail-tasks/create", { teamSeat: true }).map((c) => [c.label, c.href]),
+      [["Ekibime gönder", "/mail-tasks/create"]],
+    );
+    assert.deepEqual(shellCrumbs("/mail-approvals", { teamSeat: true }), shellCrumbs("/mail-approvals"));
+  });
+
   it("links nothing outside the address contract", () => {
     assert.deepEqual(trail("/nope/missing"), [["Missing", "/nope/missing"]]);
     assert.deepEqual(trail(`/mailing-lists/${ID}`), [

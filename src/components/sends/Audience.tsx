@@ -13,7 +13,8 @@ import { formatCount, formatSendTime, type AudienceLabel } from '@/lib/sends';
  * Who a send went to. A list or a group links to its mailing list for
  * someone who may read lists; a Keycloak group carries the Harici tag the
  * mailing list screens give it. A Mail onayı request's people are the first
- * few by name and how many more.
+ * few by name and how many more; a Team mail request's Teams the first by
+ * name and how many more.
  */
 export function Audience({ audience, className = '' }: { audience: AudienceLabel; className?: string }) {
   const canReadLists = useCan(ROLE.listsRead);
@@ -43,7 +44,8 @@ export function Audience({ audience, className = '' }: { audience: AudienceLabel
           {name}
           {audience.kind === 'group' ? <Badge tone="warning" size="xs">Harici</Badge> : null}
           {audience.kind === 'form' ? <Badge tone="info" size="xs">Forms</Badge> : null}
-          {audience.more ? <span className="shrink-0 text-muted-foreground">+{formatCount(audience.more)} kişi</span> : null}
+          {audience.kind === 'team' ? <Badge tone="brand" size="xs">Ekip</Badge> : null}
+          {audience.more ? <span className="shrink-0 text-muted-foreground">+{formatCount(audience.more)} {audience.kind === 'team' ? 'ekip' : 'kişi'}</span> : null}
         </span>
         {audience.detail ? (
           <span className="text-2xs truncate text-subtle-foreground">{audience.detail}</span>

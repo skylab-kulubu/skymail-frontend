@@ -20,6 +20,10 @@ function audienceText(approval: MailApproval): string {
   const audience = approvalAudience(approval);
   if (audience.kind === 'person') return audience.detail ? `${audience.name} <${audience.detail}>` : audience.name;
   const count = approval.recipient_count === null ? 'alıcı sayısı bilinmiyor' : `${formatCount(approval.recipient_count)} alıcı`;
+  if (audience.kind === 'team') {
+    const teams = audience.more ? `${formatCount(audience.more + 1)} ekip` : `“${audience.name}” ekibi`;
+    return `${teams} (${count}; birden çok ekipte olana tek posta)`;
+  }
   return `“${audience.name}” ${audience.kind === 'group' ? 'Keycloak grubu' : 'listesi'} (${count})`;
 }
 

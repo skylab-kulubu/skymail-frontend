@@ -370,6 +370,29 @@ describe("the send form filled from a request", () => {
     assert.equal(composePrefill(approval(), { templates: [FREE, template()], lists, access: member }).tracking, false);
   });
 
+  // Ekip postası: a Team request is resubmitted to the Teams the viewer still leads.
+  it("picks a Team request's Teams the viewer still leads, and says the others", () => {
+    const seat = sendAccess([]);
+    const team = (id: string) => ({ id, path: `/UYELER/${id}`, code: id, display_name: { tr: id }, parent_id: null, depth: 0, category: `team:${id}:duyuru`, recipient_count: 2 });
+    const request = approval({ team_ids: ["web", "algo"], audience: { ...approval().audience, mail_list_id: "web", source: "keycloak", name: "WEB" } });
+    const both = composePrefill(request, { templates: [FREE], lists: [], access: seat, teams: [team("web"), team("algo")] });
+    assert.equal(both.audience, "team");
+    assert.deepEqual(both.teamIds, ["web", "algo"]);
+    assert.deepEqual(both.notes, []);
+    const one = composePrefill(request, { templates: [FREE], lists: [], access: seat, teams: [team("algo")] });
+    assert.deepEqual(one.teamIds, ["algo"]);
+    assert.deepEqual(one.notes, ["İsteğin 1 ekibinin artık lideri görünmüyorsun; seçimden çıkarıldı."]);
+    const other = composePrefill(request, { templates: [FREE], lists: [], access: seat, teams: [team("other")] });
+    assert.deepEqual(other.teamIds, []);
+    assert.deepEqual(other.notes, ["İsteğin ekiplerinin artık lideri görünmüyorsun. Bir ekip seç."]);
+    // No Team at all: the form falls back to its start (formAudience); core not answering is said as that.
+    const none = composePrefill(request, { templates: [FREE], lists: [], access: seat });
+    assert.deepEqual(none.notes, ["İstek ekiplere gidiyordu, ama şu an gönderebileceğin bir ekip yok. Başka bir kitle seç."]);
+    const unread = composePrefill(request, { templates: [FREE], lists: [], access: seat, teamsUnavailable: true });
+    assert.deepEqual(unread.notes, ["İstek ekiplere gidiyordu, ama ekiplerin şu an okunamadı. Biraz sonra yeniden dene ya da başka bir kitle seç."]);
+    assert.equal(composePrefill(approval({ team_ids: [] }), { templates: [FREE], lists, access: member }).audience, "list");
+  });
+
   it("picks the free announcement, the list and the values again", () => {
     const prefill = composePrefill(approval(), { templates: [FREE, template()], lists, access: member });
     assert.equal(prefill.what, "free");
@@ -566,7 +589,7 @@ describe("why the mail is not shown both ways", () => {
   it("tells a missing role from a version that could not be read", () => {
     assert.equal(
       pinnedSourceNote({ status: "noRole" }),
-      "Mailin iki hâlini yan yana görmek için skymail:templates:read rolü gerekiyor; değişen değişkenler yukarıda.",
+      "Mailin iki hâli burada yan yana gösterilemiyor; değişen değişkenler yukarıda.",
     );
     assert.equal(
       pinnedSourceNote({ status: "unreadable" }),

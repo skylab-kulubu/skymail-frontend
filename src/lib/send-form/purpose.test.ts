@@ -201,6 +201,7 @@ describe("a send plan with a purpose", () => {
 
     const request = approvalRequest(people.plan, { lists: true });
     assert.ok(request.ok);
+    assert.ok(!("team_ids" in request.request));
     assert.equal(request.request.purpose, "islem");
     assert.equal(request.request.transactional_statement, true);
     assert.ok(!("category" in request.request));

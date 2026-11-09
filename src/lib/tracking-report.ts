@@ -7,9 +7,11 @@
  *    an hourly-then-daily series, with no person and no link address in it. A
  *    year after the last mail went out it is `retained`: only the totals kept
  *    for a send to at least ten tracked recipients, or none (`report: null`).
- *  - `GET /mail_tasks/{id}/tracking/recipients` (`skymail:mails:tracking:read`,
- *    or the send's own sender): one row per recipient, filtered and paged;
- *    410 a year after the last mail went out.
+ *  - `GET /mail_tasks/{id}/tracking/recipients` (`skymail:mails:tracking:read`;
+ *    the send's own sender only while SkyMail's SKYMAIL_SENDER_SEES_RECIPIENTS
+ *    is on, off by default): one row per recipient, filtered and paged; 410
+ *    90 days after the last mail went out. The summary says whether the
+ *    viewer may read it (`recipients_readable`).
  *
  * An open is never proof the mail was read: Apple Mail loads images by itself
  * and Outlook blocks them. The screen speaks of opens seen or not seen, never
@@ -67,11 +69,23 @@ export type TrackingSummary = Readonly<{
    * (skymail-backend GetTracking). Absent from an older backend.
    */
   withheld?: boolean;
+  /**
+   * Whether the viewer may read the send's people (`GET
+   * /mail_tasks/{id}/tracking/recipients`), as the backend decides it.
+   * Absent from an older backend.
+   */
+  recipients_readable?: boolean;
   report: TrackingAggregate | null;
 }>;
 
 /** What the report says in place of counts withheld from the reader. */
 export const TRACKING_WITHHELD_TEXT = "Bu gönderimin sayıları kişiye dair bilgi sayılır; yalnız takip yetkisi olanlar görür.";
+
+/**
+ * What the sender reads under the counts of their own send (ADR-0074 addendum 2026-11-08).
+ * Only per-person opens and clicks are withheld; skymail:mails:read still sees the recipients in the queue.
+ */
+export const TRACKING_COUNTS_ONLY_TEXT = "Kişi bazında açılma ve tıklama yalnız takip yetkisi olanlara açık.";
 
 export type TrackingRecipientLink = Readonly<{ link_id: number; clicks: number; last_clicked_at: string }>;
 
@@ -136,20 +150,40 @@ export function sendTracked(send: Pick<Send, "tracking">): boolean {
 
 /**
  * Whether the viewer may see the send's recipients one by one, as the API
- * decides it: `skymail:mails:tracking:read` (YK, DK, ADMIN), or the send's own
- * sender without any further role. Anyone else gets the counts only, and the
- * page never asks for the people. A mail the system sends (account and
- * transaction mail, a Mail onayı notice whose sent_by is the person who
- * acted) is read with the role only: the API refuses its sender (403), and
- * the section keeps the counts alone.
+ * decides it. The summary says so (`recipients_readable`): only
+ * `skymail:mails:tracking:read` (YK, DK, ADMIN) by default; the send's own
+ * sender too only while SkyMail's switch reopens it (Yusuf, 2026-11-08;
+ * ADR-0074 addendum 2026-11-08). Anyone else gets the counts only, and the
+ * page never asks for the people. An older backend does not say: then the
+ * rule it applies, the role or the send's own sender.
  */
 export function mayReadTrackingRecipients(
   roles: readonly string[],
   viewerSub: string | null | undefined,
   send: Pick<Send, "sent_by">,
+  summary?: Pick<TrackingSummary, "recipients_readable"> | null,
 ): boolean {
+  if (typeof summary?.recipients_readable === "boolean") return summary.recipients_readable;
   if (hasRole(roles, ROLE.mailsTrackingRead)) return true;
   return Boolean(viewerSub) && viewerSub === send.sent_by;
+}
+
+/**
+ * What the section shows under the counts: the recipients one by one
+ * (`people`), to the send's own sender who may not read them a line saying
+ * they see the counts only (`counts_only`), or nothing more. A year-old
+ * send's people are gone, and withheld counts already say why.
+ */
+export function trackingPeopleView(
+  roles: readonly string[],
+  viewerSub: string | null | undefined,
+  send: Pick<Send, "sent_by">,
+  summary: Pick<TrackingSummary, "recipients_readable" | "retained" | "withheld">,
+): "people" | "counts_only" | "none" {
+  if (summary.retained) return "none";
+  if (mayReadTrackingRecipients(roles, viewerSub, send, summary)) return "people";
+  if (summary.withheld === true) return "none";
+  return Boolean(viewerSub) && viewerSub === send.sent_by ? "counts_only" : "none";
 }
 
 // ---------------------------------------------------------------------------

@@ -267,6 +267,9 @@ describe("who a tracked send will not track", () => {
     assert.equal(untrackedCount(people, null, null), null);
     const form = { kind: "form", request: { template_id: "t", form_source_id: "f", body_variables: {} }, source: {} } as unknown as SendPlan;
     assert.equal(untrackedCount(form, null, null), null);
+    // A Team request's members are accounts: tracked while every send is (tracking_always), nobody left out for want of one.
+    const toTeams = { kind: "team" as const, teams: [], request: { template_id: "t", team_ids: ["a"], body_variables: {}, commercial_content_absent: true as const } };
+    assert.equal(untrackedRecipientsNote(untrackedCount(toTeams, null, null)), null);
     assert.equal(untrackedRecipientsNote(untrackedCount(people, null, null)), "Hesabı olmayan alıcılar takip edilmez.");
   });
   it("counts an internal list's members, unknown while its size is; a Keycloak group's members all have an account", () => {
