@@ -5,7 +5,15 @@
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { CHECK_INTERVAL_MS, CONFIRM_INTERVAL_MS, createRoleSync, sameRoles, type RoleSyncOptions } from "./role-sync";
+import {
+  CHECK_INTERVAL_MS,
+  CONFIRM_INTERVAL_MS,
+  OPEN_TAB_CHECK_MS,
+  checkWhileShown,
+  createRoleSync,
+  sameRoles,
+  type RoleSyncOptions,
+} from "./role-sync";
 
 const ACCESS = "skymail:access";
 const TEMPLATES = "skymail:templates:read";
@@ -160,5 +168,39 @@ describe("confirm", () => {
     await h.sync.confirm();
     await h.sync.check();
     assert.equal(h.calls.read, 0);
+  });
+});
+
+describe("checkWhileShown", () => {
+  function clock() {
+    const ticks: { tick: () => void; ms: number }[] = [];
+    let stopped = false;
+    const every = (tick: () => void, ms: number) => {
+      ticks.push({ tick, ms });
+      return () => {
+        stopped = true;
+      };
+    };
+    return { every, ticks, stopped: () => stopped };
+  }
+
+  it("checks an open tab every token lifetime while it is shown", () => {
+    const c = clock();
+    let shown = true;
+    let checks = 0;
+    const stop = checkWhileShown(() => (checks += 1), () => shown, c.every);
+    assert.equal(c.ticks.length, 1);
+    assert.equal(c.ticks[0].ms, OPEN_TAB_CHECK_MS);
+    assert.equal(OPEN_TAB_CHECK_MS, 5 * 60_000);
+
+    c.ticks[0].tick();
+    assert.equal(checks, 1);
+
+    shown = false;
+    c.ticks[0].tick();
+    assert.equal(checks, 1, "a hidden tab waits for the next focus");
+
+    stop();
+    assert.equal(c.stopped(), true);
   });
 });
