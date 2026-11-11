@@ -14,6 +14,8 @@
  * - check(): reads the session as it is (no Keycloak call unless the token is
  *   about to expire), when the tab comes back into view and when the viewer
  *   moves to another page; at most once per CHECK_INTERVAL_MS.
+ * - checkWhileShown(): a tab left open and shown, with no focus change or
+ *   page move, checks again every OPEN_TAB_CHECK_MS (one token lifetime).
  * - confirm(): refreshes the token now. A page that says the viewer lacks a
  *   role asks for this first, so a role granted minutes ago opens it; at most
  *   once per CONFIRM_INTERVAL_MS, so a page that is simply not theirs does not
@@ -31,6 +33,24 @@ export function sameRoles(a: readonly string[], b: readonly string[]): boolean {
 
 export const CHECK_INTERVAL_MS = 10_000;
 export const CONFIRM_INTERVAL_MS = 60_000;
+export const OPEN_TAB_CHECK_MS = 5 * 60_000;
+
+/**
+ * Calls `check` every OPEN_TAB_CHECK_MS while `isShown()`; a hidden tab waits
+ * for the next focus instead. Returns the stop function.
+ */
+export function checkWhileShown(
+  check: () => void,
+  isShown: () => boolean,
+  every: (tick: () => void, ms: number) => () => void = (tick, ms) => {
+    const timer = setInterval(tick, ms);
+    return () => clearInterval(timer);
+  },
+): () => void {
+  return every(() => {
+    if (isShown()) check();
+  }, OPEN_TAB_CHECK_MS);
+}
 
 export type RoleSyncOptions = {
   /** The roles the page shows now. */
