@@ -4,7 +4,7 @@ import { getSession } from 'next-auth/react';
 import { usePathname, useRouter } from 'next/navigation';
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { hasRole, type Role } from '@/lib/access';
-import { createRoleSync, sameRoles, type RoleSync } from '@/lib/auth/role-sync';
+import { checkWhileShown, createRoleSync, sameRoles, type RoleSync } from '@/lib/auth/role-sync';
 import type { PublicConfig } from '@/lib/runtime-config';
 import type { TeamAudience } from '@/lib/send-form/teams';
 
@@ -49,8 +49,8 @@ export type RefreshRoles = () => Promise<readonly string[] | null>;
 
 /**
  * Keeps `rendered` (the roles the server rendered with) in step with the
- * session: checked when the tab is shown again and on every move to another
- * page (role-sync.ts). A change is shown at once and the server parts are
+ * session: checked when the tab is shown again, on every move to another
+ * page and every few minutes while the tab stays shown (role-sync.ts). A change is shown at once and the server parts are
  * rendered again (router.refresh), e.g. the layout's "Erişimin yok" screen.
  */
 export function useLiveRoles(
@@ -90,12 +90,15 @@ export function useLiveRoles(
   }, [sync, pathname]);
 
   useEffect(() => {
+    const isShown = () => document.visibilityState !== 'hidden';
     const shown = () => {
-      if (document.visibilityState !== 'hidden') void sync.check();
+      if (isShown()) void sync.check();
     };
     window.addEventListener('focus', shown);
     document.addEventListener('visibilitychange', shown);
+    const stop = checkWhileShown(() => void sync.check(), isShown);
     return () => {
+      stop();
       window.removeEventListener('focus', shown);
       document.removeEventListener('visibilitychange', shown);
     };
