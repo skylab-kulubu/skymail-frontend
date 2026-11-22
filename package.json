@@ -17,10 +17,10 @@
     "@tiptap/starter-kit": "^3.12.1",
     "lucide-react": "^1.55.0",
     "monaco-editor": "0.55.1",
-    "next": "~16.3.8",
+    "next": "~16.4.6",
     "next-auth": "5.0.0-beta.32",
-    "react": "^19.2.3",
-    "react-dom": "^19.2.3",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
     "react-is": "^19.2.3",
     "recharts": "^3.7.0",
     "server-only": "^0.0.1"
