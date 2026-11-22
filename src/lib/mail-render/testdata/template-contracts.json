@@ -794,13 +794,15 @@
       "Venue",
       "TicketQrUrl",
       "TicketCode",
+      "TicketUrl",
       "OwnerTeam",
       "EventUrl"
     ],
     "requiredVariables": [],
     "sensitiveVariables": [
       "TicketCode",
-      "TicketQrUrl"
+      "TicketQrUrl",
+      "TicketUrl"
     ],
     "sampleKeys": [
       "EventDate",
@@ -809,6 +811,7 @@
       "OwnerTeam",
       "TicketCode",
       "TicketQrUrl",
+      "TicketUrl",
       "Venue"
     ],
     "referenced": [
@@ -818,6 +821,7 @@
       "OwnerTeam",
       "TicketCode",
       "TicketQrUrl",
+      "TicketUrl",
       "UnsubscribeUrl",
       "Venue"
     ],
@@ -828,6 +832,7 @@
       "{{.OwnerTeam}}",
       "{{.TicketCode}}",
       "{{.TicketQrUrl}}",
+      "{{.TicketUrl}}",
       "{{.UnsubscribeUrl}}",
       "{{.Venue}}",
       "{{if .EventDate}}",
@@ -835,8 +840,10 @@
       "{{if .OwnerTeam}}",
       "{{if .TicketCode}}",
       "{{if .TicketQrUrl}}",
+      "{{if .TicketUrl}}",
       "{{if .UnsubscribeUrl}}",
-      "{{if .Venue}}"
+      "{{if .Venue}}",
+      "{{if not .TicketQrUrl}}"
     ]
   },
   "event.reminder": {
@@ -884,24 +891,34 @@
   "event.updated": {
     "subject": "{{.EventName}} etkinliğinde değişiklik var",
     "system": false,
-    "contentSensitive": false,
+    "contentSensitive": true,
     "variables": [
       "EventName",
       "ChangeSummary",
       "NewStartsAt",
       "NewEndsAt",
       "NewVenue",
+      "TicketQrUrl",
+      "TicketCode",
+      "TicketUrl",
       "EventUrl"
     ],
     "requiredVariables": [],
-    "sensitiveVariables": null,
+    "sensitiveVariables": [
+      "TicketCode",
+      "TicketQrUrl",
+      "TicketUrl"
+    ],
     "sampleKeys": [
       "ChangeSummary",
       "EventName",
       "EventUrl",
       "NewEndsAt",
       "NewStartsAt",
-      "NewVenue"
+      "NewVenue",
+      "TicketCode",
+      "TicketQrUrl",
+      "TicketUrl"
     ],
     "referenced": [
       "ChangeSummary",
@@ -910,6 +927,9 @@
       "NewEndsAt",
       "NewStartsAt",
       "NewVenue",
+      "TicketCode",
+      "TicketQrUrl",
+      "TicketUrl",
       "UnsubscribeUrl"
     ],
     "actions": [
@@ -919,13 +939,20 @@
       "{{.NewEndsAt}}",
       "{{.NewStartsAt}}",
       "{{.NewVenue}}",
+      "{{.TicketCode}}",
+      "{{.TicketQrUrl}}",
+      "{{.TicketUrl}}",
       "{{.UnsubscribeUrl}}",
       "{{if .ChangeSummary}}",
       "{{if .EventUrl}}",
       "{{if .NewEndsAt}}",
       "{{if .NewStartsAt}}",
       "{{if .NewVenue}}",
-      "{{if .UnsubscribeUrl}}"
+      "{{if .TicketCode}}",
+      "{{if .TicketQrUrl}}",
+      "{{if .TicketUrl}}",
+      "{{if .UnsubscribeUrl}}",
+      "{{if not .TicketQrUrl}}"
     ]
   },
   "mail.approval-requested": {
