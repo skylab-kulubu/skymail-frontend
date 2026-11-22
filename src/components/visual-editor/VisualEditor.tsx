@@ -420,7 +420,7 @@ function Toolbar({
 }
 
 /**
- * Why the reader got the mail: the footer's first line (ticket 31). Empty,
+ * Why the reader got the mail: the first line of the mail's footer (ticket 31). Empty,
  * the footer says the neutral sentence, which the field shows as its
  * placeholder.
  */
@@ -437,7 +437,7 @@ function ReasonField({ value, onChange, editable }: { value: string; onChange: (
         maxLength={REASON_MAX_LENGTH}
         autoComplete="off"
         readOnly={!editable}
-        hint={typed === '' ? `Boş kalırsa footer'da “${DEFAULT_REASON}” yazar.` : "Footer'ın ilk satırı."}
+        hint={typed === '' ? `Boş kalırsa postanın en altında “${DEFAULT_REASON}” yazar.` : 'Postanın en altında yazar.'}
         error={problem ? `${problem[0].toLocaleUpperCase('tr')}${problem.slice(1)}.` : null}
       />
     </div>

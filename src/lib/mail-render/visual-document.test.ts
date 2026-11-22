@@ -461,7 +461,7 @@ describe("a Visual document's reason", () => {
     ["only spaces", "   ", /reason: boş neden yazılmaz/],
     ["two lines", "Bir.\nİki.", /reason: neden tek satır olmalı/],
     ["spaced at an end", "Neden. ", /reason: nedenin başında ya da sonunda boşluk olmaz/],
-    ["a variable", "Bu e-postayı {{.TeamName}} için alıyorsun.", /reason: neden değişken ya da Go aksiyonu/],
+    ["a variable", "Bu e-postayı {{.TeamName}} için alıyorsun.", /reason: neden \{\{ \}\} içeremez; değişken kullanılamaz/],
   ] as [string, unknown, RegExp][]) {
     it(`is refused when it is ${name}`, () => {
       const problems = reasonProblems(withReason(value));

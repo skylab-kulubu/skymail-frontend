@@ -244,7 +244,7 @@ export function reasonProblem(reason: string): string | null {
   if (reason.trim() === "") return "boş neden yazılmaz";
   if (/[\r\n]/.test(reason)) return "neden tek satır olmalı";
   if (reason !== reason.trim()) return "nedenin başında ya da sonunda boşluk olmaz";
-  if (hasGoAction(reason)) return "neden değişken ya da Go aksiyonu ({{ … }}) içeremez";
+  if (hasGoAction(reason)) return "neden {{ }} içeremez; değişken kullanılamaz";
   const length = [...reason].length;
   if (length > REASON_MAX_LENGTH) return `neden en çok ${REASON_MAX_LENGTH} karakter olabilir (şu an ${length})`;
   return null;
