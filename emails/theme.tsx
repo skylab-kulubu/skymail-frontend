@@ -266,8 +266,8 @@ const brands: Record<Brand, { label: string; href: string; credit?: Credit }> = 
 };
 
 /**
- * The footer's sentence for a mail that does not say its own: every Visual
- * mail and every JSX template written before `reason` existed. It claims
+ * The footer's sentence for a mail that does not say its own: a Visual mail
+ * whose document gives no reason, and a JSX template that passes none. It claims
  * nothing about the reader, because an operator's list may reach people who
  * are neither members nor participants (a sponsor, an applicant).
  */
