@@ -45,10 +45,14 @@ import {
 } from 'lucide-react';
 import { FormField } from '@/components/common/FormField';
 import {
+  DEFAULT_REASON,
+  REASON_MAX_LENGTH,
   TEMPLATE_BODY_ALLOWANCE,
+  buildVisual,
   isVariableName,
   linkAddressProblem,
   parseVisualSource,
+  reasonProblem,
   visualDocumentVariables,
   type VisualAllowance,
 } from '@/lib/mail-render/visual-document';
@@ -73,10 +77,12 @@ type Panel = 'link' | 'variable' | 'recipientName' | null;
 /**
  * The document in the editor as source text, and the variables it uses —
  * also while something in it does not pass the model yet, such as a section
- * whose variable is still to be chosen.
+ * whose variable is still to be chosen. `reason` is the reason field as
+ * typed; left empty, the document has none.
  */
-function sourceOf(editor: Editor) {
-  const document = fromEditorContent(editor.getJSON());
+function sourceOf(editor: Editor, reason: string) {
+  const typed = reason.trim();
+  const document = buildVisual.document(fromEditorContent(editor.getJSON()).blocks, typed === '' ? undefined : typed);
   return { text: JSON.stringify(document), variables: visualDocumentVariables(document).filter(isVariableName) };
 }
 
@@ -413,6 +419,31 @@ function Toolbar({
   );
 }
 
+/**
+ * Why the reader got the mail: the footer's first line (ticket 31). Empty,
+ * the footer says the neutral sentence, which the field shows as its
+ * placeholder.
+ */
+function ReasonField({ value, onChange, editable }: { value: string; onChange: (value: string) => void; editable: boolean }) {
+  const typed = value.trim();
+  const problem = typed === '' ? null : reasonProblem(typed);
+  return (
+    <div className="border-t border-border p-3">
+      <FormField
+        label="Bu e-postayı neden alıyor?"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={DEFAULT_REASON}
+        maxLength={REASON_MAX_LENGTH}
+        autoComplete="off"
+        readOnly={!editable}
+        hint={typed === '' ? `Boş kalırsa footer'da “${DEFAULT_REASON}” yazar.` : "Footer'ın ilk satırı."}
+        error={problem ? `${problem[0].toLocaleUpperCase('tr')}${problem.slice(1)}.` : null}
+      />
+    </div>
+  );
+}
+
 /** The mail's look in the editor, readable in both panel themes; the mail's own look is the preview's. */
 const CONTENT_CLASS = [
   'min-h-[320px] px-4 py-3 text-sm leading-relaxed text-secondary-foreground outline-hidden',
@@ -472,6 +503,9 @@ export function VisualEditor({
   const [extensions] = useState(() => visualEditorExtensions(allow, words.placeholder));
   const [problems, setProblems] = useState<string[] | null>(opened.ok ? null : opened.problems);
   const [used, setUsed] = useState<string[]>(opened.ok ? visualDocumentVariables(opened.document) : []);
+  // The reason as typed; the document carries it trimmed (sourceOf).
+  const [reason, setReason] = useState(() => (opened.ok ? (opened.document.reason ?? '') : ''));
+  const reasonRef = useRef(reason);
   const [panel, setPanel] = useState<Panel>(null);
 
   const attributes = useMemo(
@@ -492,15 +526,23 @@ export function VisualEditor({
     content: opened.ok ? toEditorContent(opened.document) : undefined,
     editable,
     editorProps: { attributes },
-    onUpdate: ({ editor: current }) => {
-      const { text, variables: inDocument } = sourceOf(current);
-      setUsed(inDocument);
-      if (text === handedOut.current) return;
-      handedOut.current = text;
-      echoes.handedOut(text);
-      onChangeRef.current(text);
-    },
+    onUpdate: ({ editor: current }) => handOut(current),
   });
+
+  function handOut(current: Editor) {
+    const { text, variables: inDocument } = sourceOf(current, reasonRef.current);
+    setUsed(inDocument);
+    if (text === handedOut.current) return;
+    handedOut.current = text;
+    echoes.handedOut(text);
+    onChangeRef.current(text);
+  }
+
+  const changeReason = (typed: string) => {
+    reasonRef.current = typed;
+    setReason(typed);
+    if (editor) handOut(editor);
+  };
 
   useEffect(() => {
     editor?.setEditable(editable);
@@ -519,6 +561,8 @@ export function VisualEditor({
     if (read.ok) {
       editor.commands.setContent(toEditorContent(read.document), { emitUpdate: false });
       setUsed(visualDocumentVariables(read.document));
+      reasonRef.current = read.document.reason ?? '';
+      setReason(reasonRef.current);
     }
   }, [editor, value, allow, echoes]);
 
@@ -573,6 +617,7 @@ export function VisualEditor({
         ) : (
           <p className="px-4 py-3 text-xs text-subtle-foreground">Visual editör yükleniyor…</p>
         )}
+        {allow.reason ? <ReasonField value={reason} onChange={changeReason} editable={editable} /> : null}
         {footer}
       </div>
     </VisualEditorContext.Provider>

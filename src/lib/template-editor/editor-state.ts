@@ -88,9 +88,14 @@ import { v } from "./go";
 
 // Kulübün mail bileşenleri "./theme"ten, Go template yardımcıları "./go"dan gelir.
 // v("FirstName") gönderimde {{.FirstName}} olur ve alıcının adıyla dolar.
+// reason footer'ın ilk satırıdır: alıcı bu e-postayı neden alıyor. Yazılmazsa
+// "Bu e-postayı SKY LAB'den aldın." gider.
 export default function Mail() {
   return (
-    <Shell preview="Gelen kutusunda konunun yanında görünen kısa metin">
+    <Shell
+      preview="Gelen kutusunda konunun yanında görünen kısa metin"
+      reason="Bu e-postayı etkinliğe kayıtlı olduğun için alıyorsun."
+    >
       <Heading>Merhaba {v("FirstName")}</Heading>
       <Paragraph>Mailin metnini buraya yaz.</Paragraph>
       <Cta href="https://yildizskylab.com">Devam et</Cta>

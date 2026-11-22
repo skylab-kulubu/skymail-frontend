@@ -25,7 +25,27 @@ import { isVariableName } from "./go-template";
 import { RECIPIENT_NAME, fallbackProblem } from "./recipient-name";
 
 export const VISUAL_DOCUMENT_TYPE = "skymail.visual";
-export const VISUAL_DOCUMENT_VERSION = 1;
+
+/**
+ * The versions this panel reads. Version 2 is a document with a reason
+ * (VisualDocument.reason), and only such a document is written as 2: one
+ * without a reason stays 1, so every document saved before reasons existed
+ * reads back as the same text, and a panel that knows only 1 refuses a
+ * reason rather than dropping it.
+ */
+export const VISUAL_DOCUMENT_VERSIONS = [1, 2] as const;
+
+export type VisualDocumentVersion = (typeof VISUAL_DOCUMENT_VERSIONS)[number];
+
+/** The longest reason a document may carry, in characters. */
+export const REASON_MAX_LENGTH = 200;
+
+/**
+ * The footer's sentence for a mail that gives no reason: emails/theme.tsx
+ * defaultReason(), which visual.test.ts holds this to. Kept here too so the
+ * editor can show it without loading the mail components.
+ */
+export const DEFAULT_REASON = "Bu e-postayı SKY LAB'den aldın.";
 
 /**
  * A link's `notrack`: SkyMail does not count its clicks and sends it as it
@@ -65,8 +85,14 @@ export type VisualBlock =
 
 export type VisualDocument = {
   type: typeof VISUAL_DOCUMENT_TYPE;
-  version: typeof VISUAL_DOCUMENT_VERSION;
+  version: VisualDocumentVersion;
   blocks: VisualBlock[];
+  /**
+   * Why the reader got this mail, in one sentence of plain text: the
+   * footer's first line (emails/theme.tsx Shell reason). Only in version 2,
+   * where it is required; without it the footer says DEFAULT_REASON.
+   */
+  reason?: string;
 };
 
 export type VisualRead = { ok: true; document: VisualDocument } | { ok: false; problems: string[] };
@@ -98,6 +124,8 @@ export type VisualAllowance = Readonly<{
   subheadings: boolean;
   /** A link may be marked not to be counted (VisualMark notrack). */
   noTrackLinks?: boolean;
+  /** The document may say why the reader got the mail (VisualDocument reason): a Mail template's body, which the Shell's footer closes. */
+  reason?: boolean;
 }>;
 
 /** Every block the model knows, whatever a body may use of them. */
@@ -113,6 +141,7 @@ export const TEMPLATE_BODY_ALLOWANCE: VisualAllowance = {
   variables: true,
   lineBreaks: false,
   subheadings: false,
+  reason: true,
 };
 
 /** All of the model: what a document's source text may hold, whichever body it is. */
@@ -124,6 +153,7 @@ const WHOLE_MODEL: VisualAllowance = {
   lineBreaks: true,
   subheadings: true,
   noTrackLinks: true,
+  reason: true,
 };
 
 export { isVariableName };
@@ -152,7 +182,11 @@ const withMarks = (marks: readonly VisualMark[] | undefined) => (marks && marks.
  * same document is always the same text.
  */
 export const buildVisual = {
-  document: (blocks: VisualBlock[]): VisualDocument => ({ type: VISUAL_DOCUMENT_TYPE, version: VISUAL_DOCUMENT_VERSION, blocks }),
+  /** A document with a reason is version 2, one without it version 1. */
+  document: (blocks: VisualBlock[], reason?: string): VisualDocument =>
+    reason === undefined
+      ? { type: VISUAL_DOCUMENT_TYPE, version: 1, blocks }
+      : { type: VISUAL_DOCUMENT_TYPE, version: 2, blocks, reason },
   text: (text: string, marks?: readonly VisualMark[]): VisualInline => ({ type: "text", text, ...withMarks(marks) }),
   variable: (name: string, marks?: readonly VisualMark[], fallback?: string): VisualInline => ({
     type: "variable",
@@ -199,6 +233,21 @@ export function linkAddressProblem(href: string): string | null {
     return `"${href}" bir adres değil`;
   }
   return LINK_PROTOCOLS.includes(url.protocol) ? null : "adres https://, http:// ya da mailto: ile başlamalı";
+}
+
+/**
+ * Why a sentence cannot be a document's reason, or null when it can: one line
+ * of plain text, no longer than REASON_MAX_LENGTH, with no space at either
+ * end. It holds no variable: the mailer would print `{{.X}}` as typed.
+ */
+export function reasonProblem(reason: string): string | null {
+  if (reason.trim() === "") return "boş neden yazılmaz";
+  if (/[\r\n]/.test(reason)) return "neden tek satır olmalı";
+  if (reason !== reason.trim()) return "nedenin başında ya da sonunda boşluk olmaz";
+  if (hasGoAction(reason)) return "neden değişken ya da Go aksiyonu ({{ … }}) içeremez";
+  const length = [...reason].length;
+  if (length > REASON_MAX_LENGTH) return `neden en çok ${REASON_MAX_LENGTH} karakter olabilir (şu an ${length})`;
+  return null;
 }
 
 /** The club's own image host: its addresses name no extension, and it serves the mails' own logo. */
@@ -513,14 +562,25 @@ export function readVisualDocument(value: unknown, allowance: VisualAllowance = 
     reader.problem("belge", `türü "${VISUAL_DOCUMENT_TYPE}" değil: ${JSON.stringify(value.type)}`);
     return { ok: false, problems: reader.problems };
   }
-  if (value.version !== VISUAL_DOCUMENT_VERSION) {
-    reader.problem("belge", `sürüm ${JSON.stringify(value.version)}; bu panel yalnız ${VISUAL_DOCUMENT_VERSION}. sürümü okur`);
+  if (!VISUAL_DOCUMENT_VERSIONS.includes(value.version as VisualDocumentVersion)) {
+    reader.problem("belge", `sürüm ${JSON.stringify(value.version)}; bu panel yalnız ${VISUAL_DOCUMENT_VERSIONS.join(". ve ")}. sürümü okur`);
     return { ok: false, problems: reader.problems };
   }
-  reader.only(value, ["type", "version", "blocks"], "belge");
+  const withReason = value.version === 2;
+  reader.only(value, withReason ? ["type", "version", "blocks", "reason"] : ["type", "version", "blocks"], "belge");
   const blocks = reader.blocks(value.blocks, "blocks");
+  let reason: string | undefined;
+  if (withReason) {
+    const problem =
+      value.reason === undefined ? "2. sürüm belge bir neden taşır"
+      : typeof value.reason !== "string" ? "neden bir metin olmalı"
+      : !allowance.reason ? "neden burada kullanılamaz"
+      : reasonProblem(value.reason);
+    if (problem) reader.problem("reason", problem);
+    else reason = value.reason as string;
+  }
   if (reader.problems.length > 0) return { ok: false, problems: reader.problems };
-  return { ok: true, document: buildVisual.document(blocks) };
+  return { ok: true, document: buildVisual.document(blocks, reason) };
 }
 
 /** A Visual source, which is the document's JSON text. */

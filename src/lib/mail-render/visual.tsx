@@ -166,6 +166,11 @@ export function visualMail(document: VisualDocument): ComponentType | null {
   );
   const preview = opening ? previewLine(opening.content) : "";
   return function VisualMail() {
-    return <Shell preview={preview}>{nodes}</Shell>;
+    // No reason leaves the Shell's neutral sentence.
+    return (
+      <Shell preview={preview} reason={document.reason === undefined ? undefined : asText(document.reason)}>
+        {nodes}
+      </Shell>
+    );
   };
 }
