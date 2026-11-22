@@ -50,7 +50,7 @@ export default function EventTicketCreated() {
       <Title>Biletin Hazır</Title>
 
       <Paragraph>
-        <Strong>{v("EventName")}</Strong> biletin hazır. Kapıda QR kodunu okut.
+        <Strong>{v("EventName")}</Strong> biletin hazır. Kapıda üyeysen SkyPass QR'ını göster, misafirsen ekrandaki QR'ı telefonunla okut.
       </Paragraph>
 
       <Rows>
@@ -93,7 +93,7 @@ export default function EventTicketCreated() {
       <Cta href={v("EventUrl")}>Etkinlik Sayfası</Cta>
       {end}
 
-      <Small style={{ marginTop: "24px" }}>QR görünmüyorsa bilet kodunu görevliye söyle.</Small>
+      <Small style={{ marginTop: "24px" }}>QR'la giremezsen adını ya da e-postanı görevliye söyle.</Small>
 
       {/* KVKK aydınlatma §5.12: the photo notice goes in the registration mail, fixed, before the footer. */}
       <Small>Etkinlikte fotoğraf ve video çekilir, Kulübün kanallarında paylaşılabilir.</Small>
