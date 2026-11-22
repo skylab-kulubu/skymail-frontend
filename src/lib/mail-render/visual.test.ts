@@ -26,6 +26,8 @@ import { blockBalance, fillSampleValues, referencedVariables, renderSource, type
 import { findActions } from "./go-template";
 import { defaultReason } from "../../../emails/theme";
 import {
+  DEFAULT_REASON,
+  buildVisual,
   visualDocumentVariables,
   visualSource,
   type VisualBlock,
@@ -400,6 +402,54 @@ describe("a Visual document rendered", () => {
     assert.deepEqual(problems, []);
     assert.match(html, /@media \(prefers-color-scheme: dark\)/);
     assert.match(html, /class="card"/);
+  });
+});
+
+// The footer opens with why the reader got the mail (ticket 31): the
+// operator's sentence, or the neutral one when the document gives none.
+describe("a Visual mail's footer", () => {
+  const body: VisualBlock[] = [{ type: "paragraph", content: [{ type: "text", text: "Merhaba." }] }];
+  const sentence = "Bu e-postayı GECEKODU'na başvurduğun için alıyorsun.";
+  /** The HTML's text as a reader sees it: the renderer wraps long lines and escapes the apostrophe. */
+  const htmlText = (html: string) => html.replace(/\s+/g, " ").replaceAll("&#x27;", "'");
+
+  it("opens with the document's reason, in both bodies", async () => {
+    const { html, plainText } = await renderVisual(buildVisual.document(body, sentence));
+
+    assert.ok(htmlText(html).includes(sentence), "HTML'de neden yok");
+    assert.ok(plainText.includes(sentence), "düz metinde neden yok");
+    assert.ok(!htmlText(html).includes(DEFAULT_REASON) && !plainText.includes(DEFAULT_REASON), "nötr cümle de yazıldı");
+    const footer = plainText.slice(plainText.indexOf(sentence));
+    assert.ok(footer.indexOf(sentence) < footer.indexOf("Sorun bildir"), "neden footer'ın başında değil");
+  });
+
+  it("says the neutral sentence when the document gives no reason", async () => {
+    const { html, plainText } = await renderVisual(buildVisual.document(body));
+
+    assert.ok(htmlText(html).includes(DEFAULT_REASON));
+    assert.ok(plainText.includes(DEFAULT_REASON));
+  });
+
+  it("is the Shell's own neutral sentence, which the editor shows", () => {
+    assert.equal(DEFAULT_REASON, defaultReason());
+  });
+
+  it("prints a typed brace as the mailer will", async () => {
+    const { html } = await renderVisual(buildVisual.document(body, "Kulüp { listesi."));
+    assert.ok(htmlText(html).includes(`Kulüp ${TYPED_BRACE} listesi.`));
+  });
+
+  it("passes every check emails:render holds the repo's templates to", async () => {
+    const { html, plainText, variables } = await renderVisual(buildVisual.document(EVERY_BLOCK.blocks, sentence));
+    const problems: string[] = [];
+
+    checkBalancedActions("visual", html, problems);
+    checkOpaqueSurfaces("visual", html, problems);
+    checkBackgroundLayersAreThemed("visual", html, problems);
+    checkPlainTextIsReadable("visual", html, plainText, problems);
+    checkSubjectVariables("visual", "{{.FirstName}}, GECEKODU'nda görüşelim", variables, problems);
+
+    assert.deepEqual(problems, []);
   });
 });
 
