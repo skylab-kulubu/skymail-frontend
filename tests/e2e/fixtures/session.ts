@@ -47,6 +47,8 @@ export const ROLES = {
   member: ["skymail:access", "skymail:templates:read", "skymail:lists:read"],
   /** SkyMail's administrator: reads every send's content but a sensitive one's, single mail included (skymail:system-mails:read). */
   admin: ["skymail:access", "skymail:templates:read", "skymail:lists:read", "skymail:mails:read", "skymail:system-mails:read"],
+  /** DK (Yusuf, 2026-11-22): reads every send, its content and who opened masked content (skymail:audit:read); writes nothing. */
+  dk: ["skymail:access", "skymail:mails:read", "skymail:system-mails:read", "skymail:mails:tracking:read", "skymail:audit:read"],
   /** Decides sends submitted for approval; reads templates and sends, sends nothing itself. */
   approver: ["skymail:access", "skymail:templates:read", "skymail:mails:read", "skymail:mails:approve"],
 } as const;
