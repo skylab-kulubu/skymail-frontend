@@ -40,8 +40,13 @@ export const meta: TemplateMeta = {
 };
 
 /**
- * The QR is the door proof, so the mail has to work when images are blocked:
- * the ticket code is printed as text under it, and the door can look that up.
+ * The door reads the Ticket, not this mail (ADR-0032): a member shows their
+ * SkyPass QR, a guest scans the door screen's QR with their phone, and the
+ * desk checks anyone in by name or e-mail. core sends no QR, ticket code or
+ * event link today (docs/ticket-created-notification.md), so those blocks stay
+ * empty; they show only for a sender that fills them. The QR keeps a white
+ * ground so it scans in either theme, and the code is printed as text under
+ * it for a mail whose images are blocked.
  */
 export default function EventTicketCreated() {
   return (
