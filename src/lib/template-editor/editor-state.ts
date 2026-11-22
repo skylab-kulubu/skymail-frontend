@@ -88,6 +88,8 @@ import { v } from "./go";
 
 // Kulübün mail bileşenleri "./theme"ten, Go template yardımcıları "./go"dan gelir.
 // v("FirstName") gönderimde {{.FirstName}} olur ve alıcının adıyla dolar.
+// Shell'e reason="…" verirsen postanın en altında alıcının bu e-postayı neden
+// aldığını söyler. Vermezsen "Bu e-postayı SKY LAB'den aldın." gider.
 export default function Mail() {
   return (
     <Shell preview="Gelen kutusunda konunun yanında görünen kısa metin">

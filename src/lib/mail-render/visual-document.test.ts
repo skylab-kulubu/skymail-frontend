@@ -9,9 +9,12 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, it } from "node:test";
+import { FREE_BODY_ALLOWANCE } from "./free-body";
 import {
   EMPTY_VISUAL_SOURCE,
+  REASON_MAX_LENGTH,
   TEMPLATE_BODY_ALLOWANCE,
+  buildVisual,
   parseVisualSource,
   readVisualDocument,
   visualDocumentVariables,
@@ -112,7 +115,7 @@ describe("a Visual document that is refused", () => {
   const refused: { name: string; value: unknown; says: RegExp }[] = [
     { name: "something that is not an object", value: [], says: /belge/ },
     { name: "a document of another kind", value: { type: "doc", version: 1, blocks: [] }, says: /skymail\.visual/ },
-    { name: "a version this panel does not read", value: { type: "skymail.visual", version: 2, blocks: [] }, says: /sürüm.*2/ },
+    { name: "a version this panel does not read", value: { type: "skymail.visual", version: 3, blocks: [] }, says: /sürüm 3.*1\. ve 2\./ },
     { name: "a field the model does not have", value: { type: "skymail.visual", version: 1, blocks: [], theme: "dark" }, says: /theme/ },
     { name: "an unknown block", value: withBlocks([{ type: "quote", content: [] }]), says: /blocks\[0\].*"quote"/ },
     {
@@ -412,5 +415,66 @@ describe("a link marked not to be counted", () => {
       const read = readVisualDocument(marked(value), { ...TEMPLATE_BODY_ALLOWANCE, noTrackLinks: true });
       assert.ok(!read.ok && read.problems.some((problem) => /notrack: yalnız true olabilir/.test(problem)), String(value));
     }
+  });
+});
+
+// Why the reader got the mail (ticket 31): the operator's sentence for the
+// footer's first line. It came with version 2, and only a document that has
+// one is written as 2, so a document saved before stays the same text.
+describe("a Visual document's reason", () => {
+  const withReason = (reason: unknown, blocks: unknown[] = []) => ({ type: "skymail.visual", version: 2, blocks, reason });
+  const reasonProblems = (value: unknown, allowance?: VisualAllowance) => {
+    const read = readVisualDocument(value, allowance);
+    assert.ok(!read.ok, "belge kabul edildi");
+    return read.problems;
+  };
+
+  it("is read from a version 2 document, keys in their one order", () => {
+    const sentence = "Bu e-postayı GECEKODU'na başvurduğun için alıyorsun.";
+    const read = readVisualDocument(reversedKeys(withReason(sentence, [{ type: "paragraph", content: [{ type: "text", text: "a" }] }])));
+
+    assert.ok(read.ok, read.ok ? "" : read.problems.join("\n"));
+    assert.equal(read.document.reason, sentence);
+    assert.equal(
+      visualSource(read.document),
+      JSON.stringify({ type: "skymail.visual", version: 2, blocks: [{ type: "paragraph", content: [{ type: "text", text: "a" }] }], reason: sentence }),
+    );
+  });
+
+  it("makes a document version 2, and its absence keeps it version 1", () => {
+    assert.deepEqual(buildVisual.document([], "Neden."), { type: "skymail.visual", version: 2, blocks: [], reason: "Neden." });
+    assert.deepEqual(buildVisual.document([]), { type: "skymail.visual", version: 1, blocks: [] });
+    assert.equal(EMPTY_VISUAL_SOURCE, '{"type":"skymail.visual","version":1,"blocks":[]}');
+  });
+
+  it("may be as long as the limit, counted in characters", () => {
+    const read = readVisualDocument(withReason("ş".repeat(REASON_MAX_LENGTH)));
+    assert.ok(read.ok, read.ok ? "" : read.problems.join("\n"));
+  });
+
+  for (const [name, value, says] of [
+    ["longer than the limit", "a".repeat(REASON_MAX_LENGTH + 1), /reason: neden en çok 200 karakter olabilir \(şu an 201\)/],
+    ["a number", 42, /reason: neden bir metin olmalı/],
+    ["null", null, /reason: neden bir metin olmalı/],
+    ["a list", ["a"], /reason: neden bir metin olmalı/],
+    ["empty", "", /reason: boş neden yazılmaz/],
+    ["only spaces", "   ", /reason: boş neden yazılmaz/],
+    ["two lines", "Bir.\nİki.", /reason: neden tek satır olmalı/],
+    ["spaced at an end", "Neden. ", /reason: nedenin başında ya da sonunda boşluk olmaz/],
+    ["a variable", "Bu e-postayı {{.TeamName}} için alıyorsun.", /reason: neden \{\{ \}\} içeremez; değişken kullanılamaz/],
+  ] as [string, unknown, RegExp][]) {
+    it(`is refused when it is ${name}`, () => {
+      const problems = reasonProblems(withReason(value));
+      assert.ok(problems.some((problem) => says.test(problem)), problems.join("\n"));
+    });
+  }
+
+  it("is required in version 2 and refused in version 1", () => {
+    assert.deepEqual(reasonProblems({ type: "skymail.visual", version: 2, blocks: [] }), ["reason: 2. sürüm belge bir neden taşır"]);
+    assert.deepEqual(reasonProblems({ type: "skymail.visual", version: 1, blocks: [], reason: "Neden." }), ['belge: bilinmeyen alan "reason"']);
+  });
+
+  it("is refused on a body that has no footer of its own: a free announcement", () => {
+    assert.deepEqual(reasonProblems(withReason("Neden."), FREE_BODY_ALLOWANCE), ["reason: neden burada kullanılamaz"]);
   });
 });
