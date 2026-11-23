@@ -48,6 +48,7 @@ import { SentContentDialog } from './SentContentDialog';
 import { SendControlBadge, SendControlNotice, SendControls } from './SendControls';
 import { parkedAttempt } from '@/lib/send-controls';
 import { TrackingSection } from './TrackingReport';
+import { ContentViewsSection } from './ContentViews';
 import { sendTracked } from '@/lib/tracking-report';
 
 export function SendDetail({ id }: { id: string }) {
@@ -118,6 +119,8 @@ function SendView({ send, notice, onDismiss, onChanged }: { send: Send; notice: 
       </dl>
 
       <ContentNotice send={send} />
+
+      <ContentViewsSection send={send} />
 
       {sendTracked(send) ? <TrackingSection send={send} /> : null}
 

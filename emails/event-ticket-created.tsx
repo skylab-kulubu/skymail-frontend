@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Img } from "@react-email/components";
-import { CodeBlock, Context, Cta, Label, Paragraph, RowItem, Rows, RowsEnd, Shell, Small, Strong, Title } from "./theme";
-import { end, ifSet, v } from "./go";
+import { Context, Cta, Paragraph, RowItem, Rows, RowsEnd, Shell, Small, TextLink, Title } from "./theme";
+import { end, ifNotSet, ifSet, v } from "./go";
 import type { TemplateMeta } from "./types";
 
 export const meta: TemplateMeta = {
@@ -12,9 +12,9 @@ export const meta: TemplateMeta = {
   contentSensitive: true,
   brand: "skylab",
   trigger:
-    "core-backend, Member apply / Guest apply / Apply-for-other bir Ticket yazdığında, yayında ve bitmemiş bir etkinlikte (TICKET_CREATED_NOTIFICATION=on; docs/ticket-created-notification.md). Üyeye bildirim olarak (POST /v1/notifications: kutu + e-posta), konuğa yalnız bu e-posta. core bugün TicketQrUrl, TicketCode ve EventUrl göndermez; satırları boşsa görünmez.",
-  variables: ["EventName", "EventDate", "Venue", "TicketQrUrl", "TicketCode", "OwnerTeam", "EventUrl"],
-  sensitiveVariables: ["TicketCode", "TicketQrUrl"],
+    "core-backend, Member apply / Guest apply / Apply-for-other bir Ticket yazdığında, yayında ve bitmemiş bir etkinlikte (TICKET_CREATED_NOTIFICATION=on; docs/ticket-created-notification.md), ve panelden yeniden gönderimde. Üyeye bildirim olarak (POST /v1/notifications: kutu + e-posta), konuğa yalnız bu e-posta. TICKET_PAGE_URL açıkken core TicketUrl (bilet sayfası), TicketQrUrl (QR görseli; PUBLIC_API_ORIGIN boşsa boş) ve TicketCode da gönderir; kapalıyken göndermez ve satırları görünmez. EventUrl hiç gönderilmez.",
+  variables: ["EventName", "EventDate", "Venue", "TicketQrUrl", "TicketCode", "TicketUrl", "OwnerTeam", "EventUrl"],
+  sensitiveVariables: ["TicketCode", "TicketQrUrl", "TicketUrl"],
   notification: {
     category: null,
     required: true,
@@ -32,31 +32,28 @@ export const meta: TemplateMeta = {
     EventName: "GECEKODU 2026",
     EventDate: "12–13 Nisan 2026, 10:00",
     Venue: "YTÜ Davutpaşa Kampüsü, D-Blok",
-    TicketQrUrl: "https://skyl.app/qr/SKY-TCK-2026-0042.png",
-    TicketCode: "SKY-TCK-2026-0042",
+    TicketQrUrl: "https://api.yildizskylab.com/v1/public/tickets/7Q2MK4XRWZ3HN5TJVB6PDYCGEA/qr.png",
+    TicketCode: "K7M2-QX9F",
+    TicketUrl: "https://yildizskylab.com/bilet/7Q2MK4XRWZ3HN5TJVB6PDYCGEA",
     OwnerTeam: "WEBLAB",
     EventUrl: "https://skyl.app/gecekodu",
   },
 };
 
 /**
- * The door reads the Ticket, not this mail (ADR-0032): a member shows their
- * SkyPass QR, a guest scans the door screen's QR with their phone, and the
- * desk checks anyone in by name or e-mail. core sends no QR, ticket code or
- * event link today (core-backend docs/ticket-created-notification.md), so
- * those blocks stay empty; they show only for a sender that fills them. The QR keeps a white
- * ground so it scans in either theme, and the code is printed as text under
- * it for a mail whose images are blocked.
+ * The Ticket as the mail carries it (ADR 0082): the QR on a white ground, the
+ * code under it and a plain link to the Ticket page, as the page's pass shows
+ * them. Only data, no instructions (Yusuf, 2026-11-22). core sends the three
+ * only while TICKET_PAGE_URL is set; without them the mail is the event's rows
+ * and nothing more. The link is the page's bearer key, so all three are
+ * sensitive. With images blocked the QR's alt text stands in its place and
+ * the code and the link still work; a code without a QR goes into the rows.
  */
 export default function EventTicketCreated() {
   return (
     <Shell preview={`${v("EventName")} biletin hazır.`} brand="skylab" reason={null}>
       <Context tone="ok">{v("EventName")}</Context>
       <Title>Biletin Hazır</Title>
-
-      <Paragraph>
-        <Strong>{v("EventName")}</Strong> biletin hazır. Kapıda üyeysen SkyPass QR'ını göster, misafirsen ekrandaki QR'ı telefonunla okut.
-      </Paragraph>
 
       <Rows>
         <RowItem label="Etkinlik">{v("EventName")}</RowItem>
@@ -68,6 +65,11 @@ export default function EventTicketCreated() {
         {end}
         {ifSet("OwnerTeam")}
         <RowItem label="Düzenleyen">{v("OwnerTeam")}</RowItem>
+        {end}
+        {ifSet("TicketCode")}
+        {ifNotSet("TicketQrUrl")}
+        <RowItem label="Bilet kodu">{v("TicketCode")}</RowItem>
+        {end}
         {end}
         <RowsEnd />
       </Rows>
@@ -82,26 +84,24 @@ export default function EventTicketCreated() {
           alt="Bilet QR kodu"
           style={{ margin: "0 auto", borderRadius: "8px", backgroundColor: "#ffffff", padding: "12px", border: "1px solid #e5e5e5" }}
         />
+        {ifSet("TicketCode")}
+        <Paragraph style={{ textAlign: "center" }}>{v("TicketCode")}</Paragraph>
+        {end}
       </div>
       {end}
 
-      {ifSet("TicketCode")}
-      <div style={{ marginTop: "16px" }}>
-        <Label>Bilet Kodu</Label>
-        <CodeBlock size={16} center>
-          {v("TicketCode")}
-        </CodeBlock>
-      </div>
+      {ifSet("TicketUrl")}
+      <Paragraph style={{ margin: "16px 0 0", textAlign: "center" }}>
+        <TextLink href={v("TicketUrl")}>Biletini aç</TextLink>
+      </Paragraph>
       {end}
 
       {ifSet("EventUrl")}
       <Cta href={v("EventUrl")}>Etkinlik Sayfası</Cta>
       {end}
 
-      <Small style={{ marginTop: "24px" }}>QR'la giremezsen adını ya da e-postanı görevliye söyle.</Small>
-
       {/* KVKK aydınlatma §5.12: the photo notice goes in the registration mail, fixed, before the footer. */}
-      <Small>Etkinlikte fotoğraf ve video çekilir, Kulübün kanallarında paylaşılabilir.</Small>
+      <Small style={{ marginTop: "24px" }}>Etkinlikte fotoğraf ve video çekilir, Kulübün kanallarında paylaşılabilir.</Small>
     </Shell>
   );
 }

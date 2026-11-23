@@ -23,6 +23,8 @@ export const ROLE = {
   unsubscribesReactivate: "skymail:unsubscribes:reactivate",
   /** Removes a bounce from the suppression list and reads the bounce rate (skymail-bounce-isleme 08, Keycloak ticket 06). */
   suppressionsManage: "skymail:suppressions:manage",
+  /** Who opened a send's masked content (ticket 32; DK alone): not the roles that open it. */
+  auditRead: "skymail:audit:read",
 } as const;
 
 export type Role = (typeof ROLE)[keyof typeof ROLE];

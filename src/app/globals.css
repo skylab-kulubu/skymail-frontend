@@ -14,6 +14,7 @@
  */
 @import '@skylab-kulubu/skylcn-ui/theme-base.css';
 @import '@skylab-kulubu/skylcn-ui/sources/app-shell.css';
+@import '@skylab-kulubu/skylcn-ui/sources/avatar.css';
 @import '@skylab-kulubu/skylcn-ui/sources/badge.css';
 @import '@skylab-kulubu/skylcn-ui/sources/breadcrumbs.css';
 @import '@skylab-kulubu/skylcn-ui/sources/button.css';

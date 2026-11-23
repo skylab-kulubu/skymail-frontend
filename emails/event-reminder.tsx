@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Img } from "@react-email/components";
-import { Context, Cta, Paragraph, RowItem, Rows, RowsEnd, Shell, Small, Strong, Title } from "./theme";
+import { Context, Cta, RowItem, Rows, RowsEnd, Shell, Title } from "./theme";
 import { end, ifSet, v } from "./go";
 import type { TemplateMeta } from "./types";
 
@@ -30,10 +30,6 @@ export default function EventReminder() {
       <Context tone="wait">{v("EventName")}</Context>
       <Title>Etkinlik Yarın</Title>
 
-      <Paragraph>
-        <Strong>{v("EventName")}</Strong> yarın başlıyor. Kapıda üyeysen SkyPass QR'ını göster, misafirsen ekrandaki QR'ı telefonunla okut.
-      </Paragraph>
-
       <Rows>
         <RowItem label="Başlangıç">{v("StartsAt")}</RowItem>
         <RowItem label="Yer">{v("Venue")}</RowItem>
@@ -55,8 +51,6 @@ export default function EventReminder() {
       {ifSet("MapUrl")}
       <Cta href={v("MapUrl")}>Yol Tarifi</Cta>
       {end}
-
-      <Small style={{ marginTop: "24px" }}>QR'la giremezsen adını ya da e-postanı görevliye söyle.</Small>
     </Shell>
   );
 }
