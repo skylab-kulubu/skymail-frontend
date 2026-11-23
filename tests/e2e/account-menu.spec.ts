@@ -15,12 +15,15 @@ test("the account menu opens from the avatar at the top right", async ({ page, s
   await signIn("sender");
   await page.goto("/");
 
+  // The account button: avatar, the name and a chevron in a 36 px pill at the top right
   const trigger = page.getByRole("button", { name: `Hesap: ${NAME}` });
   await expect(trigger).toBeVisible();
+  await expect(trigger).toContainText(NAME);
   const box = (await trigger.boundingBox())!;
   const viewport = page.viewportSize()!;
-  expect(box.x).toBeGreaterThan(viewport.width - 120);
+  expect(box.x + box.width).toBeGreaterThan(viewport.width - 60);
   expect(box.y).toBeLessThan(60);
+  expect(box.height).toBe(36);
 
   const sidebar = page.getByRole("complementary");
   await expect(sidebar.getByText(NAME)).toHaveCount(0);
@@ -43,7 +46,13 @@ test.describe("on a phone", () => {
     await signIn("sender");
     await page.goto("/");
 
-    await expect(page.getByRole("button", { name: `Hesap: ${NAME}` })).toBeVisible();
+    // The avatar alone, in a 36 px touch target
+    const trigger = page.getByRole("button", { name: `Hesap: ${NAME}` });
+    await expect(trigger).toBeVisible();
+    await expect(trigger.getByText(NAME)).toBeHidden();
+    const box = (await trigger.boundingBox())!;
+    expect(box.width).toBe(36);
+    expect(box.height).toBe(36);
     await page.getByRole("button", { name: "Menüyü aç" }).click();
     const drawer = page.getByRole("dialog");
     await expect(drawer.getByRole("link", { name: "Ana sayfa" })).toBeVisible();
