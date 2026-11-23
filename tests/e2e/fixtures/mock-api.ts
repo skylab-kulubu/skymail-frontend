@@ -230,6 +230,18 @@ type SendRecord = {
   cleared: boolean;
   /** Its opens and clicks, when a test tracked it (`trackSend`). */
   tracking?: TrackingFixture;
+  /** Who opened its masked content, newest first (`recordContentViews`). */
+  contentViews?: ContentViewFixture[];
+};
+
+/** One opening of a recipient's masked mail, as `GET /mail_tasks/:id/content-views` gives it. */
+export type ContentViewFixture = {
+  id: string;
+  queue_item_id: string;
+  actor: { sub: string | null; name: string | null };
+  masked_by: "variables" | "patterns";
+  masked_variables: string[];
+  created_at: string;
 };
 
 /** What a tracked send's read routes answer: the summary, and every recipient row. */
@@ -522,6 +534,16 @@ export class MockSkymail {
   /** The send asked for tracking and got it; its read routes answer `fixture`. */
   trackSend(id: string, fixture: TrackingFixture) {
     this.sends.get(id)!.tracking = fixture;
+  }
+
+  /** Who opened the send's masked content, newest first; its row ids are `${sendId}-${index}`. */
+  recordContentViews(id: string, views: ContentViewFixture[]) {
+    this.sends.get(id)!.contentViews = views;
+  }
+
+  /** The requests for who opened a send's masked content. */
+  contentViewRequests(): Recorded[] {
+    return this.requests.filter((request) => /^\/mail_tasks\/[^/]+\/content-views$/.test(request.path));
   }
 
   /** The requests for a send's recipients one by one. */
@@ -839,6 +861,17 @@ export class MockSkymail {
     const contentMatch = /^\/mail_tasks\/([^/]+)\/queue\/([^/]+)\/content$/.exec(path);
     if (method === "GET" && contentMatch) {
       return can("skymail:mails:read") ? this.sentContent(contentMatch[1], contentMatch[2], viewer) : refuse(403, "server.forbidden");
+    }
+    // Who opened masked content (skymail-backend #135): skymail:audit:read alone, newest first, paged.
+    const viewsMatch = /^\/mail_tasks\/([^/]+)\/content-views$/.exec(path);
+    if (method === "GET" && viewsMatch) {
+      if (!can("skymail:audit:read")) return refuse(403, "server.forbidden");
+      const send = this.sends.get(viewsMatch[1]);
+      if (!send) return refuse(404, "server.not_found");
+      const views = send.contentViews ?? [];
+      const start = Number(query.get("_start") ?? 0);
+      const end = Number(query.get("_end") ?? 10);
+      return { status: 200, body: views.slice(start, end), headers: { "X-Total-Count": String(views.length) } };
     }
     const trackingMatch = /^\/mail_tasks\/([^/]+)\/tracking(\/recipients)?$/.exec(path);
     if (method === "GET" && trackingMatch) return this.trackingRead(trackingMatch[1], Boolean(trackingMatch[2]), query, viewer);

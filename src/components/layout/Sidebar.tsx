@@ -1,41 +1,22 @@
 'use client';
 
 // The sidebar of skylcn-ui's AppShell, laid out like the admin panel's
-// (core-frontend AdminSidebar): the brand with the club console switcher, the
-// sections, and the signed-in person's menu (account, theme, sign-out).
+// (core-frontend AdminSidebar): the brand with the club console switcher and
+// the sections. The signed-in person's menu sits at the top right
+// (UserMenu, ConsoleShell), never at the foot of the sidebar.
 // SkyMail's menu is flat links gated by role (src/lib/access.ts). An
 // approver's Mail onayları carries how many requests wait for them (ticket
 // 20): one small request per page load, read again when the viewer changes a
 // request.
 
 import { usePathname } from 'next/navigation';
-import { useEffect, useRef } from 'react';
-import {
-  MenuItem,
-  MenuLabel,
-  MenuLinkItem,
-  MenuRadioGroup,
-  MenuRadioItem,
-  MenuSeparator,
-  MenuSub,
-  MenuSubContent,
-  MenuSubTrigger,
-  SidebarBrand,
-  SidebarContent,
-  SidebarFooter,
-  SidebarItem,
-  SidebarUser,
-  useSidebar,
-  useTheme,
-  type ThemePreference,
-} from '@skylab-kulubu/skylcn-ui';
-import { Ban, ChevronRight, ClipboardCheck, FileText, Home, List, LogOut, Palette, Send, SquarePen, UserRound } from 'lucide-react';
+import { useEffect } from 'react';
+import { SidebarBrand, SidebarContent, SidebarFooter, SidebarItem, useSidebar } from '@skylab-kulubu/skylcn-ui';
+import { Ban, ChevronRight, ClipboardCheck, FileText, Home, List, Send, SquarePen } from 'lucide-react';
 import { DeveloperCredit } from '@/components/auth/DeveloperCredit';
 import { useConsole } from '@/components/layout/ConsoleContext';
 import { activeNavHref, isApprover, navLabel, visibleNavigation } from '@/lib/access';
 import { useApiLoad } from '@/lib/api/react';
-import { signOutOfKeycloak } from '@/lib/auth/actions';
-import { displayPersonName } from '@/lib/chrome-role';
 import { clubConsoles } from '@/lib/club-consoles';
 import { TEAM_SEAT_SEND_LABEL, TEAM_SEAT_SEND_PATH } from '@/lib/chrome-breadcrumbs';
 import { APPROVAL_LIST_PATH, pendingCount } from '@/lib/mail-approvals/approvals';
@@ -72,23 +53,7 @@ function PendingBadge({ count }: { count: number }) {
   );
 }
 
-function ThemeMenu() {
-  const { theme, setTheme } = useTheme();
-  return (
-    <MenuSub>
-      <MenuSubTrigger icon={Palette}>Tema</MenuSubTrigger>
-      <MenuSubContent>
-        <MenuRadioGroup value={theme} onValueChange={(value) => setTheme(value as ThemePreference)}>
-          <MenuRadioItem value="dark">Koyu</MenuRadioItem>
-          <MenuRadioItem value="light">Açık</MenuRadioItem>
-          <MenuRadioItem value="system">Sistem</MenuRadioItem>
-        </MenuRadioGroup>
-      </MenuSubContent>
-    </MenuSub>
-  );
-}
-
-/** Who built SkyMail, under the person's menu; the icon rail has no room for it. */
+/** Who built SkyMail, at the foot of the sidebar; the icon rail has no room for it. */
 function SidebarCredit() {
   const { collapsed } = useSidebar();
   if (collapsed) return null;
@@ -101,7 +66,7 @@ function SidebarCredit() {
 
 export function Sidebar() {
   const pathname = usePathname() || '/';
-  const { roles, user, config, teamSeat } = useConsole();
+  const { roles, config, teamSeat } = useConsole();
   // A Leader without skymail:access: the send form is "Ekibime gönder", their Teams only.
   const items = visibleNavigation(roles, { teamSeat: teamSeat !== null }).map((item) =>
     teamSeat !== null && item.href === TEAM_SEAT_SEND_PATH ? { ...item, label: TEAM_SEAT_SEND_LABEL } : item,
@@ -109,8 +74,6 @@ export function Sidebar() {
   const activeHref = activeNavHref(pathname, items);
   const pendingApprovals = usePendingApprovals(isApprover(roles));
   const { collapsed } = useSidebar();
-  const fullName = user.name ? displayPersonName(user.name) : 'Kullanıcı';
-  const signOutForm = useRef<HTMLFormElement>(null);
 
   return (
     <>
@@ -133,26 +96,6 @@ export function Sidebar() {
         </div>
       </SidebarContent>
       <SidebarFooter>
-        {/* The sign-out is a Server Action; the menu item submits this form, as the old button did. */}
-        <form ref={signOutForm} action={signOutOfKeycloak} hidden />
-        <SidebarUser
-          name={fullName}
-          email={user.email}
-          subtitle={user.email ?? undefined}
-          menu={
-            <>
-              {user.email ? <MenuLabel>{user.email}</MenuLabel> : null}
-              <MenuLinkItem href={config.accountUrl} icon={UserRound}>
-                Hesap merkezi
-              </MenuLinkItem>
-              <ThemeMenu />
-              <MenuSeparator />
-              <MenuItem icon={LogOut} destructive onClick={() => signOutForm.current?.requestSubmit()}>
-                Çıkış yap
-              </MenuItem>
-            </>
-          }
-        />
         <SidebarCredit />
       </SidebarFooter>
     </>
