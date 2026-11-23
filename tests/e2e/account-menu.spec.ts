@@ -15,11 +15,15 @@ test("the account menu opens from the avatar at the top right", async ({ page, s
   await signIn("sender");
   await page.goto("/");
 
-  // The account button: avatar, the name and a chevron in a 36 px pill at the top right
+  // The account button, as in Entra: the name, a chevron and the avatar last, in a 36 px pill at the top right
   const trigger = page.getByRole("button", { name: `Hesap: ${NAME}` });
   await expect(trigger).toBeVisible();
   await expect(trigger).toContainText(NAME);
+  const nameBox = (await trigger.getByText(NAME).boundingBox())!;
+  const avatarBox = (await trigger.locator('[data-slot="avatar"]').boundingBox())!;
+  expect(avatarBox.x).toBeGreaterThan(nameBox.x + nameBox.width);
   const box = (await trigger.boundingBox())!;
+  expect(box.x + box.width - (avatarBox.x + avatarBox.width)).toBeLessThanOrEqual(3);
   const viewport = page.viewportSize()!;
   expect(box.x + box.width).toBeGreaterThan(viewport.width - 60);
   expect(box.y).toBeLessThan(60);

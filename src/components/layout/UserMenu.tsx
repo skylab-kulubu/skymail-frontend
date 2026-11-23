@@ -32,11 +32,12 @@ import { displayPersonName } from '@/lib/chrome-role';
 /*
  * The account button, the same in every SKY LAB product's top bar (Microsoft 365 / Google
  * style, 2026-11-23): a 32 px avatar (photo or initials on a coloured ground); on desktop the
- * name beside it (cut at about 16 characters) and a chevron, in a thin-bordered pill 36 px high;
+ * name first (cut at about 16 characters), then a chevron, the avatar last against the corner
+ * (as in Entra and the Azure portal), in a thin-bordered pill 36 px high;
  * on phones the avatar alone in a 36 px touch target. Hover, open and focus are drawn.
  */
 const ACCOUNT_BUTTON =
-  'group text-foreground hover:bg-accent data-popup-open:bg-accent focus-visible:ring-ring focus-visible:ring-offset-background flex size-9 shrink-0 items-center justify-center rounded-full border border-transparent outline-hidden transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 md:w-auto md:justify-start md:gap-2 md:border-border md:bg-muted/40 md:pr-2.5 md:pl-px md:hover:border-border-strong md:data-popup-open:border-border-strong';
+  'group text-foreground hover:bg-accent data-popup-open:bg-accent focus-visible:ring-ring focus-visible:ring-offset-background flex size-9 shrink-0 items-center justify-center rounded-full border border-transparent outline-hidden transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 md:w-auto md:justify-start md:gap-2 md:border-border md:bg-muted/40 md:pr-px md:pl-2.5 md:hover:border-border-strong md:data-popup-open:border-border-strong';
 
 /** Stronger than the lists' faint tint, so the button reads at a glance; same hue per person. */
 const AVATAR_TONES = [
@@ -70,16 +71,16 @@ export function UserMenu({
       <form ref={signOutForm} action={signOutOfKeycloak} hidden />
       <DropdownMenu>
         <DropdownMenuTrigger aria-label={`Hesap: ${name}`} title={name} className={ACCOUNT_BUTTON}>
+          <span className="hidden max-w-[16ch] truncate text-sm font-medium md:inline">{name}</span>
+          <ChevronDown
+            aria-hidden
+            className="text-muted-foreground hidden size-3.5 shrink-0 transition-transform group-data-popup-open:rotate-180 md:block"
+          />
           <Avatar
             name={name}
             email={email}
             size="sm"
             className={cn('text-2xs size-8', AVATAR_TONES[avatarTone(name, email)])}
-          />
-          <span className="hidden max-w-[16ch] truncate text-sm font-medium md:inline">{name}</span>
-          <ChevronDown
-            aria-hidden
-            className="text-muted-foreground hidden size-3.5 shrink-0 transition-transform group-data-popup-open:rotate-180 md:block"
           />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-64">
