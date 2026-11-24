@@ -59,20 +59,16 @@ const LISTS: Record<string, string[]> = {
   "event.reminder": ["TicketCode", "TicketQrUrl", "TicketUrl"],
   "event.updated": ["TicketCode", "TicketQrUrl", "TicketUrl"],
   "event.waitlist-joined": ["TicketUrl"],
-  "event.attendance-welcome": ["AttendeeNote"],
+  "event.attendance-welcome": [],
   "event.waitlist-promoted": ["TicketCode", "TicketQrUrl", "TicketUrl"],
   "core.contact-consent-confirm": ["confirmUrl", "withdrawUrl"],
 };
 
 /**
  * Variables listed although SkyMail does not mask them by name, each a
- * credential: the organizer's venue note carries the Wi-Fi password, and
- * SkyMail masks a password without digits only when it is listed
- * (skymail-backend internal/mailer/mask.go).
+ * credential by decision. None since ADR-0074's 2026-11-24 ek (no mask).
  */
-const CREDENTIALS_BY_DECISION: Record<string, string[]> = {
-  "event.attendance-welcome": ["AttendeeNote"],
-};
+const CREDENTIALS_BY_DECISION: Record<string, string[]> = {};
 
 describe("the sensitive variables declared in emails/", () => {
   it("are the lists checked against the senders' variables", () => {
@@ -91,7 +87,11 @@ describe("the sensitive variables declared in emails/", () => {
     }
 
     it(`${meta.key} lists only variables it is sent, as the server accepts them, that SkyMail masks by name today or that is a credential by decision`, () => {
-      assert.ok(meta.contentSensitive, `${meta.key}: hassas olmayan bir şablonun gönderimi maskelenmez, liste anlamsız`);
+      // An empty list on a template that is not content-sensitive clears what an earlier seed
+      // wrote (ADR-0074, 2026-11-24 ek: no mask); a list with names needs a sensitive template.
+      if (list.length > 0) {
+        assert.ok(meta.contentSensitive, `${meta.key}: hassas olmayan bir şablonun gönderimi maskelenmez, liste anlamsız`);
+      }
       assert.ok(list.length <= LIST_LIMIT, `${meta.key}: en çok ${LIST_LIMIT} değişken`);
       assert.deepEqual(list, [...new Set(list)].sort(), `${meta.key}: liste sıralı ve tekil olmalı (sunucu öyle saklar)`);
       for (const name of list) {
