@@ -1225,8 +1225,7 @@
     ],
     "requiredVariables": [],
     "sensitiveVariables": [
-      "AttendeeNote",
-      "AttendeeNoteParts"
+      "AttendeeNote"
     ],
     "sampleKeys": [
       "Attended",

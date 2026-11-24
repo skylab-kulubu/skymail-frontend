@@ -37,9 +37,9 @@ export const meta: TemplateMeta = {
   ],
   // The Wi-Fi password is a credential, and SkyMail's masking does not catch a
   // password without digits by itself: listed, it is hidden whole.
-  // AttendeeNoteParts is the same note cut at its web addresses (core makes
-  // them links): masked whole as well, and its addresses never tracked.
-  sensitiveVariables: ["AttendeeNote", "AttendeeNoteParts"],
+  // AttendeeNoteParts (the note cut at its web addresses) is not listed: no
+  // mask, and its links are tracked as any other (ADR-0074, 2026-11-24 ek).
+  sensitiveVariables: ["AttendeeNote"],
   notification: {
     category: null,
     required: true,

@@ -107,7 +107,7 @@ describe("the welcome (event.attendance-welcome)", () => {
   it("masks its content and the note whole, since the note may hold the Wi-Fi password", async () => {
     const { meta } = await rendered("event.attendance-welcome");
     assert.equal(meta.contentSensitive, true);
-    assert.deepEqual(meta.sensitiveVariables, ["AttendeeNote", "AttendeeNoteParts"]);
+    assert.deepEqual(meta.sensitiveVariables, ["AttendeeNote"]);
   });
 
   it("shows the programme, the note with its line breaks and the certificate line only when set", async () => {
