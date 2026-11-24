@@ -104,10 +104,9 @@ describe("the door mails", () => {
 });
 
 describe("the welcome (event.attendance-welcome)", () => {
-  it("masks its content and the note whole, since the note may hold the Wi-Fi password", async () => {
+  it("masks no variable (ADR-0074, 2026-11-24 ek): the empty list clears an earlier seed's", async () => {
     const { meta } = await rendered("event.attendance-welcome");
-    assert.equal(meta.contentSensitive, true);
-    assert.deepEqual(meta.sensitiveVariables, ["AttendeeNote"]);
+    assert.deepEqual(meta.sensitiveVariables, []);
   });
 
   it("shows the programme, the note with its line breaks and the certificate line only when set", async () => {

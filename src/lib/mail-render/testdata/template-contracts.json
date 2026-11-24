@@ -1224,9 +1224,7 @@
       "MissedRequired"
     ],
     "requiredVariables": [],
-    "sensitiveVariables": [
-      "AttendeeNote"
-    ],
+    "sensitiveVariables": [],
     "sampleKeys": [
       "Attended",
       "AttendeeNote",

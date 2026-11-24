@@ -8,7 +8,6 @@ export const meta: TemplateMeta = {
   name: "Etkinlik · Kapı: Hoş Geldin",
   subject: `${v("EventName")}: hoş geldin`,
   system: false,
-  // AttendeeNote may hold the venue's Wi-Fi password.
   contentSensitive: true,
   brand: "skylab",
   trigger:
@@ -35,11 +34,10 @@ export const meta: TemplateMeta = {
     "MissingRequired",
     "MissedRequired",
   ],
-  // The Wi-Fi password is a credential, and SkyMail's masking does not catch a
-  // password without digits by itself: listed, it is hidden whole.
-  // AttendeeNoteParts (the note cut at its web addresses) is not listed: no
-  // mask, and its links are tracked as any other (ADR-0074, 2026-11-24 ek).
-  sensitiveVariables: ["AttendeeNote"],
+  // No variable is masked (ADR-0074, 2026-11-24 ek): the note is mail content
+  // that whoever holds mails:read may read, and its links are tracked as any
+  // other. The empty list clears the one an earlier seed wrote.
+  sensitiveVariables: [],
   notification: {
     category: null,
     required: true,
