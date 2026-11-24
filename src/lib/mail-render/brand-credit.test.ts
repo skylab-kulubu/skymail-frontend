@@ -23,6 +23,7 @@ const BRAND_OF: Record<string, Brand> = {
   "keycloak.generic": "account",
   "core.welcome": "skylab",
   "core.certificate": "skylab",
+  "core.certificate-auto-finalized": "skylab",
   "core.event-cancelled": "skylab",
   "core.event-reinstated": "skylab",
   "core.feedback-request": "skylab",

@@ -22,6 +22,7 @@ import KeycloakGeneric, { meta as keycloakGeneric } from "./keycloak-generic";
 
 import CoreWelcome, { meta as coreWelcome } from "./core-welcome";
 import CoreCertificate, { meta as coreCertificate } from "./core-certificate";
+import CoreCertificateAutoFinalized, { meta as coreCertificateAutoFinalized } from "./core-certificate-auto-finalized";
 import CoreEventCancelled, { meta as coreEventCancelled } from "./core-event-cancelled";
 import CoreEventReinstated, { meta as coreEventReinstated } from "./core-event-reinstated";
 import CoreFeedbackRequest, { meta as coreFeedbackRequest } from "./core-feedback-request";
@@ -73,6 +74,7 @@ export const templates: EmailTemplate[] = [
 
   { meta: coreWelcome, Component: CoreWelcome },
   { meta: coreCertificate, Component: CoreCertificate },
+  { meta: coreCertificateAutoFinalized, Component: CoreCertificateAutoFinalized },
   { meta: coreEventCancelled, Component: CoreEventCancelled },
   { meta: coreEventReinstated, Component: CoreEventReinstated },
   { meta: coreFeedbackRequest, Component: CoreFeedbackRequest },
