@@ -108,10 +108,10 @@ const MONO = "'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace";
   PNGs, not the SVG the app uses: Gmail and Outlook do not render SVG. Two
   colours of the same mark, the ink one on light and the lilac one on dark,
   both served by the İletişim console's own site (public/mail/, open without a
-  session; iletisim.yildizskylab.com since iletişim-servisi 11, the old mail.
-  address redirects there with its path, so mails already sent keep their logo).
+  session; notify.yildizskylab.com since ADR-0090). The old iletisim. and mail.
+  names are deleted, not redirected: mails sent before show no logo.
 */
-const ASSETS = "https://iletisim.yildizskylab.com/mail";
+const ASSETS = "https://notify.yildizskylab.com/mail";
 const LOGO_INK = `${ASSETS}/skylab-ink.png`;
 const LOGO_LILAC = `${ASSETS}/skylab-lilac.png`;
 
@@ -232,7 +232,7 @@ interface Credit {
 /** SkyMail sends and renders every mail, so every mail ends with its line. */
 const SKYMAIL: Credit = {
   product: "SkyMail",
-  href: "https://iletisim.yildizskylab.com",
+  href: "https://notify.yildizskylab.com",
   developer: { name: "Enes Genç", href: "https://enesgenc.dev" },
 };
 
@@ -262,7 +262,7 @@ const brands: Record<Brand, { label: string; href: string; credit?: Credit }> = 
       developer: { name: "Yusuf Açmacı", href: "https://www.linkedin.com/in/yusuf-acmaci/" },
     },
   },
-  mail: { label: "SKY LAB İletişim", href: "https://iletisim.yildizskylab.com" },
+  mail: { label: "SKY LAB İletişim", href: "https://notify.yildizskylab.com" },
 };
 
 /**

@@ -22,8 +22,8 @@ export const meta: TemplateMeta = {
     AudienceName: "GECEKODU katılımcıları",
     AudienceKind: "mailing_list",
     RecipientCount: "312",
-    PreviewUrl: "https://iletisim.yildizskylab.com/mail_tasks/ornek",
-    ApproveUrl: "https://iletisim.yildizskylab.com/mail_tasks/ornek/onay",
+    PreviewUrl: "https://notify.yildizskylab.com/mail_tasks/ornek",
+    ApproveUrl: "https://notify.yildizskylab.com/mail_tasks/ornek/onay",
   },
 };
 
