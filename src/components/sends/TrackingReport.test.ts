@@ -107,6 +107,8 @@ describe("the overview", () => {
     assert.match(words, /Takip edilen 40/);
     assert.match(words, /Takip edilmeyen 5 Hesabı yok: 3 · Takibi kapatmış: 2/);
     assert.match(words, /Açılma görülen 16 Takip edilenlere oranı: %40/);
+    // Everyone with any open, Apple Mail's and scanners' too (K6: everything shown).
+    assert.match(words, /Açılma \(otomatik dahil\) 22 Takip edilenlere oranı: %55/);
     assert.match(words, /Yalnız otomatik açılma 6/);
     assert.match(words, /Tıklayan 9/);
   });
@@ -242,6 +244,8 @@ describe("the recipients", () => {
   it("marks each row as the classifier saw it", () => {
     assert.match(words, /Deneme Bir deneme\.bir@example\.test/);
     assert.match(words, /Muhtemelen otomatik \(Apple Mail\)/);
+    // Every class seen, not only the doubtful ones.
+    assert.match(words, /Tarayıcı/);
     assert.match(words, /Tıklamadan çıkarım/);
     assert.match(words, /1\. bağlantı \(2\)/);
     assert.match(words, /Yalnız otomatik açılma/);

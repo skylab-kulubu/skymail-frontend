@@ -91,17 +91,25 @@ test("a tracking reader sees the counts, the series as a table, the links and ev
   const section = page.getByRole("region", { name: "Açılma ve tıklama" });
   await expect(section.getByText(/^Açılma kesin değildir\. Apple Mail postayı kendisi yükleyebilir/)).toBeVisible();
   await expect(section.locator("[data-slot=stat-card]").filter({ hasText: "Takip edilmeyen" })).toContainText("Hesabı yok: 1");
+  await expect(section.locator("[data-slot=stat-card]").filter({ hasText: "Açılma (otomatik dahil)" })).toContainText("2");
 
   // The series' accessible twin: the same counts, hour by hour, then by the day.
   await section.getByRole("button", { name: "Tablo olarak göster" }).click();
   const series = section.getByRole("table", { name: "Zaman içinde" });
-  await expect(series.getByRole("columnheader")).toHaveText(["Zaman", "Açılma (insan olası)", "Açılma (muhtemelen otomatik)", "Tıklama"]);
+  await expect(series.getByRole("columnheader")).toHaveText([
+    "Zaman",
+    "Açılma (insan olası)",
+    "Açılma (muhtemelen otomatik)",
+    "Tıklama (insan olası)",
+    "Tıklama (muhtemelen otomatik)",
+  ]);
   await expect(series.getByRole("row")).toHaveCount(1 + 3 + 1);
 
   await expect(section.getByRole("cell", { name: "1. bağlantı", exact: true })).toBeVisible();
 
   const people = section.getByRole("table").last();
   await expect(people.getByRole("row", { name: /Deneme Bir/ })).toContainText("Tıklamadan çıkarım");
+  await expect(people.getByRole("row", { name: /Deneme Bir/ })).toContainText("Tarayıcı");
   await expect(people.getByRole("row", { name: /Deneme İki/ })).toContainText("Muhtemelen otomatik (Apple Mail)");
   await expect(people.getByRole("row", { name: /Deneme İki/ })).toContainText("Yalnız otomatik açılma");
   await expect(people.getByRole("row", { name: /Deneme Üç/ })).toContainText("Açılma görülmedi");
