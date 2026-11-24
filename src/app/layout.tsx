@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import { Space_Grotesk, Space_Mono } from "next/font/google";
 import { ThemeScript } from "@skylab-kulubu/skylcn-ui";
 import { ThemeSync } from "@/components/layout/ThemeSync";
@@ -29,13 +30,16 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  // The proxy's nonce (src/proxy.ts): the policy runs only the inline scripts that carry it.
+  // Reading it renders every page per request, which a nonce needs anyway.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     // The theme scripts set data-theme before React hydrates (src/lib/theme.ts).
     <html lang="tr" className={`${sans.variable} ${mono.variable}`} suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeMigrationScript }} />
-        <ThemeScript />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: themeMigrationScript }} />
+        <ThemeScript nonce={nonce} />
       </head>
       <body className="antialiased">
         <Providers>

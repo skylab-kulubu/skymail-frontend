@@ -1,0 +1,23 @@
+# ADR 0055 / ADR 0064 (karar 4): npm for @skylab-kulubu/* only (skylcn-ui),
+# weekly, in one grouped PR; other npm dependencies get no version-update PRs.
+# The workflows' actions are updated weekly too, in one grouped PR.
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    allow:
+      - dependency-name: "@skylab-kulubu/*"
+    groups:
+      skylab-kulubu:
+        patterns:
+          - "@skylab-kulubu/*"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
