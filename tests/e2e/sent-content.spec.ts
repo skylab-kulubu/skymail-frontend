@@ -28,8 +28,11 @@ function newsletter(skymail: MockSkymail) {
 
 /**
  * The page's requests to the pixel's host: those the frame's content policy
- * stopped in the browser (Chromium reports them failed with "csp") and those
- * that went out (a .test name never resolves, so none gets anywhere).
+ * stopped in the browser and those that went out (a .test name never
+ * resolves, so none gets anywhere). Chromium reports a stopped one as a
+ * request failed with "csp", or, when it stops it before any request exists
+ * (as it does under the console's own policy, which the frame inherits), only
+ * as the policy's console message naming the image.
  */
 function watchPixel(page: Page) {
   const seen = { blocked: 0, sent: 0 };
@@ -38,6 +41,10 @@ function watchPixel(page: Page) {
     if (!isPixel(request.url())) return;
     if (request.failure()?.errorText === "csp") seen.blocked += 1;
     else seen.sent += 1;
+  });
+  page.on("console", (message) => {
+    const text = message.text();
+    if (/Content Security Policy/.test(text) && text.includes(`https://${PIXEL_HOST}/`)) seen.blocked += 1;
   });
   page.context().on("requestfinished", (request) => {
     if (isPixel(request.url())) seen.sent += 1;

@@ -1,6 +1,22 @@
 import type { NextConfig } from "next";
 import { PHASE_DEVELOPMENT_SERVER } from "next/constants";
 
+/**
+ * Account Center's headers (account-center next.config.ts), less what does
+ * not fit here: no Cross-Origin-Resource-Policy, since mail clients load the
+ * two logos in public/mail/ from other origins, and no
+ * Strict-Transport-Security, which the edge is to send for every host.
+ * X-Frame-Options keeps the console out of other sites' frames even while the
+ * policy's frame-ancestors only reports (CSP_MODE).
+ */
+const securityHeaders = [
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+  { key: "Referrer-Policy", value: "same-origin" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+];
+
 const nextConfig: NextConfig = {
   // The image runs `node server.js` from the standalone output; every setting
   // that differs between sandbox and production is read from the process
@@ -23,6 +39,13 @@ const nextConfig: NextConfig = {
   agentRules: false,
   async headers() {
     return [
+      {
+        // Every path but the render sandbox, which the editor frames and which
+        // keeps its own headers below. The Content-Security-Policy is the
+        // proxy's (src/proxy.ts): it needs a nonce per response.
+        source: "/((?!render-sandbox/).*)",
+        headers: securityHeaders,
+      },
       {
         // The Mail template editor's render sandbox (src/lib/template-editor/
         // sandbox-frame.ts). The iframe that loads it is sandboxed already;
