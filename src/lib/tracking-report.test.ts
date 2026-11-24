@@ -161,18 +161,32 @@ describe("the wording", () => {
     assert.equal(clickedLinksText([], []), "—");
   });
 
-  it("marks Apple Mail, Gmail, a scanner and an open inferred from a click (design note 07 §3.2)", () => {
+  it("marks every source class seen, in a fixed order, and an open inferred from a click (K6: everything shown)", () => {
     const labels = recipientBadges({
-      source_classes: ["browser", "scanner_likely", "google_proxy", "apple_proxy_likely"],
+      source_classes: ["unknown", "browser", "mail_client", "microsoft", "scanner_likely", "yahoo_proxy", "google_proxy", "apple_proxy_likely"],
       likely_human_open_source: "click_inferred",
     }).map((badge) => badge.label);
     assert.deepEqual(labels, [
       "Muhtemelen otomatik (Apple Mail)",
       "Gmail üzerinden: tekrar açılmalar görünmez",
+      "Yahoo üzerinden",
       "Güvenlik taraması olası",
+      "Outlook",
+      "Posta uygulaması",
+      "Tarayıcı",
+      "Bilinmeyen istemci",
       "Tıklamadan çıkarım",
     ]);
-    assert.deepEqual(recipientBadges({ source_classes: ["mail_client"], likely_human_open_source: "open" }), []);
+    assert.deepEqual(
+      recipientBadges({ source_classes: ["mail_client"], likely_human_open_source: "open" }).map((badge) => badge.label),
+      ["Posta uygulaması"],
+    );
+    assert.deepEqual(recipientBadges({ source_classes: [], likely_human_open_source: null }), []);
+  });
+
+  it("names a source class the panel does not know yet by itself, once", () => {
+    const badges = recipientBadges({ source_classes: ["new_proxy", "browser", "new_proxy"], likely_human_open_source: null });
+    assert.deepEqual(badges.map((badge) => [badge.key, badge.label]), [["browser", "Tarayıcı"], ["other:new_proxy", "new_proxy"]]);
   });
 
   it("says why there is no likely real open", () => {
@@ -200,15 +214,15 @@ describe("the series", () => {
       point("2026-10-26T00:00:00Z", "day", 0, 0, 2),
     ]);
     assert.deepEqual(
-      rows.map((row) => [row.interval, row.at, row.likely_human_opens, row.automated_opens, row.clicks]),
+      rows.map((row) => [row.interval, row.at, row.likely_human_opens, row.automated_opens, row.likely_human_clicks, row.automated_clicks]),
       [
-        ["hour", "2026-10-20T09:00:00.000Z", 2, 3, 0],
-        ["hour", "2026-10-20T10:00:00.000Z", 0, 0, 0],
-        ["hour", "2026-10-20T11:00:00.000Z", 0, 0, 0],
-        ["hour", "2026-10-20T12:00:00.000Z", 0, 0, 2],
-        ["day", "2026-10-24T00:00:00.000Z", 1, 0, 0],
-        ["day", "2026-10-25T00:00:00.000Z", 0, 0, 0],
-        ["day", "2026-10-26T00:00:00.000Z", 0, 0, 2],
+        ["hour", "2026-10-20T09:00:00.000Z", 2, 3, 0, 0],
+        ["hour", "2026-10-20T10:00:00.000Z", 0, 0, 0, 0],
+        ["hour", "2026-10-20T11:00:00.000Z", 0, 0, 0, 0],
+        ["hour", "2026-10-20T12:00:00.000Z", 0, 0, 1, 1],
+        ["day", "2026-10-24T00:00:00.000Z", 1, 0, 0, 0],
+        ["day", "2026-10-25T00:00:00.000Z", 0, 0, 0, 0],
+        ["day", "2026-10-26T00:00:00.000Z", 0, 0, 2, 0],
       ],
     );
   });
@@ -224,10 +238,19 @@ describe("the series", () => {
     assert.deepEqual(trackingSeries([]), []);
     assert.equal(seriesHasEvents(trackingSeries([point("2026-10-20T09:00:00Z", "hour")])), false);
     assert.equal(seriesHasEvents(trackingSeries([point("2026-10-20T09:00:00Z", "hour", 0, 1)])), true);
+    assert.equal(seriesHasEvents(trackingSeries([point("2026-10-20T09:00:00Z", "hour", 0, 0, 0, 1)])), true);
   });
 
   it("carries counts only, no person", () => {
     const [row] = trackingSeries([point("2026-10-20T09:00:00Z", "hour", 1)]);
-    assert.deepEqual(Object.keys(row).sort(), ["at", "automated_opens", "clicks", "interval", "label", "likely_human_opens"]);
+    assert.deepEqual(Object.keys(row).sort(), [
+      "at",
+      "automated_clicks",
+      "automated_opens",
+      "interval",
+      "label",
+      "likely_human_clicks",
+      "likely_human_opens",
+    ]);
   });
 });

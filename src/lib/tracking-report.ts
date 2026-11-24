@@ -237,17 +237,37 @@ export function linkLabel(position: number): string {
 
 export type TrackingBadge = Readonly<{ key: string; label: string; tone: "warning" | "info" | "neutral" }>;
 
-const SOURCE_BADGE: Readonly<Record<string, TrackingBadge>> = {
-  apple_proxy_likely: { key: "apple", label: "Muhtemelen otomatik (Apple Mail)", tone: "warning" },
-  google_proxy: { key: "google", label: "Gmail üzerinden: tekrar açılmalar görünmez", tone: "info" },
-  scanner_likely: { key: "scanner", label: "Güvenlik taraması olası", tone: "warning" },
-};
+/**
+ * Every source class skymail-backend's classifier writes
+ * (internal/tracking/classifier.go), in the order a row shows them. The rows
+ * show each one a recipient has, not only the ones that cast doubt on an
+ * open (K6, Yusuf 2026-11-24: everything the tracking records is shown).
+ */
+const SOURCE_BADGES: readonly (readonly [string, TrackingBadge])[] = [
+  ["apple_proxy_likely", { key: "apple", label: "Muhtemelen otomatik (Apple Mail)", tone: "warning" }],
+  ["google_proxy", { key: "google", label: "Gmail üzerinden: tekrar açılmalar görünmez", tone: "info" }],
+  ["yahoo_proxy", { key: "yahoo", label: "Yahoo üzerinden", tone: "info" }],
+  ["scanner_likely", { key: "scanner", label: "Güvenlik taraması olası", tone: "warning" }],
+  ["microsoft", { key: "microsoft", label: "Outlook", tone: "neutral" }],
+  ["mail_client", { key: "mail_client", label: "Posta uygulaması", tone: "neutral" }],
+  ["browser", { key: "browser", label: "Tarayıcı", tone: "neutral" }],
+  ["unknown", { key: "unknown", label: "Bilinmeyen istemci", tone: "neutral" }],
+];
 
-/** The marks a recipient's row carries (design note 07 §3.2), in a fixed order. */
+const KNOWN_SOURCES = new Set(SOURCE_BADGES.map(([source]) => source));
+
+/**
+ * The marks a recipient's row carries (design note 07 §3.2): each source
+ * class seen, in a fixed order, a class this panel does not know yet by its
+ * own name, and an open inferred from a click.
+ */
 export function recipientBadges(row: Pick<TrackingRecipient, "source_classes" | "likely_human_open_source">): TrackingBadge[] {
   const badges: TrackingBadge[] = [];
-  for (const source of ["apple_proxy_likely", "google_proxy", "scanner_likely"]) {
-    if (row.source_classes.includes(source)) badges.push(SOURCE_BADGE[source]);
+  for (const [source, badge] of SOURCE_BADGES) {
+    if (row.source_classes.includes(source)) badges.push(badge);
+  }
+  for (const source of new Set(row.source_classes)) {
+    if (!KNOWN_SOURCES.has(source)) badges.push({ key: `other:${source}`, label: source, tone: "neutral" });
   }
   if (row.likely_human_open_source === "click_inferred") {
     badges.push({ key: "click", label: "Tıklamadan çıkarım", tone: "neutral" });
@@ -288,7 +308,8 @@ export type TrackingSeriesRow = Readonly<{
   label: string;
   likely_human_opens: number;
   automated_opens: number;
-  clicks: number;
+  likely_human_clicks: number;
+  automated_clicks: number;
 }>;
 
 const HOUR_MS = 3_600_000;
@@ -311,7 +332,8 @@ function rowOf(at: number, interval: "hour" | "day", point?: TrackingPoint): Tra
     label: (interval === "hour" ? HOUR_LABEL : DAY_LABEL).format(new Date(at)),
     likely_human_opens: point?.likely_human_opens ?? 0,
     automated_opens: point?.automated_opens ?? 0,
-    clicks: (point?.likely_human_clicks ?? 0) + (point?.automated_clicks ?? 0),
+    likely_human_clicks: point?.likely_human_clicks ?? 0,
+    automated_clicks: point?.automated_clicks ?? 0,
   };
 }
 
@@ -347,11 +369,12 @@ export function trackingSeries(points: readonly TrackingPoint[] | undefined): Tr
 
 /** Whether the series has anything to draw. */
 export function seriesHasEvents(rows: readonly TrackingSeriesRow[]): boolean {
-  return rows.some((row) => row.likely_human_opens + row.automated_opens + row.clicks > 0);
+  return rows.some((row) => row.likely_human_opens + row.automated_opens + row.likely_human_clicks + row.automated_clicks > 0);
 }
 
 export const SERIES_LABELS = {
   likely_human_opens: "Açılma (insan olası)",
   automated_opens: "Açılma (muhtemelen otomatik)",
-  clicks: "Tıklama",
+  likely_human_clicks: "Tıklama (insan olası)",
+  automated_clicks: "Tıklama (muhtemelen otomatik)",
 } as const;
