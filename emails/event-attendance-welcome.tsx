@@ -1,6 +1,6 @@
 import * as React from "react";
-import { Context, ListHeader, Note, Paragraph, RowItem, Rows, RowsEnd, Shell, Strong, Title } from "./theme";
-import { end, ifSet, joinTitles, rangeOver, v } from "./go";
+import { Context, ListHeader, Note, Paragraph, RowItem, Rows, RowsEnd, Shell, Strong, TextLink, Title } from "./theme";
+import { elseBranch, end, ifSet, joinTitles, rangeOver, v } from "./go";
 import type { TemplateMeta } from "./types";
 
 export const meta: TemplateMeta = {
@@ -14,6 +14,8 @@ export const meta: TemplateMeta = {
   trigger:
     "core-backend, kişinin o günkü ilk okutmasında (o günün Venue entry'si yazılınca: kapıda okutma, masa ya da girişsiz alınan oturum yoklaması), yazıldıktan 2 dakika sonra, günde bir kez; çok günlü etkinlikte her gün (ATTENDANCE_MAIL=on, SKYMAIL_ATTENDANCE_WELCOME_TEMPLATE_KEY, etkinliğin attendanceWelcomeMail anahtarı; docs/attendance-mail.md). İşlem postası, kişi kapatamaz. Aynı biletin 2 dakika içindeki oturum yoklamaları bu postaya katılır (Recorded dolu gelir). Üyeye bildirim olarak (POST /v1/notifications: kutu + e-posta), misafire yalnız bu e-posta (POST /v1/mail_tasks/single). Her değişken her zaman gelir, boş olabilir. AttendeeNote düzenleyenin mekan/Wi-Fi notudur, yalnız bu postada görünür, kutuya girmez.",
   // core-backend kapi-postalari 04 (SPEC §5.2). Program: [{Time, Title}];
+  // AttendeeNoteParts: [{Text, Url}], the note cut at its http(s) addresses,
+  // Url empty for plain text (the note's links, Yusuf 2026-11-24);
   // Recorded, MissingRequired, MissedRequired: [{Title}]; the counts are
   // numbers, 0 when the event has no certificate rule.
   variables: [
@@ -24,6 +26,7 @@ export const meta: TemplateMeta = {
     "DayLabel",
     "Program",
     "AttendeeNote",
+    "AttendeeNoteParts",
     "CertificateLine",
     "Recorded",
     "Attended",
@@ -34,7 +37,9 @@ export const meta: TemplateMeta = {
   ],
   // The Wi-Fi password is a credential, and SkyMail's masking does not catch a
   // password without digits by itself: listed, it is hidden whole.
-  sensitiveVariables: ["AttendeeNote"],
+  // AttendeeNoteParts is the same note cut at its web addresses (core makes
+  // them links): masked whole as well, and its addresses never tracked.
+  sensitiveVariables: ["AttendeeNote", "AttendeeNoteParts"],
   notification: {
     category: null,
     required: true,
@@ -59,7 +64,11 @@ export const meta: TemplateMeta = {
       { Time: "13:30–15:00", Title: "Veritabanı tasarımı" },
       { Time: "15:15–16:45", Title: "Takım çalışması" },
     ],
-    AttendeeNote: "Wi-Fi: SKYLAB-Etkinlik\nParola: ornek-parola\nSalon: D-Blok zemin kat, D-001",
+    AttendeeNote: "Wi-Fi: SKYLAB-Etkinlik\nParola: ornek-parola\nSalon: D-Blok zemin kat, D-001\nKroki: https://example.test/kroki",
+    AttendeeNoteParts: [
+      { Text: "Wi-Fi: SKYLAB-Etkinlik\nParola: ornek-parola\nSalon: D-Blok zemin kat, D-001\nKroki: ", Url: "" },
+      { Text: "https://example.test/kroki", Url: "https://example.test/kroki" },
+    ],
     CertificateLine: "Sertifika için 16 oturumdan en az 12'sine katılmalısın. Zorunlu: Final.",
     Recorded: [{ Title: "Açılış" }],
     Attended: 1,
@@ -108,7 +117,13 @@ export default function EventAttendanceWelcome() {
 
       {ifSet("AttendeeNote")}
       <Note label="Bilmen gerekenler" keepLines>
-        {v("AttendeeNote")}
+        {rangeOver("AttendeeNoteParts")}
+        {ifSet("Url")}
+        <TextLink href={v("Url")}>{v("Text")}</TextLink>
+        {elseBranch}
+        {v("Text")}
+        {end}
+        {end}
       </Note>
       {end}
 

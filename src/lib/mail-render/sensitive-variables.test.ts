@@ -59,7 +59,7 @@ const LISTS: Record<string, string[]> = {
   "event.reminder": ["TicketCode", "TicketQrUrl", "TicketUrl"],
   "event.updated": ["TicketCode", "TicketQrUrl", "TicketUrl"],
   "event.waitlist-joined": ["TicketUrl"],
-  "event.attendance-welcome": ["AttendeeNote"],
+  "event.attendance-welcome": ["AttendeeNote", "AttendeeNoteParts"],
   "event.waitlist-promoted": ["TicketCode", "TicketQrUrl", "TicketUrl"],
   "core.contact-consent-confirm": ["confirmUrl", "withdrawUrl"],
 };
@@ -71,7 +71,7 @@ const LISTS: Record<string, string[]> = {
  * (skymail-backend internal/mailer/mask.go).
  */
 const CREDENTIALS_BY_DECISION: Record<string, string[]> = {
-  "event.attendance-welcome": ["AttendeeNote"],
+  "event.attendance-welcome": ["AttendeeNote", "AttendeeNoteParts"],
 };
 
 describe("the sensitive variables declared in emails/", () => {

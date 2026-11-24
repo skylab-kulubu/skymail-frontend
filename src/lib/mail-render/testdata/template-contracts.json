@@ -1214,6 +1214,7 @@
       "DayLabel",
       "Program",
       "AttendeeNote",
+      "AttendeeNoteParts",
       "CertificateLine",
       "Recorded",
       "Attended",
@@ -1224,11 +1225,13 @@
     ],
     "requiredVariables": [],
     "sensitiveVariables": [
-      "AttendeeNote"
+      "AttendeeNote",
+      "AttendeeNoteParts"
     ],
     "sampleKeys": [
       "Attended",
       "AttendeeNote",
+      "AttendeeNoteParts",
       "CertificateLine",
       "CountedTotal",
       "DayLabel",
@@ -1245,6 +1248,7 @@
     "referenced": [
       "Attended",
       "AttendeeNote",
+      "AttendeeNoteParts",
       "CertificateLine",
       "CountedTotal",
       "DayLabel",
@@ -1261,7 +1265,6 @@
     "actions": [
       "{{$s.Title}}",
       "{{.Attended}}",
-      "{{.AttendeeNote}}",
       "{{.CertificateLine}}",
       "{{.CountedTotal}}",
       "{{.DayLabel}}",
@@ -1269,9 +1272,11 @@
       "{{.FirstName}}",
       "{{.MinRequired}}",
       "{{.OwnerTeam}}",
+      "{{.Text}}",
       "{{.Time}}",
       "{{.Title}}",
       "{{.UnsubscribeUrl}}",
+      "{{.Url}}",
       "{{if $i}}",
       "{{if .AttendeeNote}}",
       "{{if .CertificateLine}}",
@@ -1284,9 +1289,11 @@
       "{{if .Program}}",
       "{{if .Recorded}}",
       "{{if .UnsubscribeUrl}}",
+      "{{if .Url}}",
       "{{range $i, $s := .MissedRequired}}",
       "{{range $i, $s := .MissingRequired}}",
       "{{range $i, $s := .Recorded}}",
+      "{{range .AttendeeNoteParts}}",
       "{{range .Program}}"
     ]
   },
