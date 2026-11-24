@@ -1276,9 +1276,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@skylab-kulubu/skylcn-ui@npm:^0.1.9":
-  version: 0.1.9
-  resolution: "@skylab-kulubu/skylcn-ui@npm:0.1.9"
+"@skylab-kulubu/skylcn-ui@npm:^0.2.2":
+  version: 0.2.2
+  resolution: "@skylab-kulubu/skylcn-ui@npm:0.2.2"
   dependencies:
     "@base-ui/react": "npm:^1.8.0"
     "@tanstack/react-table": "npm:^9.2.4"
@@ -1294,7 +1294,7 @@ __metadata:
   peerDependencies:
     react: ^19.0.0
     react-dom: ^19.0.0
-  checksum: 10c0/ddcf9aea4050061edd07bc4599a832ed35293eb6e4ee070acadc8bc7d3761a3ac2625cf7adac0402e679ac111a9dcf3d7251ba5f2d8975ea48b55f356b20da47
+  checksum: 10c0/8a8c06fc2ac6a8aed10d7c5caeb3b0399804b8484e9f787da2824d6e9ba862f43d5eba093f3fb2d74f794e710c5f8856ed8c8011b7b8798dea7af245954257c6
   languageName: node
   linkType: hard
 
@@ -4510,7 +4510,7 @@ __metadata:
     "@playwright/test": "npm:1.63.0"
     "@react-email/components": "npm:^1.0.8"
     "@react-email/render": "npm:^2.0.4"
-    "@skylab-kulubu/skylcn-ui": "npm:^0.1.9"
+    "@skylab-kulubu/skylcn-ui": "npm:^0.2.2"
     "@tailwindcss/postcss": "npm:^4.3.3"
     "@tiptap/core": "npm:^3.12.1"
     "@tiptap/extension-list": "npm:^3.12.1"
