@@ -107,8 +107,8 @@ describe("the overview", () => {
     assert.match(words, /Takip edilen 40/);
     assert.match(words, /Takip edilmeyen 5 Hesabı yok: 3 · Takibi kapatmış: 2/);
     assert.match(words, /Açılma görülen 16 Takip edilenlere oranı: %40/);
-    // Everyone with any open, Apple Mail's and scanners' too (K6: everything shown).
-    assert.match(words, /Açılma \(otomatik dahil\) 22 Takip edilenlere oranı: %55/);
+    // Everyone whose pixel loaded, Apple Mail's and scanners' too (K6: everything shown); a click-inferred open is not in it.
+    assert.match(words, /Piksel açılması \(otomatik dahil\) 22 Takip edilenlere oranı: %55 · tıklamadan çıkarım hariç/);
     assert.match(words, /Yalnız otomatik açılma 6/);
     assert.match(words, /Tıklayan 9/);
   });

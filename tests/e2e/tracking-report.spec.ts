@@ -91,7 +91,7 @@ test("a tracking reader sees the counts, the series as a table, the links and ev
   const section = page.getByRole("region", { name: "Açılma ve tıklama" });
   await expect(section.getByText(/^Açılma kesin değildir\. Apple Mail postayı kendisi yükleyebilir/)).toBeVisible();
   await expect(section.locator("[data-slot=stat-card]").filter({ hasText: "Takip edilmeyen" })).toContainText("Hesabı yok: 1");
-  await expect(section.locator("[data-slot=stat-card]").filter({ hasText: "Açılma (otomatik dahil)" })).toContainText("2");
+  await expect(section.locator("[data-slot=stat-card]").filter({ hasText: "Piksel açılması (otomatik dahil)" })).toContainText("tıklamadan çıkarım hariç");
 
   // The series' accessible twin: the same counts, hour by hour, then by the day.
   await section.getByRole("button", { name: "Tablo olarak göster" }).click();

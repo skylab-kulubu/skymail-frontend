@@ -163,8 +163,12 @@ function TrackingFigures({ report }: { report: TrackingAggregate }) {
         hint={untracked.parts.length > 0 ? untracked.parts.join(' · ') : 'kişi'}
       />
       <StatCard label="Açılma görülen" value={formatCount(report.unique_likely_human_opens)} hint={ofTracked(report.unique_likely_human_opens) ?? 'insan olası'} />
-      {/* Everyone with any open, Apple Mail's and scanners' too (unique_opens). */}
-      <StatCard label="Açılma (otomatik dahil)" value={formatCount(report.unique_opens)} hint={ofTracked(report.unique_opens) ?? 'kişi'} />
+      {/* unique_opens: everyone whose pixel loaded, Apple Mail's and scanners' too; an open inferred from a click is not in it. */}
+      <StatCard
+        label="Piksel açılması (otomatik dahil)"
+        value={formatCount(report.unique_opens)}
+        hint={[ofTracked(report.unique_opens), 'tıklamadan çıkarım hariç'].filter(Boolean).join(' · ')}
+      />
       {report.automated_only_recipients !== undefined ? (
         <StatCard
           label="Yalnız otomatik açılma"
