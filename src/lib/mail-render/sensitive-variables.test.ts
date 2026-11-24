@@ -87,7 +87,11 @@ describe("the sensitive variables declared in emails/", () => {
     }
 
     it(`${meta.key} lists only variables it is sent, as the server accepts them, that SkyMail masks by name today or that is a credential by decision`, () => {
-      assert.ok(meta.contentSensitive, `${meta.key}: hassas olmayan bir şablonun gönderimi maskelenmez, liste anlamsız`);
+      // An empty list on a template that is not content-sensitive clears what an earlier seed
+      // wrote (ADR-0074, 2026-11-24 ek: no mask); a list with names needs a sensitive template.
+      if (list.length > 0) {
+        assert.ok(meta.contentSensitive, `${meta.key}: hassas olmayan bir şablonun gönderimi maskelenmez, liste anlamsız`);
+      }
       assert.ok(list.length <= LIST_LIMIT, `${meta.key}: en çok ${LIST_LIMIT} değişken`);
       assert.deepEqual(list, [...new Set(list)].sort(), `${meta.key}: liste sıralı ve tekil olmalı (sunucu öyle saklar)`);
       for (const name of list) {

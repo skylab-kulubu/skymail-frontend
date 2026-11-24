@@ -1205,7 +1205,7 @@
   "event.attendance-welcome": {
     "subject": "{{.EventName}}: hoş geldin",
     "system": false,
-    "contentSensitive": true,
+    "contentSensitive": false,
     "variables": [
       "FirstName",
       "EventName",

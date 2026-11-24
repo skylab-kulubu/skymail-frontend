@@ -8,7 +8,8 @@ export const meta: TemplateMeta = {
   name: "Etkinlik · Kapı: Hoş Geldin",
   subject: `${v("EventName")}: hoş geldin`,
   system: false,
-  contentSensitive: true,
+  // No mask (ADR-0074, 2026-11-24 ek): the content is not hidden either.
+  contentSensitive: false,
   brand: "skylab",
   trigger:
     "core-backend, kişinin o günkü ilk okutmasında (o günün Venue entry'si yazılınca: kapıda okutma, masa ya da girişsiz alınan oturum yoklaması), yazıldıktan 2 dakika sonra, günde bir kez; çok günlü etkinlikte her gün (ATTENDANCE_MAIL=on, SKYMAIL_ATTENDANCE_WELCOME_TEMPLATE_KEY, etkinliğin attendanceWelcomeMail anahtarı; docs/attendance-mail.md). İşlem postası, kişi kapatamaz. Aynı biletin 2 dakika içindeki oturum yoklamaları bu postaya katılır (Recorded dolu gelir). Üyeye bildirim olarak (POST /v1/notifications: kutu + e-posta), misafire yalnız bu e-posta (POST /v1/mail_tasks/single). Her değişken her zaman gelir, boş olabilir. AttendeeNote düzenleyenin mekan/Wi-Fi notudur, yalnız bu postada görünür, kutuya girmez.",
@@ -36,7 +37,8 @@ export const meta: TemplateMeta = {
   ],
   // No variable is masked (ADR-0074, 2026-11-24 ek): the note is mail content
   // that whoever holds mails:read may read, and its links are tracked as any
-  // other. The empty list clears the one an earlier seed wrote.
+  // other. The empty list clears the one an earlier seed wrote (the template
+  // is not content-sensitive, so the list would mask nothing anyway).
   sensitiveVariables: [],
   notification: {
     category: null,

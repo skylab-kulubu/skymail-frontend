@@ -106,6 +106,7 @@ describe("the door mails", () => {
 describe("the welcome (event.attendance-welcome)", () => {
   it("masks no variable (ADR-0074, 2026-11-24 ek): the empty list clears an earlier seed's", async () => {
     const { meta } = await rendered("event.attendance-welcome");
+    assert.equal(meta.contentSensitive, false);
     assert.deepEqual(meta.sensitiveVariables, []);
   });
 
