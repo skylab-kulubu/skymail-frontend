@@ -80,7 +80,7 @@ export function ConfirmSend({
   progress: Progress | null;
   /** A submission for approval is on its way. */
   submitting?: boolean;
-  /** SkyMail tracks every send (tracking_always): a Forms source's too, which asks for nothing. */
+  /** SkyNotify tracks every send (tracking_always): a Forms source's too, which asks for nothing. */
   trackingAlways?: boolean;
   /** The backend holds guests to their announcement consent (list_consent_available). */
   listConsent?: boolean;

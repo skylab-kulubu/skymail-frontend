@@ -27,7 +27,7 @@ export default async function ConsoleLayout({ children }: Readonly<{ children: R
   const config = publicConfig();
   const user = { name: session.user?.name, email: session.user?.email, sub: session.subject };
   if (!hasAccess(session.roles)) {
-    // A Leader without skymail:access gets the team seat (ekip-postasi 06); anyone else "Erişimin yok".
+    // A Leader without skynotify:access gets the team seat (ekip-postasi 06); anyone else "Erişimin yok".
     return (
       <TeamSeatGate
         roles={session.roles}

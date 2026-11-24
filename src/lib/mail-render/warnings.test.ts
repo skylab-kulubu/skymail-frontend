@@ -22,7 +22,7 @@ const glued: SourceInput[] = [
   {
     mode: "visual",
     source: JSON.stringify({
-      type: "skymail.visual",
+      type: "skynotify.visual",
       version: 1,
       blocks: [
         {

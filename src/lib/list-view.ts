@@ -3,7 +3,7 @@
  * page's address (`?lifecycle=inactive&page=2`), so a refresh, the back button
  * or a shared link shows the same rows.
  *
- * Records are archived, never deleted (ADR-0042). skymail-backend's management
+ * Records are archived, never deleted (ADR-0042). skynotify-backend's management
  * lists take `lifecycle=current|inactive|all` (default `current`) and page with
  * `_start`/`_end`, for Mail templates and mailing lists alike.
  */

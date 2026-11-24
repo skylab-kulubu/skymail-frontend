@@ -11,7 +11,7 @@ export type FormSource = Readonly<{
   form_title: string;
   recipient_count: number;
   /**
-   * Of them, those who gave no name (skymail-backend unnamed_count): a mail
+   * Of them, those who gave no name (skynotify-backend unnamed_count): a mail
    * that greets its recipient by name prints the fallback for them. Absent
    * from a backend before it, and from a historical readback.
    */

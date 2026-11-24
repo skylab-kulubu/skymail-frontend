@@ -11,7 +11,7 @@ export const meta: TemplateMeta = {
   contentSensitive: false,
   brand: "mail",
   trigger:
-    "SkyMail, gönderme yetkisi olmayan biri taslak gönderdiğinde onaycılara (ADR-0031, CONTEXT.md \"Mail onayı\", ticket 19).",
+    "SkyNotify, gönderme yetkisi olmayan biri taslak gönderdiğinde onaycılara (ADR-0031, CONTEXT.md \"Mail onayı\", ticket 19).",
   // AudienceKind is the request's audience.kind: mailing_list, single or
   // people. RecipientCount is in digits, or "?" when Keycloak did not name a
   // group's members in time.
@@ -30,7 +30,7 @@ export const meta: TemplateMeta = {
 /**
  * A list is named ("… listesine"), people are counted ("3 kişiye"): a list's
  * members are not known by name here, and several people are named in
- * AudienceName already. A sender that does not give AudienceKind (a SkyMail
+ * AudienceName already. A sender that does not give AudienceKind (a SkyNotify
  * before it did) gets neither sentence and the rows as they were.
  */
 export default function MailApprovalRequested() {
@@ -39,7 +39,7 @@ export default function MailApprovalRequested() {
   const toOne = elseIfEq("AudienceKind", "single");
 
   return (
-    <Shell preview="SkyMail'de onayını bekleyen bir gönderim var." brand="mail" reason={null}>
+    <Shell preview="SkyNotify'da onayını bekleyen bir gönderim var." brand="mail" reason={null}>
       <Context tone="wait">Mail onayı</Context>
       <Title>Onayını Bekleyen Gönderim</Title>
 

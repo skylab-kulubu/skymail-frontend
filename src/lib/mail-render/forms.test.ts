@@ -58,14 +58,14 @@ describe("the Forms mails", () => {
     it(`${key} is a required Notification type, by e-mail only, on the system lane (ADR-0075)`, async () => {
       const { meta } = await rendered(key);
       // core sends these to a member with POST /v1/notifications, which
-      // refuses a type SkyMail has no record of; the seed writes the record.
+      // refuses a type SkyNotify has no record of; the seed writes the record.
       assert.deepEqual(meta.notification, { category: null, required: true, defaultChannels: ["email"], lane: "system" });
     });
   }
 
   const base = { formTitle: "Başvuru 2026", firstName: "Ayşe", recipientName: "Ayşe Yılmaz", reviewedAt: "04 Ekim 2026, 22:10" };
   const statuses: { status: string; title: string; not: string[] }[] = [
-    // The preview here shows every `if $next` as true; the mailer's own run (skymail-backend) picks the title.
+    // The preview here shows every `if $next` as true; the mailer's own run (skynotify-backend) picks the title.
     { status: "approved", title: "cevabınızı inceledik ve onayladık", not: ["kabul edilmedi", "düzeltme istendi", "Yeniden başvurabilirsiniz"] },
     { status: "declined", title: "Cevabınız kabul edilmedi", not: ["onaylandı", "düzeltme istendi", "Yeniden başvurabilirsiniz"] },
     { status: "returned", title: "Cevabınızda düzeltme istendi", not: ["onaylandı", "kabul edilmedi", "Yeniden başvurabilirsiniz"] },

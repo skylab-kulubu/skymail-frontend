@@ -1,5 +1,5 @@
 /**
- * A send, as skymail-backend takes it (internal/requests/mail.go and
+ * A send, as skynotify-backend takes it (internal/requests/mail.go and
  * internal/handlers/mail.go, unchanged by the rewrite):
  *
  *  - to a mailing list — an internal list or a Keycloak group —
@@ -86,7 +86,7 @@ export type SendDraft = Readonly<{
   /** The Teams a Team request goes to (teams.ts requestTeams): covered Sub-teams already left out. */
   teams?: readonly TeamAudience[];
   people: readonly PersonRow[];
-  /** Open and click tracking: true when the form offered its box (tracking.ts trackingOffered) and it is ticked, or while SkyMail tracks every send (trackingAsked). A list or people send asks for it. */
+  /** Open and click tracking: true when the form offered its box (tracking.ts trackingOffered) and it is ticked, or while SkyNotify tracks every send (trackingAsked). A list or people send asks for it. */
   tracking?: boolean;
   /** The purpose and category the send carries (purpose.ts); none while the backend takes no purpose. */
   purpose?: PurposeFields | null;
@@ -121,7 +121,7 @@ export type SendWarnings = Readonly<{
 export const unnamedRespondents = (count: number) =>
   `Forms kaynağında ${formatCount(count)} yanıtlayanın adı yok: alıcının adı yerine yedek metin gider, yedek yoksa boş kalır.`;
 
-export const NO_FREE_TEMPLATE = `Serbest duyuru template'i (${FREE_TEMPLATE_KEY}) SkyMail'de yok ya da arşivlenmiş; serbest duyuru gönderilemez.`;
+export const NO_FREE_TEMPLATE = `Serbest duyuru template'i (${FREE_TEMPLATE_KEY}) SkyNotify'da yok ya da arşivlenmiş; serbest duyuru gönderilemez.`;
 
 /** The requests a draft sends, or what keeps it from going out; and either way, what may be a slip in it. */
 export function sendPlan(
@@ -349,10 +349,10 @@ export function sendFailure(error: unknown, to: "list" | "person" | "form", chec
     };
   }
   if (refusal.code === "validation.error" && invalidField(refusal) === "recipient_email") {
-    return { kind: "final", reason: "SkyMail bu adresi geçerli bir e-posta adresi saymadı." };
+    return { kind: "final", reason: "SkyNotify bu adresi geçerli bir e-posta adresi saymadı." };
   }
   if (PURPOSE_REFUSALS.has(refusal.code)) return { kind: "final", reason: refusal.message, code: refusal.code };
-  return { kind: "final", reason: `SkyMail gönderimi reddetti: ${apiErrorMessage(refusal)}` };
+  return { kind: "final", reason: `SkyNotify gönderimi reddetti: ${apiErrorMessage(refusal)}` };
 }
 
 /** The first field a validation error names (`params.errors[].field`). */

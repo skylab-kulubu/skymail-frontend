@@ -1,6 +1,6 @@
 /**
  * A System template's contract Required variables are declared beside its
- * Template key and written by the Template seed. SkyMail then refuses every
+ * Template key and written by the Template seed. SkyNotify then refuses every
  * save and publish whose body no longer references one of them — the seed's
  * own included. So the body the repo renders must reference each, counted by
  * the rule the server counts with (see variables.test.ts), or the seed would
@@ -11,10 +11,10 @@ import { describe, it } from "node:test";
 import { templates } from "../../../emails";
 import { renderComponent } from ".";
 
-/** skymail-backend's variable name rule (pkg/validator IsVariableName). */
+/** skynotify-backend's variable name rule (pkg/validator IsVariableName). */
 const VARIABLE_NAME = /^[A-Za-z_][A-Za-z0-9_]{0,63}$/;
 
-/** skymail-backend's limit on a reason (requests.ContractVariable). */
+/** skynotify-backend's limit on a reason (requests.ContractVariable). */
 const REASON_LIMIT = 300;
 
 /**

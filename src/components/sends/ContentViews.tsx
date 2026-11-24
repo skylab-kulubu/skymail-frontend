@@ -1,7 +1,7 @@
 'use client';
 
 // Who opened the send's masked content (hub ticket skymail-frontend-rewrite
-// 32): to the holder of skymail:audit:read alone (DK), newest first, with the
+// 32): to the holder of skynotify:audit:read alone (DK), newest first, with the
 // recipient whose mail was opened. A send no one opened masked shows nothing,
 // unless the viewer sees it is masked.
 

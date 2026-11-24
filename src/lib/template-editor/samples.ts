@@ -72,7 +72,7 @@ export function sampleValues(
 /** The part of Web Storage this uses. */
 export type SampleStorage = Pick<Storage, "getItem" | "setItem">;
 
-const storageKey = (template: string) => `skymail.template-samples.${template}`;
+const storageKey = (template: string) => `skynotify.template-samples.${template}`;
 
 /**
  * What the operator typed for a template's preview, kept in their browser —

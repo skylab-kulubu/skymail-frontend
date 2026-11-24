@@ -24,8 +24,8 @@ export type FreeBodyRead = Readonly<{
 
 const TOKEN = /<!--[\s\S]*?-->|<(\/?)([a-zA-Z][a-zA-Z0-9]*)((?:\s[^>]*)?)\/?>|([^<]+|<)/g;
 const HREF = /\shref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/i;
-/** data-skymail-notrack as the server keeps it: bare, empty or "true" (sanitize.go). */
-const NO_TRACK = /\sdata-skymail-notrack(?:\s*=\s*(?:"(?:true)?"|'(?:true)?'|true))?(?![\w-]|\s*=)/i;
+/** data-skynotify-notrack as the server keeps it: bare, empty or "true" (sanitize.go). */
+const NO_TRACK = /\sdata-skynotify-notrack(?:\s*=\s*(?:"(?:true)?"|'(?:true)?'|true))?(?![\w-]|\s*=)/i;
 
 // A Map, not an object literal: a name comes from the body, and "constructor"
 // must not find what every object inherits.

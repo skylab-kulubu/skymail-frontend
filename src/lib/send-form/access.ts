@@ -1,6 +1,6 @@
 /**
  * What the send form (`/mail-tasks/create`, ticket 16) offers the person
- * looking at it, by the roles skymail-backend checks (main.go): a send to a
+ * looking at it, by the roles skynotify-backend checks (main.go): a send to a
  * mailing list or to a Forms source's respondents needs `mails:write`, a send
  * to one person `mails:send` or `mails:write`. What the viewer may not send they submit for approval
  * (ticket 20): to a list, or to 1..100 people as one request (ticket 22);
@@ -51,7 +51,7 @@ export function sendAccess(roles: readonly string[]): SendAccess {
 /**
  * Whether a send to `audience` goes at once; if not, it is submitted for
  * approval. People a legacy Forms transfer added (`legacyForms`, Eski aktarım:
- * Forms' fallback when SkyMail cannot prepare a source) are Forms respondents,
+ * Forms' fallback when SkyNotify cannot prepare a source) are Forms respondents,
  * a bulk audience: as a Forms source, they go at once only with `mails:write`.
  */
 export function directSend(access: SendAccess, audience: "list" | "people" | "form" | "team", { legacyForms = false }: { legacyForms?: boolean } = {}): boolean {

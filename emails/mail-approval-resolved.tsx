@@ -22,7 +22,7 @@ export const meta: TemplateMeta = {
   contentSensitive: false,
   brand: "mail",
   trigger:
-    "SkyMail, bir onay isteği sonuçlandığında. approved/rejected/returned/expired talebi açana, declined onaycılara gider (ADR-0031, ticket 19).",
+    "SkyNotify, bir onay isteği sonuçlandığında. approved/rejected/returned/expired talebi açana, declined onaycılara gider (ADR-0031, ticket 19).",
   // AudienceKind is the request's audience.kind: mailing_list, single or
   // people. RecipientCount is in digits: once approved, how many it was sent
   // to; before that, how many it would reach ("?" when Keycloak did not name a
@@ -68,7 +68,7 @@ export const meta: TemplateMeta = {
  *
  * An approval says where the mail went: a list by name ("… listesine"),
  * people by how many ("3 kişiye"). A sender that does not give AudienceKind
- * (a SkyMail before it did) gets "alıcılara", as before.
+ * (a SkyNotify before it did) gets "alıcılara", as before.
  */
 export default function MailApprovalResolved() {
   const approved = ifEq("Decision", "approved");
@@ -78,7 +78,7 @@ export default function MailApprovalResolved() {
   const declined = elseIfEq("Decision", "declined");
 
   return (
-    <Shell preview={`SkyMail onay isteği sonuçlandı: ${v("TemplateName")}`} brand="mail" reason={null}>
+    <Shell preview={`SkyNotify onay isteği sonuçlandı: ${v("TemplateName")}`} brand="mail" reason={null}>
       {approved}
       <Context tone="ok">Onaylandı</Context>
       {rejected}

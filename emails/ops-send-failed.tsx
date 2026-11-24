@@ -6,12 +6,12 @@ import type { TemplateMeta } from "./types";
 export const meta: TemplateMeta = {
   key: "ops.send-failed",
   name: "Operasyon · Gönderim Hatası",
-  subject: "SkyMail gönderiminde hata",
+  subject: "SkyNotify gönderiminde hata",
   system: false,
   contentSensitive: false,
   brand: "mail",
   trigger:
-    "SkyMail, bir görevdeki mailler yeniden denemeler bittikten sonra da gönderilemediğinde, gönderimi başlatan kişiye. NOT: bu uyarıyı gönderen kod henüz yazılmadı.",
+    "SkyNotify, bir görevdeki mailler yeniden denemeler bittikten sonra da gönderilemediğinde, gönderimi başlatan kişiye. NOT: bu uyarıyı gönderen kod henüz yazılmadı.",
   variables: ["TaskId", "TemplateName", "FailedCount", "TotalCount", "FirstError", "TaskUrl"],
   sample: {
     TaskId: "6f3d2c61-8a1e-4f5b-9f21-2b7c4de90a13",
@@ -29,7 +29,7 @@ export const meta: TemplateMeta = {
  */
 export default function OpsSendFailed() {
   return (
-    <Shell preview="SkyMail gönderiminde iletilemeyen mailler var." brand="mail" reason={null}>
+    <Shell preview="SkyNotify gönderiminde iletilemeyen mailler var." brand="mail" reason={null}>
       <Context tone="bad">
         {v("FailedCount")} / {v("TotalCount")} başarısız
       </Context>

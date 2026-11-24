@@ -21,7 +21,7 @@ import { SectionTitle } from './SectionTitle';
 
 const RECENT = 5;
 
-/** `teamSeat`: a Leader without skymail:access, who sends only to their Teams (ekip-postasi 06). */
+/** `teamSeat`: a Leader without skynotify:access, who sends only to their Teams (ekip-postasi 06). */
 export function ComposerHome({ teamSeat = false }: { teamSeat?: boolean }) {
   return (
     <div className="space-y-6">

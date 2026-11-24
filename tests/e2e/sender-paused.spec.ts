@@ -1,5 +1,5 @@
 /**
- * A paused sender (skymail-backend ticket 28): while SkyMail runs with
+ * A paused sender (skynotify-backend ticket 28): while SkyNotify runs with
  * MAIL_SENDER=paused, as during a restore from backup, the summary answers
  * `sender_paused: true` and nothing queued goes out. The home screen and the
  * send list say so above everything else, with nothing to close it; once the
@@ -17,9 +17,9 @@ const summaryAnswered = (page: Page) => page.waitForResponse((response) => isSum
 /** The send list has loaded: it counts its sends. */
 const sendCount = (page: Page) => page.getByText("0 gönderim", { exact: true });
 
-test("the home screen and the send list say the sender is paused, until it runs again", async ({ page, skymail, signIn }) => {
+test("the home screen and the send list say the sender is paused, until it runs again", async ({ page, skynotify, signIn }) => {
   await signIn("watcher");
-  skymail.pauseSender();
+  skynotify.pauseSender();
 
   await page.goto("/");
   await expect(notice(page)).toBeVisible();
@@ -37,7 +37,7 @@ test("the home screen and the send list say the sender is paused, until it runs 
   await expect(notice(page).getByRole("button")).toHaveCount(0);
   await expect(sendCount(page)).toBeVisible();
 
-  skymail.pauseSender(false);
+  skynotify.pauseSender(false);
   let answered = summaryAnswered(page);
   await page.reload();
   await answered;
@@ -51,9 +51,9 @@ test("the home screen and the send list say the sender is paused, until it runs 
   await expect(page.getByText(NOTICE)).toHaveCount(0);
 });
 
-test("a summary that does not come leaves the send list without the notice, and the list still loads", async ({ page, skymail, signIn }) => {
+test("a summary that does not come leaves the send list without the notice, and the list still loads", async ({ page, skynotify, signIn }) => {
   await signIn("watcher");
-  skymail.pauseSender();
+  skynotify.pauseSender();
   await page.route(isSummary, (route) => route.fulfill({ status: 500, contentType: "application/json", body: '{"code":"server.internal"}' }));
 
   const answered = summaryAnswered(page);

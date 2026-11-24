@@ -20,8 +20,8 @@ const mono = Space_Mono({
 });
 
 export const metadata: Metadata = {
-  title: { default: "İletişim", template: "%s · İletişim" },
-  description: "SKY LAB iletişim konsolu: e-posta ve bildirim gönderimi, şablonlar ve listeler.",
+  title: { default: "SkyNotify", template: "%s · SkyNotify" },
+  description: "SKY LAB SkyNotify konsolu: e-posta ve bildirim gönderimi, şablonlar ve listeler.",
   icons: { icon: "/favicon.ico" },
 };
 

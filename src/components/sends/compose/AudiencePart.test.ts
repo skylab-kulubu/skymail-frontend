@@ -65,7 +65,7 @@ describe("the audience part", () => {
     assert.match(text(html), /FRONTEND 12 üye · Üst ekiple birlikte gider/);
     assert.match(text(html), /40 üye\. E-posta adresi olmayan üye sayılmaz\./);
     assert.equal((html.match(/type="checkbox"/g) ?? []).length, 3);
-    assert.doesNotMatch(html, /skymail:/);
+    assert.doesNotMatch(html, /skynotify:/);
   });
 
   it("offers no Ekibim without Teams, and a Team request filled in again falls back to the list", () => {

@@ -117,7 +117,7 @@ export function Compose({
   legacyForms?: boolean;
   /** The Teams the viewer leads (ekip-postasi 05): Ekibim is offered while there are any. */
   teams?: readonly TeamAudience[];
-  /** A Leader without skymail:access: Ekibim only, a free announcement only (ekip-postasi 06). */
+  /** A Leader without skynotify:access: Ekibim only, a free announcement only (ekip-postasi 06). */
   teamSeat?: boolean;
   /** The API said the viewer no longer leads some Teams picked: read the Teams again. */
   onTeamsRefused?: () => void;
@@ -165,7 +165,7 @@ export function Compose({
   const chosenTeams = useMemo(() => requestTeams(pickedTeams, teams), [pickedTeams, teams]);
   const input = { values, rich };
   const formSource = prefill?.formSource ?? null;
-  // While the mode loads or fails, the box stays hidden. While SkyMail tracks every send
+  // While the mode loads or fails, the box stays hidden. While SkyNotify tracks every send
   // (tracking_always) there is no box: every list and people send asks, and the confirmation says so.
   const trackingState = useApiLoad(
     (loader, signal) => fetchTrackingMode(loader, { canReadSummary: access.detail, signal }),
@@ -179,7 +179,7 @@ export function Compose({
   useEffect(() => {
     if (untrackable) setTrackingTicked(false);
   }, [untrackable]);
-  // With an older backend, or SKYMAIL_MAIL_PURPOSE off, the form says and sends nothing of it.
+  // With an older backend, or SKYNOTIFY_MAIL_PURPOSE off, the form says and sends nothing of it.
   // Team mail's purpose is the server's, always shown fixed; only its statement is the sender's.
   const purposeShown = trackingMode.purpose && !team;
   const purpose = purposeShown ? purposeFields(purposeChoice, audience, list, trackingMode.listConsent) : null;
@@ -392,7 +392,7 @@ export function Compose({
         {/* Not a <form>: the Visual editor holds forms of its own (a link's address), and forms do not nest. */}
         <div className="min-w-0 space-y-8">
           {teamSeat ? (
-            free ? null : <Notice tone="warning">{problems?.template ?? 'Serbest duyuru şu an hazırlanamıyor: çerçevesi SkyMail\'de yok.'}</Notice>
+            free ? null : <Notice tone="warning">{problems?.template ?? 'Serbest duyuru şu an hazırlanamıyor: çerçevesi SkyNotify\'da yok.'}</Notice>
           ) : (
             <Part id="send-what" title="1. Ne gönderilecek">
               <WhatPart

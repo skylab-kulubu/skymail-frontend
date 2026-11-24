@@ -6,15 +6,15 @@ import type { TemplateMeta } from "./types";
 export const meta: TemplateMeta = {
   key: "club.news",
   name: "Kulüp · Haber ve Duyuru",
-  // skymail-backend writes Subject on every News send: the one the sender
+  // skynotify-backend writes Subject on every News send: the one the sender
   // typed, else the record's title ("Duyuru: " before a duyuru's).
   subject: v("Subject"),
   system: true,
   contentSensitive: false,
   brand: "skylab",
   trigger:
-    "SkyMail'de bir News kaydını (inscribed news) e-postayla gönderirken (POST /v1/news_sends; duyuru-haber bilet 06): kaydın o anki hâli, core'un çözdüğü kitlenin her kişisine bir kez.",
-  // skymail-backend internal/news Variables. AudienceReason, CategoryLabel and
+    "SkyNotify'da bir News kaydını (inscribed news) e-postayla gönderirken (POST /v1/news_sends; duyuru-haber bilet 06): kaydın o anki hâli, core'un çözdüğü kitlenin her kişisine bir kez.",
+  // skynotify-backend internal/news Variables. AudienceReason, CategoryLabel and
   // UnsubscribeUrl are each recipient's, from core's audience (core
   // docs/news-audience.md); the rest are the send's. BodyHtml is set only
   // with FullBody (the "Tam metin" format) and goes through the mailer's

@@ -24,7 +24,7 @@
 import { isVariableName } from "./go-template";
 import { RECIPIENT_NAME, fallbackProblem } from "./recipient-name";
 
-export const VISUAL_DOCUMENT_TYPE = "skymail.visual";
+export const VISUAL_DOCUMENT_TYPE = "skynotify.visual";
 
 /**
  * The versions this panel reads. Version 2 is a document with a reason
@@ -48,8 +48,8 @@ export const REASON_MAX_LENGTH = 200;
 export const DEFAULT_REASON = "Bu e-postayı SKY LAB'den aldın.";
 
 /**
- * A link's `notrack`: SkyMail does not count its clicks and sends it as it
- * is, never through its own address (skymail-backend data-skymail-notrack):
+ * A link's `notrack`: SkyNotify does not count its clicks and sends it as it
+ * is, never through its own address (skynotify-backend data-skynotify-notrack):
  * for a personal or one-off link. Only on a body whose allowance says so.
  */
 export type VisualMark = { type: "bold" } | { type: "italic" } | { type: "link"; href: string; notrack?: true };

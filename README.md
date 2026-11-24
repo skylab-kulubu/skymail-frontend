@@ -1,17 +1,17 @@
 <div align="center">
-  <a href="https://github.com/skylab-kulubu/skymail-frontend">
+  <a href="https://github.com/skylab-kulubu/skynotify-frontend">
     <img src="https://avatars.githubusercontent.com/u/96308083?s=200&v=4" alt="Repo Logo" height="100">
   </a>
 </div>
 
-<h2 align="center">Skymail</h3>
+<h2 align="center">SkyNotify</h3>
 
 <div align="center">
   <img src="https://img.shields.io/badge/license-MIT-blue.svg?labelColor=003694&color=ffffff" alt="License">
-  <img src="https://img.shields.io/github/contributors/skylab-kulubu/skymail-frontend?labelColor=003694&color=ffffff" alt="GitHub contributors" >
-  <img src="https://img.shields.io/github/stars/skylab-kulubu/skymail-frontend.svg?labelColor=003694&color=ffffff" alt="Stars">
-  <img src="https://img.shields.io/github/forks/skylab-kulubu/skymail-frontend.svg?labelColor=003694&color=ffffff" alt="Forks">
-  <img src="https://img.shields.io/github/issues/skylab-kulubu/skymail-frontend.svg?labelColor=003694&color=ffffff" alt="Issues">
+  <img src="https://img.shields.io/github/contributors/skylab-kulubu/skynotify-frontend?labelColor=003694&color=ffffff" alt="GitHub contributors" >
+  <img src="https://img.shields.io/github/stars/skylab-kulubu/skynotify-frontend.svg?labelColor=003694&color=ffffff" alt="Stars">
+  <img src="https://img.shields.io/github/forks/skylab-kulubu/skynotify-frontend.svg?labelColor=003694&color=ffffff" alt="Forks">
+  <img src="https://img.shields.io/github/issues/skylab-kulubu/skynotify-frontend.svg?labelColor=003694&color=ffffff" alt="Issues">
 </div>
 
 ## Özellikler
@@ -20,14 +20,14 @@
 * **Mail listeleri:** internal listeler ve Keycloak grupları.
 * **Gönderimler:** bir listeye ya da tek tek kişilere mail gönderme.
 * **Mail onayı:** gönderim yetkisi olmayan üye gönderimi onaya sunar; onaycı
-  (`skymail:mails:approve`) olduğu gibi onaylar, değişkenleri düzenleyip gönderir
+  (`skynotify:mails:approve`) olduğu gibi onaylar, değişkenleri düzenleyip gönderir
   ya da sunana geri gönderir, ya da gerekçesiyle reddeder. 7 gün içinde karar
   verilmeyen istek gönderilmez.
 
 Panel Next.js (App Router) + Tailwind 4 + TypeScript. Tema, kabuk (`AppShell`) ve
-bileşenler kulübün tasarım sistemi `@skylab-kulubu/skylcn-ui`'den gelir (ADR 0055); giriş Auth.js v5 ile Keycloak'ın `skymail`
+bileşenler kulübün tasarım sistemi `@skylab-kulubu/skylcn-ui`'den gelir (ADR 0055); giriş Auth.js v5 ile Keycloak'ın `skynotify`
 public istemcisi üzerinden (sır yok, PKCE + `state`). Sayfalar tarayıcıdan
-doğrudan SkyMail API'sine gider; tek HTTP istemcisi `src/lib/api/client.ts`.
+doğrudan SkyNotify API'sine gider; tek HTTP istemcisi `src/lib/api/client.ts`.
 
 ## Yerelde çalıştırma
 
@@ -44,26 +44,26 @@ Ortam değişkenleri çalışma zamanında okunur; imaj sandbox ve production i�
 | `AUTH_SECRET` | Auth.js oturum çerezini şifreler; Keycloak'a gitmez | `openssl rand -base64 33` |
 | `AUTH_URL` | Sitenin dış adresi; yerelde boş | `https://notify.yildizskylab.com` |
 | `KEYCLOAK_ISSUER` | Realm adresi | `https://e.yildizskylab.com/realms/e-skylab` |
-| `KEYCLOAK_CLIENT_ID` | Public istemci (varsayılan `skymail`) | `skymail` |
-| `API_URL` | SkyMail API'si (yerelde dev proxy'si, aşağıda) | `https://api.yildizskylab.com/api/skymail/v1` |
+| `KEYCLOAK_CLIENT_ID` | Public istemci (varsayılan `skynotify`) | `skynotify` |
+| `API_URL` | SkyNotify API'si (yerelde dev proxy'si, aşağıda) | `https://api.yildizskylab.com/api/skynotify/v1` |
 | `ADMIN_URL`, `FORMS_ADMIN_URL` | Kulüp değiştiricideki diğer konsollar (boşsa production) | `https://admin.yildizskylab.com` |
 | `ACCOUNT_URL` | Kullanıcı menüsündeki Hesap merkezi (boşsa production) | `https://my.yildizskylab.com` |
 
 `AUTH_SECRET`, `KEYCLOAK_ISSUER` ya da `API_URL` eksikse production sunucusu
 eksikleri yazıp kapanır.
 
-**Yerel geliştirme sandbox'a karşıdır.** Tarayıcı SkyMail API'sine
-`API_URL=http://localhost:3000/sandbox-api/api/skymail/v1` üzerinden gider:
+**Yerel geliştirme sandbox'a karşıdır.** Tarayıcı SkyNotify API'sine
+`API_URL=http://localhost:3000/sandbox-api/api/skynotify/v1` üzerinden gider:
 `yarn dev`, `/sandbox-api/*` isteklerini `https://sandbox-api.yildizskylab.com/*`
 adresine iletir (`next.config.ts`; yalnız `next dev`, imaj bu yönlendirmeyi
 içermez). Kulübün kenarı `http://localhost:3000`'in kulüp adlarına çapraz kökenli
 istek atmasına izin vermez; `API_URL` doğrudan bir `yildizskylab.com` adresi
 olursa `yarn dev` açılışta uyarır. Port 3000 değilse adresteki portu da değiştir.
 
-**Keycloak:** yerel giriş sandbox realm'ının (`e-skylab-sandbox`) `skymail`
+**Keycloak:** yerel giriş sandbox realm'ının (`e-skylab-sandbox`) `skynotify`
 istemcisiyle yapılır. İstemci `http://localhost:3000/api/auth/callback/keycloak`
 dönüş adresini ve `http://localhost:3000` çıkış dönüşünü kabul ediyor
-(2026-10-05'te denendi). Production realm'ının `skymail` istemcisine yerel adres
+(2026-10-05'te denendi). Production realm'ının `skynotify` istemcisine yerel adres
 eklenmez; yerel geliştirme production'a karşı yapılmaz.
 
 Canlıda geri dönüş adresi `<AUTH_URL>/api/auth/callback/keycloak`, çıkış dönüşü
@@ -83,7 +83,7 @@ yarn test:e2e         # tarayıcı testleri (Playwright): editörün riskli akı
 ```
 
 `yarn test:e2e` paneli production build olarak 3013 portunda (ya da `E2E_PORT`'ta;
-iki checkout aynı anda koşarken biri diğerinin sunucusunu kullanmasın) başlatır; SkyMail
+iki checkout aynı anda koşarken biri diğerinin sunucusunu kullanmasın) başlatır; SkyNotify
 API'si tarayıcıda ağ katmanında taklit edilir (`tests/e2e/fixtures/mock-api.ts`),
 oturum atılabilir bir `AUTH_SECRET` ile üretilir, Keycloak'a gidilmez. Chromium
 ilk seferde `yarn playwright install chromium` ile indirilir.
@@ -95,10 +95,11 @@ worker) ve Monaco (`public/monaco/<sürüm>/vs`, CDN yerine panelin kendisinden)
 İkisi de üretilir, git'e girmez; dosya adları ya da yolları içeriğe/sürüme
 bağlı olduğu için kalıcı önbelleklenir.
 
-İmaj: `docker build -t skymail-frontend .` — build argümanı yok; konteyner
-`node server.js` ile başlar ve ayarlarını ortamdan okur.
+İmaj: `docker build -t skynotify-frontend .` — build argümanı yok; konteyner
+`node server.js` ile başlar ve ayarlarını ortamdan okur. CI'ın yayımladığı
+paket `ghcr.io/skylab-kulubu/skynotify-frontend`'dir (adı depo adından türer).
 
-## Şablonları SkyMail'e yüklemek (Template seed)
+## Şablonları SkyNotify'a yüklemek (Template seed)
 
 `emails/`'teki şablonlar sandbox'a ya da production'a GitHub'dan bir düğmeyle
 yüklenir: Actions → **Seed templates** → Run workflow
@@ -110,17 +111,17 @@ gh workflow run seed-templates.yml --ref main -f environment=sandbox -f dry_run=
 
 * `environment`: `sandbox` ya da `production`. Production her çalışmada onay bekler.
 * `dry_run` (varsayılan açık): hiçbir şablon yazılmaz, ama servis hesabı yine denenir
-  (token + SkyMail'den 200).
+  (token + SkyNotify'dan 200).
 * `force`: operatörün değiştirdiği şablonun üstüne yazmak için: boş, `all`, ya da
   `anahtar[,anahtar]`.
 
 Yalnız `main`'den koşar. Çıktı çalışmanın Summary sayfasındadır. Seed, Keycloak'taki
-`skymail-seed` servis hesabıyla yazar. Secret'ı yalnız `seed-sandbox` / `seed-production`
+`skynotify-seed` servis hesabıyla yazar. Secret'ı yalnız `seed-sandbox` / `seed-production`
 GitHub ortamlarında durur ve kimse görmez. Kurulumu ve secret'ın yenilenmesi SKY LAB
-ops'taki `skymail-seed-github-wizard.sh` ile yapılır.
+ops'taki `skynotify-seed-github-wizard.sh` ile yapılır.
 
 Şablonların görünümü `emails/theme.tsx`'tedir (SKY LAB Forms'un mail düzeni). Logolar
-SkyMail'in kendi sitesinden, `public/mail/` altından (`https://notify.yildizskylab.com/mail/…`)
+SkyNotify'ın kendi sitesinden, `public/mail/` altından (`https://notify.yildizskylab.com/mail/…`)
 oturumsuz gelir; bu dosyalara dokunan bir değişiklik, seed'den önce production'a çıkmalıdır.
 Eski `iletisim.` ve `mail.` adları yönlendirme olarak tutulmaz, geçişle birlikte silinir
 (ADR-0090); daha önce gönderilmiş postalardaki logolar ve konsol bağlantıları açılmaz.
@@ -131,8 +132,8 @@ Elle koşmak için yerelde `corepack yarn emails:seed`: seçenekler ve ortam de�
 
 ## Katkıda Bulunanlar 🧙‍♂️
 
-<a href="https://github.com/skylab-kulubu/skymail-frontend/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=skylab-kulubu/skymail-frontend" />
+<a href="https://github.com/skylab-kulubu/skynotify-frontend/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=skylab-kulubu/skynotify-frontend" />
 </a>
 
 <sup><sub>[contrib.rocks](https://contrib.rocks) ile yapıldı.</sub></sup>

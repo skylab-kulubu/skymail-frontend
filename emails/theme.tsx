@@ -2,7 +2,7 @@
  * The shared layout every SKY LAB e-mail is built from.
  *
  * It follows SKY LAB Forms' mail layout (forms-frontend mail-templates/
- * _components/Layout.jsx) piece for piece, so a mail from SkyMail and one from
+ * _components/Layout.jsx) piece for piece, so a mail from SkyNotify and one from
  * Forms read as the same family: the same type, colours and tones, the small
  * logo and product name on top, a status line (Context) above the title, rows
  * of facts between hairlines, a quiet footer that says why the mail came.
@@ -23,7 +23,7 @@
  *    gets a fixed width there from a table only it reads, and padding that it
  *    drops off a link is repeated as `mso-padding-alt`.
  *
- * Variables are Go templates rendered by skymail-backend, not React props. A
+ * Variables are Go templates rendered by skynotify-backend, not React props. A
  * template writes `{{.formTitle}}`; the mailer substitutes it per send. Missing
  * variables render as empty in HTML but as `<no value>` in the subject and the
  * plain-text part, so only ever put a variable in a subject when the sender is
@@ -107,7 +107,7 @@ const MONO = "'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace";
 /*
   PNGs, not the SVG the app uses: Gmail and Outlook do not render SVG. Two
   colours of the same mark, the ink one on light and the lilac one on dark,
-  both served by the İletişim console's own site (public/mail/, open without a
+  both served by the SkyNotify console's own site (public/mail/, open without a
   session; notify.yildizskylab.com since ADR-0090). The old iletisim. and mail.
   names are deleted, not redirected: mails sent before show no logo.
 */
@@ -120,12 +120,12 @@ const KVKK = "https://yildizskylab.com/kvkk-metni.pdf";
 /**
  * The Account center's communication preferences (core keeps them): which
  * club and team announcements reach the reader. Every footer but the account
- * mails' carries it (skymail-backend bounce ticket 11): a mail to many always
+ * mails' carries it (skynotify-backend bounce ticket 11): a mail to many always
  * shows a way to its preferences, and account mails go whatever they say.
  */
 const PREFERENCES = "https://my.yildizskylab.com/communication-preferences";
 /**
- * The recipient's own unsubscribe link, which SkyMail passes to a mail of the
+ * The recipient's own unsubscribe link, which SkyNotify passes to a mail of the
  * duyuru stream when the row has one (ADR 0072; abonelik-cikisi 05). Account
  * and transactional mails get none, so the footer shows the link only when
  * it is set. Not a Required variable: an empty one is the usual case.
@@ -212,7 +212,7 @@ const OUTLOOK_COLUMN_CLOSE = "<!--[if mso]></td></tr></table><![endif]-->";
 /**
  * Which product the mail comes from. It decides the name beside the logo and
  * in the footer: an account security notice must not look like it came from
- * Forms, and an approval request comes from SkyMail itself.
+ * Forms, and an approval request comes from SkyNotify itself.
  */
 export type Brand = "skylab" | "forms" | "account" | "mail";
 
@@ -229,21 +229,21 @@ interface Credit {
   developer: Developer;
 }
 
-/** SkyMail sends and renders every mail, so every mail ends with its line. */
-const SKYMAIL: Credit = {
-  product: "SkyMail",
+/** SkyNotify sends and renders every mail, so every mail ends with its line. */
+const SKYNOTIFY: Credit = {
+  product: "SkyNotify",
   href: "https://notify.yildizskylab.com",
   developer: { name: "Enes Genç", href: "https://enesgenc.dev" },
 };
 
 /**
  * The product a mail comes from: its name beside the logo and, for a product
- * with a credit of its own, a line above SkyMail's (Yusuf, 2026-10-13).
+ * with a credit of its own, a line above SkyNotify's (Yusuf, 2026-10-13).
  *
  *  - account: the account product is e-skylab (Keycloak's sign-in pages and
  *    the account mails), in lower case as its sign-in pages write it.
  *  - forms: credited as Forms' own mails are.
- *  - mail: SkyMail's own mails; SkyMail's line says it all.
+ *  - mail: SkyNotify's own mails; SkyNotify's line says it all.
  *  - skylab: the club's own mails; SKY LAB is the club, not a product.
  */
 const brands: Record<Brand, { label: string; href: string; credit?: Credit }> = {
@@ -262,7 +262,7 @@ const brands: Record<Brand, { label: string; href: string; credit?: Credit }> = 
       developer: { name: "Yusuf Açmacı", href: "https://www.linkedin.com/in/yusuf-acmaci/" },
     },
   },
-  mail: { label: "SKY LAB İletişim", href: "https://notify.yildizskylab.com" },
+  mail: { label: "SkyNotify", href: "https://notify.yildizskylab.com" },
 };
 
 /**
@@ -367,7 +367,7 @@ function Footer({ brand, reason, sender }: { brand: Brand; reason: React.ReactNo
       </p>
       <div style={{ marginTop: "24px" }}>
         {credit ? <CreditLine credit={credit} /> : null}
-        <CreditLine credit={SKYMAIL} />
+        <CreditLine credit={SKYNOTIFY} />
       </div>
     </div>
   );

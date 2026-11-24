@@ -2,11 +2,11 @@
 
 // "Haberden gönder" (hub ticket duyuru-haber 08; SPEC §5.7): a published News
 // record mailed to every member or to some teams. The panel and the site open
-// it as /mail-tasks/create?source=news&slug=<slug>; SkyMail's send list opens
-// it with no slug, to type one in. Every step reads skymail-backend: the
+// it as /mail-tasks/create?source=news&slug=<slug>; SkyNotify's send list opens
+// it with no slug, to type one in. Every step reads skynotify-backend: the
 // preview is the server's own rendering of club.news, the count is core's, a
 // test mail goes to the viewer's own address only, and the send is queued by
-// the server. Only skymail:announcements:send sends; a Mail onayı path for
+// the server. Only skynotify:announcements:send sends; a Mail onayı path for
 // news sends comes with a later backend version.
 
 import Link from 'next/link';
@@ -93,7 +93,7 @@ export function NewsSendForm({ slug, problem }: { slug: string; problem?: string
   const availability = useApiLoad((api, signal) => fetchNewsAvailability(api, signal), 'news-availability');
 
   if (!access.prepare) {
-    return <StateCard icon={AlertTriangle} tone="warning" title="Haberden gönderim için yetkin yok" description="Haberi göndermek ya da hazırlamak için SkyMail'de gönderim yetkisi gerekiyor." />;
+    return <StateCard icon={AlertTriangle} tone="warning" title="Haberden gönderim için yetkin yok" description="Haberi göndermek ya da hazırlamak için SkyNotify'da gönderim yetkisi gerekiyor." />;
   }
   if (availability.status === 'loading') return <StateCard loading title="Haberden gönderim hazırlanıyor" />;
   if (availability.status === 'error') {
@@ -106,7 +106,7 @@ export function NewsSendForm({ slug, problem }: { slug: string; problem?: string
     );
   }
   if (!availability.data.available) {
-    return <StateCard icon={AlertTriangle} tone="warning" title="Haberden gönderim kapalı" description="SkyMail'de haberden gönderim henüz açılmadı." />;
+    return <StateCard icon={AlertTriangle} tone="warning" title="Haberden gönderim kapalı" description="SkyNotify'da haberden gönderim henüz açılmadı." />;
   }
   if (problem) return <StateCard icon={SearchX} title="Haber adresi geçersiz" description={problem} />;
   if (!slug) return <SlugPicker />;

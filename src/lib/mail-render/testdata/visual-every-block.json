@@ -1,5 +1,5 @@
 {
-  "type": "skymail.visual",
+  "type": "skynotify.visual",
   "version": 1,
   "blocks": [
     { "type": "heading", "content": [{ "type": "text", "text": "Merhaba " }, { "type": "variable", "name": "FirstName" }] },

@@ -1,5 +1,5 @@
 /**
- * The Template seed: writes the Mail templates in emails/ into SkyMail by
+ * The Template seed: writes the Mail templates in emails/ into SkyNotify by
  * Template key (`PUT /v1/templates/by-key/{key}`).
  *
  * Each template goes with its own .tsx source as the JSX source, and with the
@@ -7,7 +7,7 @@
  * JSX mode compiles, so the panel opens exactly what was seeded and sends the
  * same mail (jsx.test.ts compares that render with the component's).
  *
- * SkyMail refuses a template an operator changed since the last seed
+ * SkyNotify refuses a template an operator changed since the last seed
  * (ADR-0047) with 409 `template.seed_conflict`, and writes nothing to it. The
  * run goes on with the other templates, then lists the refused ones with the
  * rules that held and the command that forces each, and fails. A forced
@@ -76,7 +76,7 @@ export interface ForceOption {
 }
 
 export interface SeedRun {
-  /** The SkyMail API root, without /v1. */
+  /** The SkyNotify API root, without /v1. */
   baseUrl: string;
   token: string;
   templates: RepoTemplate[];
@@ -146,7 +146,7 @@ export function parseSeedArgs(argv: string[], keys: string[]): SeedArgs {
   return { ok: true, dryRun, allowStale, hideNames, force: { all, keys: all ? [] : forced } };
 }
 
-/** A version a refusal or a force names: its summary, as skymail-backend's version routes serve it. */
+/** A version a refusal or a force names: its summary, as skynotify-backend's version routes serve it. */
 interface ConflictVersion {
   id: string;
   seq: number;
@@ -156,7 +156,7 @@ interface ConflictVersion {
   published_at: string | null;
 }
 
-/** What a forced seed wrote over (skymail-backend handlers.SeedOverride). */
+/** What a forced seed wrote over (skynotify-backend handlers.SeedOverride). */
 interface Override {
   rules: string[];
   published_version: ConflictVersion | null;
@@ -189,7 +189,7 @@ interface Refusal {
 }
 
 /** A template's upsert body: what the repo holds, and the module's render of its source. */
-/** A Notification type's upsert body (skymail-backend requests.PutNotificationType). */
+/** A Notification type's upsert body (skynotify-backend requests.PutNotificationType). */
 interface NotificationTypePayload {
   category: string | null;
   required: boolean;
@@ -245,8 +245,8 @@ export async function runSeed(run: SeedRun): Promise<number> {
         // alone.
         contract_required_variables: meta.requiredVariables ?? [],
         // Unlike the contract, a template that lists none sends nothing:
-        // SkyMail then keeps the list it has, and a SkyMail from before the
-        // field (skymail-backend #65) never sees it.
+        // SkyNotify then keeps the list it has, and a SkyNotify from before the
+        // field (skynotify-backend #65) never sees it.
         ...(meta.sensitiveVariables !== undefined && { sensitive_variables: meta.sensitiveVariables }),
       },
     });
@@ -397,9 +397,15 @@ function reportRefusals(print: (line: string) => void, refusals: Refusal[], hide
   print(`\nReddedilenlerin hepsini zorlamak için: ${SEED_COMMAND} --force=${keys}`);
   print(`Her şablonu zorlamak için: ${SEED_COMMAND} --force-all`);
   print(
-    "Zorlamak operatörün çalışmasını silmez: sürümleri SkyMail'de şablonun geçmişinde kalır ve oradan geri getirilebilir.",
+    "Zorlamak operatörün çalışmasını silmez: sürümleri SkyNotify'da şablonun geçmişinde kalır ve oradan geri getirilebilir.",
   );
   print("Repo, operatörün yayımladığı içeriği aynen tutarsa seed o şablonda çakışmadan geçer.");
+  // A seed that forces nothing (the SkyNotify rename window's) leaves these
+  // with the operator's text and the footer they had: someone has to say so.
+  print(`\nAtlanan şablonlar: ${refusals.map(({ key }) => key).join(", ")}`);
+  print(
+    "Bunlar reponun bu hâlini, alt bilgi dahil, almadı; operatöre bildir: şablonu panelde elle güncellesin ya da tek tek zorlasın.",
+  );
 }
 
 const who = (version: ConflictVersion, hideNames: boolean) =>

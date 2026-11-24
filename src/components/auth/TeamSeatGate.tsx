@@ -1,11 +1,11 @@
 'use client';
 
-// Someone signed in without skymail:access (ekip-postasi 06; skymail-backend
+// Someone signed in without skynotify:access (ekip-postasi 06; skynotify-backend
 // #128). A Leader — core says they lead a Team — gets the team seat: the
 // panel with their Teams, a free announcement and their own requests,
-// whatever other SkyMail role their token carries. Anyone else, or while
+// whatever other SkyNotify role their token carries. Anyone else, or while
 // Team mail is off (404), gets "Erişimin yok" (`denied`). While core or
-// SkyMail does not answer it is not known which they are: the screen says
+// SkyNotify does not answer it is not known which they are: the screen says
 // both, a way to try again and the sign-out "Erişimin yok" has.
 
 import { useState, type ReactNode } from 'react';
@@ -31,7 +31,7 @@ type Props = Readonly<{
 
 /** Said while it is not known whether the viewer leads a Team: true for a Leader and for anyone else. */
 export const TEAM_SEAT_UNKNOWN =
-  'Bu hesapta İletişim konsolu yetkisi yok. Ekip lideriysen ekiplerine buradan duyuru gönderebilirsin, ama liderlik bilgisi şu an okunamadı; birkaç saniye sonra yeniden dene.';
+  'Bu hesapta SkyNotify konsolu yetkisi yok. Ekip lideriysen ekiplerine buradan duyuru gönderebilirsin, ama liderlik bilgisi şu an okunamadı; birkaç saniye sonra yeniden dene.';
 
 export function TeamSeatGate(props: Props) {
   return (

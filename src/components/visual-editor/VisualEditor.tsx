@@ -140,7 +140,7 @@ function ToolButton({
 
 const Separator = () => <span aria-hidden className="mx-0.5 h-5 w-px shrink-0 bg-accent-strong" />;
 
-/** What the link panel's switch says: SkyMail does not count the link's clicks, and sends it as it is. */
+/** What the link panel's switch says: SkyNotify does not count the link's clicks, and sends it as it is. */
 export const NO_TRACK_LABEL = 'Bu bağlantıyı sayma';
 
 function LinkPanel({ editor, onClose, noTrack }: { editor: Editor; onClose: () => void; noTrack: boolean }) {

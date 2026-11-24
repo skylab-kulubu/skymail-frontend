@@ -1,12 +1,12 @@
 /**
  * A send's controls (hub ticket duyuru-haber 05 G4, 08): pause, resume and
- * cancel, through skymail-backend's POST /mail_tasks/:id/{pause,resume,cancel},
+ * cancel, through skynotify-backend's POST /mail_tasks/:id/{pause,resume,cancel},
  * and what the send's page and the home screen say about a paused or
  * cancelled send and about the bulk lane's hold.
  *
  * Only a send to many has them: a single mail goes at once. Who sends to
- * everyone (skymail:announcements:send) controls any send; who sends to a list
- * (skymail:mails:write) controls their own, as the backend checks.
+ * everyone (skynotify:announcements:send) controls any send; who sends to a list
+ * (skynotify:mails:write) controls their own, as the backend checks.
  */
 import { ROLE, hasRole } from "./access";
 import type { ApiClient } from "./api/client";
@@ -64,7 +64,7 @@ export function controlNotice(send: Send): ControlNotice | null {
 }
 
 /**
- * When a paused send's pending row is due: skymail-backend parks it at
+ * When a paused send's pending row is due: skynotify-backend parks it at
  * 2999-01-01 until the send is resumed, so it is no time to show.
  */
 export function parkedAttempt(nextAttemptAt: string | null): boolean {

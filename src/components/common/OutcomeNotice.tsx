@@ -3,7 +3,7 @@
 import { Button, Notice } from '@skylab-kulubu/skylcn-ui';
 import type { NoticeData } from '@/lib/notice';
 
-/** skylcn-ui's Notice tone for SkyMail's: an error is skylcn's danger (announced at once, `alert`). */
+/** skylcn-ui's Notice tone for SkyNotify's: an error is skylcn's danger (announced at once, `alert`). */
 export function noticeTone(tone: NoticeData['tone'] | 'info'): 'success' | 'warning' | 'danger' | 'info' {
   return tone === 'error' ? 'danger' : tone;
 }

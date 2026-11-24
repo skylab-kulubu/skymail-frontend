@@ -10,8 +10,8 @@ import { VIEWER } from "./fixtures/session";
 
 const NAME = "Deneme Operatör";
 
-test("the account menu opens from the avatar at the top right", async ({ page, skymail, signIn }) => {
-  void skymail;
+test("the account menu opens from the avatar at the top right", async ({ page, skynotify, signIn }) => {
+  void skynotify;
   await signIn("sender");
   await page.goto("/");
 
@@ -45,8 +45,8 @@ test("the account menu opens from the avatar at the top right", async ({ page, s
 test.describe("on a phone", () => {
   test.use({ viewport: { width: 375, height: 812 } });
 
-  test("the avatar stays in the top bar and the drawer has no account row", async ({ page, skymail, signIn }) => {
-    void skymail;
+  test("the avatar stays in the top bar and the drawer has no account row", async ({ page, skynotify, signIn }) => {
+    void skynotify;
     await signIn("sender");
     await page.goto("/");
 

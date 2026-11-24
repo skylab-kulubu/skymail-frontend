@@ -23,7 +23,7 @@ export const MEMBER: Person = {
   email: "ayse.yilmaz@example.test",
 };
 
-/** An approver (skymail:mails:approve), someone other than the member. */
+/** An approver (skynotify:mails:approve), someone other than the member. */
 export const APPROVER: Person = {
   sub: "6f3b8d21-9a4c-4e7f-b2d0-3c8e5a1f7b64",
   name: "Zeynep Arslan",
@@ -31,26 +31,26 @@ export const APPROVER: Person = {
 };
 
 export const ROLES = {
-  writer: ["skymail:access", "skymail:templates:read", "skymail:templates:write"],
-  reader: ["skymail:access", "skymail:templates:read"],
+  writer: ["skynotify:access", "skynotify:templates:read", "skynotify:templates:write"],
+  reader: ["skynotify:access", "skynotify:templates:read"],
   /** Sends to lists and people, and reads sends and lists (ticket 16). */
-  sender: ["skymail:access", "skymail:templates:read", "skymail:lists:read", "skymail:mails:read", "skymail:mails:write"],
+  sender: ["skynotify:access", "skynotify:templates:read", "skynotify:lists:read", "skynotify:mails:read", "skynotify:mails:write"],
   /** Sends to people only (`mails:send`), and reads nothing of sends. */
-  individual: ["skymail:access", "skymail:templates:read", "skymail:mails:send"],
+  individual: ["skynotify:access", "skynotify:templates:read", "skynotify:mails:send"],
   /** Sends to people only (`mails:send`) and reads lists: a list goes for approval (ticket 20). */
-  personSender: ["skymail:access", "skymail:templates:read", "skymail:lists:read", "skymail:mails:send"],
+  personSender: ["skynotify:access", "skynotify:templates:read", "skynotify:lists:read", "skynotify:mails:send"],
   /** Reads sends, sends nothing. */
-  watcher: ["skymail:access", "skymail:templates:read", "skymail:mails:read"],
+  watcher: ["skynotify:access", "skynotify:templates:read", "skynotify:mails:read"],
   /** Reads sends and every tracked send's recipients one by one (YK, DK, ADMIN; hub ticket 15b). */
-  trackingReader: ["skymail:access", "skymail:templates:read", "skymail:mails:read", "skymail:mails:tracking:read"],
+  trackingReader: ["skynotify:access", "skynotify:templates:read", "skynotify:mails:read", "skynotify:mails:tracking:read"],
   /** Reads templates and lists and sends nothing: submits for approval (ticket 20). */
-  member: ["skymail:access", "skymail:templates:read", "skymail:lists:read"],
-  /** SkyMail's administrator: reads every send's content but a sensitive one's, single mail included (skymail:system-mails:read). */
-  admin: ["skymail:access", "skymail:templates:read", "skymail:lists:read", "skymail:mails:read", "skymail:system-mails:read"],
-  /** DK (Yusuf, 2026-11-22): reads every send, its content and who opened masked content (skymail:audit:read); writes nothing. */
-  dk: ["skymail:access", "skymail:mails:read", "skymail:system-mails:read", "skymail:mails:tracking:read", "skymail:audit:read"],
+  member: ["skynotify:access", "skynotify:templates:read", "skynotify:lists:read"],
+  /** SkyNotify's administrator: reads every send's content but a sensitive one's, single mail included (skynotify:system-mails:read). */
+  admin: ["skynotify:access", "skynotify:templates:read", "skynotify:lists:read", "skynotify:mails:read", "skynotify:system-mails:read"],
+  /** DK (Yusuf, 2026-11-22): reads every send, its content and who opened masked content (skynotify:audit:read); writes nothing. */
+  dk: ["skynotify:access", "skynotify:mails:read", "skynotify:system-mails:read", "skynotify:mails:tracking:read", "skynotify:audit:read"],
   /** Decides sends submitted for approval; reads templates and sends, sends nothing itself. */
-  approver: ["skymail:access", "skymail:templates:read", "skymail:mails:read", "skymail:mails:approve"],
+  approver: ["skynotify:access", "skynotify:templates:read", "skynotify:mails:read", "skynotify:mails:approve"],
 } as const;
 
 export type Profile = keyof typeof ROLES;
@@ -64,7 +64,7 @@ const base64url = (value: unknown) => Buffer.from(JSON.stringify(value)).toStrin
 
 /** The bearer token the panel sends for `profile`; the mock API accepts these and nothing else. */
 export function accessToken(profile: Profile): string {
-  const claims = { sub: personOf(profile).sub, resource_access: { skymail: { roles: ROLES[profile] } } };
+  const claims = { sub: personOf(profile).sub, resource_access: { skynotify: { roles: ROLES[profile] } } };
   return `${base64url({ alg: "none", typ: "JWT" })}.${base64url(claims)}.`;
 }
 

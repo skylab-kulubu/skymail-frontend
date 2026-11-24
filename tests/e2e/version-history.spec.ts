@@ -21,11 +21,11 @@ const versions = (page: Page) => page.getByRole("list", { name: "Sürümler" }).
 
 test("two versions compare side by side, and restoring one opens a new draft while live mail stays", async ({
   page,
-  skymail,
+  skynotify,
   signIn,
 }) => {
   await signIn("writer");
-  const { id, versionId: first } = skymail.addTemplate({
+  const { id, versionId: first } = skynotify.addTemplate({
     name: "Etkinlik duyurusu",
     key: "club.event-announcement",
     subject: "Bu hafta SKY LAB'de",
@@ -35,15 +35,15 @@ test("two versions compare side by side, and restoring one opens a new draft whi
     plainText: "İlk metin",
     author: MIGRATED,
   });
-  skymail.publishAs(id, TEMPLATE_SEED, { html_source: mail("Seed'in metni"), html_content: mail("Seed'in metni") });
-  const sent = skymail.publishAs(id, OTHER_OPERATOR, {
+  skynotify.publishAs(id, TEMPLATE_SEED, { html_source: mail("Seed'in metni"), html_content: mail("Seed'in metni") });
+  const sent = skynotify.publishAs(id, OTHER_OPERATOR, {
     subject: "Mehmet'in konusu",
     html_source: mail("Mehmet'in metni"),
     html_content: mail("Mehmet'in metni"),
   });
-  const theirs = skymail.addDraft(id, OTHER_OPERATOR, { html_source: mail("Mehmet'in taslağı"), html_content: mail("Mehmet'in taslağı") });
-  skymail.refuseSeed(id, ["published_by_operator", "newer_operator_version"]);
-  const live = structuredClone(skymail.row(id));
+  const theirs = skynotify.addDraft(id, OTHER_OPERATOR, { html_source: mail("Mehmet'in taslağı"), html_content: mail("Mehmet'in taslağı") });
+  skynotify.refuseSeed(id, ["published_by_operator", "newer_operator_version"]);
+  const live = structuredClone(skynotify.row(id));
 
   // The editor's header says a seed is waiting, and leads to the history.
   await page.goto(`/templates/edit/${id}`);
@@ -120,10 +120,10 @@ test("two versions compare side by side, and restoring one opens a new draft whi
   await expect(preview(page, "Mail önizlemesi")).toContainText("İlk metin");
 
   // One restore, nothing published; the row still sends Mehmet's version.
-  expect(skymail.writes().map((request) => [request.method, request.path])).toEqual([
+  expect(skynotify.writes().map((request) => [request.method, request.path])).toEqual([
     ["POST", `/templates/${id}/versions/${first}/restore`],
   ]);
-  const restored = skymail.versionsOf(id)[0];
+  const restored = skynotify.versionsOf(id)[0];
   expect(restored).toMatchObject({
     seq: 5,
     published_at: null,
@@ -132,18 +132,18 @@ test("two versions compare side by side, and restoring one opens a new draft whi
     subject: "Bu hafta SKY LAB'de",
     html_content: mail("İlk metin"),
   });
-  expect(skymail.row(id)).toEqual(live);
-  expect(skymail.version(theirs.id).published_at).toBeNull();
+  expect(skynotify.row(id)).toEqual(live);
+  expect(skynotify.version(theirs.id).published_at).toBeNull();
 });
 
 // 200 is "nothing written" (ticket 07), whatever the page last knew of the viewer's drafts.
 test("restoring what the viewer's draft already is, saved in another tab, opens that draft and writes nothing", async ({
   page,
-  skymail,
+  skynotify,
   signIn,
 }) => {
   await signIn("writer");
-  const { id, versionId: first } = skymail.addTemplate({
+  const { id, versionId: first } = skynotify.addTemplate({
     name: "Bülten",
     subject: "Eylül bülteni",
     mainMode: "html",
@@ -152,14 +152,14 @@ test("restoring what the viewer's draft already is, saved in another tab, opens 
     plainText: "Eylül",
     author: OTHER_OPERATOR,
   });
-  skymail.publishAs(id, OTHER_OPERATOR, { subject: "Ekim bülteni", html_source: mail("Ekim"), html_content: mail("Ekim") });
+  skynotify.publishAs(id, OTHER_OPERATOR, { subject: "Ekim bülteni", html_source: mail("Ekim"), html_content: mail("Ekim") });
 
   await page.goto(`/templates/history/${id}`);
   await expect(item(page, 2)).toContainText("Gönderilen");
 
   // In another tab, the viewer saves a draft with the first wording back.
-  const { subject, html_source, html_content, plain_text_content } = skymail.version(first);
-  const mine = skymail.addDraft(id, ME, { subject, html_source, html_content, plain_text_content });
+  const { subject, html_source, html_content, plain_text_content } = skynotify.version(first);
+  const mine = skynotify.addDraft(id, ME, { subject, html_source, html_content, plain_text_content });
 
   await item(page, 1).getByRole("button", { name: "Geri getir: sürüm #1" }).click();
   await page.getByRole("dialog", { name: "Sürümü geri getir" }).getByRole("button", { name: "Taslak olarak geri getir" }).click();
@@ -169,12 +169,12 @@ test("restoring what the viewer's draft already is, saved in another tab, opens 
     page.getByRole("status").filter({ hasText: `Süren taslağın (#${mine.seq}) zaten sürüm #1 ile aynı; yeni taslak açılmadı.` }),
   ).toBeVisible();
   await expect(page.getByText(`Taslağını düzenliyorsun: #${mine.seq}`)).toBeVisible();
-  expect(skymail.versionsOf(id)).toHaveLength(3);
+  expect(skynotify.versionsOf(id)).toHaveLength(3);
 });
 
-test("restoring what is sent already opens no draft and stays in the history", async ({ page, skymail, signIn }) => {
+test("restoring what is sent already opens no draft and stays in the history", async ({ page, skynotify, signIn }) => {
   await signIn("writer");
-  const { id, versionId: first } = skymail.addTemplate({
+  const { id, versionId: first } = skynotify.addTemplate({
     name: "Bülten",
     subject: "Eylül bülteni",
     mainMode: "html",
@@ -183,9 +183,9 @@ test("restoring what is sent already opens no draft and stays in the history", a
     plainText: "Eylül",
     author: OTHER_OPERATOR,
   });
-  skymail.publishAs(id, OTHER_OPERATOR, { html_source: mail("Ekim"), html_content: mail("Ekim") });
+  skynotify.publishAs(id, OTHER_OPERATOR, { html_source: mail("Ekim"), html_content: mail("Ekim") });
   // Someone put the first wording back.
-  const sent = skymail.publishAs(id, OTHER_OPERATOR, { html_source: mail("Eylül"), html_content: mail("Eylül") });
+  const sent = skynotify.publishAs(id, OTHER_OPERATOR, { html_source: mail("Eylül"), html_content: mail("Eylül") });
 
   await page.goto(`/templates/history/${id}`);
   await item(page, 1).getByRole("button", { name: "Geri getir: sürüm #1" }).click();
@@ -193,18 +193,18 @@ test("restoring what is sent already opens no draft and stays in the history", a
 
   await expect(page.getByRole("status").filter({ hasText: "Sürüm #1, şu an gönderilen sürümle aynı; yeni taslak açılmadı." })).toBeVisible();
   await expect(page).toHaveURL(new RegExp(`/templates/history/${id}$`));
-  expect(skymail.writes().map((request) => request.path)).toEqual([`/templates/${id}/versions/${first}/restore`]);
-  expect(skymail.versionsOf(id)).toHaveLength(3);
-  expect(skymail.row(id).published_version_id).toBe(sent.id);
+  expect(skynotify.writes().map((request) => request.path)).toEqual([`/templates/${id}/versions/${first}/restore`]);
+  expect(skynotify.versionsOf(id)).toHaveLength(3);
+  expect(skynotify.row(id).published_version_id).toBe(sent.id);
 });
 
 test("one operator's saves on one base read as one row, stale once someone publishes, and each can be compared", async ({
   page,
-  skymail,
+  skynotify,
   signIn,
 }) => {
   await signIn("writer");
-  const { id } = skymail.addTemplate({
+  const { id } = skynotify.addTemplate({
     name: "Duyuru",
     subject: "Duyuru",
     mainMode: "html",
@@ -213,9 +213,9 @@ test("one operator's saves on one base read as one row, stale once someone publi
     plainText: "İlk",
     author: OTHER_OPERATOR,
   });
-  skymail.addDraft(id, OTHER_OPERATOR, { html_source: mail("Taslak 1"), html_content: mail("Taslak 1") });
-  skymail.addDraft(id, OTHER_OPERATOR, { html_source: mail("Taslak 2"), html_content: mail("Taslak 2") });
-  skymail.publishAs(id, ME, { html_source: mail("Yayımlanan"), html_content: mail("Yayımlanan") });
+  skynotify.addDraft(id, OTHER_OPERATOR, { html_source: mail("Taslak 1"), html_content: mail("Taslak 1") });
+  skynotify.addDraft(id, OTHER_OPERATOR, { html_source: mail("Taslak 2"), html_content: mail("Taslak 2") });
+  skynotify.publishAs(id, ME, { html_source: mail("Yayımlanan"), html_content: mail("Yayımlanan") });
 
   await page.goto(`/templates/history/${id}`);
   await expect(versions(page)).toHaveCount(3);
@@ -233,9 +233,9 @@ test("one operator's saves on one base read as one row, stale once someone publi
   await expect(preview(page, "Sürüm #4")).toContainText("Yayımlanan");
 });
 
-test("a reader pages through the history, compares across pages, and is offered no restore", async ({ page, skymail, signIn }) => {
+test("a reader pages through the history, compares across pages, and is offered no restore", async ({ page, skynotify, signIn }) => {
   await signIn("reader");
-  const { id } = skymail.addTemplate({
+  const { id } = skynotify.addTemplate({
     name: "Hoş geldin",
     subject: "SKY LAB'e hoş geldin",
     mainMode: "html",
@@ -245,10 +245,10 @@ test("a reader pages through the history, compares across pages, and is offered 
     author: TEMPLATE_SEED,
   });
   for (let seq = 2; seq <= 21; seq += 1) {
-    skymail.publishAs(id, OTHER_OPERATOR, { html_source: mail(`Sürüm ${seq}`), html_content: mail(`Sürüm ${seq}`) });
+    skynotify.publishAs(id, OTHER_OPERATOR, { html_source: mail(`Sürüm ${seq}`), html_content: mail(`Sürüm ${seq}`) });
   }
   // The version sent is a seed's, which starts from no version.
-  skymail.publishAs(id, TEMPLATE_SEED, { html_source: mail("Sürüm 22"), html_content: mail("Sürüm 22") });
+  skynotify.publishAs(id, TEMPLATE_SEED, { html_source: mail("Sürüm 22"), html_content: mail("Sürüm 22") });
 
   await page.goto(`/templates/show/${id}`);
   await expect(page.getByRole("heading", { name: "Hoş geldin" })).toBeVisible();
@@ -282,5 +282,5 @@ test("a reader pages through the history, compares across pages, and is offered 
   await expect(preview(page, "Sürüm #1")).toContainText("Sürüm 1");
   await expect(preview(page, "Sürüm #22")).toContainText("Sürüm 22");
   await expect(comparison.getByRole("button", { name: /^Geri getir/ })).toHaveCount(0);
-  expect(skymail.writes()).toHaveLength(0);
+  expect(skynotify.writes()).toHaveLength(0);
 });

@@ -21,7 +21,7 @@ describe("the home screen's lock", () => {
     const html = render(false);
     assert.match(text(html), /Gönderim yetkin yok/);
     assert.match(text(html), /kulüp yönetimine başvur/);
-    assert.doesNotMatch(html, /skymail:/);
+    assert.doesNotMatch(html, /skynotify:/);
     assert.doesNotMatch(html, /href="\/mail-approvals"/);
   });
 
@@ -29,6 +29,6 @@ describe("the home screen's lock", () => {
     const html = render(true);
     assert.match(html, /href="\/mail-approvals"/);
     assert.match(text(html), /Mail onaylarına git/);
-    assert.doesNotMatch(html, /skymail:/);
+    assert.doesNotMatch(html, /skynotify:/);
   });
 });

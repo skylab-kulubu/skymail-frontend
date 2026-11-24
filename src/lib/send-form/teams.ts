@@ -1,20 +1,20 @@
 /**
  * Ekip postası (ADR-0067 addendum of 2026-11-08; hub tickets ekip-postasi 05
- * and 06; skymail-backend #128): a Leader mails their own Team, or Sub-teams
+ * and 06; skynotify-backend #128): a Leader mails their own Team, or Sub-teams
  * below it, through Mail onayı.
  *
  *  - `GET /me/team_audiences` lists the Teams core says the viewer leads, in
  *    path order, as a tree (`parent_id`, `depth`), each with how many it
  *    reaches (members with an address, its Sub-teams' too; never an address).
  *    Empty: the viewer leads no Team. 404 `team_mail.off`: the switch is off.
- *    403: neither skymail:access nor a Team. 503
+ *    403: neither skynotify:access nor a Team. 503
  *    `team_mail.leadership_unavailable`: core did not answer.
  *  - A request names the Teams in `team_ids` (1..50). A Sub-team picked with
  *    a Team above it is dropped (the Team above reaches its members anyway).
  *    The purpose is always duyuru and each Team's send goes with its own
  *    category, `team:<id>:duyuru`: the form shows it fixed and sends only the
  *    statement that the mail is not promotion.
- *  - A Leader without skymail:access (the "team seat") gets only this: their
+ *  - A Leader without skynotify:access (the "team seat") gets only this: their
  *    Teams, a free announcement (free.basic) and their own requests.
  */
 import type { ApiClient } from "../api/client";

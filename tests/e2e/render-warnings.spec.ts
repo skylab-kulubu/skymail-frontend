@@ -11,9 +11,9 @@ import { VIEWER } from "./fixtures/session";
 const GLUED = '<p>Ayrıntılar <a href="https://skyl.app/e">burada</a>dan öğren.</p>';
 const WARNING = "Bağlantıdan sonra bir boşluk bırak: düz metinde bağlantı ile sonraki kelime birleşiyor";
 
-test("a draft with a warning says it by the preview and again before publishing, and still publishes", async ({ page, skymail, signIn }) => {
+test("a draft with a warning says it by the preview and again before publishing, and still publishes", async ({ page, skynotify, signIn }) => {
   await signIn("writer");
-  const { id } = skymail.addTemplate({
+  const { id } = skynotify.addTemplate({
     name: "Duyuru",
     subject: "Duyuru",
     mainMode: "html",
@@ -21,7 +21,7 @@ test("a draft with a warning says it by the preview and again before publishing,
     htmlContent: "<p>Eski metin</p>",
     plainText: "Eski metin",
   });
-  skymail.addDraft(id, { kind: "operator", sub: VIEWER.sub, name: VIEWER.name }, {
+  skynotify.addDraft(id, { kind: "operator", sub: VIEWER.sub, name: VIEWER.name }, {
     html_source: GLUED,
     html_content: GLUED,
     plain_text_content: "Ayrıntılar burada https://skyl.app/edan öğren.",
@@ -39,13 +39,13 @@ test("a draft with a warning says it by the preview and again before publishing,
   await dialog.getByRole("button", { name: "Yayımla" }).click();
 
   await expect(page.getByRole("status").filter({ hasText: "Yayımlandı" })).toBeVisible();
-  expect(skymail.row(id).html_content).toBe(GLUED);
+  expect(skynotify.row(id).html_content).toBe(GLUED);
 });
 
-test("the publish confirmation says nothing more when there is no warning", async ({ page, skymail, signIn }) => {
+test("the publish confirmation says nothing more when there is no warning", async ({ page, skynotify, signIn }) => {
   await signIn("writer");
   const clean = '<p>Ayrıntılar <a href="https://skyl.app/e">burada</a>, gel.</p>';
-  const { id } = skymail.addTemplate({
+  const { id } = skynotify.addTemplate({
     name: "Duyuru",
     subject: "Duyuru",
     mainMode: "html",
@@ -53,7 +53,7 @@ test("the publish confirmation says nothing more when there is no warning", asyn
     htmlContent: "<p>Eski metin</p>",
     plainText: "Eski metin",
   });
-  skymail.addDraft(id, { kind: "operator", sub: VIEWER.sub, name: VIEWER.name }, {
+  skynotify.addDraft(id, { kind: "operator", sub: VIEWER.sub, name: VIEWER.name }, {
     html_source: clean,
     html_content: clean,
     plain_text_content: "Ayrıntılar burada https://skyl.app/e, gel.",

@@ -54,12 +54,12 @@ async function addVisualSource(page: Page) {
   await expect(textbox(page)).toBeVisible();
 }
 
-test("a Visual source is written from blocks and made the Main source, the JSX source untouched", async ({ page, skymail, signIn }) => {
+test("a Visual source is written from blocks and made the Main source, the JSX source untouched", async ({ page, skynotify, signIn }) => {
   // The sandbox renders one Visual edit after another in the same frame; none of that may throw.
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await signIn("writer");
-  const { id } = skymail.addTemplate({
+  const { id } = skynotify.addTemplate({
     name: "GECEKODU duyurusu",
     subject: "{{.FirstName}}, GECEKODU'nda görüşelim",
     mainMode: "jsx",
@@ -138,18 +138,18 @@ test("a Visual source is written from blocks and made the Main source, the JSX s
   const dialog = page.getByRole("dialog", { name: "Visual kaynağını Main source yap" });
   await expect(preview(page, "Main source adayı")).toContainText("Yer yakında duyurulacak.");
   await expect(dialog).toContainText("JSX kaynağı olduğu gibi korunur");
-  expect(skymail.writes()).toHaveLength(0);
+  expect(skynotify.writes()).toHaveLength(0);
   await dialog.getByRole("button", { name: "Main source yap" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Main source artık Visual" })).toBeVisible();
 
   // One draft: the document itself and its render, the JSX source left for the API to keep.
-  const [change] = skymail.writes();
+  const [change] = skynotify.writes();
   expect(change.path).toBe(`/templates/${id}/drafts`);
   const body = change.body as Record<string, unknown>;
   expect(body.main_mode).toBe("visual");
   expect(body).not.toHaveProperty("jsx_source");
   const document = body.visual_source as { type: string; version: number; blocks: { type: string; content?: unknown[] }[] };
-  expect(document.type).toBe("skymail.visual");
+  expect(document.type).toBe("skynotify.visual");
   expect(document.version).toBe(1);
   // The editor keeps a line to type in under the last block; it is empty and renders nothing.
   const written = document.blocks.filter((block) => !(block.type === "paragraph" && block.content?.length === 0));
@@ -203,9 +203,9 @@ test("a Visual source is written from blocks and made the Main source, the JSX s
   expect(html).toContain('href="https://skyl.app/gecekodu"');
   expect(body.plain_text_content).toContain("{{if .TicketUrl}}");
 
-  const draft = skymail.versionsOf(id)[0];
+  const draft = skynotify.versionsOf(id)[0];
   expect(draft).toMatchObject({ main_mode: "visual", jsx_source: JSX, published_at: null });
-  expect(skymail.row(id).html_content).toBe("<p>stored render</p>");
+  expect(skynotify.row(id).html_content).toBe("<p>stored render</p>");
 
   // Opened again: the document as the API keeps it (jsonb, keys in its own order) is no unsaved change.
   await page.reload();
@@ -218,9 +218,9 @@ test("a Visual source is written from blocks and made the Main source, the JSX s
   expect(errors).toEqual([]);
 });
 
-test("the toolbar is one stop for Tab, and arrow keys move through it", async ({ page, skymail, signIn }) => {
+test("the toolbar is one stop for Tab, and arrow keys move through it", async ({ page, skynotify, signIn }) => {
   await signIn("writer");
-  const { id } = skymail.addTemplate({
+  const { id } = skynotify.addTemplate({
     name: "Klavye",
     subject: "Klavye",
     mainMode: "jsx",
@@ -247,9 +247,9 @@ test("the toolbar is one stop for Tab, and arrow keys move through it", async ({
 
 // The block refuses what Gmail and Outlook do not show, and what the model
 // refuses is never saved: the render says why.
-test("an SVG image is refused, and the save with it; the club CDN's image is taken", async ({ page, skymail, signIn }) => {
+test("an SVG image is refused, and the save with it; the club CDN's image is taken", async ({ page, skynotify, signIn }) => {
   await signIn("writer");
-  const { id } = skymail.addTemplate({
+  const { id } = skynotify.addTemplate({
     name: "Afiş",
     subject: "Afiş",
     mainMode: "jsx",
@@ -272,7 +272,7 @@ test("an SVG image is refused, and the save with it; the club CDN's image is tak
   await expect(page.getByRole("alert").filter({ hasText: "Render edilemedi" })).toContainText("SVG kabul edilmez");
   await page.getByRole("button", { name: "Taslağı kaydet" }).click();
   await expect(page.getByRole("alert").filter({ hasText: "Kaydedilmedi" })).toContainText("Visual kaynağı render edilemedi");
-  expect(skymail.writes()).toHaveLength(0);
+  expect(skynotify.writes()).toHaveLength(0);
 
   await address.fill("https://example.com/afis.webp");
   await expect(image).toContainText("WebP kabul edilmez");
@@ -284,7 +284,7 @@ test("an SVG image is refused, and the save with it; the club CDN's image is tak
   await expect(preview(page, "Mail önizlemesi").locator(`img[src="${cdn}"]`)).toHaveCount(1);
   await page.getByRole("button", { name: "Taslağı kaydet" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Taslak kaydedildi" })).toBeVisible();
-  const saved = skymail.versionsOf(id)[0];
+  const saved = skynotify.versionsOf(id)[0];
   expect(saved.main_mode).toBe("jsx");
   expect(JSON.stringify(saved.visual_source)).toContain(cdn);
 });
@@ -292,7 +292,7 @@ test("an SVG image is refused, and the save with it; the club CDN's image is tak
 // POST /templates takes no Visual source, so a template started in Visual is
 // created with the plain HTML starter — its first published version, said
 // plainly — and opens in the editor on an empty Visual document.
-test("a template started in Visual is created with the plain starter and opens on an empty Visual document", async ({ page, skymail, signIn }) => {
+test("a template started in Visual is created with the plain starter and opens on an empty Visual document", async ({ page, skynotify, signIn }) => {
   await signIn("writer");
   await page.goto("/templates/create");
   await page.getByLabel("Template adı").fill("Bülten");
@@ -311,7 +311,7 @@ test("a template started in Visual is created with the plain starter and opens o
   await expect(textbox(page)).toHaveText("");
   await expect(page.getByRole("status").filter({ hasText: "sade bir HTML başlangıcı" })).toContainText("Main source yap");
 
-  const [created] = skymail.writes();
+  const [created] = skynotify.writes();
   expect(created.path).toBe("/templates");
   expect(created.body).toMatchObject({ name: "Bülten", subject: "Eylül bülteni" });
   expect((created.body as { html_content: string }).html_content).toContain("Mailin metnini buraya yaz.");

@@ -141,14 +141,14 @@ function ApprovalView({
     (client, signal) => (asksTemplate ? fetchTemplate(client, approval.template.id, signal) : Promise.resolve(null)),
     `tracking:${asksTemplate}:${approval.template.id}`,
   );
-  // While SkyMail tracks every send, a waiting request is tracked once approved, whatever it asked.
+  // While SkyNotify tracks every send, a waiting request is tracked once approved, whatever it asked.
   const canReadSummary = useCan(ROLE.mailsRead);
   const trackingMode = useApiLoad(
     (client, signal) => fetchTrackingMode(client, { canReadSummary, signal }),
     `tracking-mode:${canReadSummary}`,
   );
 
-  // A team category names its group by id; the request's own group is named already, any other is read (skymail:lists:read).
+  // A team category names its group by id; the request's own group is named already, any other is read (skynotify:lists:read).
   const groupId = approval.audience.source === 'keycloak' ? approval.audience.mail_list_id?.toLowerCase() : null;
   const canReadLists = useCan(ROLE.listsRead);
   const otherTeam = canReadLists ? categoryTeam(approval.category, groupId) : null;

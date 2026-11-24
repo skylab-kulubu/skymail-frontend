@@ -148,7 +148,7 @@ function MaskedNotice({ content }: { content: SentContent }) {
 /** A masked value, marked as the HTML part marks it. */
 function MaskMark() {
   return (
-    <mark data-skymail-masked="" className="rounded bg-warning/15 px-0.5 font-medium text-warning" title="Güvenlik için gizlendi">
+    <mark data-skynotify-masked="" className="rounded bg-warning/15 px-0.5 font-medium text-warning" title="Güvenlik için gizlendi">
       {MASK}
     </mark>
   );
