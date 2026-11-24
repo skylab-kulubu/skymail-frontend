@@ -113,7 +113,7 @@ jobs:
       # The runner's global Yarn hands off to .yarn/releases via yarnPath, so
       # this is the repo's Yarn 4, not whatever the image ships.
       - name: Set up Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@v7.1.0
         with:
           node-version: 22
           cache: yarn
@@ -129,7 +129,7 @@ jobs:
         run: yarn typecheck
 
       # Next.js's own build cache: the build reuses unchanged modules of the previous build.
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: .next/cache
           key: nextjs-${{ runner.os }}-${{ hashFiles('yarn.lock') }}-${{ hashFiles('src/**', 'emails/**', 'public/**', 'next.config.ts', 'tsconfig.json', 'postcss.config.mjs') }}
