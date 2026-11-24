@@ -141,7 +141,7 @@ describe("the footer's communication preferences link", () => {
  * shows it, before "İletişim tercihleri", only when it is set: an empty one
  * leaves the footer as it was.
  */
-const UNSUBSCRIBE = "https://mail.yildizskylab.com/api/skymail/u/ornek";
+const UNSUBSCRIBE = "https://api.yildizskylab.com/api/skymail/u/ornek";
 
 describe("the footer's unsubscribe link", () => {
   for (const { meta, Component } of templates) {
