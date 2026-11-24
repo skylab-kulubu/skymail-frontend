@@ -510,6 +510,28 @@ describe("the Template seed's Notification types", () => {
     assert.equal(calls.length, 0);
     for (const key of keys) assert.match(output, new RegExp(`${key.replace(".", "\\.")}.*\\[bildirim türü\\]`));
   });
+  it("register the Ticket status, reminder and door mails as required, system lane types by e-mail and the inbox", async () => {
+    const keys = [
+      "event.ticket-cancelled", "event.waitlist-joined", "event.waitlist-promoted", "event.registration-full", "event.reminder",
+      "event.attendance-welcome", "event.attendance-recorded", "event.attendance-day-summary",
+    ];
+    for (const key of keys) {
+      const n = repoTemplates.find(({ meta }) => meta.key === key)?.meta.notification;
+      assert.deepEqual(
+        n && { required: n.required, lane: n.lane, channels: n.defaultChannels, category: n.category, link: n.inbox?.link },
+        { required: true, lane: "system", channels: ["email", "inbox"], category: null, link: "/events/{{.EventId}}" },
+        key,
+      );
+    }
+    const { fetch, calls } = scriptedFetch();
+    const typed = repoTemplates
+      .filter(({ meta }) => keys.includes(meta.key))
+      .map(({ meta }) => template(meta.key, meta.name, { notification: meta.notification }));
+    const { exitCode, output } = await run({ templates: typed, fetch, dryRun: true });
+    assert.equal(exitCode, 0, output);
+    assert.equal(calls.length, 0);
+    for (const key of keys) assert.match(output, new RegExp(`${key.replace(".", "\\.")}.*\\[bildirim türü\\]`));
+  });
 });
 
 describe("the seed's command line", () => {
