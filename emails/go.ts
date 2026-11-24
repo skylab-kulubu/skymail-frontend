@@ -26,3 +26,6 @@ export const end = "{{end}}";
 /** `{{if .X}}a{{else}}b{{end}}` as one string, for attributes and subjects. */
 export const cond = (name: string, whenSet: string, otherwise = "") =>
   `${ifSet(name)}${whenSet}${elseBranch}${otherwise}${end}`;
+
+/** `A, B, C`: the Title of each element of a list field, joined with commas. */
+export const joinTitles = (name: string) => `{{range $i, $s := .${name}}}{{if $i}}, {{end}}{{$s.Title}}{{end}}`;

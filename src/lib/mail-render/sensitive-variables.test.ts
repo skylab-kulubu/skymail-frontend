@@ -56,8 +56,10 @@ const LISTS: Record<string, string[]> = {
   "account.deletion-completed": [],
   "account.deletion-in-progress": [],
   "event.ticket-created": ["TicketCode", "TicketQrUrl", "TicketUrl"],
-  "event.reminder": ["TicketQrUrl"],
+  "event.reminder": ["TicketCode", "TicketQrUrl", "TicketUrl"],
   "event.updated": ["TicketCode", "TicketQrUrl", "TicketUrl"],
+  "event.waitlist-joined": ["TicketUrl"],
+  "event.waitlist-promoted": ["TicketCode", "TicketQrUrl", "TicketUrl"],
   "core.contact-consent-confirm": ["confirmUrl", "withdrawUrl"],
 };
 

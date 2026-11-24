@@ -59,9 +59,9 @@ function template(overrides: Partial<MailTemplate> = {}): MailTemplate {
     id: REMINDER_ID,
     name: "Etkinlik hatırlatması",
     key: "event.reminder",
-    subject: "{{.EventName}} yarın",
+    subject: "Yarın: {{.EventName}}",
     system: false,
-    html_content: '<p>Merhaba {{.FullName}}, {{.EventName}} yarın. <a href="{{.DetailsUrl}}">Ayrıntılar</a></p>',
+    html_content: '<p>Merhaba {{.FullName}}, {{.EventName}} yarın. <a href="{{.TicketUrl}}">Biletini aç</a></p>',
     plain_text_content: "",
     react_email_content: "",
     created_at: "2026-09-01T10:00:00Z",
@@ -191,9 +191,9 @@ describe("an approver's edit", () => {
   });
 
   it("does not empty a Required variable", () => {
-    const reminder = approvalFields(template(), { EventName: "GECEKODU", DetailsUrl: "" }, "event.reminder");
-    const start = inputFromVariables(reminder, { EventName: "GECEKODU", DetailsUrl: "" }).input;
-    assert.deepEqual(editedVariables(reminder, { EventName: "GECEKODU", DetailsUrl: "" }, start, { values: { EventName: " ", DetailsUrl: "" }, rich: {} }), {
+    const reminder = approvalFields(template(), { EventName: "GECEKODU", TicketUrl: "" }, "event.reminder");
+    const start = inputFromVariables(reminder, { EventName: "GECEKODU", TicketUrl: "" }).input;
+    assert.deepEqual(editedVariables(reminder, { EventName: "GECEKODU", TicketUrl: "" }, start, { values: { EventName: " ", TicketUrl: "" }, rich: {} }), {
       ok: false,
       problems: { EventName: "EventName boş bırakılamaz: bir Required variable." },
     });
@@ -413,7 +413,7 @@ describe("the send form filled from a request", () => {
         template: { id: REMINDER_ID, version_id: "v", name: "Etkinlik hatırlatması", key: "event.reminder", republished: true },
         audience: { kind: "single", mail_list_id: null, name: null, source: null, recipient_full_name: "Ali Can", recipient_email: "ali@ornek.com" },
         recipients: [{ full_name: "Ali Can", email: "ali@ornek.com" }],
-        body_variables: { EventName: "GECEKODU", DetailsUrl: "https://skyl.app/g" },
+        body_variables: { EventName: "GECEKODU", TicketUrl: "https://yildizskylab.com/bilet/ORNEK" },
       }),
       { templates: [FREE, template()], lists, access: member },
     );
@@ -421,7 +421,7 @@ describe("the send form filled from a request", () => {
     assert.equal(prefill.templateId, REMINDER_ID);
     assert.equal(prefill.audience, "people");
     assert.deepEqual(prefill.people, [{ name: "Ali Can", email: "ali@ornek.com" }]);
-    assert.deepEqual(prefill.values, { EventName: "GECEKODU", DetailsUrl: "https://skyl.app/g" });
+    assert.deepEqual(prefill.values, { EventName: "GECEKODU", TicketUrl: "https://yildizskylab.com/bilet/ORNEK" });
   });
 
   it("picks every person again, in the order submitted", () => {
