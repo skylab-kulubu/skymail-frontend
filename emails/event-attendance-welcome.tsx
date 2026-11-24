@@ -32,6 +32,9 @@ export const meta: TemplateMeta = {
     "MissingRequired",
     "MissedRequired",
   ],
+  // The Wi-Fi password is a credential, and SkyMail's masking does not catch a
+  // password without digits by itself: listed, it is hidden whole.
+  sensitiveVariables: ["AttendeeNote"],
   notification: {
     category: null,
     required: true,
@@ -119,7 +122,7 @@ export default function EventAttendanceWelcome() {
         {ifSet("MinRequired")} {v("CountedTotal")} oturumdan {v("Attended")} tanesine katıldın; sertifika için {v("MinRequired")} gerekiyor.{end}
       </Paragraph>
       {ifSet("MissingRequired")}
-      <Paragraph>Zorunlu oturumlardan katılmadıkların: {joinTitles("MissingRequired")}.</Paragraph>
+      <Paragraph>Zorunlu oturumlardan henüz katılmadıkların: {joinTitles("MissingRequired")}.</Paragraph>
       {end}
       {ifSet("MissedRequired")}
       <Paragraph>Kaçırdığın zorunlu oturumlar: {joinTitles("MissedRequired")}.</Paragraph>

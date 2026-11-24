@@ -104,9 +104,10 @@ describe("the door mails", () => {
 });
 
 describe("the welcome (event.attendance-welcome)", () => {
-  it("masks its content, since the note may hold the Wi-Fi password", async () => {
+  it("masks its content and the note whole, since the note may hold the Wi-Fi password", async () => {
     const { meta } = await rendered("event.attendance-welcome");
     assert.equal(meta.contentSensitive, true);
+    assert.deepEqual(meta.sensitiveVariables, ["AttendeeNote"]);
   });
 
   it("shows the programme, the note with its line breaks and the certificate line only when set", async () => {
@@ -147,7 +148,7 @@ describe("the session receipt (event.attendance-recorded)", () => {
       body,
       /\{\{if \.FirstName\}\}Merhaba \{\{\.FirstName\}\}, \{\{end\}\}\s*\{\{range \$i, \$s := \.Sessions\}\}\{\{if \$i\}\}, \{\{end\}\}'\{\{\$s\.Title\}\}'\{\{end\}\} \{\{if eq \(len \.Sessions\) 1\}\}oturumuna\{\{else\}\}oturumlarına\{\{end\}\} katılımın alındı\.\s*\{\{if \.HasRule\}\}\s*\{\{\.CountedTotal\}\} oturumdan \{\{\.Attended\}\} tanesine katıldın; sertifika için \{\{\.MinRequired\}\} gerekiyor\.\{\{end\}\}/,
     );
-    assert.match(body, /\{\{if \.HasRule\}\}\s*\{\{if \.MissingRequired\}\}\s*Zorunlu oturumlardan katılmadıkların: /);
+    assert.match(body, /\{\{if \.HasRule\}\}\s*\{\{if \.MissingRequired\}\}\s*Zorunlu oturumlardan henüz katılmadıkların: /);
     assert.match(body, /Kaçırdığın zorunlu oturumlar: /);
     assert.match(body, /\{\{if eq \(len \.Sessions\) 1\}\}Bu oturum sertifikada sayılmıyor\.\{\{else\}\}Sertifikada sayılmayan oturumlar: /);
   });

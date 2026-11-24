@@ -76,7 +76,7 @@ export default function EventAttendanceRecorded() {
 
       {ifSet("HasRule")}
       {ifSet("MissingRequired")}
-      <Paragraph>Zorunlu oturumlardan katılmadıkların: {joinTitles("MissingRequired")}.</Paragraph>
+      <Paragraph>Zorunlu oturumlardan henüz katılmadıkların: {joinTitles("MissingRequired")}.</Paragraph>
       {end}
       {ifSet("MissedRequired")}
       <Paragraph>Kaçırdığın zorunlu oturumlar: {joinTitles("MissedRequired")}.</Paragraph>

@@ -113,7 +113,7 @@ export default function EventAttendanceDaySummary() {
         Toplam: {v("CountedTotal")} oturumdan {v("Attended")} tanesine katıldın; sertifika için {v("MinRequired")} gerekiyor.
       </Paragraph>
       {ifSet("MissingRequired")}
-      <Paragraph>Zorunlu oturumlardan katılmadıkların: {joinTitles("MissingRequired")}.</Paragraph>
+      <Paragraph>Zorunlu oturumlardan henüz katılmadıkların: {joinTitles("MissingRequired")}.</Paragraph>
       {end}
       {ifSet("MissedRequired")}
       <Paragraph>Kaçırdığın zorunlu oturumlar: {joinTitles("MissedRequired")}.</Paragraph>
