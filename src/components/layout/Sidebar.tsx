@@ -15,7 +15,7 @@ import { SidebarBrand, SidebarContent, SidebarFooter, SidebarItem, useSidebar } 
 import { Ban, ChevronRight, ClipboardCheck, FileText, Home, List, Send, SquarePen } from 'lucide-react';
 import { DeveloperCredit } from '@/components/auth/DeveloperCredit';
 import { useConsole } from '@/components/layout/ConsoleContext';
-import { activeNavHref, isApprover, navLabel, visibleNavigation } from '@/lib/access';
+import { activeNavHref, isApprover, visibleNavigation } from '@/lib/access';
 import { useApiLoad } from '@/lib/api/react';
 import { clubConsoles } from '@/lib/club-consoles';
 import { TEAM_SEAT_SEND_LABEL, TEAM_SEAT_SEND_PATH } from '@/lib/chrome-breadcrumbs';
@@ -43,7 +43,11 @@ function usePendingApprovals(approver: boolean): number | null {
   return count.status === 'success' ? count.data : null;
 }
 
-/** The count after Mail onayları; screen readers hear "(n bekleyen)" with the link's name. */
+/**
+ * The count after Mail onayları; screen readers hear "(n bekleyen)" with the
+ * link's name. On the icon rail skylcn (0.2) keeps the label and the badge in
+ * the link, faded out, and shows a dot: the name still carries the count.
+ */
 function PendingBadge({ count }: { count: number }) {
   return (
     <>
@@ -73,7 +77,6 @@ export function Sidebar() {
   );
   const activeHref = activeNavHref(pathname, items);
   const pendingApprovals = usePendingApprovals(isApprover(roles));
-  const { collapsed } = useSidebar();
 
   return (
     <>
@@ -86,7 +89,7 @@ export function Sidebar() {
               <SidebarItem
                 key={item.href}
                 href={item.href}
-                label={navLabel(item.label, waiting, collapsed)}
+                label={item.label}
                 icon={NAV_ICON[item.href as keyof typeof NAV_ICON] ?? ChevronRight}
                 active={item.href === activeHref}
                 badge={waiting > 0 ? <PendingBadge count={waiting} /> : undefined}
