@@ -155,7 +155,7 @@ function TrackingFigures({ report }: { report: TrackingAggregate }) {
     return share ? `Takip edilenlere oranı: ${share}` : undefined;
   };
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
       <StatCard label="Takip edilen" value={formatCount(tracked)} hint="kişi" />
       <StatCard
         label="Takip edilmeyen"
@@ -163,6 +163,12 @@ function TrackingFigures({ report }: { report: TrackingAggregate }) {
         hint={untracked.parts.length > 0 ? untracked.parts.join(' · ') : 'kişi'}
       />
       <StatCard label="Açılma görülen" value={formatCount(report.unique_likely_human_opens)} hint={ofTracked(report.unique_likely_human_opens) ?? 'insan olası'} />
+      {/* unique_opens: everyone whose pixel loaded, Apple Mail's and scanners' too; an open inferred from a click is not in it. */}
+      <StatCard
+        label="Piksel açılması (otomatik dahil)"
+        value={formatCount(report.unique_opens)}
+        hint={[ofTracked(report.unique_opens), 'tıklamadan çıkarım hariç'].filter(Boolean).join(' · ')}
+      />
       {report.automated_only_recipients !== undefined ? (
         <StatCard
           label="Yalnız otomatik açılma"
@@ -187,7 +193,8 @@ function TrackingChart({ report }: { report: TrackingAggregate }) {
       series={{
         likely_human_opens: { label: SERIES_LABELS.likely_human_opens },
         automated_opens: { label: SERIES_LABELS.automated_opens },
-        clicks: { label: SERIES_LABELS.clicks },
+        likely_human_clicks: { label: SERIES_LABELS.likely_human_clicks },
+        automated_clicks: { label: SERIES_LABELS.automated_clicks },
       }}
       palette="categorical"
       formatValue={formatCount}

@@ -21,4 +21,7 @@ export const E2E_SERVER_ENV: Record<string, string> = {
   KEYCLOAK_CLIENT_ID: "skymail",
   API_URL: E2E_API_URL,
   NEXT_TELEMETRY_DISABLED: "1",
+  // Every browser test runs under the blocking policy, not the reporting one
+  // production starts with (src/lib/content-security-policy.ts).
+  CSP_MODE: "enforce",
 };
