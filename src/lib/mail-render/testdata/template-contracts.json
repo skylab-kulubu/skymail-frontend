@@ -434,6 +434,49 @@
       "{{if .UnsubscribeUrl}}"
     ]
   },
+  "core.certificate-auto-finalized": {
+    "subject": "{{.EventName}}: katılım kapandı",
+    "system": true,
+    "contentSensitive": false,
+    "variables": [
+      "FirstName",
+      "EventName",
+      "EventId",
+      "CertificateCount",
+      "OwnerTeam"
+    ],
+    "requiredVariables": [
+      "EventId"
+    ],
+    "sensitiveVariables": null,
+    "sampleKeys": [
+      "CertificateCount",
+      "EventId",
+      "EventName",
+      "FirstName",
+      "OwnerTeam"
+    ],
+    "referenced": [
+      "CertificateCount",
+      "EventId",
+      "EventName",
+      "FirstName",
+      "OwnerTeam",
+      "UnsubscribeUrl"
+    ],
+    "actions": [
+      "{{.CertificateCount}}",
+      "{{.EventId}}",
+      "{{.EventName}}",
+      "{{.FirstName}}",
+      "{{.OwnerTeam}}",
+      "{{.UnsubscribeUrl}}",
+      "{{if .FirstName}}",
+      "{{if .OwnerTeam}}",
+      "{{if .UnsubscribeUrl}}",
+      "{{if eq .CertificateCount `0`}}"
+    ]
+  },
   "core.event-cancelled": {
     "subject": "{{.EventName}} iptal edildi",
     "system": true,

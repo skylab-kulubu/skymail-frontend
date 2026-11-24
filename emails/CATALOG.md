@@ -26,6 +26,7 @@ zaman verdiği değişkenler kullanılır.
 | Keycloak · Genel Sistem Postası 🔒 🙈 | `keycloak.generic` | SKY LAB hesap bildirimi | `link`, `linkExpirationMinutes`, `firstName`, `username`, `realmDisplayName`, `subjectKey` |
 | Hoş Geldin 🔒 | `core.welcome` | SKY LAB'e hoş geldin | `FirstName`, `LastName`, `Email`, `Username`, `SchoolEmail`, `SkyNumber`, `CreatedAt` |
 | Katılım Sertifikası 🔒 | `core.certificate` | Katılım sertifikan hazır | `FirstName`, `EventName`, `VerifyURL`, `Serial`, `OwnerTeam` |
+| Katılım Kendiliğinden Kapandı 🔒 | `core.certificate-auto-finalized` | {{.EventName}}: katılım kapandı | `FirstName`, `EventName`, `EventId`, `CertificateCount`, `OwnerTeam` |
 | Etkinlik İptali 🔒 | `core.event-cancelled` | {{.EventName}} iptal edildi | `EventName`, `EventStart`, `CancelReason`, `FirstName` |
 | Etkinlik Yeniden Yayında 🔒 | `core.event-reinstated` | {{.EventName}} yeniden yayında | `EventName`, `EventStart`, `FirstName` |
 | Geri Bildirim İsteği 🔒 🙈 | `core.feedback-request` | {{.EventName}} geri bildirim formu | `FirstName`, `EventName`, `Items`, `EventId` |
@@ -70,6 +71,7 @@ zaman verdiği değişkenler kullanılır.
 - **Keycloak · Genel Sistem Postası** (`keycloak.generic`) — Keycloak gönderici SPI'ın yedeği: eşlenmemiş bir sistem postası (ileride eklenecek bir required action gibi) bu anahtara düşer. subjectKey hangi posta olduğunu söyler.
 - **Hoş Geldin** (`core.welcome`) — core-backend, yeni bir User ilk kez göründüğünde (SKYMAIL_WELCOME_TEMPLATE_ID).
 - **Katılım Sertifikası** (`core.certificate`) — core-backend, yoklama kesinleştikten sonra sertifika üretildiğinde (SKYMAIL_CERTIFICATE_TEMPLATE_ID, certificate/service.go).
+- **Katılım Kendiliğinden Kapandı** (`core.certificate-auto-finalized`) — core-backend, son canlı oturumun bitişinden 1 saat sonra katılım kendiliğinden kapanınca, etkinliği yayınlayan kişiye bir kez (SKYMAIL_CERTIFICATE_AUTO_FINALIZED_TEMPLATE_KEY, internal/certificate/auto_finalize.go; boş anahtar postayı kapatır). Elle kapatmada gitmez.
 - **Etkinlik İptali** (`core.event-cancelled`) — core-backend, etkinlik iptal edilirken "Bilet sahiplerine bildir" seçiliyse, bilet sahiplerinin her birine bir kez (internal/eventstatusmail).
 - **Etkinlik Yeniden Yayında** (`core.event-reinstated`) — core-backend, iptal geri alınırken "Katılımcılara tekrar bildir" seçiliyse, iptal postası ulaşan her bilet sahibine bir kez (internal/eventstatusmail).
 - **Geri Bildirim İsteği** (`core.feedback-request`) — core-backend (üyeye Bildirim olarak: e-posta + kutu; misafire yalnız e-posta), etkinlik ya da oturum bitişinden 2 saat sonra (ya da "Şimdi gönder" ile) yoklaması alınan her bilet sahibine; kişi başına günde tek posta, o günün formları tek listede (ADR-0069).

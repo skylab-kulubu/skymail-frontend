@@ -38,6 +38,7 @@ const CONTRACTS: Record<string, string[]> = {
   "keycloak.generic": [],
   "core.welcome": [],
   "core.certificate": ["VerifyURL"],
+  "core.certificate-auto-finalized": ["EventId"],
   "core.event-cancelled": ["EventName"],
   "core.event-reinstated": ["EventName"],
   "core.feedback-request": ["Items"],
