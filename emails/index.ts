@@ -22,6 +22,7 @@ import KeycloakGeneric, { meta as keycloakGeneric } from "./keycloak-generic";
 
 import CoreWelcome, { meta as coreWelcome } from "./core-welcome";
 import CoreCertificate, { meta as coreCertificate } from "./core-certificate";
+import CoreCertificateAutoFinalized, { meta as coreCertificateAutoFinalized } from "./core-certificate-auto-finalized";
 import CoreEventCancelled, { meta as coreEventCancelled } from "./core-event-cancelled";
 import CoreEventReinstated, { meta as coreEventReinstated } from "./core-event-reinstated";
 import CoreFeedbackRequest, { meta as coreFeedbackRequest } from "./core-feedback-request";
@@ -38,6 +39,13 @@ import AccountDeletionInProgress, { meta as accountDeletionInProgress } from "./
 import EventTicketCreated, { meta as eventTicketCreated } from "./event-ticket-created";
 import EventReminder, { meta as eventReminder } from "./event-reminder";
 import EventUpdated, { meta as eventUpdated } from "./event-updated";
+import EventTicketCancelled, { meta as eventTicketCancelled } from "./event-ticket-cancelled";
+import EventWaitlistJoined, { meta as eventWaitlistJoined } from "./event-waitlist-joined";
+import EventWaitlistPromoted, { meta as eventWaitlistPromoted } from "./event-waitlist-promoted";
+import EventRegistrationFull, { meta as eventRegistrationFull } from "./event-registration-full";
+import EventAttendanceWelcome, { meta as eventAttendanceWelcome } from "./event-attendance-welcome";
+import EventAttendanceRecorded, { meta as eventAttendanceRecorded } from "./event-attendance-recorded";
+import EventAttendanceDaySummary, { meta as eventAttendanceDaySummary } from "./event-attendance-day-summary";
 
 import MailApprovalRequested, { meta as mailApprovalRequested } from "./mail-approval-requested";
 import MailApprovalResolved, { meta as mailApprovalResolved } from "./mail-approval-resolved";
@@ -73,6 +81,7 @@ export const templates: EmailTemplate[] = [
 
   { meta: coreWelcome, Component: CoreWelcome },
   { meta: coreCertificate, Component: CoreCertificate },
+  { meta: coreCertificateAutoFinalized, Component: CoreCertificateAutoFinalized },
   { meta: coreEventCancelled, Component: CoreEventCancelled },
   { meta: coreEventReinstated, Component: CoreEventReinstated },
   { meta: coreFeedbackRequest, Component: CoreFeedbackRequest },
@@ -89,6 +98,13 @@ export const templates: EmailTemplate[] = [
   { meta: eventTicketCreated, Component: EventTicketCreated },
   { meta: eventReminder, Component: EventReminder },
   { meta: eventUpdated, Component: EventUpdated },
+  { meta: eventTicketCancelled, Component: EventTicketCancelled },
+  { meta: eventWaitlistJoined, Component: EventWaitlistJoined },
+  { meta: eventWaitlistPromoted, Component: EventWaitlistPromoted },
+  { meta: eventRegistrationFull, Component: EventRegistrationFull },
+  { meta: eventAttendanceWelcome, Component: EventAttendanceWelcome },
+  { meta: eventAttendanceRecorded, Component: EventAttendanceRecorded },
+  { meta: eventAttendanceDaySummary, Component: EventAttendanceDaySummary },
 
   { meta: mailApprovalRequested, Component: MailApprovalRequested },
   { meta: mailApprovalResolved, Component: MailApprovalResolved },
