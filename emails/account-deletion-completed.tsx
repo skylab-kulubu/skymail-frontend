@@ -10,7 +10,7 @@ export const meta: TemplateMeta = {
   contentSensitive: true,
   brand: "account",
   trigger:
-    "core-backend hesap silme işçisi, silme tamamlandığında, kişinin silinmeden önce okunan her adresine bir kez (ACCOUNT_DELETION_NOTICES=on). Bu adrese giden son postadır. Takip edilmez, SkyMail'de kaydı kalmaz (erase_after_send).",
+    "core-backend hesap silme işçisi, silme tamamlandığında, kişinin silinmeden önce okunan her adresine bir kez (ACCOUNT_DELETION_NOTICES=on). Bu adrese giden son postadır. Takip edilmez, SkyNotify'da kaydı kalmaz (erase_after_send).",
   variables: [],
   sensitiveVariables: [],
   requiredVariables: [],

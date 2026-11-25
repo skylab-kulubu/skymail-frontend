@@ -4,7 +4,7 @@
  * following the system — and sets `data-theme` on <html> before the first
  * paint.
  *
- * SkyMail kept the choice under "colorMode" (the key the Refine app used) and
+ * SkyNotify kept the choice under "colorMode" (the key the Refine app used) and
  * followed the system when there was none. The migration script runs before
  * skylcn's, once per browser: it carries an old choice over, and gives
  * everyone who never chose "system", so nobody's theme changes with the move.
@@ -12,7 +12,7 @@
 
 export type Theme = "light" | "dark";
 
-/** Where SkyMail kept the theme before skylcn-ui. */
+/** Where SkyNotify kept the theme before skylcn-ui. */
 export const LEGACY_THEME_STORAGE_KEY = "colorMode";
 
 /** skylcn-ui's key (THEME_STORAGE_KEY there); repeated so the script needs no import. */

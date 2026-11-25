@@ -26,7 +26,7 @@ export const meta: TemplateMeta = {
     { name: "status", reason: "Onay, ret, düzeltme ve yeniden başvuru metinlerinden hangisinin gideceğini seçer; kaldırılırsa gövde boş gider." },
   ],
   // core sends this to a member with POST /v1/notifications (ADR-0075 karar
-  // 5), which refuses a type SkyMail has no record of. By e-mail only for
+  // 5), which refuses a type SkyNotify has no record of. By e-mail only for
   // now: an inbox text is its own change.
   notification: { category: null, required: true, defaultChannels: ["email"], lane: "system" },
   sample: {

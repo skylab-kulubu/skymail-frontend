@@ -8,7 +8,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AuthScreen } from "./AuthScreen";
 
-const html = renderToStaticMarkup(createElement(AuthScreen, { title: "Giriş", children: "SkyMail hesabınla giriş yap" }));
+const html = renderToStaticMarkup(createElement(AuthScreen, { title: "Giriş", children: "SkyNotify hesabınla giriş yap" }));
 
 describe("the sign-in frame", () => {
   it("credits the developer", () => {

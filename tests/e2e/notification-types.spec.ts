@@ -1,13 +1,13 @@
 /**
  * The template list shows a template's Notification type beside it
- * (iletişim-servisi 10, dilim 2; skymail-backend docs/notifications.md):
+ * (iletişim-servisi 10, dilim 2; skynotify-backend docs/notifications.md):
  * required or its category, and the default channels.
  */
 import { expect, test } from "./fixtures";
 
-test("a template that is a Notification type says so in the list", async ({ page, skymail, signIn }) => {
+test("a template that is a Notification type says so in the list", async ({ page, skynotify, signIn }) => {
   await signIn("reader");
-  skymail.addTemplate({
+  skynotify.addTemplate({
     name: "Etkinlik · Bilet Oluşturuldu",
     subject: "{{.EventName}} biletin hazır",
     key: "event.ticket-created",
@@ -16,7 +16,7 @@ test("a template that is a Notification type says so in the list", async ({ page
     htmlContent: "<p>Biletin hazır</p>",
     plainText: "Biletin hazır",
   });
-  skymail.addTemplate({
+  skynotify.addTemplate({
     name: "Serbest Gönderim",
     subject: "{{.Subject}}",
     key: "free.basic",
@@ -25,7 +25,7 @@ test("a template that is a Notification type says so in the list", async ({ page
     htmlContent: "<p>x</p>",
     plainText: "x",
   });
-  skymail.notificationTypes = [{
+  skynotify.notificationTypes = [{
     key: "event.ticket-created",
     category: null,
     required: true,

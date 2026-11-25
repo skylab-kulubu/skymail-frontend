@@ -3,7 +3,7 @@
  * free.basic's `{{safeHTML .BodyHtml}}` takes (ticket 16).
  *
  * The body is the sender's input, not a trusted template, so the server
- * narrows it to an allow-list before it reaches anyone (skymail-backend
+ * narrows it to an allow-list before it reaches anyone (skynotify-backend
  * internal/mailer/sanitize.go: no style, no class, no image). The club's mail
  * components carry their look in exactly those, so this renderer writes none
  * of them — free.basic's own frame gives the body its look — and it is not
@@ -11,7 +11,7 @@
  * elements the allow-list keeps: a heading as `h2` and a sub-heading as
  * `h3`, a paragraph as `p`, a list as `ul` or `ol`, a quote as `blockquote`,
  * a line break as `br`, bold, italic and links, a link the sender marked
- * not to be counted with `data-skymail-notrack="true"`
+ * not to be counted with `data-skynotify-notrack="true"`
  * (free-body.test.ts holds its output to that list). The server still
  * sanitises; nothing here is a second gate.
  *
@@ -50,10 +50,10 @@ export const FREE_BODY_ALLOWANCE: VisualAllowance = {
 export type FreeBody = { ok: true; html: string } | { ok: false; problems: string[] };
 
 /**
- * What marks a link SkyMail does not count: the one attribute beside href
+ * What marks a link SkyNotify does not count: the one attribute beside href
  * the server's allow-list keeps on `a`, empty or "true" (sanitize.go).
  */
-export const NO_TRACK_ATTRIBUTE = "data-skymail-notrack";
+export const NO_TRACK_ATTRIBUTE = "data-skynotify-notrack";
 
 /** The schemes the server's allow-list keeps a link with (sanitize.go, AllowURLSchemes). */
 const SERVER_LINK_SCHEMES = ["http", "https", "mailto"];

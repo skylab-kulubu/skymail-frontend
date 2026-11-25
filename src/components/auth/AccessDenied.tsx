@@ -7,7 +7,7 @@ import { clubConsoles } from '@/lib/club-consoles';
 import type { ConsoleLink } from '@/lib/runtime-config';
 
 /**
- * Someone signed in with SKY LAB but without `skymail:access`. They get a
+ * Someone signed in with SKY LAB but without `skynotify:access`. They get a
  * clear answer and what to do about it, rather than a panel whose every
  * request fails.
  */
@@ -28,8 +28,8 @@ export function AccessDenied({
       description={
         <>
           {person ? <strong className="text-foreground font-medium">{person}</strong> : 'Bu hesapla'}
-          {person ? ' olarak giriş yaptın, ama' : ''} İletişim konsolunu kullanma yetkin yok. Erişime
-          ihtiyacın varsa kulüp yönetiminden <code className="text-secondary-foreground font-mono">skymail:access</code>{' '}
+          {person ? ' olarak giriş yaptın, ama' : ''} SkyNotify konsolunu kullanma yetkin yok. Erişime
+          ihtiyacın varsa kulüp yönetiminden <code className="text-secondary-foreground font-mono">skynotify:access</code>{' '}
           rolünü iste.
         </>
       }

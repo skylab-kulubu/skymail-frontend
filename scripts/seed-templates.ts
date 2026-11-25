@@ -1,5 +1,5 @@
 /**
- * Puts the templates in emails/ into a SkyMail instance, addressed by key.
+ * Puts the templates in emails/ into a SkyNotify instance, addressed by key.
  *
  * Seeding is an upsert: a template that was archived comes back, and nothing
  * is deleted — a key that is no longer in emails/ is left alone, because
@@ -7,7 +7,7 @@
  * Each template goes with its .tsx source as its JSX source, the render of
  * that source, its subject and its contract Required variables.
  *
- * SkyMail refuses a template an operator changed since the last seed
+ * SkyNotify refuses a template an operator changed since the last seed
  * (ADR-0047). The run goes on with the others, lists the refused ones with
  * why and the command that forces each, and exits non-zero. Forcing writes
  * over the operator's change; their versions stay in the template's history.
@@ -21,8 +21,8 @@
  *
  * Credentials come from the environment and are never printed:
  *
- *   SKYMAIL_URL                 http://localhost:3000 (varsayılan)
- *   SKYMAIL_TOKEN               hazır bir bearer token, ya da
+ *   SKYNOTIFY_URL                 http://localhost:3000 (varsayılan)
+ *   SKYNOTIFY_TOKEN               hazır bir bearer token, ya da
  *   KEYCLOAK_TOKEN_URL          client-credentials ile alınsın:
  *   KEYCLOAK_CLIENT_ID
  *   KEYCLOAK_CLIENT_SECRET
@@ -32,7 +32,7 @@
  * renders them, and warns about one that has diverged from it
  * (src/lib/template-seed/freshness).
  *
- * Needs skymail:access + skymail:templates:write, and a skymail-backend that
+ * Needs skynotify:access + skynotify:templates:write, and a skynotify-backend that
  * knows the conflict rule (ticket 09): an older one ignores --force and keeps
  * an operator's subject without a word.
  */
@@ -42,7 +42,7 @@ import { SEED_COMMAND, parseSeedArgs, runSeed, templateSources } from "../src/li
 import { checkFreshness, divergedMessage, staleMessage } from "../src/lib/template-seed/freshness";
 import { seedToken } from "../src/lib/template-seed/token";
 
-const BASE_URL = (process.env.SKYMAIL_URL ?? "http://localhost:3000").replace(/\/+$/, "");
+const BASE_URL = (process.env.SKYNOTIFY_URL ?? "http://localhost:3000").replace(/\/+$/, "");
 
 /** Runs git, or null when it fails — a missing remote and a tarball both land here. */
 function git(args: string[]): string | null {

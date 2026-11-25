@@ -13,7 +13,7 @@ export const meta: TemplateMeta = {
   contentSensitive: false,
   brand: "account",
   trigger:
-    "core-backend, süreli yönetim üyeliğinin günlük işinde (MANAGEMENT_TERMS_MODE=apply; docs/management-membership-terms.md, grup-yonetimi 11): YK, DK ya da ekip liderliği üyeliğinin bitişinden 14 gün ve 1 gün önce kişiye ve üstündekilere uyarı; süre dolunca işaretlenen üyeliklerin listesi ADMIN'e; süresi dolup grubunda duranların haftalık özeti ADMIN'e. Core kuyruğa yazar ve SkyMail'e anahtarla gönderir.",
+    "core-backend, süreli yönetim üyeliğinin günlük işinde (MANAGEMENT_TERMS_MODE=apply; docs/management-membership-terms.md, grup-yonetimi 11): YK, DK ya da ekip liderliği üyeliğinin bitişinden 14 gün ve 1 gün önce kişiye ve üstündekilere uyarı; süre dolunca işaretlenen üyeliklerin listesi ADMIN'e; süresi dolup grubunda duranların haftalık özeti ADMIN'e. Core kuyruğa yazar ve SkyNotify'a anahtarla gönderir.",
   // Notice: `warning`, `expired-list` ya da `weekly-summary`; hangi posta
   // olduğunu söyler. Uyarıda: DaysLeft `14` ya da `1`; Self alıcı üyeliğin
   // sahibiyse `yes`, değilse `no`; SubjectName sahibin adı; GroupName grup

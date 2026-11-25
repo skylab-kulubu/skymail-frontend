@@ -5,19 +5,19 @@ import { seedToken } from "./token";
 
 const CLIENT = {
   KEYCLOAK_TOKEN_URL: "https://e.example.test/realms/e-skylab-sandbox/protocol/openid-connect/token",
-  KEYCLOAK_CLIENT_ID: "skymail-seed",
+  KEYCLOAK_CLIENT_ID: "skynotify-seed",
   KEYCLOAK_CLIENT_SECRET: "seed-secret",
 };
 
 describe("the Template seed's bearer token", () => {
-  it("is the one given, when SKYMAIL_TOKEN is set", async () => {
+  it("is the one given, when SKYNOTIFY_TOKEN is set", async () => {
     const { fetch, calls } = scriptedFetch();
 
-    assert.equal(await seedToken({ ...CLIENT, SKYMAIL_TOKEN: "given" }, fetch), "given");
+    assert.equal(await seedToken({ ...CLIENT, SKYNOTIFY_TOKEN: "given" }, fetch), "given");
     assert.equal(calls.length, 0);
   });
 
-  // skymail-backend checks a token by asking Keycloak's userinfo, and Keycloak
+  // skynotify-backend checks a token by asking Keycloak's userinfo, and Keycloak
   // answers userinfo only for a token that carries the openid scope; a
   // client-credentials token without it was refused as server.unauthorized.
   it("is a client-credentials token that carries the openid scope", async () => {
@@ -30,7 +30,7 @@ describe("the Template seed's bearer token", () => {
     const form = new URLSearchParams(calls[0].body ?? "");
     assert.deepEqual(Object.fromEntries(form), {
       grant_type: "client_credentials",
-      client_id: "skymail-seed",
+      client_id: "skynotify-seed",
       client_secret: "seed-secret",
       scope: "openid",
     });
@@ -39,7 +39,7 @@ describe("the Template seed's bearer token", () => {
   it("names what is missing when there is neither a token nor a client", async () => {
     const { fetch } = scriptedFetch();
 
-    await assert.rejects(seedToken({ KEYCLOAK_CLIENT_ID: "skymail-seed" }, fetch), /SKYMAIL_TOKEN.*KEYCLOAK_TOKEN_URL/);
+    await assert.rejects(seedToken({ KEYCLOAK_CLIENT_ID: "skynotify-seed" }, fetch), /SKYNOTIFY_TOKEN.*KEYCLOAK_TOKEN_URL/);
   });
 
   it("gives Keycloak's status but not its body, which can echo the secret", async () => {

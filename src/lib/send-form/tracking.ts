@@ -1,9 +1,9 @@
 /**
  * Open and click tracking on the send form (hub ticket iletisim-servisi 15a;
- * Yusuf 2026-10-20: people too). skymail-backend takes `tracking: true` on
+ * Yusuf 2026-10-20: people too). skynotify-backend takes `tracking: true` on
  * `POST /mail_tasks`, on a person's `POST /mail_tasks/single` and on a request
  * for approval to a list or to people, and answers whether the send got it.
- * It tracks only while `SKYMAIL_TRACKING=on` (`GET /mail_tasks/summary`
+ * It tracks only while `SKYNOTIFY_TRACKING=on` (`GET /mail_tasks/summary`
  * tracking_available) and never a System template (account and transaction
  * mails) or a sensitive one; to people, a template that says nothing of its
  * content counts as sensitive. Each recipient is then decided on their own:
@@ -12,7 +12,7 @@
  * queued); an internal list's addresses are not looked up (no_account). A
  * Forms send is not offered the box. The box starts unticked.
  *
- * While SkyMail tracks every send a person makes (`SKYMAIL_TRACKING_OPERATOR`,
+ * While SkyNotify tracks every send a person makes (`SKYNOTIFY_TRACKING_OPERATOR`,
  * summary `tracking_always`; Yusuf 2026-10-21: no box, no opting out per
  * send) the form shows no box: every list and people send asks for tracking
  * and the backend tracks it whatever the template (a sensitive one with the
@@ -29,20 +29,20 @@ import type { PersonOutcome, SendPlan, SingleSendRequest } from "./send";
 export const TRACKING_LABEL = "Açılma ve tıklama takibi";
 
 /** What a send that asked for tracking says when it came back untracked. */
-export const TRACKING_NOT_APPLIED = "Takip açılmadı: SkyMail'de takip kapalı ya da bu template takip edilmiyor.";
+export const TRACKING_NOT_APPLIED = "Takip açılmadı: SkyNotify'da takip kapalı ya da bu template takip edilmiyor.";
 
-/** Whether the summary says SkyMail's tracking is on: only a `true` does; a missing field (an older backend) does not. */
+/** Whether the summary says SkyNotify's tracking is on: only a `true` does; a missing field (an older backend) does not. */
 export function trackingAvailable(summary: Pick<SendSummary, "tracking_available">): boolean {
   return summary.tracking_available === true;
 }
 
-/** Whether SkyMail tracks every send a person makes: only a `true` beside tracking on does; a missing field (an older backend) does not. */
+/** Whether SkyNotify tracks every send a person makes: only a `true` beside tracking on does; a missing field (an older backend) does not. */
 export function trackingAlways(summary: Pick<SendSummary, "tracking_available" | "tracking_always">): boolean {
   return trackingAvailable(summary) && summary.tracking_always === true;
 }
 
 /**
- * SkyMail's tracking as the send form reads it: on (the box may be offered),
+ * SkyNotify's tracking as the send form reads it: on (the box may be offered),
  * and always (no box, every send tracked); and, read from the same answer,
  * whether a send carries its purpose (purpose.ts).
  */
@@ -68,10 +68,10 @@ const modeOf = (answer: ModeAnswer): TrackingMode => ({
 const BEFORE_TRACKING_MODE: ReadonlySet<number> = new Set([403, 404, 500]);
 
 /**
- * SkyMail's tracking. One who may read the summary (mails:read) reads it from
+ * SkyNotify's tracking. One who may read the summary (mails:read) reads it from
  * the smallest summary (a day, a send), which every backend answers and a new
  * one says `tracking_always` in. Anyone else asks `GET /mail_tasks/tracking-mode`,
- * which anyone who may use SkyMail reads (a setting, not a send: someone who
+ * which anyone who may use SkyNotify reads (a setting, not a send: someone who
  * only submits for approval sees it too); a backend before it answers 403,
  * 404 or 500, and then the form knows nothing.
  */
@@ -87,7 +87,7 @@ export async function fetchTrackingMode(api: ApiClient, { canReadSummary, signal
   }
 }
 
-/** A template's sends may be tracked: neither a System template nor sensitive (skymail-backend GetTemplateTrackingExclusion). */
+/** A template's sends may be tracked: neither a System template nor sensitive (skynotify-backend GetTemplateTrackingExclusion). */
 export type TrackableTemplate = Pick<MailTemplate, "system" | "content_sensitive" | "content_sensitive_locked">;
 
 /** Who a send goes to, as tracking reads it: a list, or people one by one. */
@@ -121,7 +121,7 @@ export function trackingOffered({
 }
 
 /**
- * Whether the send asks for tracking: a list or people send while SkyMail
+ * Whether the send asks for tracking: a list or people send while SkyNotify
  * tracks every one, whatever its template and with no box; otherwise only
  * when the box is offered and ticked. A Forms send and a Team request never ask.
  */

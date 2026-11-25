@@ -19,7 +19,7 @@ async function variablesOf(mode: "jsx" | "html", source: string): Promise<string
 }
 
 /**
- * The cases skymail-backend's Required variable check is held to as well, from
+ * The cases skynotify-backend's Required variable check is held to as well, from
  * a copy of the same file: the panel shows a template's variables with this
  * reading of a body and the server refuses a save with its own, so the two
  * must not disagree. Change both copies together.
@@ -34,18 +34,18 @@ const SHARED_CASES = join(import.meta.dirname, "testdata", "referenced-variables
 
 /**
  * The shared cases are one file kept in two repos: this copy, and
- * skymail-backend's internal/mailer/testdata/referenced-variables.json, whose
+ * skynotify-backend's internal/mailer/testdata/referenced-variables.json, whose
  * test pins the same hash. Changing either copy fails its own repo's test
  * until both copies, and both hashes, change together.
  */
-const SHARED_CASES_SHA256 = "b54be25614fedd3054e85589e27ea596b97d2023dc37817058a32d4c08d2bbab";
+const SHARED_CASES_SHA256 = "b2d9c205a26ebc97de48ad26e61e1ed377f84cf0f5c8bf9ba2b02c4a87cb311a";
 
 it("holds the same shared cases as the server", async () => {
   const sum = createHash("sha256").update(await readFile(SHARED_CASES)).digest("hex");
   assert.equal(
     sum,
     SHARED_CASES_SHA256,
-    "testdata/referenced-variables.json değişmiş: skymail-backend'deki kopyayı (internal/mailer/testdata/referenced-variables.json) da aynı yap, sonra iki sabiti de güncelle",
+    "testdata/referenced-variables.json değişmiş: skynotify-backend'deki kopyayı (internal/mailer/testdata/referenced-variables.json) da aynı yap, sonra iki sabiti de güncelle",
   );
 });
 

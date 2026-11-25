@@ -1,30 +1,30 @@
 /**
- * The `skymail` client roles and what each one opens in the panel.
+ * The `skynotify` client roles and what each one opens in the panel.
  *
- * Keycloak names them with the client prefix — `skymail:templates:read`, not
- * `templates:read` — and skymail-backend checks exactly these strings.
- * `skymail:access` is the gate: without it nothing else counts.
+ * Keycloak names them with the client prefix — `skynotify:templates:read`, not
+ * `templates:read` — and skynotify-backend checks exactly these strings.
+ * `skynotify:access` is the gate: without it nothing else counts.
  */
 
 export const ROLE = {
-  access: "skymail:access",
-  templatesRead: "skymail:templates:read",
-  templatesWrite: "skymail:templates:write",
-  listsRead: "skymail:lists:read",
-  listsWrite: "skymail:lists:write",
-  mailsRead: "skymail:mails:read",
-  mailsWrite: "skymail:mails:write",
-  mailsSend: "skymail:mails:send",
+  access: "skynotify:access",
+  templatesRead: "skynotify:templates:read",
+  templatesWrite: "skynotify:templates:write",
+  listsRead: "skynotify:lists:read",
+  listsWrite: "skynotify:lists:write",
+  mailsRead: "skynotify:mails:read",
+  mailsWrite: "skynotify:mails:write",
+  mailsSend: "skynotify:mails:send",
   /** Mail onayı (ticket 18): decides sends submitted for approval; apart from sending. */
-  mailsApprove: "skymail:mails:approve",
+  mailsApprove: "skynotify:mails:approve",
   /** A tracked send's recipients one by one (hub ticket 15b; YK, DK, ADMIN). A send's own sender needs no role for its own. */
-  mailsTrackingRead: "skymail:mails:tracking:read",
+  mailsTrackingRead: "skynotify:mails:tracking:read",
   /** Reverses an address's unsubscribe at the person's request, with a reason (abonelik-cikisi 04, Keycloak ticket 10). */
-  unsubscribesReactivate: "skymail:unsubscribes:reactivate",
+  unsubscribesReactivate: "skynotify:unsubscribes:reactivate",
   /** Removes a bounce from the suppression list and reads the bounce rate (skymail-bounce-isleme 08, Keycloak ticket 06). */
-  suppressionsManage: "skymail:suppressions:manage",
+  suppressionsManage: "skynotify:suppressions:manage",
   /** Who opened a send's masked content (ticket 32; DK alone): not the roles that open it. */
-  auditRead: "skymail:audit:read",
+  auditRead: "skynotify:audit:read",
 } as const;
 
 export type Role = (typeof ROLE)[keyof typeof ROLE];
@@ -79,19 +79,19 @@ function sectionRoles(item: NavItem): readonly Role[] {
 }
 
 /**
- * The menu. A Leader without skymail:access (`teamSeat`, ekip-postasi 06)
+ * The menu. A Leader without skynotify:access (`teamSeat`, ekip-postasi 06)
  * gets the home screen, the send form (their Teams only) and their own
- * requests: nothing else of SkyMail answers them.
+ * requests: nothing else of SkyNotify answers them.
  */
 export function visibleNavigation(roles: readonly string[], { teamSeat = false }: { teamSeat?: boolean } = {}): NavItem[] {
   if (!hasAccess(roles)) return teamSeat ? NAVIGATION.filter((item) => TEAM_SEAT_SECTIONS.includes(item.href)) : [];
   return NAVIGATION.filter((item) => hasAnyRole(roles, sectionRoles(item)));
 }
 
-/** What a Leader without skymail:access reaches (skymail-backend registerTeamMailRoutes). */
+/** What a Leader without skynotify:access reaches (skynotify-backend registerTeamMailRoutes). */
 const TEAM_SEAT_SECTIONS: readonly string[] = ["/", "/mail-tasks/create", "/mail-approvals"];
 
-/** Whether a Leader without skymail:access may open `pathname`: the home screen, the send form, and their requests. */
+/** Whether a Leader without skynotify:access may open `pathname`: the home screen, the send form, and their requests. */
 export function teamSeatAllows(pathname: string): boolean {
   return pathname === "/" || pathname === "/mail-tasks/create" || pathname === "/mail-approvals" || pathname.startsWith("/mail-approvals/");
 }
@@ -142,7 +142,7 @@ export function isApprover(roles: readonly string[]): boolean {
   return hasRole(roles, ROLE.mailsApprove);
 }
 
-/** Whether `roles` hold any one of `anyOf` (and `skymail:access`); none asked for is only access. */
+/** Whether `roles` hold any one of `anyOf` (and `skynotify:access`); none asked for is only access. */
 export function hasAnyRole(roles: readonly string[], anyOf: readonly Role[]): boolean {
   return hasAccess(roles) && (anyOf.length === 0 || anyOf.some((role) => roles.includes(role)));
 }

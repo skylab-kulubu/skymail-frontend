@@ -13,7 +13,7 @@ const ticket = {
 };
 
 describe("notification types", () => {
-  it("reads SkyMail's list by key", () => {
+  it("reads SkyNotify's list by key", () => {
     const types = parseNotificationTypes([ticket, { ...ticket, key: "event.reminder", required: false, category: "events", default_channels: ["inbox"], lane: "bulk", archived_at: "2026-10-25T09:00:00Z" }]);
     assert.ok(types);
     assert.deepEqual(types.get("event.ticket-created"), {

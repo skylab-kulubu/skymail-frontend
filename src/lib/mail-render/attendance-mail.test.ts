@@ -1,7 +1,7 @@
 /**
  * The door mails (kapi-postalari 07; SPEC §5.2): the welcome on the day's first
  * scan, the receipt for each session check-in and the day's summary. core
- * sends every variable every time (SkyMail renders with missingkey=error);
+ * sends every variable every time (SkyNotify renders with missingkey=error);
  * lists are ranged over, so inside a range .Title, .Time and .Attended are the
  * element's. Words are Yusuf's (2026-11-24, K5): "'<Oturum>' oturumuna
  * katılımın alındı. <N> oturumdan <x> tanesine katıldın; sertifika için <M>

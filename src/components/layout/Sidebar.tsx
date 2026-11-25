@@ -4,7 +4,7 @@
 // (core-frontend AdminSidebar): the brand with the club console switcher and
 // the sections. The signed-in person's menu sits at the top right
 // (UserMenu, ConsoleShell), never at the foot of the sidebar.
-// SkyMail's menu is flat links gated by role (src/lib/access.ts). An
+// SkyNotify's menu is flat links gated by role (src/lib/access.ts). An
 // approver's Mail onayları carries how many requests wait for them (ticket
 // 20): one small request per page load, read again when the viewer changes a
 // request.
@@ -57,7 +57,7 @@ function PendingBadge({ count }: { count: number }) {
   );
 }
 
-/** Who built SkyMail, at the foot of the sidebar; the icon rail has no room for it. */
+/** Who built SkyNotify, at the foot of the sidebar; the icon rail has no room for it. */
 function SidebarCredit() {
   const { collapsed } = useSidebar();
   if (collapsed) return null;
@@ -71,7 +71,7 @@ function SidebarCredit() {
 export function Sidebar() {
   const pathname = usePathname() || '/';
   const { roles, config, teamSeat } = useConsole();
-  // A Leader without skymail:access: the send form is "Ekibime gönder", their Teams only.
+  // A Leader without skynotify:access: the send form is "Ekibime gönder", their Teams only.
   const items = visibleNavigation(roles, { teamSeat: teamSeat !== null }).map((item) =>
     teamSeat !== null && item.href === TEAM_SEAT_SEND_PATH ? { ...item, label: TEAM_SEAT_SEND_LABEL } : item,
   );
@@ -80,7 +80,7 @@ export function Sidebar() {
 
   return (
     <>
-      <SidebarBrand name="SKY LAB" subtitle="İletişim" consoles={clubConsoles(config.consoles)} current="mail" />
+      <SidebarBrand name="SKY LAB" subtitle="SkyNotify" consoles={clubConsoles(config.consoles)} current="mail" />
       <SidebarContent>
         <div className="flex flex-col gap-1">
           {items.map((item) => {

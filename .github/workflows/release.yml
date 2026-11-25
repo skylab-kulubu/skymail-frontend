@@ -3,7 +3,7 @@ name: Build and Push Docker Image
 # main: builds the image (latest, sandbox, sha-<sha>) and deploys the sandbox.
 # production: when a push to main has tested this tree green (checks.yml's checks gate) and that
 # commit's image exists, its tags are copied to production and sha-<sha>: no rebuild, production
-# runs the bytes main built (their SKYMAIL_BUILD_ID is that main commit: one per build, which is all
+# runs the bytes main built (their SKYNOTIFY_BUILD_ID is that main commit: one per build, which is all
 # Next.js's deploymentId needs). Otherwise (a hotfix straight on production) the image is built.
 on:
   push:
@@ -105,7 +105,7 @@ jobs:
           # Next.js's deploymentId (next.config.ts): one per build, so a page
           # from the previous deploy reloads instead of mixing two builds.
           build-args: |
-            SKYMAIL_BUILD_ID=${{ github.sha }}
+            SKYNOTIFY_BUILD_ID=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

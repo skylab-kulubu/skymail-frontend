@@ -43,7 +43,7 @@ import { Compose } from './Compose';
 import { NewsSendForm } from '../news/NewsSendForm';
 import { readNewsSendQuery } from '@/lib/news-send';
 
-/** A Leader without skymail:access (ekip-postasi 06): their Teams and a free announcement only. */
+/** A Leader without skynotify:access (ekip-postasi 06): their Teams and a free announcement only. */
 function useTeamSeat(): boolean {
   const { roles, teamSeat } = useConsole();
   return teamSeat !== null && !hasAccess(roles);
@@ -56,7 +56,7 @@ export function SendForm() {
   const seat = useTeamSeat();
   // The tab says what the team seat's form is; the page's metadata names the send form for everyone.
   useEffect(() => {
-    if (seat) document.title = `${TEAM_SEAT_SEND_LABEL} · İletişim`;
+    if (seat) document.title = `${TEAM_SEAT_SEND_LABEL} · SkyNotify`;
   }, [seat]);
   if (seat) return <ComposeCatalog from={from ? { kind: 'copy', id: from } : null} />;
   const handoff = params.has('forms_handoff') || params.get('source') === 'forms';

@@ -7,6 +7,6 @@ import { missingEnv } from '@/lib/runtime-config';
 
 const missing = missingEnv();
 if (missing.length > 0) {
-  console.error(`SkyMail: missing environment variables: ${missing.join(', ')} (see .env.example)`);
+  console.error(`SkyNotify: missing environment variables: ${missing.join(', ')} (see .env.example)`);
   if (process.env.NODE_ENV === 'production') process.exit(1);
 }

@@ -10,7 +10,7 @@ export const meta: TemplateMeta = {
   system: true,
   // The person's own answers (a phone or student number among them) are what
   // the recipient alone should see: a send's content is kept masked. No
-  // sensitiveVariables list; SkyMail masks by name and shape.
+  // sensitiveVariables list; SkyNotify masks by name and shape.
   contentSensitive: true,
   brand: "forms",
   trigger:
@@ -25,7 +25,7 @@ export const meta: TemplateMeta = {
     { name: "answers", reason: "Gönderilen cevapların kopyası; kaldırılırsa posta kopyayı taşımaz." },
   ],
   // core sends this to a member with POST /v1/notifications (ADR-0075 karar
-  // 5), which refuses a type SkyMail has no record of. By e-mail only for
+  // 5), which refuses a type SkyNotify has no record of. By e-mail only for
   // now: an inbox text is its own change.
   notification: { category: null, required: true, defaultChannels: ["email"], lane: "system" },
   sample: {

@@ -1,7 +1,7 @@
 /**
  * Liveness for the container's health check (Dockerfile HEALTHCHECK) and for
  * Swarm's start-first deploy, which keeps the old task until the new one
- * answers here. It answers from this process alone — no Keycloak, no SkyMail
+ * answers here. It answers from this process alone — no Keycloak, no SkyNotify
  * API — so an outage of either never restarts the panel. A missing environment
  * already stops the process at start (src/instrumentation-node.ts).
  *

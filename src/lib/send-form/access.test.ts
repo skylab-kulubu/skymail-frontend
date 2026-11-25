@@ -1,7 +1,7 @@
 /**
- * Who may send what (ticket 16), as skymail-backend decides it: a send to a
+ * Who may send what (ticket 16), as skynotify-backend decides it: a send to a
  * mailing list or to a Forms source needs `mails:write`, a send to one person
- * `mails:send` or `mails:write` (main.go). Anyone who can use SkyMail may submit a send for
+ * `mails:send` or `mails:write` (main.go). Anyone who can use SkyNotify may submit a send for
  * approval instead (ticket 20, `POST /mail_approvals`). The form reads Mail
  * templates to offer one and lists to pick one, so it needs their read roles
  * whichever way the send goes. The page itself is gated by RoleGate
@@ -79,7 +79,7 @@ describe("whether the audience chosen is sent at once or submitted for approval"
     );
   });
 
-  // Forms' fallback when SkyMail cannot prepare a source puts the respondents
+  // Forms' fallback when SkyNotify cannot prepare a source puts the respondents
   // among people (Eski aktarım); they are still Forms respondents.
   it("sends people a legacy Forms transfer added at once only with mails:write", () => {
     const sender = sendAccess(roles(ROLE.templatesRead, ROLE.listsRead, ROLE.mailsSend));

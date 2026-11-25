@@ -1,6 +1,6 @@
 import { Badge, StatusDot } from '@skylab-kulubu/skylcn-ui';
 
-/** The four states SkyMail shows: sent, on its way, failed, and nothing to say. */
+/** The four states SkyNotify shows: sent, on its way, failed, and nothing to say. */
 export type Tone = 'good' | 'busy' | 'bad' | 'idle';
 
 /** skylcn-ui's tone for each; the send statuses, the home screen's tiles and the Mail template versions share them. */

@@ -4,7 +4,7 @@
  * details changed and its editor said to tell (core-backend #443), and
  * event.door-staff-added, to a person added to its door staff (#442). Each
  * reads exactly the variables core passes, its inbox text only those core
- * always passes (SkyMail renders it with missingkey=error), and shows a part
+ * always passes (SkyNotify renders it with missingkey=error), and shows a part
  * only when its variable is set.
  */
 import assert from "node:assert/strict";

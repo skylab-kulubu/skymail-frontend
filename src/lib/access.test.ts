@@ -1,6 +1,6 @@
 /**
  * Who sees what. The API enforces the same roles on every route
- * (skymail-backend `main.go`), so the panel's job is only to not offer a
+ * (skynotify-backend `main.go`), so the panel's job is only to not offer a
  * screen that would answer 403.
  */
 import assert from "node:assert/strict";
@@ -10,21 +10,21 @@ import { ROLE, activeNavHref, hasAccess, hasAnyRole, homeScreen, homeView, isApp
 const hrefs = (roles: string[]) => visibleNavigation(roles).map((item) => item.href);
 
 describe("the menu", () => {
-  // Anyone who can use SkyMail may submit a send for approval, and sees their
+  // Anyone who can use SkyNotify may submit a send for approval, and sees their
   // own requests (ticket 20).
   it("shows the home screen and the mail approvals to someone with access and no read roles", () => {
-    assert.deepEqual(hrefs(["skymail:access"]), ["/", "/mail-approvals"]);
+    assert.deepEqual(hrefs(["skynotify:access"]), ["/", "/mail-approvals"]);
   });
 
   it("adds each section for its read role", () => {
-    assert.deepEqual(hrefs(["skymail:access", "skymail:templates:read"]), ["/", "/mail-tasks/create", "/templates", "/mail-approvals"]);
-    assert.deepEqual(hrefs(["skymail:access", "skymail:lists:read"]), ["/", "/mailing-lists", "/mail-approvals"]);
-    assert.deepEqual(hrefs(["skymail:access", "skymail:mails:read"]), ["/", "/mail-tasks", "/mail-approvals"]);
+    assert.deepEqual(hrefs(["skynotify:access", "skynotify:templates:read"]), ["/", "/mail-tasks/create", "/templates", "/mail-approvals"]);
+    assert.deepEqual(hrefs(["skynotify:access", "skynotify:lists:read"]), ["/", "/mailing-lists", "/mail-approvals"]);
+    assert.deepEqual(hrefs(["skynotify:access", "skynotify:mails:read"]), ["/", "/mail-tasks", "/mail-approvals"]);
   });
 
   it("shows every section to someone with every read role, in a fixed order", () => {
     assert.deepEqual(
-      hrefs(["skymail:mails:read", "skymail:lists:read", "skymail:templates:read", "skymail:access"]),
+      hrefs(["skynotify:mails:read", "skynotify:lists:read", "skynotify:templates:read", "skynotify:access"]),
       ["/", "/mail-tasks/create", "/templates", "/mailing-lists", "/mail-tasks", "/mail-approvals"],
     );
   });
@@ -32,28 +32,28 @@ describe("the menu", () => {
   // A team leader holds access and templates:read only (ALGOLAB today): the
   // menu itself leads to the send form, not only the mail approvals' button.
   it("offers the send form to whoever may compose one, templates:read", () => {
-    assert.ok(hrefs(["skymail:access", "skymail:templates:read"]).includes("/mail-tasks/create"));
-    assert.ok(!hrefs(["skymail:access"]).includes("/mail-tasks/create"));
-    assert.ok(!hrefs(["skymail:access", "skymail:mails:write"]).includes("/mail-tasks/create"));
+    assert.ok(hrefs(["skynotify:access", "skynotify:templates:read"]).includes("/mail-tasks/create"));
+    assert.ok(!hrefs(["skynotify:access"]).includes("/mail-tasks/create"));
+    assert.ok(!hrefs(["skynotify:access", "skynotify:mails:write"]).includes("/mail-tasks/create"));
   });
 
   it("does not count a write role as permission to read the list", () => {
-    assert.deepEqual(hrefs(["skymail:access", "skymail:templates:write", "skymail:mails:send"]), ["/", "/mail-approvals"]);
+    assert.deepEqual(hrefs(["skynotify:access", "skynotify:templates:write", "skynotify:mails:send"]), ["/", "/mail-approvals"]);
   });
 
-  it("is empty without skymail:access, whatever else the token carries", () => {
-    assert.deepEqual(hrefs(["skymail:templates:read", "skymail:lists:read"]), []);
-    assert.equal(hasAccess(["skymail:templates:read"]), false);
-    assert.equal(hasAccess(["skymail:access"]), true);
+  it("is empty without skynotify:access, whatever else the token carries", () => {
+    assert.deepEqual(hrefs(["skynotify:templates:read", "skynotify:lists:read"]), []);
+    assert.equal(hasAccess(["skynotify:templates:read"]), false);
+    assert.equal(hasAccess(["skynotify:access"]), true);
   });
 
   it("labels the sections in Turkish", () => {
     assert.deepEqual(
       visibleNavigation([
-        "skymail:access",
-        "skymail:templates:read",
-        "skymail:lists:read",
-        "skymail:mails:read",
+        "skynotify:access",
+        "skynotify:templates:read",
+        "skynotify:lists:read",
+        "skynotify:mails:read",
       ]).map((item) => item.label),
       ["Ana sayfa", "Yeni gönderim", "Mail template'ler", "Mail listeleri", "Gönderimler", "Mail onayları"],
     );
@@ -61,24 +61,24 @@ describe("the menu", () => {
     assert.equal(sectionLabel("/mail-approvals"), "Mail onayları");
   });
 
-  // GET /suppressions takes either role (skymail-backend main.go).
+  // GET /suppressions takes either role (skynotify-backend main.go).
   it("shows the suppression list to one who may remove a bounce or reverse an unsubscribe", () => {
-    assert.ok(!hrefs(["skymail:access", "skymail:mails:read"]).includes("/suppressions"));
-    assert.ok(hrefs(["skymail:access", "skymail:unsubscribes:reactivate"]).includes("/suppressions"));
-    assert.ok(hrefs(["skymail:access", "skymail:suppressions:manage"]).includes("/suppressions"));
-    assert.ok(!hrefs(["skymail:suppressions:manage"]).includes("/suppressions"));
-    assert.deepEqual(requiredRolesFor("/suppressions"), ["skymail:suppressions:manage", "skymail:unsubscribes:reactivate"]);
+    assert.ok(!hrefs(["skynotify:access", "skynotify:mails:read"]).includes("/suppressions"));
+    assert.ok(hrefs(["skynotify:access", "skynotify:unsubscribes:reactivate"]).includes("/suppressions"));
+    assert.ok(hrefs(["skynotify:access", "skynotify:suppressions:manage"]).includes("/suppressions"));
+    assert.ok(!hrefs(["skynotify:suppressions:manage"]).includes("/suppressions"));
+    assert.deepEqual(requiredRolesFor("/suppressions"), ["skynotify:suppressions:manage", "skynotify:unsubscribes:reactivate"]);
   });
 });
 
 describe("a page opened by its address", () => {
   // Any one of the roles opens it.
   it("needs the read role of the section it belongs to", () => {
-    assert.deepEqual(requiredRolesFor("/templates"), ["skymail:templates:read"]);
-    assert.deepEqual(requiredRolesFor("/templates/edit/123"), ["skymail:templates:read"]);
-    assert.deepEqual(requiredRolesFor("/mailing-lists/show/abc"), ["skymail:lists:read"]);
-    assert.deepEqual(requiredRolesFor("/mail-tasks/show/abc"), ["skymail:mails:read"]);
-    assert.deepEqual(requiredRolesFor("/mail-tasks"), ["skymail:mails:read"]);
+    assert.deepEqual(requiredRolesFor("/templates"), ["skynotify:templates:read"]);
+    assert.deepEqual(requiredRolesFor("/templates/edit/123"), ["skynotify:templates:read"]);
+    assert.deepEqual(requiredRolesFor("/mailing-lists/show/abc"), ["skynotify:lists:read"]);
+    assert.deepEqual(requiredRolesFor("/mail-tasks/show/abc"), ["skynotify:mails:read"]);
+    assert.deepEqual(requiredRolesFor("/mail-tasks"), ["skynotify:mails:read"]);
   });
 
   // The send form submits for approval what the viewer may not send
@@ -160,8 +160,8 @@ describe("the home screen once the token is checked", () => {
 });
 
 describe("an approver", () => {
-  it("holds skymail:mails:approve, apart from sending, with access", () => {
-    assert.equal(ROLE.mailsApprove, "skymail:mails:approve");
+  it("holds skynotify:mails:approve, apart from sending, with access", () => {
+    assert.equal(ROLE.mailsApprove, "skynotify:mails:approve");
     assert.equal(isApprover([ROLE.access, ROLE.mailsApprove]), true);
     assert.equal(isApprover([ROLE.access, ROLE.mailsWrite, ROLE.mailsSend]), false);
     assert.equal(isApprover([ROLE.mailsApprove]), false);
@@ -177,10 +177,10 @@ describe("any of some roles", () => {
   });
 });
 
-// A Leader without skymail:access (ekip-postasi 06): SkyMail's team chain
+// A Leader without skynotify:access (ekip-postasi 06): SkyNotify's team chain
 // answers them only for Team mail, the free announcement and their requests.
 describe("the team seat", () => {
-  it("shows the home screen, the send form and the mail approvals, whatever other SkyMail role the token carries", () => {
+  it("shows the home screen, the send form and the mail approvals, whatever other SkyNotify role the token carries", () => {
     const seat = (roles: string[]) => visibleNavigation(roles, { teamSeat: true }).map((item) => item.href);
     assert.deepEqual(seat([]), ["/", "/mail-tasks/create", "/mail-approvals"]);
     assert.deepEqual(seat([ROLE.mailsApprove, ROLE.listsRead]), ["/", "/mail-tasks/create", "/mail-approvals"]);

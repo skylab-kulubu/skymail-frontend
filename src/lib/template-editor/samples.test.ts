@@ -92,9 +92,9 @@ describe("what the operator typed, kept for the next visit", () => {
     assert.doesNotThrow(() => writeTypedSamples(blocked, "template-1", { FirstName: "Zeynep" }));
     assert.deepEqual(readTypedSamples(blocked, "template-1"), {});
     const odd = memory();
-    odd.setItem("skymail.template-samples.template-1", '{"FirstName": 5, "x": "y"}');
+    odd.setItem("skynotify.template-samples.template-1", '{"FirstName": 5, "x": "y"}');
     assert.deepEqual(readTypedSamples(odd, "template-1"), { x: "y" });
-    odd.setItem("skymail.template-samples.template-1", "not json");
+    odd.setItem("skynotify.template-samples.template-1", "not json");
     assert.deepEqual(readTypedSamples(odd, "template-1"), {});
   });
 });

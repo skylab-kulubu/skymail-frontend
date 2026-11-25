@@ -1,9 +1,9 @@
 /**
  * Which product each template speaks for, and how its footer credits it
- * (Yusuf, 2026-10-13). Every mail ends with SkyMail's line, since SkyMail
+ * (Yusuf, 2026-10-13). Every mail ends with SkyNotify's line, since SkyNotify
  * sends them all; e-skylab's (the account product) and Forms' mails have
- * their own line above it. SkyMail's own mails and the club's have only
- * SkyMail's: SKY LAB is the club, not a product.
+ * their own line above it. SkyNotify's own mails and the club's have only
+ * SkyNotify's: SKY LAB is the club, not a product.
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
@@ -63,12 +63,12 @@ const BRAND_OF: Record<string, Brand> = {
 };
 
 /** The name beside the logo, and the footer's credit lines, last one last. */
-const SKYMAIL_LINE = "SkyMail by WEBLAB Developed by Enes Genç";
+const SKYNOTIFY_LINE = "SkyNotify by WEBLAB Developed by Enes Genç";
 const SIGNED: Record<Brand, { name: string; credits: string[] }> = {
-  account: { name: "e-skylab", credits: ["e-skylab by WEBLAB Developed by Yusuf Açmacı", SKYMAIL_LINE] },
-  forms: { name: "SKY LAB Forms", credits: ["SKY LAB Forms by WEBLAB Developed by Fatih Naz", SKYMAIL_LINE] },
-  mail: { name: "SKY LAB İletişim", credits: [SKYMAIL_LINE] },
-  skylab: { name: "SKY LAB", credits: [SKYMAIL_LINE] },
+  account: { name: "e-skylab", credits: ["e-skylab by WEBLAB Developed by Yusuf Açmacı", SKYNOTIFY_LINE] },
+  forms: { name: "SKY LAB Forms", credits: ["SKY LAB Forms by WEBLAB Developed by Fatih Naz", SKYNOTIFY_LINE] },
+  mail: { name: "SkyNotify", credits: [SKYNOTIFY_LINE] },
+  skylab: { name: "SKY LAB", credits: [SKYNOTIFY_LINE] },
 };
 
 /** Where each credit links. */
@@ -109,7 +109,7 @@ describe("the product each template speaks for", () => {
           assert.match(rendered.html, new RegExp(`<a[^>]*href="${href}"[^>]*>\\s*${credit.replaceAll(" ", "\\s+")}\\s*</a`), `${meta.key}: "${credit}" is not linked`);
         }
       }
-      assert.ok(!/SKY LAB (Mail |İletişim )?by WEBLAB/.test(rendered.plainText), `${meta.key}: a club or SKY LAB İletişim product line`);
+      assert.ok(!/SKY LAB (Mail |İletişim |SkyNotify )?by WEBLAB/.test(rendered.plainText), `${meta.key}: a club or SKY LAB product line`);
       assert.ok(!rendered.plainText.includes("SKY LAB Hesap"), `${meta.key}: still names "SKY LAB Hesap"`);
     });
   }
@@ -117,7 +117,7 @@ describe("the product each template speaks for", () => {
 
 /**
  * The footer's link to the Account center's communication preferences
- * (skymail-backend bounce ticket 11): every mail but the account mails, which
+ * (skynotify-backend bounce ticket 11): every mail but the account mails, which
  * go whatever the preferences say, beside "Sorun bildir" and the KVKK link.
  */
 const PREFERENCES = "https://my.yildizskylab.com/communication-preferences";
@@ -137,13 +137,13 @@ describe("the footer's communication preferences link", () => {
 });
 
 /**
- * The footer's "Abonelikten çık" (abonelik-cikisi 05; ADR 0072): SkyMail
+ * The footer's "Abonelikten çık" (abonelik-cikisi 05; ADR 0072): SkyNotify
  * gives a mail of the duyuru stream the recipient's own unsubscribe link as
  * .UnsubscribeUrl, and no other mail any. Every footer but the account mails'
  * shows it, before "İletişim tercihleri", only when it is set: an empty one
  * leaves the footer as it was.
  */
-const UNSUBSCRIBE = "https://api.yildizskylab.com/api/skymail/u/ornek";
+const UNSUBSCRIBE = "https://api.yildizskylab.com/api/skynotify/u/ornek";
 
 describe("the footer's unsubscribe link", () => {
   for (const { meta, Component } of templates) {

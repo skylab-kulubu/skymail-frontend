@@ -46,11 +46,11 @@ test("each response has a nonce of its own", async ({ page, signIn }) => {
   expect(first).not.toBe(second);
 });
 
-test("the template editor, Monaco and the mail preview run under it", async ({ page, skymail, signIn }) => {
+test("the template editor, Monaco and the mail preview run under it", async ({ page, skynotify, signIn }) => {
   const blocked = violations(page);
   await signIn("writer");
   const html = `<!DOCTYPE html><html><head><style>.boyali { color: rgb(255, 0, 0); }</style></head><body><p class="boyali">stilli metin</p><img alt="logo" src="data:image/gif;base64,R0lGODlhAQABAAAAACw="></body></html>`;
-  const { id } = skymail.addTemplate({
+  const { id } = skynotify.addTemplate({
     name: "Stilli gövde",
     subject: "Merhaba",
     mainMode: "html",

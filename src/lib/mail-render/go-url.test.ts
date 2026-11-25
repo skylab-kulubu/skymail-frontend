@@ -7,7 +7,7 @@
  *
  * The expected outputs were recorded from Go 1.25.5 net/url (url.Parse, then
  * String(); null where Parse returned an error) on 2026-09-23, the Go that
- * skymail-backend builds with.
+ * skynotify-backend builds with.
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";

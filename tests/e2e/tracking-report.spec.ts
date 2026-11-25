@@ -1,13 +1,13 @@
 /**
  * A tracked send's "Açılma ve tıklama" section (hub ticket iletisim-servisi
- * 15b) against the mock of skymail-backend's read routes (14b): the counts,
+ * 15b) against the mock of skynotify-backend's read routes (14b): the counts,
  * the series and its table, the links; the recipients one by one only for
- * skymail:mails:tracking:read or the send's own sender (anyone else's page
+ * skynotify:mails:tracking:read or the send's own sender (anyone else's page
  * never asks for them); a year-old send's kept totals; and no section at all
  * for a send that was not tracked. Every person here is made up.
  */
 import { expect, test } from "./fixtures";
-import type { MockSkymail, TrackingFixture } from "./fixtures/mock-api";
+import type { MockSkyNotify, TrackingFixture } from "./fixtures/mock-api";
 
 const SOMEONE_ELSE = "0c9e4f6a-1b2d-4c3e-8f7a-9d0e1f2a3b4c";
 
@@ -72,20 +72,20 @@ const TRACKED: TrackingFixture = {
   ],
 };
 
-function trackedSend(skymail: MockSkymail, { sentBy = SOMEONE_ELSE, fixture = TRACKED }: { sentBy?: string; fixture?: TrackingFixture } = {}) {
-  const { id: templateId } = skymail.addTemplate({ name: "Ekim bülteni", subject: "Ekim", mainMode: "html", html: "<p>…</p>", htmlContent: "<p>Ekim</p>", plainText: "Ekim" });
-  const listId = skymail.addList({
+function trackedSend(skynotify: MockSkyNotify, { sentBy = SOMEONE_ELSE, fixture = TRACKED }: { sentBy?: string; fixture?: TrackingFixture } = {}) {
+  const { id: templateId } = skynotify.addTemplate({ name: "Ekim bülteni", subject: "Ekim", mainMode: "html", html: "<p>…</p>", htmlContent: "<p>Ekim</p>", plainText: "Ekim" });
+  const listId = skynotify.addList({
     name: "Deneme listesi",
     recipients: fixture.recipients.map((recipient) => ({ full_name: recipient.recipient_full_name, email: String(recipient.recipient_email) })),
   });
-  const id = skymail.addSend({ templateId, listId, sentBy });
-  skymail.trackSend(id, fixture);
+  const id = skynotify.addSend({ templateId, listId, sentBy });
+  skynotify.trackSend(id, fixture);
   return id;
 }
 
-test("a tracking reader sees the counts, the series as a table, the links and every recipient with their marks", async ({ page, skymail, signIn }) => {
+test("a tracking reader sees the counts, the series as a table, the links and every recipient with their marks", async ({ page, skynotify, signIn }) => {
   await signIn("trackingReader");
-  const id = trackedSend(skymail);
+  const id = trackedSend(skynotify);
   await page.goto(`/mail-tasks/show/${id}`);
 
   const section = page.getByRole("region", { name: "Açılma ve tıklama" });
@@ -117,26 +117,26 @@ test("a tracking reader sees the counts, the series as a table, the links and ev
 
   await section.getByRole("group", { name: "Gösterilen kişiler" }).getByRole("button", { name: /^Tıkladı/ }).click();
   await expect(people.getByRole("row")).toHaveCount(2);
-  expect(skymail.trackingRecipientRequests().length).toBeGreaterThanOrEqual(2);
+  expect(skynotify.trackingRecipientRequests().length).toBeGreaterThanOrEqual(2);
 
   await expect(page.locator("body")).not.toContainText(/\b(okudu|okumadı|okundu|okunmadı)/i);
 });
 
-test("someone who reads sends but neither holds the role nor sent this one gets the counts, and the page never asks for the people", async ({ page, skymail, signIn }) => {
+test("someone who reads sends but neither holds the role nor sent this one gets the counts, and the page never asks for the people", async ({ page, skynotify, signIn }) => {
   await signIn("watcher");
-  const id = trackedSend(skymail);
+  const id = trackedSend(skynotify);
   await page.goto(`/mail-tasks/show/${id}`);
 
   const section = page.getByRole("region", { name: "Açılma ve tıklama" });
   await expect(section.locator("[data-slot=stat-card]").filter({ hasText: "Tıklayan" })).toContainText("1");
   await expect(section.getByRole("heading", { name: "Kişiler", exact: true })).toHaveCount(0);
   await expect(section.getByText("Deneme Bir")).toHaveCount(0);
-  expect(skymail.trackingRecipientRequests()).toHaveLength(0);
+  expect(skynotify.trackingRecipientRequests()).toHaveLength(0);
 });
 
-test("the send's own sender sees its recipients without the role", async ({ page, skymail, signIn }) => {
+test("the send's own sender sees its recipients without the role", async ({ page, skynotify, signIn }) => {
   await signIn("watcher");
-  const id = trackedSend(skymail, { sentBy: "8d0f5c2e-6b1a-4c3e-9f27-5a1d3b7e9c41" });
+  const id = trackedSend(skynotify, { sentBy: "8d0f5c2e-6b1a-4c3e-9f27-5a1d3b7e9c41" });
   await page.goto(`/mail-tasks/show/${id}`);
 
   const section = page.getByRole("region", { name: "Açılma ve tıklama" });
@@ -144,28 +144,28 @@ test("the send's own sender sees its recipients without the role", async ({ page
   await expect(section.getByRole("row", { name: /Deneme Bir/ })).toBeVisible();
 });
 
-test("a year after the last mail only the kept totals remain, and nobody is asked for", async ({ page, skymail, signIn }) => {
+test("a year after the last mail only the kept totals remain, and nobody is asked for", async ({ page, skynotify, signIn }) => {
   await signIn("trackingReader");
   // Kept totals carry no series and no automatic-only count.
   const kept = { ...REPORT, series: undefined, automated_only_recipients: undefined };
-  const id = trackedSend(skymail, { fixture: { summary: { retained: true, report: kept }, recipients: TRACKED.recipients } });
+  const id = trackedSend(skynotify, { fixture: { summary: { retained: true, report: kept }, recipients: TRACKED.recipients } });
   await page.goto(`/mail-tasks/show/${id}`);
 
   const section = page.getByRole("region", { name: "Açılma ve tıklama" });
   await expect(section.getByText(/Kişi bazında kayıt 1 yıl sonra silindi\./)).toBeVisible();
   await expect(section.locator("[data-slot=stat-card]").filter({ has: page.getByText("Takip edilen", { exact: true }) })).toContainText("3");
   await expect(section.getByText("Zaman içinde")).toHaveCount(0);
-  expect(skymail.trackingRecipientRequests()).toHaveLength(0);
+  expect(skynotify.trackingRecipientRequests()).toHaveLength(0);
 });
 
-test("a send that was not tracked has no section and asks for nothing of it", async ({ page, skymail, signIn }) => {
+test("a send that was not tracked has no section and asks for nothing of it", async ({ page, skynotify, signIn }) => {
   await signIn("trackingReader");
-  const { id: templateId } = skymail.addTemplate({ name: "Ekim bülteni", subject: "Ekim", mainMode: "html", html: "<p>…</p>", htmlContent: "<p>Ekim</p>", plainText: "Ekim" });
-  const listId = skymail.addList({ name: "Deneme listesi", recipients: [{ full_name: "Deneme Bir", email: "deneme.bir@example.test" }] });
-  const id = skymail.addSend({ templateId, listId });
+  const { id: templateId } = skynotify.addTemplate({ name: "Ekim bülteni", subject: "Ekim", mainMode: "html", html: "<p>…</p>", htmlContent: "<p>Ekim</p>", plainText: "Ekim" });
+  const listId = skynotify.addList({ name: "Deneme listesi", recipients: [{ full_name: "Deneme Bir", email: "deneme.bir@example.test" }] });
+  const id = skynotify.addSend({ templateId, listId });
   await page.goto(`/mail-tasks/show/${id}`);
 
   await expect(page.getByRole("region", { name: "Alıcılar" })).toBeVisible();
   await expect(page.getByRole("region", { name: "Açılma ve tıklama" })).toHaveCount(0);
-  expect(skymail.requests.filter((request) => request.path.includes("/tracking"))).toHaveLength(0);
+  expect(skynotify.requests.filter((request) => request.path.includes("/tracking"))).toHaveLength(0);
 });

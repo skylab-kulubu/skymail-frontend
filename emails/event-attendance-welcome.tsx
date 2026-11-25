@@ -12,7 +12,7 @@ export const meta: TemplateMeta = {
   contentSensitive: false,
   brand: "skylab",
   trigger:
-    "core-backend, kişinin o günkü ilk okutmasında (o günün Venue entry'si yazılınca: kapıda okutma, masa ya da girişsiz alınan oturum yoklaması), yazıldıktan 2 dakika sonra, günde bir kez; çok günlü etkinlikte her gün (ATTENDANCE_MAIL=on, SKYMAIL_ATTENDANCE_WELCOME_TEMPLATE_KEY, etkinliğin attendanceWelcomeMail anahtarı; docs/attendance-mail.md). İşlem postası, kişi kapatamaz. Aynı biletin 2 dakika içindeki oturum yoklamaları bu postaya katılır (Recorded dolu gelir). Üyeye bildirim olarak (POST /v1/notifications: kutu + e-posta), misafire yalnız bu e-posta (POST /v1/mail_tasks/single). Her değişken her zaman gelir, boş olabilir. AttendeeNote düzenleyenin mekan/Wi-Fi notudur, yalnız bu postada görünür, kutuya girmez.",
+    "core-backend, kişinin o günkü ilk okutmasında (o günün Venue entry'si yazılınca: kapıda okutma, masa ya da girişsiz alınan oturum yoklaması), yazıldıktan 2 dakika sonra, günde bir kez; çok günlü etkinlikte her gün (ATTENDANCE_MAIL=on, SKYNOTIFY_ATTENDANCE_WELCOME_TEMPLATE_KEY, etkinliğin attendanceWelcomeMail anahtarı; docs/attendance-mail.md). İşlem postası, kişi kapatamaz. Aynı biletin 2 dakika içindeki oturum yoklamaları bu postaya katılır (Recorded dolu gelir). Üyeye bildirim olarak (POST /v1/notifications: kutu + e-posta), misafire yalnız bu e-posta (POST /v1/mail_tasks/single). Her değişken her zaman gelir, boş olabilir. AttendeeNote düzenleyenin mekan/Wi-Fi notudur, yalnız bu postada görünür, kutuya girmez.",
   // core-backend kapi-postalari 04 (SPEC §5.2). Program: [{Time, Title}];
   // AttendeeNoteParts: [{Text, Url}], the note cut at its http(s) addresses,
   // Url empty for plain text (the note's links, Yusuf 2026-11-24);

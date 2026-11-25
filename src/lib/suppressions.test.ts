@@ -84,7 +84,7 @@ describe("reversing an unsubscribe", () => {
     const refusal = (status: number, code: string) => reactivateRefusal(apiErrorFromResponse(status, JSON.stringify({ code })));
     assert.deepEqual(refusal(400, "suppression.reason_required"), { text: "Gerekçe tek satır ve 10–500 karakter olmalı.", reload: false });
     assert.deepEqual(refusal(400, "suppression.reason_has_address"), { text: "Gerekçeye adres yazma.", reload: false });
-    assert.deepEqual(refusal(403, "server.forbidden"), { text: "Geri alma yetkin yok (skymail:unsubscribes:reactivate).", reload: false });
+    assert.deepEqual(refusal(403, "server.forbidden"), { text: "Geri alma yetkin yok (skynotify:unsubscribes:reactivate).", reload: false });
     assert.deepEqual(refusal(409, "suppression.use_delete"), { text: "Bu kayıt kalıcı ret; geri alınmaz, kaldırılır.", reload: true });
     assert.equal(refusal(404, "server.not_found").reload, true);
   });
@@ -120,7 +120,7 @@ describe("removing a bounce", () => {
 
   it("says the backend's 403, 404 and 409 in words", () => {
     const refusal = (status: number, code: string) => removeRefusal(apiErrorFromResponse(status, JSON.stringify({ code })));
-    assert.deepEqual(refusal(403, "server.forbidden"), { text: "Kaldırma yetkin yok (skymail:suppressions:manage).", reload: false });
+    assert.deepEqual(refusal(403, "server.forbidden"), { text: "Kaldırma yetkin yok (skynotify:suppressions:manage).", reload: false });
     assert.deepEqual(refusal(404, "server.not_found"), { text: "Kayıt artık listede yok.", reload: true });
     assert.deepEqual(refusal(409, "suppression.use_reactivate"), { text: "Bu kayıt abonelikten çıkış; kaldırılmaz, geri alınır.", reload: true });
   });
@@ -178,7 +178,7 @@ describe("what each viewer may do on the list", () => {
     { reason: "unsubscribed", source: "link", reason_code: null },
   ];
 
-  // skymail-backend main.go: DELETE needs manage, a bounce only (409 otherwise);
+  // skynotify-backend main.go: DELETE needs manage, a bounce only (409 otherwise);
   // POST reactivate needs reactivate, an unsubscribe only. Source and code never decide.
   it("offers Kaldır only on a bounce to manage, Geri al only on an unsubscribe to reactivate", () => {
     for (const can of ROLES) {

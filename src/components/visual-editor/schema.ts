@@ -212,7 +212,7 @@ export const BLOCK_NODES: Readonly<Record<Exclude<VisualBlockType, "paragraph" |
  * pasted in. A heading stays one line.
  */
 /**
- * A link's notrack (VisualMark): kept as data-skymail-notrack, so a link
+ * A link's notrack (VisualMark): kept as data-skynotify-notrack, so a link
  * copied within the editor, or pasted from a body that had it, keeps it.
  * Only where the body may say it (VisualAllowance noTrackLinks).
  */

@@ -1678,7 +1678,7 @@
     ]
   },
   "ops.send-failed": {
-    "subject": "SkyMail gönderiminde hata",
+    "subject": "SkyNotify gönderiminde hata",
     "system": false,
     "contentSensitive": false,
     "variables": [

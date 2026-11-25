@@ -1,5 +1,5 @@
 /**
- * What the home screen, the send list and a send make of skymail-backend's
+ * What the home screen, the send list and a send make of skynotify-backend's
  * answers (`GET /mail_tasks/summary`, `GET /mail_tasks?status=`,
  * `GET /mail_tasks/:id` and its `/queue?status=`). The numbers on the home
  * screen count different things — mails to one recipient, sends — so these
@@ -111,7 +111,7 @@ describe("the home screen's tiles", () => {
   });
 });
 
-// MAIL_SENDER=paused (skymail-backend ticket 28): sends are queued and none goes out.
+// MAIL_SENDER=paused (skynotify-backend ticket 28): sends are queued and none goes out.
 describe("a paused sender", () => {
   /** A summary as it comes over the wire with no `sender_paused` at all. */
   const withoutPausedField = (): SendSummary => {
@@ -424,7 +424,7 @@ describe("a send's recipients", () => {
     assert.deepEqual(recipientSummary({ pending: 0, processing: 0, sent: 0, failed: 0 }), { total: 0, parts: [] });
   });
 
-  // skymail-backend QueueTotals (skymail-bounce-isleme 08): undelivered is in
+  // skynotify-backend QueueTotals (skymail-bounce-isleme 08): undelivered is in
   // sent, suppressed in failed, suppressed_but_sent in its status.
   it("say what the suppression list did to them, when it did anything", () => {
     const counts = { pending: 0, processing: 0, sent: 10, failed: 3 };
@@ -437,7 +437,7 @@ describe("a send's recipients", () => {
     assert.deepEqual(deliveryNotes(counts), []);
   });
 
-  // skymail-backend encodes a queue row's status as sqlc's NullMailQueueStatus.
+  // skynotify-backend encodes a queue row's status as sqlc's NullMailQueueStatus.
   it("each have the status in status.mail_queue_status", () => {
     assert.equal(recipientStatus({ mail_queue_status: "failed", valid: true }), "failed");
     assert.equal(recipientStatus({ mail_queue_status: "processing", valid: true }), "processing");

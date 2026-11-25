@@ -15,14 +15,14 @@ import { ERASED_PERSON, ERASED_SUBJECT } from "./people";
 const SEND = "3f1c2b4a-1d2e-4f5a-8b9c-0d1e2f3a4b5c";
 
 describe("who reads who opened masked content", () => {
-  it("is the audit role, with SkyMail's access", () => {
+  it("is the audit role, with SkyNotify's access", () => {
     assert.equal(readsContentViews([ROLE.access, ROLE.auditRead]), true);
     assert.equal(readsContentViews([ROLE.auditRead]), false);
   });
 
   it("is not a role that opens the content", () => {
     // Those audited do not read their own record (Yusuf, 2026-11-22).
-    assert.equal(readsContentViews([ROLE.access, ROLE.mailsRead, ROLE.mailsWrite, ROLE.mailsTrackingRead, "skymail:system-mails:read"]), false);
+    assert.equal(readsContentViews([ROLE.access, ROLE.mailsRead, ROLE.mailsWrite, ROLE.mailsTrackingRead, "skynotify:system-mails:read"]), false);
   });
 });
 

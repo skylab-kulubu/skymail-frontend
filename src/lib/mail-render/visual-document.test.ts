@@ -47,7 +47,7 @@ function problemsOf(value: unknown): string[] {
 }
 
 /** EVERY_BLOCK with its blocks replaced. */
-const withBlocks = (blocks: unknown[]) => ({ type: "skymail.visual", version: 1, blocks });
+const withBlocks = (blocks: unknown[]) => ({ type: "skynotify.visual", version: 1, blocks });
 
 describe("a Visual document", () => {
   it("reads back as the same document, whatever order jsonb keeps its keys in", () => {
@@ -88,14 +88,14 @@ describe("a Visual document", () => {
     const parsed = parseVisualSource(EMPTY_VISUAL_SOURCE);
 
     assert.ok(parsed.ok);
-    assert.deepEqual(parsed.document, { type: "skymail.visual", version: 1, blocks: [] });
+    assert.deepEqual(parsed.document, { type: "skynotify.visual", version: 1, blocks: [] });
   });
 
   it("lists the variables it uses: inline, as a button's link and as a condition, nested ones too", () => {
     assert.deepEqual(visualDocumentVariables(EVERY_BLOCK), ["FirstName", "TeamName", "TicketUrl", "Venue"]);
     assert.deepEqual(
       visualDocumentVariables({
-        type: "skymail.visual",
+        type: "skynotify.visual",
         version: 1,
         blocks: [
           {
@@ -114,9 +114,9 @@ describe("a Visual document", () => {
 describe("a Visual document that is refused", () => {
   const refused: { name: string; value: unknown; says: RegExp }[] = [
     { name: "something that is not an object", value: [], says: /belge/ },
-    { name: "a document of another kind", value: { type: "doc", version: 1, blocks: [] }, says: /skymail\.visual/ },
-    { name: "a version this panel does not read", value: { type: "skymail.visual", version: 3, blocks: [] }, says: /sürüm 3.*1\. ve 2\./ },
-    { name: "a field the model does not have", value: { type: "skymail.visual", version: 1, blocks: [], theme: "dark" }, says: /theme/ },
+    { name: "a document of another kind", value: { type: "doc", version: 1, blocks: [] }, says: /skynotify\.visual/ },
+    { name: "a version this panel does not read", value: { type: "skynotify.visual", version: 3, blocks: [] }, says: /sürüm 3.*1\. ve 2\./ },
+    { name: "a field the model does not have", value: { type: "skynotify.visual", version: 1, blocks: [], theme: "dark" }, says: /theme/ },
     { name: "an unknown block", value: withBlocks([{ type: "quote", content: [] }]), says: /blocks\[0\].*"quote"/ },
     {
       name: "an unknown mark",
@@ -422,7 +422,7 @@ describe("a link marked not to be counted", () => {
 // footer's first line. It came with version 2, and only a document that has
 // one is written as 2, so a document saved before stays the same text.
 describe("a Visual document's reason", () => {
-  const withReason = (reason: unknown, blocks: unknown[] = []) => ({ type: "skymail.visual", version: 2, blocks, reason });
+  const withReason = (reason: unknown, blocks: unknown[] = []) => ({ type: "skynotify.visual", version: 2, blocks, reason });
   const reasonProblems = (value: unknown, allowance?: VisualAllowance) => {
     const read = readVisualDocument(value, allowance);
     assert.ok(!read.ok, "belge kabul edildi");
@@ -437,14 +437,14 @@ describe("a Visual document's reason", () => {
     assert.equal(read.document.reason, sentence);
     assert.equal(
       visualSource(read.document),
-      JSON.stringify({ type: "skymail.visual", version: 2, blocks: [{ type: "paragraph", content: [{ type: "text", text: "a" }] }], reason: sentence }),
+      JSON.stringify({ type: "skynotify.visual", version: 2, blocks: [{ type: "paragraph", content: [{ type: "text", text: "a" }] }], reason: sentence }),
     );
   });
 
   it("makes a document version 2, and its absence keeps it version 1", () => {
-    assert.deepEqual(buildVisual.document([], "Neden."), { type: "skymail.visual", version: 2, blocks: [], reason: "Neden." });
-    assert.deepEqual(buildVisual.document([]), { type: "skymail.visual", version: 1, blocks: [] });
-    assert.equal(EMPTY_VISUAL_SOURCE, '{"type":"skymail.visual","version":1,"blocks":[]}');
+    assert.deepEqual(buildVisual.document([], "Neden."), { type: "skynotify.visual", version: 2, blocks: [], reason: "Neden." });
+    assert.deepEqual(buildVisual.document([]), { type: "skynotify.visual", version: 1, blocks: [] });
+    assert.equal(EMPTY_VISUAL_SOURCE, '{"type":"skynotify.visual","version":1,"blocks":[]}');
   });
 
   it("may be as long as the limit, counted in characters", () => {
@@ -470,8 +470,8 @@ describe("a Visual document's reason", () => {
   }
 
   it("is required in version 2 and refused in version 1", () => {
-    assert.deepEqual(reasonProblems({ type: "skymail.visual", version: 2, blocks: [] }), ["reason: 2. sürüm belge bir neden taşır"]);
-    assert.deepEqual(reasonProblems({ type: "skymail.visual", version: 1, blocks: [], reason: "Neden." }), ['belge: bilinmeyen alan "reason"']);
+    assert.deepEqual(reasonProblems({ type: "skynotify.visual", version: 2, blocks: [] }), ["reason: 2. sürüm belge bir neden taşır"]);
+    assert.deepEqual(reasonProblems({ type: "skynotify.visual", version: 1, blocks: [], reason: "Neden." }), ['belge: bilinmeyen alan "reason"']);
   });
 
   it("is refused on a body that has no footer of its own: a free announcement", () => {

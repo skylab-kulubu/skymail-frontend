@@ -1,5 +1,5 @@
 /**
- * Every template SkyMail seeds, in one list.
+ * Every template SkyNotify seeds, in one list.
  *
  * An explicit registry rather than a glob: the folder also holds shared pieces
  * (theme, action-mail) that are not templates, and an accidental export should

@@ -15,7 +15,7 @@ function short(text: string | null): string {
 function ChangeLine({ change, fields, teamName }: { change: ApprovalChange; fields: readonly VariableField[]; teamName: TeamNames }) {
   if (change.field === 'template') return <li>Mail template&apos;in şimdi yayımlanmış sürümüne bağlandı.</li>;
   if (change.field === 'audience') {
-    // A Team request's Teams an approval took out (skymail-backend #128).
+    // A Team request's Teams an approval took out (skynotify-backend #128).
     const after = new Set(teamIdsIn(change.after).map((id) => id.toLowerCase()));
     const out = teamIdsIn(change.before).filter((id) => !after.has(id.toLowerCase()));
     return <li>{out.length > 0 ? `Gönderimden çıkarılan ekipler: ${namedTeams(out, teamName)}.` : 'Kitle değişti.'}</li>;

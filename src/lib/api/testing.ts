@@ -5,7 +5,7 @@
  */
 import { createApiClient, type ApiClient } from "./client";
 
-export const TEST_BASE_URL = "https://api.example.test/api/skymail/v1";
+export const TEST_BASE_URL = "https://api.example.test/api/skynotify/v1";
 
 export type RecordedCall = { url: string; method: string; headers: Headers; body: string | null };
 

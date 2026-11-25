@@ -1,6 +1,6 @@
 /**
  * Ekip postası on the send form (ekip-postasi 05): the Teams the viewer
- * leads as skymail-backend lists them, the ones a request goes to once a
+ * leads as skynotify-backend lists them, the ones a request goes to once a
  * Team above covers a Sub-team, and what the form says of them.
  */
 import assert from "node:assert/strict";

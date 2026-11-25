@@ -108,7 +108,7 @@ function ListDetail({ list }: { list: MailingList }) {
         </div>
         <div className="min-w-0 space-y-1">
           <dt className="text-2xs tracking-wider text-subtle-foreground uppercase">Kaynak</dt>
-          <dd className="text-sm text-secondary-foreground">{row.external ? 'Keycloak grubu' : 'SkyMail'}</dd>
+          <dd className="text-sm text-secondary-foreground">{row.external ? 'Keycloak grubu' : 'SkyNotify'}</dd>
         </div>
         {row.createdAt ? (
           <div className="min-w-0 space-y-1">
