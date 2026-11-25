@@ -1023,7 +1023,7 @@
   "event.changed": {
     "subject": "{{.EventName}} etkinliğinde değişiklik var",
     "system": false,
-    "contentSensitive": true,
+    "contentSensitive": false,
     "variables": [
       "EventId",
       "EventName",
@@ -1035,10 +1035,7 @@
       "TicketUrl"
     ],
     "requiredVariables": [],
-    "sensitiveVariables": [
-      "TicketCode",
-      "TicketUrl"
-    ],
+    "sensitiveVariables": [],
     "sampleKeys": [
       "ChangeSummary",
       "ChangedFields",

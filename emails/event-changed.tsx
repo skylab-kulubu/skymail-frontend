@@ -8,14 +8,13 @@ export const meta: TemplateMeta = {
   name: "Etkinlik · Ayrıntılar Değişti",
   subject: `${v("EventName")} etkinliğinde değişiklik var`,
   system: false,
-  // The Ticket's link is a bearer key: the content is masked, the rows stay readable.
-  contentSensitive: true,
+  contentSensitive: false,
   brand: "skylab",
   trigger:
     "core-backend, yayındaki ve bitmemiş bir etkinliğin adı, açıklaması, katılımcı notu, kontenjanı ya da bağlantıları değişince ve düzenleyen kaydederken \"Bilet sahiplerine bildir\" kutusunu işaretleyince (varsayılan işaretsiz), ilk değişiklikten 15 dakika sonra (aradaki değişiklikler tek bildirimde; geri alınan alan söylenmez), bileti olan herkese (EVENT_CHANGED_NOTIFICATION=on; docs/event-updated-notification.md#other-details). Aynı pencerede saat ya da yer de değiştiyse bu değil event.updated gider. Üyeye bildirim olarak (POST /v1/notifications: kutu + e-posta), konuğa yalnız bu e-posta. Değişen alanın metni postaya girmez: ChangedFields hangi alanların değiştiğini (\"açıklaması ve bağlantıları\"), ChangeSummary aynısını cümle olarak söyler. StartsAt ve Venue gönderim anındaki etkinliktir. TICKET_PAGE_URL açıkken core alıcının biletinden TicketUrl ve TicketCode da gönderir; kapalıyken göndermez ve satırları görünmez. EventId yalnız kutu bağlantısı içindir.",
   // core-backend internal/eventupdatenotify changedVars + withTicket (#443).
   variables: ["EventId", "EventName", "ChangedFields", "ChangeSummary", "StartsAt", "Venue", "TicketCode", "TicketUrl"],
-  sensitiveVariables: ["TicketCode", "TicketUrl"],
+  sensitiveVariables: [],
   notification: {
     category: null,
     required: true,

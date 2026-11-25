@@ -47,7 +47,7 @@ export default function EventDoorStaffAdded() {
 
       <Paragraph>
         {ifSet("FirstName")}Merhaba {v("FirstName")}, {end}
-        <Strong>{v("EventName")}</Strong> etkinliğine kapı görevlisi olarak eklendin. Biletleri panelin kapı sayfasından okutursun.
+        <Strong>{v("EventName")}</Strong> etkinliğine kapı görevlisi olarak eklendin. Biletleri panelin kapı sayfasından okutabilirsin.
       </Paragraph>
 
       <Rows>

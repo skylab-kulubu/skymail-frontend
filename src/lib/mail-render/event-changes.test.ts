@@ -106,8 +106,9 @@ describe("the details mail (event.changed)", () => {
   it("names the changed details and never their text", async () => {
     const { meta } = await rendered("event.changed");
     assert.equal(meta.notification?.inbox?.summary, "{{.ChangeSummary}}");
-    assert.deepEqual(meta.sensitiveVariables, ["TicketCode", "TicketUrl"]);
-    assert.ok(meta.contentSensitive);
+    // Yusuf, 2026-11-24 (ADR-0074 ek): no mask.
+    assert.deepEqual(meta.sensitiveVariables, []);
+    assert.equal(meta.contentSensitive, false);
     const mail = await received("event.changed");
     for (const body of [mail.html, mail.plainText]) {
       assert.match(body, /GECEKODU 2026 etkinliğinin açıklaması ve bağlantıları değişti\. Biletin geçerli\./);
@@ -144,7 +145,7 @@ describe("the door staff mail (event.door-staff-added)", () => {
     assert.equal(meta.notification?.inbox?.summary, "{{if .StartsAt}}{{.StartsAt}}{{if .Venue}} · {{end}}{{end}}{{.Venue}}");
     const mail = await received("event.door-staff-added");
     for (const body of [mail.html, mail.plainText]) {
-      assert.match(body, /Merhaba Ayşe, GECEKODU 2026 etkinliğine kapı görevlisi olarak eklendin\./);
+      assert.match(body, /Merhaba Ayşe, GECEKODU 2026 etkinliğine kapı görevlisi olarak eklendin\. Biletleri panelin kapı sayfasından okutabilirsin\./);
       assert.match(body, /Başlangıç\s+12\.04\.2026 10:00/);
       assert.match(body, /Bitiş\s+12\.04\.2026 18:00/);
       assert.match(body, /Yer\s+YTÜ Davutpaşa Kampüsü, D-Blok/);

@@ -41,7 +41,7 @@ zaman verdiği değişkenler kullanılır.
 | Etkinlik · Bilet Oluşturuldu 🙈 | `event.ticket-created` | {{.EventName}} biletin hazır | `EventName`, `EventDate`, `Venue`, `TicketQrUrl`, `TicketCode`, `TicketUrl`, `OwnerTeam`, `EventUrl` |
 | Etkinlik · Hatırlatma 🙈 | `event.reminder` | Yarın: {{.EventName}} | `EventId`, `EventName`, `StartsAt`, `Venue`, `OwnerTeam`, `TicketUrl`, `TicketQrUrl`, `TicketCode`, `MapUrl` |
 | Etkinlik · Güncellendi 🙈 | `event.updated` | {{.EventName}} etkinliğinde değişiklik var | `EventName`, `ChangeSummary`, `NewStartsAt`, `NewEndsAt`, `NewVenue`, `TicketQrUrl`, `TicketCode`, `TicketUrl`, `EventUrl` |
-| Etkinlik · Ayrıntılar Değişti 🙈 | `event.changed` | {{.EventName}} etkinliğinde değişiklik var | `EventId`, `EventName`, `ChangedFields`, `ChangeSummary`, `StartsAt`, `Venue`, `TicketCode`, `TicketUrl` |
+| Etkinlik · Ayrıntılar Değişti | `event.changed` | {{.EventName}} etkinliğinde değişiklik var | `EventId`, `EventName`, `ChangedFields`, `ChangeSummary`, `StartsAt`, `Venue`, `TicketCode`, `TicketUrl` |
 | Etkinlik · Bilet İptal Edildi | `event.ticket-cancelled` | {{.EventName}} biletin iptal edildi | `EventId`, `EventName`, `EventDate`, `OwnerTeam`, `CancelledBy`, `Reason` |
 | Etkinlik · Bekleme Listesi 🙈 | `event.waitlist-joined` | {{.EventName}}: bekleme listesindesin | `EventId`, `EventName`, `EventDate`, `Venue`, `OwnerTeam`, `TicketUrl` |
 | Etkinlik · Bekleme Listesinden Bilet 🙈 | `event.waitlist-promoted` | Yer açıldı: {{.EventName}} biletin hazır | `EventId`, `EventName`, `EventDate`, `Venue`, `TicketQrUrl`, `TicketCode`, `TicketUrl`, `OwnerTeam` |
