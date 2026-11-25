@@ -58,6 +58,7 @@ const LISTS: Record<string, string[]> = {
   "event.ticket-created": ["TicketCode", "TicketQrUrl", "TicketUrl"],
   "event.reminder": ["TicketCode", "TicketQrUrl", "TicketUrl"],
   "event.updated": ["TicketCode", "TicketQrUrl", "TicketUrl"],
+  "event.changed": ["TicketCode", "TicketUrl"],
   "event.waitlist-joined": ["TicketUrl"],
   "event.attendance-welcome": [],
   "event.waitlist-promoted": ["TicketCode", "TicketQrUrl", "TicketUrl"],

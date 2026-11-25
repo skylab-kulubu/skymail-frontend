@@ -1020,6 +1020,60 @@
       "{{if not .TicketQrUrl}}"
     ]
   },
+  "event.changed": {
+    "subject": "{{.EventName}} etkinliğinde değişiklik var",
+    "system": false,
+    "contentSensitive": true,
+    "variables": [
+      "EventId",
+      "EventName",
+      "ChangedFields",
+      "ChangeSummary",
+      "StartsAt",
+      "Venue",
+      "TicketCode",
+      "TicketUrl"
+    ],
+    "requiredVariables": [],
+    "sensitiveVariables": [
+      "TicketCode",
+      "TicketUrl"
+    ],
+    "sampleKeys": [
+      "ChangeSummary",
+      "ChangedFields",
+      "EventId",
+      "EventName",
+      "StartsAt",
+      "TicketCode",
+      "TicketUrl",
+      "Venue"
+    ],
+    "referenced": [
+      "ChangedFields",
+      "EventName",
+      "StartsAt",
+      "TicketCode",
+      "TicketUrl",
+      "UnsubscribeUrl",
+      "Venue"
+    ],
+    "actions": [
+      "{{.ChangedFields}}",
+      "{{.EventName}}",
+      "{{.StartsAt}}",
+      "{{.TicketCode}}",
+      "{{.TicketUrl}}",
+      "{{.UnsubscribeUrl}}",
+      "{{.Venue}}",
+      "{{if .ChangedFields}}",
+      "{{if .StartsAt}}",
+      "{{if .TicketCode}}",
+      "{{if .TicketUrl}}",
+      "{{if .UnsubscribeUrl}}",
+      "{{if .Venue}}"
+    ]
+  },
   "event.ticket-cancelled": {
     "subject": "{{.EventName}} biletin iptal edildi",
     "system": false,
@@ -1458,6 +1512,55 @@
       "{{range $i, $s := .MissedRequired}}",
       "{{range $i, $s := .MissingRequired}}",
       "{{range .DaySessions}}"
+    ]
+  },
+  "event.door-staff-added": {
+    "subject": "{{.EventName}} etkinliğinde kapı görevlisisin",
+    "system": false,
+    "contentSensitive": false,
+    "variables": [
+      "FirstName",
+      "EventId",
+      "EventName",
+      "StartsAt",
+      "EndsAt",
+      "Venue",
+      "DoorUrl"
+    ],
+    "requiredVariables": [],
+    "sensitiveVariables": null,
+    "sampleKeys": [
+      "DoorUrl",
+      "EndsAt",
+      "EventId",
+      "EventName",
+      "FirstName",
+      "StartsAt",
+      "Venue"
+    ],
+    "referenced": [
+      "DoorUrl",
+      "EndsAt",
+      "EventName",
+      "FirstName",
+      "StartsAt",
+      "UnsubscribeUrl",
+      "Venue"
+    ],
+    "actions": [
+      "{{.DoorUrl}}",
+      "{{.EndsAt}}",
+      "{{.EventName}}",
+      "{{.FirstName}}",
+      "{{.StartsAt}}",
+      "{{.UnsubscribeUrl}}",
+      "{{.Venue}}",
+      "{{if .DoorUrl}}",
+      "{{if .EndsAt}}",
+      "{{if .FirstName}}",
+      "{{if .StartsAt}}",
+      "{{if .UnsubscribeUrl}}",
+      "{{if .Venue}}"
     ]
   },
   "mail.approval-requested": {
