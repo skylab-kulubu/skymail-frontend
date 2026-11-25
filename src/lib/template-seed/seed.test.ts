@@ -515,10 +515,11 @@ describe("the Template seed's Notification types", () => {
     assert.equal(calls.length, 0);
     for (const key of keys) assert.match(output, new RegExp(`${key.replace(".", "\\.")}.*\\[bildirim türü\\]`));
   });
-  it("register the Ticket status, reminder and door mails as required, system lane types by e-mail and the inbox", async () => {
+  it("register the Ticket status, reminder, event change and door mails as required, system lane types by e-mail and the inbox", async () => {
     const keys = [
       "event.ticket-cancelled", "event.waitlist-joined", "event.waitlist-promoted", "event.registration-full", "event.reminder",
       "event.attendance-welcome", "event.attendance-recorded", "event.attendance-day-summary",
+      "event.changed", "event.door-staff-added",
     ];
     for (const key of keys) {
       const n = repoTemplates.find(({ meta }) => meta.key === key)?.meta.notification;
