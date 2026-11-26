@@ -19,7 +19,8 @@ export const meta: TemplateMeta = {
   trigger:
     "core-backend, her oturum Check-in'inde (görevli okutması, yoklama QR'ı, kendi e-postası, masa), yazıldıktan 2 dakika sonra, dakikada en çok ATTENDANCE_MAIL_PER_MINUTE posta (ATTENDANCE_MAIL=on, SKYNOTIFY_ATTENDANCE_RECORDED_TEMPLATE_KEY, etkinliğin attendanceRecordedMail anahtarı; docs/attendance-mail.md). İşlem postası, kişi kapatamaz. Aynı biletin bekleyen yoklamaları tek postada (Sessions); hoş geldin ya da gün sonu özetiyle birleşen yoklama ayrıca gitmez. Check-in geri alınırsa gitmez. Sayılar gönderim anında sertifika kuralından; kural yoksa HasRule false, sayılar 0, listeler boş. Üyeye bildirim olarak (POST /v1/notifications: kutu + e-posta), misafire yalnız bu e-posta (POST /v1/mail_tasks/single).",
   // core-backend kapi-postalari 05 (SPEC §5.2): Sessions, MissingRequired,
-  // MissedRequired, NotCounted are [{Title}].
+  // MissedRequired, NotCounted are [{Title}]. Theme and EventBannerUrl: the
+  // event's theme (theme.tsx, <Shell themed>).
   variables: [
     "FirstName",
     "EventName",
@@ -33,6 +34,8 @@ export const meta: TemplateMeta = {
     "MissingRequired",
     "MissedRequired",
     "NotCounted",
+    "Theme",
+    "EventBannerUrl",
   ],
   notification: {
     category: null,
@@ -58,13 +61,16 @@ export const meta: TemplateMeta = {
     MissingRequired: [{ Title: "Final" }],
     MissedRequired: [],
     NotCounted: [],
+    // The club's own look; "artlab" previews the ARTLAB theme.
+    Theme: "",
+    EventBannerUrl: "",
   },
 };
 
 /** Yusuf, 2026-11-24 (kapi-postalari K5): one sentence, the count, what is still required. */
 export default function EventAttendanceRecorded() {
   return (
-    <Shell preview={`${v("EventName")}: katılımın alındı.`} brand="skylab" reason={null}>
+    <Shell preview={`${v("EventName")}: katılımın alındı.`} brand="skylab" reason={null} themed>
       <Context tone="ok">{v("EventName")}</Context>
       <Title>Katılımın Alındı</Title>
 

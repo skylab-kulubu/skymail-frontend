@@ -25,6 +25,8 @@ import CoreCertificate, { meta as coreCertificate } from "./core-certificate";
 import CoreCertificateAutoFinalized, { meta as coreCertificateAutoFinalized } from "./core-certificate-auto-finalized";
 import CoreEventCancelled, { meta as coreEventCancelled } from "./core-event-cancelled";
 import CoreEventReinstated, { meta as coreEventReinstated } from "./core-event-reinstated";
+import CoreEventCoOrganizerAdded, { meta as coreEventCoOrganizerAdded } from "./core-event-co-organizer-added";
+import CoreEventCoOrganizerRemoved, { meta as coreEventCoOrganizerRemoved } from "./core-event-co-organizer-removed";
 import CoreFeedbackRequest, { meta as coreFeedbackRequest } from "./core-feedback-request";
 import CoreFeedbackReminder, { meta as coreFeedbackReminder } from "./core-feedback-reminder";
 import CoreContactConsentConfirm, { meta as coreContactConsentConfirm } from "./core-contact-consent-confirm";
@@ -86,6 +88,8 @@ export const templates: EmailTemplate[] = [
   { meta: coreCertificateAutoFinalized, Component: CoreCertificateAutoFinalized },
   { meta: coreEventCancelled, Component: CoreEventCancelled },
   { meta: coreEventReinstated, Component: CoreEventReinstated },
+  { meta: coreEventCoOrganizerAdded, Component: CoreEventCoOrganizerAdded },
+  { meta: coreEventCoOrganizerRemoved, Component: CoreEventCoOrganizerRemoved },
   { meta: coreFeedbackRequest, Component: CoreFeedbackRequest },
   { meta: coreFeedbackReminder, Component: CoreFeedbackReminder },
   { meta: coreContactConsentConfirm, Component: CoreContactConsentConfirm },

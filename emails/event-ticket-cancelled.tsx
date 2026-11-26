@@ -15,7 +15,7 @@ export const meta: TemplateMeta = {
   // core-backend kontenjan-iptal-hatirlatma 04: EventId, EventName, EventDate
   // (empty without a start), OwnerTeam, CancelledBy (holder | operator) and
   // Reason (empty unless the organizer wrote one), always all of them.
-  variables: ["EventId", "EventName", "EventDate", "OwnerTeam", "CancelledBy", "Reason"],
+  variables: ["EventId", "EventName", "EventDate", "OwnerTeam", "CancelledBy", "Reason", "Theme", "EventBannerUrl"],
   notification: {
     category: null,
     required: true,
@@ -34,13 +34,16 @@ export const meta: TemplateMeta = {
     OwnerTeam: "WEBLAB",
     CancelledBy: "operator",
     Reason: "Aynı kişiye iki bilet yazılmış.",
+    // The club's own look; "artlab" previews the ARTLAB theme.
+    Theme: "",
+    EventBannerUrl: "",
   },
 };
 
 /** Who cancelled, the event's rows and the organizer's reason when there is one. No way back in: there is no event page to register again from. */
 export default function EventTicketCancelled() {
   return (
-    <Shell preview={`${v("EventName")} biletin iptal edildi.`} brand="skylab" reason={null}>
+    <Shell preview={`${v("EventName")} biletin iptal edildi.`} brand="skylab" reason={null} themed>
       <Context tone="bad">{v("EventName")}</Context>
       <Title>Biletin İptal Edildi</Title>
 

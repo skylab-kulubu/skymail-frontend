@@ -13,13 +13,16 @@ export const meta: TemplateMeta = {
   trigger:
     "core-backend, etkinlik iptal edilirken \"Bilet sahiplerine bildir\" seçiliyse, bilet sahiplerinin her birine bir kez (internal/eventstatusmail).",
   // core-backend/internal/eventstatusmail/service.go vars.
-  variables: ["EventName", "EventStart", "CancelReason", "FirstName"],
+  variables: ["EventName", "EventStart", "CancelReason", "FirstName", "Theme", "EventBannerUrl"],
   requiredVariables: [{ name: "EventName", reason: "Hangi etkinliğin iptal edildiğini söyleyen tek alan; kaldırılırsa posta etkinliği adlandırmaz." }],
   sample: {
     EventName: "GECEKODU 2026",
     EventStart: "14.03.2026 19:00",
     CancelReason: "Salon bakımda olduğu için.",
     FirstName: "Yusuf",
+    // The club's own look; "artlab" previews the ARTLAB theme.
+    Theme: "",
+    EventBannerUrl: "",
   },
 };
 
@@ -30,7 +33,7 @@ export const meta: TemplateMeta = {
  */
 export default function CoreEventCancelled() {
   return (
-    <Shell preview={`${v("EventName")} iptal edildi.`} brand="skylab" reason={null}>
+    <Shell preview={`${v("EventName")} iptal edildi.`} brand="skylab" reason={null} themed>
       <Context tone="bad">İptal</Context>
       <Title>Etkinlik İptal Edildi</Title>
 

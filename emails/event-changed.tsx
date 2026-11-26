@@ -13,7 +13,7 @@ export const meta: TemplateMeta = {
   trigger:
     "core-backend, yayındaki ve bitmemiş bir etkinliğin adı, açıklaması, katılımcı notu, kontenjanı ya da bağlantıları değişince ve düzenleyen kaydederken \"Bilet sahiplerine bildir\" kutusunu işaretleyince (varsayılan işaretsiz), ilk değişiklikten 15 dakika sonra (aradaki değişiklikler tek bildirimde; geri alınan alan söylenmez), bileti olan herkese (EVENT_CHANGED_NOTIFICATION=on; docs/event-updated-notification.md#other-details). Aynı pencerede saat ya da yer de değiştiyse bu değil event.updated gider. Üyeye bildirim olarak (POST /v1/notifications: kutu + e-posta), konuğa yalnız bu e-posta. Değişen alanın metni postaya girmez: ChangedFields hangi alanların değiştiğini (\"açıklaması ve bağlantıları\"), ChangeSummary aynısını cümle olarak söyler. StartsAt ve Venue gönderim anındaki etkinliktir. TICKET_PAGE_URL açıkken core alıcının biletinden TicketUrl ve TicketCode da gönderir; kapalıyken göndermez ve satırları görünmez. EventId yalnız kutu bağlantısı içindir.",
   // core-backend internal/eventupdatenotify changedVars + withTicket (#443).
-  variables: ["EventId", "EventName", "ChangedFields", "ChangeSummary", "StartsAt", "Venue", "TicketCode", "TicketUrl"],
+  variables: ["EventId", "EventName", "ChangedFields", "ChangeSummary", "StartsAt", "Venue", "TicketCode", "TicketUrl", "Theme", "EventBannerUrl"],
   sensitiveVariables: [],
   notification: {
     category: null,
@@ -37,6 +37,9 @@ export const meta: TemplateMeta = {
     Venue: "YTÜ Davutpaşa Kampüsü, D-Blok",
     TicketCode: "K7M2-QX9F",
     TicketUrl: "https://yildizskylab.com/bilet/7Q2MK4XRWZ3HN5TJVB6PDYCGEA",
+    // The club's own look; "artlab" previews the ARTLAB theme.
+    Theme: "",
+    EventBannerUrl: "",
   },
 };
 
@@ -47,7 +50,7 @@ export const meta: TemplateMeta = {
  */
 export default function EventChanged() {
   return (
-    <Shell preview={`${v("EventName")} etkinliğinde değişiklik var.`} brand="skylab" reason={null}>
+    <Shell preview={`${v("EventName")} etkinliğinde değişiklik var.`} brand="skylab" reason={null} themed>
       <Context tone="wait">{v("EventName")}</Context>
       <Title>Etkinlikte Değişiklik Var</Title>
 

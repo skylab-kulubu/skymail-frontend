@@ -403,35 +403,45 @@
       "EventName",
       "VerifyURL",
       "Serial",
-      "OwnerTeam"
+      "OwnerTeam",
+      "Theme",
+      "EventBannerUrl"
     ],
     "requiredVariables": [
       "VerifyURL"
     ],
     "sensitiveVariables": null,
     "sampleKeys": [
+      "EventBannerUrl",
       "EventName",
       "FirstName",
       "OwnerTeam",
       "Serial",
+      "Theme",
       "VerifyURL"
     ],
     "referenced": [
+      "EventBannerUrl",
       "EventName",
       "FirstName",
       "OwnerTeam",
       "Serial",
+      "Theme",
       "UnsubscribeUrl",
       "VerifyURL"
     ],
     "actions": [
+      "{{.EventBannerUrl}}",
       "{{.EventName}}",
       "{{.FirstName}}",
       "{{.OwnerTeam}}",
       "{{.Serial}}",
       "{{.UnsubscribeUrl}}",
       "{{.VerifyURL}}",
-      "{{if .UnsubscribeUrl}}"
+      "{{end -}}",
+      "{{if .EventBannerUrl}}",
+      "{{if .UnsubscribeUrl}}",
+      "{{if and .Theme (eq .Theme `artlab`)}}"
     ]
   },
   "core.certificate-auto-finalized": {
@@ -485,7 +495,9 @@
       "EventName",
       "EventStart",
       "CancelReason",
-      "FirstName"
+      "FirstName",
+      "Theme",
+      "EventBannerUrl"
     ],
     "requiredVariables": [
       "EventName"
@@ -493,27 +505,35 @@
     "sensitiveVariables": null,
     "sampleKeys": [
       "CancelReason",
-      "EventName",
-      "EventStart",
-      "FirstName"
-    ],
-    "referenced": [
-      "CancelReason",
+      "EventBannerUrl",
       "EventName",
       "EventStart",
       "FirstName",
+      "Theme"
+    ],
+    "referenced": [
+      "CancelReason",
+      "EventBannerUrl",
+      "EventName",
+      "EventStart",
+      "FirstName",
+      "Theme",
       "UnsubscribeUrl"
     ],
     "actions": [
       "{{.CancelReason}}",
+      "{{.EventBannerUrl}}",
       "{{.EventName}}",
       "{{.EventStart}}",
       "{{.FirstName}}",
       "{{.UnsubscribeUrl}}",
+      "{{end -}}",
       "{{if .CancelReason}}",
+      "{{if .EventBannerUrl}}",
       "{{if .EventStart}}",
       "{{if .FirstName}}",
-      "{{if .UnsubscribeUrl}}"
+      "{{if .UnsubscribeUrl}}",
+      "{{if and .Theme (eq .Theme `artlab`)}}"
     ]
   },
   "core.event-reinstated": {
@@ -523,30 +543,143 @@
     "variables": [
       "EventName",
       "EventStart",
-      "FirstName"
+      "FirstName",
+      "Theme",
+      "EventBannerUrl"
     ],
     "requiredVariables": [
       "EventName"
     ],
     "sensitiveVariables": null,
     "sampleKeys": [
-      "EventName",
-      "EventStart",
-      "FirstName"
-    ],
-    "referenced": [
+      "EventBannerUrl",
       "EventName",
       "EventStart",
       "FirstName",
+      "Theme"
+    ],
+    "referenced": [
+      "EventBannerUrl",
+      "EventName",
+      "EventStart",
+      "FirstName",
+      "Theme",
       "UnsubscribeUrl"
     ],
     "actions": [
+      "{{.EventBannerUrl}}",
       "{{.EventName}}",
       "{{.EventStart}}",
       "{{.FirstName}}",
       "{{.UnsubscribeUrl}}",
+      "{{end -}}",
+      "{{if .EventBannerUrl}}",
       "{{if .EventStart}}",
       "{{if .FirstName}}",
+      "{{if .UnsubscribeUrl}}",
+      "{{if and .Theme (eq .Theme `artlab`)}}"
+    ]
+  },
+  "core.event-co-organizer-added": {
+    "subject": "{{.EventName}}: {{if .TeamName}}ekibin etkinliğe eklendi{{else}}ortak düzenleyen oldun{{end}}",
+    "system": true,
+    "contentSensitive": false,
+    "variables": [
+      "EventId",
+      "EventName",
+      "OwnerTeam",
+      "TeamName",
+      "Management",
+      "Visibility",
+      "ActorName",
+      "PanelUrl"
+    ],
+    "requiredVariables": [
+      "EventName"
+    ],
+    "sensitiveVariables": null,
+    "sampleKeys": [
+      "ActorName",
+      "EventId",
+      "EventName",
+      "Management",
+      "OwnerTeam",
+      "PanelUrl",
+      "TeamName",
+      "Visibility"
+    ],
+    "referenced": [
+      "ActorName",
+      "EventName",
+      "Management",
+      "OwnerTeam",
+      "PanelUrl",
+      "TeamName",
+      "UnsubscribeUrl",
+      "Visibility"
+    ],
+    "actions": [
+      "{{.ActorName}}",
+      "{{.EventName}}",
+      "{{.Management}}",
+      "{{.OwnerTeam}}",
+      "{{.PanelUrl}}",
+      "{{.TeamName}}",
+      "{{.UnsubscribeUrl}}",
+      "{{.Visibility}}",
+      "{{if .ActorName}}",
+      "{{if .Management}}",
+      "{{if .OwnerTeam}}",
+      "{{if .PanelUrl}}",
+      "{{if .TeamName}}",
+      "{{if .UnsubscribeUrl}}",
+      "{{if .Visibility}}"
+    ]
+  },
+  "core.event-co-organizer-removed": {
+    "subject": "{{.EventName}}: {{if .TeamName}}ekibin etkinlikten çıkarıldı{{else}}artık ortak düzenleyen değilsin{{end}}",
+    "system": true,
+    "contentSensitive": false,
+    "variables": [
+      "EventId",
+      "EventName",
+      "OwnerTeam",
+      "TeamName",
+      "Management",
+      "Visibility",
+      "ActorName",
+      "PanelUrl"
+    ],
+    "requiredVariables": [
+      "EventName"
+    ],
+    "sensitiveVariables": null,
+    "sampleKeys": [
+      "ActorName",
+      "EventId",
+      "EventName",
+      "Management",
+      "OwnerTeam",
+      "PanelUrl",
+      "TeamName",
+      "Visibility"
+    ],
+    "referenced": [
+      "ActorName",
+      "EventName",
+      "OwnerTeam",
+      "TeamName",
+      "UnsubscribeUrl"
+    ],
+    "actions": [
+      "{{.ActorName}}",
+      "{{.EventName}}",
+      "{{.OwnerTeam}}",
+      "{{.TeamName}}",
+      "{{.UnsubscribeUrl}}",
+      "{{if .ActorName}}",
+      "{{if .OwnerTeam}}",
+      "{{if .TeamName}}",
       "{{if .UnsubscribeUrl}}"
     ]
   },
@@ -558,32 +691,42 @@
       "FirstName",
       "EventName",
       "Items",
-      "EventId"
+      "EventId",
+      "Theme",
+      "EventBannerUrl"
     ],
     "requiredVariables": [
       "Items"
     ],
     "sensitiveVariables": null,
     "sampleKeys": [
+      "EventBannerUrl",
       "EventId",
       "EventName",
       "FirstName",
-      "Items"
+      "Items",
+      "Theme"
     ],
     "referenced": [
+      "EventBannerUrl",
       "EventName",
       "FirstName",
       "Items",
+      "Theme",
       "UnsubscribeUrl"
     ],
     "actions": [
+      "{{.EventBannerUrl}}",
       "{{.EventName}}",
       "{{.FirstName}}",
       "{{.Title}}",
       "{{.URL}}",
       "{{.UnsubscribeUrl}}",
+      "{{end -}}",
+      "{{if .EventBannerUrl}}",
       "{{if .FirstName}}",
       "{{if .UnsubscribeUrl}}",
+      "{{if and .Theme (eq .Theme `artlab`)}}",
       "{{range .Items}}"
     ]
   },
@@ -595,32 +738,42 @@
       "FirstName",
       "EventName",
       "Items",
-      "EventId"
+      "EventId",
+      "Theme",
+      "EventBannerUrl"
     ],
     "requiredVariables": [
       "Items"
     ],
     "sensitiveVariables": null,
     "sampleKeys": [
+      "EventBannerUrl",
       "EventId",
       "EventName",
       "FirstName",
-      "Items"
+      "Items",
+      "Theme"
     ],
     "referenced": [
+      "EventBannerUrl",
       "EventName",
       "FirstName",
       "Items",
+      "Theme",
       "UnsubscribeUrl"
     ],
     "actions": [
+      "{{.EventBannerUrl}}",
       "{{.EventName}}",
       "{{.FirstName}}",
       "{{.Title}}",
       "{{.URL}}",
       "{{.UnsubscribeUrl}}",
+      "{{end -}}",
+      "{{if .EventBannerUrl}}",
       "{{if .FirstName}}",
       "{{if .UnsubscribeUrl}}",
+      "{{if and .Theme (eq .Theme `artlab`)}}",
       "{{range .Items}}"
     ]
   },
@@ -839,7 +992,11 @@
       "TicketCode",
       "TicketUrl",
       "OwnerTeam",
-      "EventUrl"
+      "EventUrl",
+      "Theme",
+      "EventBannerUrl",
+      "TicketNote",
+      "TicketNoteParts"
     ],
     "requiredVariables": [],
     "sensitiveVariables": [
@@ -848,45 +1005,62 @@
       "TicketUrl"
     ],
     "sampleKeys": [
+      "EventBannerUrl",
       "EventDate",
       "EventName",
       "EventUrl",
       "OwnerTeam",
+      "Theme",
       "TicketCode",
+      "TicketNote",
+      "TicketNoteParts",
       "TicketQrUrl",
       "TicketUrl",
       "Venue"
     ],
     "referenced": [
+      "EventBannerUrl",
       "EventDate",
       "EventName",
       "EventUrl",
       "OwnerTeam",
+      "Theme",
       "TicketCode",
+      "TicketNote",
+      "TicketNoteParts",
       "TicketQrUrl",
       "TicketUrl",
       "UnsubscribeUrl",
       "Venue"
     ],
     "actions": [
+      "{{.EventBannerUrl}}",
       "{{.EventDate}}",
       "{{.EventName}}",
       "{{.EventUrl}}",
       "{{.OwnerTeam}}",
+      "{{.Text}}",
       "{{.TicketCode}}",
       "{{.TicketQrUrl}}",
       "{{.TicketUrl}}",
       "{{.UnsubscribeUrl}}",
+      "{{.Url}}",
       "{{.Venue}}",
+      "{{end -}}",
+      "{{if .EventBannerUrl}}",
       "{{if .EventDate}}",
       "{{if .EventUrl}}",
       "{{if .OwnerTeam}}",
       "{{if .TicketCode}}",
+      "{{if .TicketNote}}",
       "{{if .TicketQrUrl}}",
       "{{if .TicketUrl}}",
       "{{if .UnsubscribeUrl}}",
+      "{{if .Url}}",
       "{{if .Venue}}",
-      "{{if not .TicketQrUrl}}"
+      "{{if and .Theme (eq .Theme `artlab`)}}",
+      "{{if not .TicketQrUrl}}",
+      "{{range .TicketNoteParts}}"
     ]
   },
   "event.reminder": {
@@ -902,7 +1076,11 @@
       "TicketUrl",
       "TicketQrUrl",
       "TicketCode",
-      "MapUrl"
+      "MapUrl",
+      "Theme",
+      "EventBannerUrl",
+      "TicketNote",
+      "TicketNoteParts"
     ],
     "requiredVariables": [],
     "sensitiveVariables": [
@@ -911,46 +1089,63 @@
       "TicketUrl"
     ],
     "sampleKeys": [
+      "EventBannerUrl",
       "EventId",
       "EventName",
       "MapUrl",
       "OwnerTeam",
       "StartsAt",
+      "Theme",
       "TicketCode",
+      "TicketNote",
+      "TicketNoteParts",
       "TicketQrUrl",
       "TicketUrl",
       "Venue"
     ],
     "referenced": [
+      "EventBannerUrl",
       "EventName",
       "MapUrl",
       "OwnerTeam",
       "StartsAt",
+      "Theme",
       "TicketCode",
+      "TicketNote",
+      "TicketNoteParts",
       "TicketQrUrl",
       "TicketUrl",
       "UnsubscribeUrl",
       "Venue"
     ],
     "actions": [
+      "{{.EventBannerUrl}}",
       "{{.EventName}}",
       "{{.MapUrl}}",
       "{{.OwnerTeam}}",
       "{{.StartsAt}}",
+      "{{.Text}}",
       "{{.TicketCode}}",
       "{{.TicketQrUrl}}",
       "{{.TicketUrl}}",
       "{{.UnsubscribeUrl}}",
+      "{{.Url}}",
       "{{.Venue}}",
+      "{{end -}}",
+      "{{if .EventBannerUrl}}",
       "{{if .MapUrl}}",
       "{{if .OwnerTeam}}",
       "{{if .StartsAt}}",
       "{{if .TicketCode}}",
+      "{{if .TicketNote}}",
       "{{if .TicketQrUrl}}",
       "{{if .TicketUrl}}",
       "{{if .UnsubscribeUrl}}",
+      "{{if .Url}}",
       "{{if .Venue}}",
-      "{{if not .TicketQrUrl}}"
+      "{{if and .Theme (eq .Theme `artlab`)}}",
+      "{{if not .TicketQrUrl}}",
+      "{{range .TicketNoteParts}}"
     ]
   },
   "event.updated": {
@@ -966,7 +1161,9 @@
       "TicketQrUrl",
       "TicketCode",
       "TicketUrl",
-      "EventUrl"
+      "EventUrl",
+      "Theme",
+      "EventBannerUrl"
     ],
     "requiredVariables": [],
     "sensitiveVariables": [
@@ -976,22 +1173,26 @@
     ],
     "sampleKeys": [
       "ChangeSummary",
+      "EventBannerUrl",
       "EventName",
       "EventUrl",
       "NewEndsAt",
       "NewStartsAt",
       "NewVenue",
+      "Theme",
       "TicketCode",
       "TicketQrUrl",
       "TicketUrl"
     ],
     "referenced": [
       "ChangeSummary",
+      "EventBannerUrl",
       "EventName",
       "EventUrl",
       "NewEndsAt",
       "NewStartsAt",
       "NewVenue",
+      "Theme",
       "TicketCode",
       "TicketQrUrl",
       "TicketUrl",
@@ -999,6 +1200,7 @@
     ],
     "actions": [
       "{{.ChangeSummary}}",
+      "{{.EventBannerUrl}}",
       "{{.EventName}}",
       "{{.EventUrl}}",
       "{{.NewEndsAt}}",
@@ -1008,7 +1210,9 @@
       "{{.TicketQrUrl}}",
       "{{.TicketUrl}}",
       "{{.UnsubscribeUrl}}",
+      "{{end -}}",
       "{{if .ChangeSummary}}",
+      "{{if .EventBannerUrl}}",
       "{{if .EventUrl}}",
       "{{if .NewEndsAt}}",
       "{{if .NewStartsAt}}",
@@ -1017,6 +1221,7 @@
       "{{if .TicketQrUrl}}",
       "{{if .TicketUrl}}",
       "{{if .UnsubscribeUrl}}",
+      "{{if and .Theme (eq .Theme `artlab`)}}",
       "{{if not .TicketQrUrl}}"
     ]
   },
@@ -1032,24 +1237,30 @@
       "StartsAt",
       "Venue",
       "TicketCode",
-      "TicketUrl"
+      "TicketUrl",
+      "Theme",
+      "EventBannerUrl"
     ],
     "requiredVariables": [],
     "sensitiveVariables": [],
     "sampleKeys": [
       "ChangeSummary",
       "ChangedFields",
+      "EventBannerUrl",
       "EventId",
       "EventName",
       "StartsAt",
+      "Theme",
       "TicketCode",
       "TicketUrl",
       "Venue"
     ],
     "referenced": [
       "ChangedFields",
+      "EventBannerUrl",
       "EventName",
       "StartsAt",
+      "Theme",
       "TicketCode",
       "TicketUrl",
       "UnsubscribeUrl",
@@ -1057,18 +1268,22 @@
     ],
     "actions": [
       "{{.ChangedFields}}",
+      "{{.EventBannerUrl}}",
       "{{.EventName}}",
       "{{.StartsAt}}",
       "{{.TicketCode}}",
       "{{.TicketUrl}}",
       "{{.UnsubscribeUrl}}",
       "{{.Venue}}",
+      "{{end -}}",
       "{{if .ChangedFields}}",
+      "{{if .EventBannerUrl}}",
       "{{if .StartsAt}}",
       "{{if .TicketCode}}",
       "{{if .TicketUrl}}",
       "{{if .UnsubscribeUrl}}",
-      "{{if .Venue}}"
+      "{{if .Venue}}",
+      "{{if and .Theme (eq .Theme `artlab`)}}"
     ]
   },
   "event.ticket-cancelled": {
@@ -1081,36 +1296,46 @@
       "EventDate",
       "OwnerTeam",
       "CancelledBy",
-      "Reason"
+      "Reason",
+      "Theme",
+      "EventBannerUrl"
     ],
     "requiredVariables": [],
     "sensitiveVariables": null,
     "sampleKeys": [
       "CancelledBy",
+      "EventBannerUrl",
       "EventDate",
       "EventId",
       "EventName",
       "OwnerTeam",
-      "Reason"
+      "Reason",
+      "Theme"
     ],
     "referenced": [
       "CancelledBy",
+      "EventBannerUrl",
       "EventDate",
       "EventName",
       "OwnerTeam",
       "Reason",
+      "Theme",
       "UnsubscribeUrl"
     ],
     "actions": [
+      "{{.EventBannerUrl}}",
       "{{.EventDate}}",
       "{{.EventName}}",
       "{{.OwnerTeam}}",
       "{{.Reason}}",
       "{{.UnsubscribeUrl}}",
+      "{{end -}}",
+      "{{if .EventBannerUrl}}",
       "{{if .EventDate}}",
       "{{if .OwnerTeam}}",
       "{{if .Reason}}",
       "{{if .UnsubscribeUrl}}",
+      "{{if and .Theme (eq .Theme `artlab`)}}",
       "{{if eq .CancelledBy `operator`}}"
     ]
   },
@@ -1124,40 +1349,50 @@
       "EventDate",
       "Venue",
       "OwnerTeam",
-      "TicketUrl"
+      "TicketUrl",
+      "Theme",
+      "EventBannerUrl"
     ],
     "requiredVariables": [],
     "sensitiveVariables": [
       "TicketUrl"
     ],
     "sampleKeys": [
+      "EventBannerUrl",
       "EventDate",
       "EventId",
       "EventName",
       "OwnerTeam",
+      "Theme",
       "TicketUrl",
       "Venue"
     ],
     "referenced": [
+      "EventBannerUrl",
       "EventDate",
       "EventName",
       "OwnerTeam",
+      "Theme",
       "TicketUrl",
       "UnsubscribeUrl",
       "Venue"
     ],
     "actions": [
+      "{{.EventBannerUrl}}",
       "{{.EventDate}}",
       "{{.EventName}}",
       "{{.OwnerTeam}}",
       "{{.TicketUrl}}",
       "{{.UnsubscribeUrl}}",
       "{{.Venue}}",
+      "{{end -}}",
+      "{{if .EventBannerUrl}}",
       "{{if .EventDate}}",
       "{{if .OwnerTeam}}",
       "{{if .TicketUrl}}",
       "{{if .UnsubscribeUrl}}",
-      "{{if .Venue}}"
+      "{{if .Venue}}",
+      "{{if and .Theme (eq .Theme `artlab`)}}"
     ]
   },
   "event.waitlist-promoted": {
@@ -1172,7 +1407,11 @@
       "TicketQrUrl",
       "TicketCode",
       "TicketUrl",
-      "OwnerTeam"
+      "OwnerTeam",
+      "TicketNote",
+      "TicketNoteParts",
+      "Theme",
+      "EventBannerUrl"
     ],
     "requiredVariables": [],
     "sensitiveVariables": [
@@ -1181,42 +1420,59 @@
       "TicketUrl"
     ],
     "sampleKeys": [
+      "EventBannerUrl",
       "EventDate",
       "EventId",
       "EventName",
       "OwnerTeam",
+      "Theme",
       "TicketCode",
+      "TicketNote",
+      "TicketNoteParts",
       "TicketQrUrl",
       "TicketUrl",
       "Venue"
     ],
     "referenced": [
+      "EventBannerUrl",
       "EventDate",
       "EventName",
       "OwnerTeam",
+      "Theme",
       "TicketCode",
+      "TicketNote",
+      "TicketNoteParts",
       "TicketQrUrl",
       "TicketUrl",
       "UnsubscribeUrl",
       "Venue"
     ],
     "actions": [
+      "{{.EventBannerUrl}}",
       "{{.EventDate}}",
       "{{.EventName}}",
       "{{.OwnerTeam}}",
+      "{{.Text}}",
       "{{.TicketCode}}",
       "{{.TicketQrUrl}}",
       "{{.TicketUrl}}",
       "{{.UnsubscribeUrl}}",
+      "{{.Url}}",
       "{{.Venue}}",
+      "{{end -}}",
+      "{{if .EventBannerUrl}}",
       "{{if .EventDate}}",
       "{{if .OwnerTeam}}",
       "{{if .TicketCode}}",
+      "{{if .TicketNote}}",
       "{{if .TicketQrUrl}}",
       "{{if .TicketUrl}}",
       "{{if .UnsubscribeUrl}}",
+      "{{if .Url}}",
       "{{if .Venue}}",
-      "{{if not .TicketQrUrl}}"
+      "{{if and .Theme (eq .Theme `artlab`)}}",
+      "{{if not .TicketQrUrl}}",
+      "{{range .TicketNoteParts}}"
     ]
   },
   "event.registration-full": {
@@ -1272,7 +1528,9 @@
       "CountedTotal",
       "MinRequired",
       "MissingRequired",
-      "MissedRequired"
+      "MissedRequired",
+      "Theme",
+      "EventBannerUrl"
     ],
     "requiredVariables": [],
     "sensitiveVariables": [],
@@ -1283,6 +1541,7 @@
       "CertificateLine",
       "CountedTotal",
       "DayLabel",
+      "EventBannerUrl",
       "EventId",
       "EventName",
       "FirstName",
@@ -1291,7 +1550,8 @@
       "MissingRequired",
       "OwnerTeam",
       "Program",
-      "Recorded"
+      "Recorded",
+      "Theme"
     ],
     "referenced": [
       "Attended",
@@ -1300,6 +1560,7 @@
       "CertificateLine",
       "CountedTotal",
       "DayLabel",
+      "EventBannerUrl",
       "EventName",
       "FirstName",
       "MinRequired",
@@ -1308,6 +1569,7 @@
       "OwnerTeam",
       "Program",
       "Recorded",
+      "Theme",
       "UnsubscribeUrl"
     ],
     "actions": [
@@ -1316,6 +1578,7 @@
       "{{.CertificateLine}}",
       "{{.CountedTotal}}",
       "{{.DayLabel}}",
+      "{{.EventBannerUrl}}",
       "{{.EventName}}",
       "{{.FirstName}}",
       "{{.MinRequired}}",
@@ -1325,10 +1588,12 @@
       "{{.Title}}",
       "{{.UnsubscribeUrl}}",
       "{{.Url}}",
+      "{{end -}}",
       "{{if $i}}",
       "{{if .AttendeeNote}}",
       "{{if .CertificateLine}}",
       "{{if .DayLabel}}",
+      "{{if .EventBannerUrl}}",
       "{{if .FirstName}}",
       "{{if .MinRequired}}",
       "{{if .MissedRequired}}",
@@ -1338,6 +1603,7 @@
       "{{if .Recorded}}",
       "{{if .UnsubscribeUrl}}",
       "{{if .Url}}",
+      "{{if and .Theme (eq .Theme `artlab`)}}",
       "{{range $i, $s := .MissedRequired}}",
       "{{range $i, $s := .MissingRequired}}",
       "{{range $i, $s := .Recorded}}",
@@ -1361,13 +1627,16 @@
       "MinRequired",
       "MissingRequired",
       "MissedRequired",
-      "NotCounted"
+      "NotCounted",
+      "Theme",
+      "EventBannerUrl"
     ],
     "requiredVariables": [],
     "sensitiveVariables": null,
     "sampleKeys": [
       "Attended",
       "CountedTotal",
+      "EventBannerUrl",
       "EventId",
       "EventName",
       "FirstName",
@@ -1377,11 +1646,13 @@
       "MissingRequired",
       "NotCounted",
       "OwnerTeam",
-      "Sessions"
+      "Sessions",
+      "Theme"
     ],
     "referenced": [
       "Attended",
       "CountedTotal",
+      "EventBannerUrl",
       "EventName",
       "FirstName",
       "HasRule",
@@ -1391,18 +1662,22 @@
       "NotCounted",
       "OwnerTeam",
       "Sessions",
+      "Theme",
       "UnsubscribeUrl"
     ],
     "actions": [
       "{{$s.Title}}",
       "{{.Attended}}",
       "{{.CountedTotal}}",
+      "{{.EventBannerUrl}}",
       "{{.EventName}}",
       "{{.FirstName}}",
       "{{.MinRequired}}",
       "{{.OwnerTeam}}",
       "{{.UnsubscribeUrl}}",
+      "{{end -}}",
       "{{if $i}}",
+      "{{if .EventBannerUrl}}",
       "{{if .FirstName}}",
       "{{if .HasRule}}",
       "{{if .MissedRequired}}",
@@ -1410,6 +1685,7 @@
       "{{if .NotCounted}}",
       "{{if .OwnerTeam}}",
       "{{if .UnsubscribeUrl}}",
+      "{{if and .Theme (eq .Theme `artlab`)}}",
       "{{if eq (len .Sessions) 1}}",
       "{{range $i, $s := .MissedRequired}}",
       "{{range $i, $s := .MissingRequired}}",

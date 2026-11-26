@@ -14,7 +14,7 @@ export const meta: TemplateMeta = {
   brand: "skylab",
   trigger:
     "core-backend, yayındaki ve bitmemiş bir etkinliğin başlangıcı, bitişi ya da yeri değişince, ilk değişiklikten 15 dakika sonra (aradaki değişiklikler tek bildirimde), bileti olan herkese (EVENT_UPDATED_NOTIFICATION=on; docs/event-updated-notification.md). Üyeye bildirim olarak (POST /v1/notifications: kutu + e-posta), konuğa yalnız bu e-posta. Değerler gönderim anındaki etkinliktir. TICKET_PAGE_URL açıkken core alıcının biletinden TicketUrl (QR'ı yeni tarihle imzalanan bilet sayfası) ve TicketCode da gönderir; kapalıyken göndermez ve satırları görünmez. TicketQrUrl'yi core bugün bu postada göndermez; gönderirse QR görünür. EventUrl gönderilmez, düğme boşsa görünmez.",
-  variables: ["EventName", "ChangeSummary", "NewStartsAt", "NewEndsAt", "NewVenue", "TicketQrUrl", "TicketCode", "TicketUrl", "EventUrl"],
+  variables: ["EventName", "ChangeSummary", "NewStartsAt", "NewEndsAt", "NewVenue", "TicketQrUrl", "TicketCode", "TicketUrl", "EventUrl", "Theme", "EventBannerUrl"],
   sensitiveVariables: ["TicketCode", "TicketQrUrl", "TicketUrl"],
   notification: {
     category: null,
@@ -40,6 +40,9 @@ export const meta: TemplateMeta = {
     TicketCode: "K7M2-QX9F",
     TicketUrl: "https://yildizskylab.com/bilet/7Q2MK4XRWZ3HN5TJVB6PDYCGEA",
     EventUrl: "https://skyl.app/gecekodu",
+    // The club's own look; "artlab" previews the ARTLAB theme.
+    Theme: "",
+    EventBannerUrl: "",
   },
 };
 
@@ -50,7 +53,7 @@ export const meta: TemplateMeta = {
  */
 export default function EventUpdated() {
   return (
-    <Shell preview={`${v("EventName")} etkinliğinde değişiklik var.`} brand="skylab" reason={null}>
+    <Shell preview={`${v("EventName")} etkinliğinde değişiklik var.`} brand="skylab" reason={null} themed>
       <Context tone="wait">{v("EventName")}</Context>
       <Title>Etkinlikte Değişiklik Var</Title>
 
