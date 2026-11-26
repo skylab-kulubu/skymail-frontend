@@ -474,8 +474,13 @@ export const ifArtlabTheme = `{{if and .${THEME} (eq .${THEME} \`artlab\`)}}`;
 */
 const END_TRIMMED = "{{end -}}";
 
-/** ARTLAB's palette (artlab-site globals.css), and an amber dark enough for text on white (5:1). */
-const artlab = { ground: "#0b0e13", surface: "#141a23", ink: "#e9edf2", amber: "#f5b82e", amberOnWhite: "#a16207", cyan: "#3ed6f0" } as const;
+/**
+ * ARTLAB's palette: the poster's (Yusuf, 2026-11-26), on every surface of the
+ * theme. Navy ground, orange accent, electric blue second accent. On white
+ * the orange is darkened for text: #b35600 is 4.9:1 on white (4.7:1 on the
+ * button's #fafafa); #ff8a1f, 2.4:1 there, is for the dark ground (7.9:1).
+ */
+const artlab = { ground: "#0a1222", surface: "#121c30", ink: "#e9edf2", orange: "#ff8a1f", orangeOnWhite: "#b35600", blue: "#3aa0ff" } as const;
 
 /*
   Each rule is scoped under .email-bg, the page's own wrapper, so it outweighs
@@ -484,14 +489,16 @@ const artlab = { ground: "#0b0e13", surface: "#141a23", ink: "#e9edf2", amber: "
   bytes as they were.
 */
 const artlabCss = `
-.email-bg .t-link, .email-bg .tone-brand { color: ${artlab.amberOnWhite} !important; }
-.email-bg .card { border-color: ${artlab.amber} !important; }
+.email-bg .t-link, .email-bg .tone-brand { color: ${artlab.orangeOnWhite} !important; }
+.email-bg .card { border-color: ${artlab.orange} !important; }
 @media (prefers-color-scheme: dark) {
-  .email-bg .t-link, .email-bg .tone-brand { color: ${artlab.amber} !important; }
-  .email-bg .card { background-color: ${artlab.surface} !important; border-color: ${artlab.amber} !important; }
+  .email-bg .t-link, .email-bg .tone-brand { color: ${artlab.orange} !important; }
+  .email-bg .card { background-color: ${artlab.surface} !important; border-color: ${artlab.orange} !important; }
+  .email-bg .artlab-ground { background-color: ${artlab.ground} !important; }
 }
-[data-ogsc] .email-bg .t-link, [data-ogsc] .email-bg .tone-brand, .email-bg .t-link[data-ogsc] { color: ${artlab.amber} !important; }
+[data-ogsc] .email-bg .t-link, [data-ogsc] .email-bg .tone-brand, .email-bg .t-link[data-ogsc] { color: ${artlab.orange} !important; }
 [data-ogsb] .email-bg .card, .email-bg .card[data-ogsb] { background-color: ${artlab.surface} !important; }
+[data-ogsb] .email-bg .artlab-ground, .email-bg .artlab-ground[data-ogsb] { background-color: ${artlab.ground} !important; }
 `;
 
 /** The theme's stylesheet. */
@@ -513,7 +520,7 @@ function ThemeStyle() {
  * event in its rows.
  */
 function ThemeBand() {
-  const ground = { ...legacy({ bgcolor: artlab.ground }), className: "email-bg" };
+  const ground = { ...legacy({ bgcolor: artlab.ground }), className: "email-bg artlab-ground" };
   return (
     <>
       {ifArtlabTheme}
@@ -522,7 +529,7 @@ function ThemeBand() {
           <td style={{ paddingBottom: "28px" }}>
             <Table>
               <tr>
-                {/* email-bg keeps the client's dark mode from repainting the band: it stays near-black there too. */}
+                {/* email-bg is the dark-aware class; artlab-ground, in the theme's sheet, keeps the band navy in dark mode too. */}
                 <td
                   align="center"
                   {...ground}
@@ -560,13 +567,13 @@ function ThemeBand() {
                         style={{
                           backgroundColor: artlab.ground,
                           borderRadius: "8px",
-                          borderBottom: `2px solid ${artlab.cyan}`,
+                          borderBottom: `2px solid ${artlab.blue}`,
                           padding: "22px 20px 20px",
                           fontFamily: fontStack,
                           textAlign: "center",
                         }}
                       >
-                        <p style={{ margin: 0, fontSize: "22px", lineHeight: "28px", fontWeight: 700, letterSpacing: "4px", color: artlab.amber, fontFamily: fontStack }}>
+                        <p style={{ margin: 0, fontSize: "22px", lineHeight: "28px", fontWeight: 700, letterSpacing: "4px", color: artlab.orange, fontFamily: fontStack }}>
                           ARTLAB
                         </p>
                         <p style={{ margin: "6px 0 0", fontSize: "14px", lineHeight: "20px", fontWeight: 600, color: artlab.ink, fontFamily: fontStack }}>

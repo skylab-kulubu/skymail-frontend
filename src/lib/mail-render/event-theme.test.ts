@@ -86,14 +86,14 @@ describe("the event's theme", () => {
       const written = band.slice(band.indexOf("{{else}}"));
       assert.match(written, />\s*ARTLAB\s*<\/p>/, `${key}: yazılı bant yok`);
       assert.ok(written.includes("{{.EventName}}"), `${key}: yazılı bantta etkinlik adı yok`);
-      assert.ok(band.includes('bgcolor="#0b0e13"'), `${key}: koyu zemin yok`);
+      assert.ok(band.includes('bgcolor="#0a1222"'), `${key}: koyu zemin yok`);
       assert.ok(band.includes('data-skip-in-text="true"'), `${key}: bant düz metne giriyor`);
       // The band comes first in the body, before the status line.
       assert.ok(html.indexOf(band) < html.indexOf(`class="tone-`), `${key}: bant gövdenin başında değil`);
 
       // Nothing of the theme outside its {{if}}s: no preload in the head, no stray reference.
       const otherwise = withoutTheme(html);
-      for (const word of ["artlab", "ARTLAB", EVENT_BANNER_URL, `.${THEME}`, "#0b0e13"]) {
+      for (const word of ["artlab", "ARTLAB", EVENT_BANNER_URL, `.${THEME}`, "#0a1222"]) {
         assert.ok(!otherwise.includes(word), `${key}: ${word} {{if}} dışında`);
       }
 
