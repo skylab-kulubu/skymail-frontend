@@ -41,6 +41,9 @@ const CONTRACTS: Record<string, string[]> = {
   "core.certificate-auto-finalized": ["EventId"],
   "core.event-cancelled": ["EventName"],
   "core.event-reinstated": ["EventName"],
+  // core-backend internal/coorganizermail vars: EventName on every send.
+  "core.event-co-organizer-added": ["EventName"],
+  "core.event-co-organizer-removed": ["EventName"],
   "core.feedback-request": ["Items"],
   "core.feedback-reminder": ["Items"],
   "core.contact-consent-confirm": ["confirmUrl"],

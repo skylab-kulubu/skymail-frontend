@@ -17,7 +17,8 @@ export const meta: TemplateMeta = {
   // AttendeeNoteParts: [{Text, Url}], the note cut at its http(s) addresses,
   // Url empty for plain text (the note's links, Yusuf 2026-11-24);
   // Recorded, MissingRequired, MissedRequired: [{Title}]; the counts are
-  // numbers, 0 when the event has no certificate rule.
+  // numbers, 0 when the event has no certificate rule. Theme and
+  // EventBannerUrl: the event's theme (theme.tsx, <Shell themed>).
   variables: [
     "FirstName",
     "EventName",
@@ -34,6 +35,8 @@ export const meta: TemplateMeta = {
     "MinRequired",
     "MissingRequired",
     "MissedRequired",
+    "Theme",
+    "EventBannerUrl",
   ],
   // No variable is masked (ADR-0074, 2026-11-24 ek): the note is mail content
   // that whoever holds mails:read may read, and its links are tracked as any
@@ -76,6 +79,9 @@ export const meta: TemplateMeta = {
     MinRequired: 12,
     MissingRequired: [{ Title: "Final" }],
     MissedRequired: [],
+    // The club's own look; "artlab" previews the ARTLAB theme.
+    Theme: "",
+    EventBannerUrl: "",
   },
 };
 
@@ -86,7 +92,7 @@ export const meta: TemplateMeta = {
  */
 export default function EventAttendanceWelcome() {
   return (
-    <Shell preview={`${v("EventName")}: hoş geldin.`} brand="skylab" reason={null}>
+    <Shell preview={`${v("EventName")}: hoş geldin.`} brand="skylab" reason={null} themed>
       <Context tone="ok">{v("EventName")}</Context>
       <Title>Hoş Geldin</Title>
 

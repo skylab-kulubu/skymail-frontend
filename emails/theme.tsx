@@ -35,7 +35,7 @@
  */
 import { Body, Head, Hr, Html, Img, Link, Preview } from "@react-email/components";
 import * as React from "react";
-import { end, ifSet, v } from "./go";
+import { elseBranch, end, ifSet, rangeOver, v } from "./go";
 
 /** Forms' palette: the light theme, inline. */
 const ink = {
@@ -436,11 +436,171 @@ function InboxPreview({ text }: { text: string }) {
   );
 }
 
+/*
+  The event's theme (etkinlik teması, plan §3.3): the look its organisers chose
+  for the event, kept in core and sent with each participant mail as two
+  variables: Theme, the theme's key (empty for the club's own look), and
+  EventBannerUrl, the public address of the event's banner (its ticket image;
+  empty when it has none). Today's themes: none and "artlab".
+
+  A mail opts in with <Shell themed>: the participant mails (ticket,
+  reminder, cancellation, change, certificate, feedback, the door's welcome
+  and receipt). Go chooses per
+  send: for any other theme, and from a core that sends no Theme at all, every
+  {{if}} … {{end -}} of the theme drops out and the mail is the same bytes as
+  before. `and` guards the `eq`: Go's eq fails on a variable the send does not
+  carry. Colours are written out per theme rather than sent as variables:
+  html/template filters a value in CSS, and a theme's look lives in code.
+
+  The theme changes the frame, never the content: a band above the body (the
+  banner, or the theme's written band without one) and the accent of links,
+  of the brand-toned status line and of the action button, through a
+  stylesheet of its own. A client that drops <style> keeps the club's colours;
+  the band is inline and shows everywhere. No webfont: the theme's display
+  face (Unbounded) is not one a reader has, as the shell's own note says.
+*/
+
+/** The variables core sends for the event's theme (core T3). */
+export const THEME = "Theme";
+export const EVENT_BANNER_URL = "EventBannerUrl";
+
+/** The ARTLAB theme's condition. Backquoted strings, as ifEq writes them: React writes a double quote in text as &quot;. */
+export const ifArtlabTheme = `{{if and .${THEME} (eq .${THEME} \`artlab\`)}}`;
+
+/*
+  The theme's end trims the white space after it. The formatter puts an {{if}}
+  where the next element began, on that element's line and indent, so with
+  the theme's part dropped and the space after {{end}} trimmed, the body and
+  the plain text are byte for byte what they were without it.
+*/
+const END_TRIMMED = "{{end -}}";
+
+/**
+ * ARTLAB's palette: the poster's (Yusuf, 2026-11-26), on every surface of the
+ * theme. Navy ground, orange accent, electric blue second accent. On white
+ * the orange is darkened for text: #b35600 is 4.9:1 on white (4.7:1 on the
+ * button's #fafafa); #ff8a1f, 2.4:1 there, is for the dark ground (7.9:1).
+ */
+const artlab = { ground: "#0a1222", surface: "#121c30", ink: "#e9edf2", orange: "#ff8a1f", orangeOnWhite: "#b35600", blue: "#3aa0ff" } as const;
+
+/*
+  Each rule is scoped under .email-bg, the page's own wrapper, so it outweighs
+  the shell's rules for the same class whatever their order: the theme's sheet
+  comes before the shell's in the <head>, where its {{end}} leaves the shell's
+  bytes as they were.
+*/
+const artlabCss = `
+.email-bg .t-link, .email-bg .tone-brand { color: ${artlab.orangeOnWhite} !important; }
+.email-bg .card { border-color: ${artlab.orange} !important; }
+@media (prefers-color-scheme: dark) {
+  .email-bg .t-link, .email-bg .tone-brand { color: ${artlab.orange} !important; }
+  .email-bg .card { background-color: ${artlab.surface} !important; border-color: ${artlab.orange} !important; }
+  .email-bg .artlab-ground { background-color: ${artlab.ground} !important; }
+}
+[data-ogsc] .email-bg .t-link, [data-ogsc] .email-bg .tone-brand, .email-bg .t-link[data-ogsc] { color: ${artlab.orange} !important; }
+[data-ogsb] .email-bg .card, .email-bg .card[data-ogsb] { background-color: ${artlab.surface} !important; }
+[data-ogsb] .email-bg .artlab-ground, .email-bg .artlab-ground[data-ogsb] { background-color: ${artlab.ground} !important; }
+`;
+
+/** The theme's stylesheet. */
+function ThemeStyle() {
+  return (
+    <>
+      {ifArtlabTheme}
+      <style>{artlabCss}</style>
+      {END_TRIMMED}
+    </>
+  );
+}
+
+/**
+ * The theme's band, first in the body: the event's banner on the theme's
+ * ground, or the written band (the theme's name over the event's) without
+ * one. The banner's alt text is the event's name, so with images off the
+ * band still reads. The plain text leaves the band out; the mail names the
+ * event in its rows.
+ */
+function ThemeBand() {
+  const ground = { ...legacy({ bgcolor: artlab.ground }), className: "email-bg artlab-ground" };
+  return (
+    <>
+      {ifArtlabTheme}
+      <Table data-skip-in-text="true">
+        <tr>
+          <td style={{ paddingBottom: "28px" }}>
+            <Table>
+              <tr>
+                {/* email-bg is the dark-aware class; artlab-ground, in the theme's sheet, keeps the band navy in dark mode too. */}
+                <td
+                  align="center"
+                  {...ground}
+                  style={{ backgroundColor: artlab.ground, borderRadius: "8px", color: artlab.ink, fontFamily: fontStack }}
+                >
+                  {ifSet(EVENT_BANNER_URL)}
+                  {/* Width only: the banner's proportions are the event's. fetchPriority low keeps React from
+                      preloading it in the <head>, outside the {{if}}, which every mail would carry. */}
+                  <Img
+                    src={v(EVENT_BANNER_URL)}
+                    width="472"
+                    alt={v("EventName")}
+                    fetchPriority="low"
+                    style={{
+                      display: "block",
+                      width: "100%",
+                      maxWidth: "472px",
+                      height: "auto",
+                      border: 0,
+                      borderRadius: "8px",
+                      color: artlab.ink,
+                      fontFamily: fontStack,
+                      fontSize: "15px",
+                      fontWeight: 600,
+                      lineHeight: "22px",
+                      textAlign: "center",
+                    }}
+                  />
+                  {elseBranch}
+                  <Table>
+                    <tr>
+                      <td
+                        align="center"
+                        {...ground}
+                        style={{
+                          backgroundColor: artlab.ground,
+                          borderRadius: "8px",
+                          borderBottom: `2px solid ${artlab.blue}`,
+                          padding: "22px 20px 20px",
+                          fontFamily: fontStack,
+                          textAlign: "center",
+                        }}
+                      >
+                        <p style={{ margin: 0, fontSize: "22px", lineHeight: "28px", fontWeight: 700, letterSpacing: "4px", color: artlab.orange, fontFamily: fontStack }}>
+                          ARTLAB
+                        </p>
+                        <p style={{ margin: "6px 0 0", fontSize: "14px", lineHeight: "20px", fontWeight: 600, color: artlab.ink, fontFamily: fontStack }}>
+                          {v("EventName")}
+                        </p>
+                      </td>
+                    </tr>
+                  </Table>
+                  {end}
+                </td>
+              </tr>
+            </Table>
+          </td>
+        </tr>
+      </Table>
+      {END_TRIMMED}
+    </>
+  );
+}
+
 export function Shell({
   preview,
   brand = "skylab",
   reason,
   sender,
+  themed = false,
   children,
 }: {
   preview: string;
@@ -457,6 +617,11 @@ export function Shell({
    * 06): a line under the reason. Left out, the footer has none.
    */
   sender?: React.ReactNode;
+  /**
+   * Whether the event's theme frames the mail (Theme, EventBannerUrl): the
+   * participant mails of an event. Left out, the mail is the club's look alone.
+   */
+  themed?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -465,6 +630,7 @@ export function Shell({
         <meta name="color-scheme" content="light dark" />
         <meta name="supported-color-schemes" content="light dark" />
         <meta name="x-apple-disable-message-reformatting" />
+        {themed ? <ThemeStyle /> : null}
         <style>{css}</style>
       </Head>
       <InboxPreview text={preview} />
@@ -479,7 +645,10 @@ export function Shell({
                 <tr>
                   <td className="shell" style={{ padding: "40px 24px 32px", fontFamily: fontStack, textAlign: "left" }}>
                     <BrandMark brand={brand} />
-                    <div style={{ paddingTop: "32px" }}>{children}</div>
+                    <div style={{ paddingTop: "32px" }}>
+                      {themed ? <ThemeBand /> : null}
+                      {children}
+                    </div>
                     <Footer brand={brand} reason={reason === undefined ? defaultReason() : reason} sender={sender} />
                   </td>
                 </tr>
@@ -864,5 +1033,32 @@ export function ListHeader({ title, count }: { title: React.ReactNode; count?: R
         </td>
       </tr>
     </Table>
+  );
+}
+
+/**
+ * The organizer's announcement in the ticket mails (event.ticket-created,
+ * event.waitlist-promoted, event.reminder): the event's WhatsApp group, say.
+ * core sends TicketNote, the note as written (at most 500 characters, line
+ * breaks kept), and TicketNoteParts, [{Text, Url}], the same text cut at its
+ * https addresses, Url empty for plain text (core-backend docs/ticket-note.md;
+ * Yusuf, 2026-11-26). An http address stays text. Empty, the section is not
+ * there; a core that sends neither leaves it out too.
+ */
+export function TicketNote() {
+  return (
+    <>
+      {ifSet("TicketNote")}
+      <Note label="Duyuru" keepLines>
+        {rangeOver("TicketNoteParts")}
+        {ifSet("Url")}
+        <TextLink href={v("Url")}>{v("Text")}</TextLink>
+        {elseBranch}
+        {v("Text")}
+        {end}
+        {end}
+      </Note>
+      {end}
+    </>
   );
 }

@@ -34,14 +34,15 @@ const text = (html: string) =>
     .replace(/\s+/g, " ")
     .trim();
 
+/** What core sends; Theme and EventBannerUrl for the welcome and the receipt: the event's theme (core T3). */
 const CORE: Record<string, string[]> = {
   "event.attendance-welcome": [
     "AttendeeNote", "AttendeeNoteParts", "Attended", "CertificateLine", "CountedTotal", "DayLabel", "EventId", "EventName", "FirstName",
-    "MinRequired", "MissedRequired", "MissingRequired", "OwnerTeam", "Program", "Recorded",
+    "MinRequired", "MissedRequired", "MissingRequired", "OwnerTeam", "Program", "Recorded", "Theme", "EventBannerUrl",
   ],
   "event.attendance-recorded": [
     "Attended", "CountedTotal", "EventId", "EventName", "FirstName", "HasRule", "MinRequired", "MissedRequired",
-    "MissingRequired", "NotCounted", "OwnerTeam", "Sessions",
+    "MissingRequired", "NotCounted", "OwnerTeam", "Sessions", "Theme", "EventBannerUrl",
   ],
   "event.attendance-day-summary": [
     "Attended", "CertificateNote", "CountedTotal", "DayAttended", "DayLabel", "DaySessions", "DayTotal", "Eligible",

@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Img } from "@react-email/components";
-import { Context, Cta, Paragraph, RowItem, Rows, RowsEnd, Shell, Small, TextLink, Title } from "./theme";
+import { Context, Cta, Paragraph, RowItem, Rows, RowsEnd, Shell, Small, TextLink, TicketNote, Title } from "./theme";
 import { end, ifNotSet, ifSet, v } from "./go";
 import type { TemplateMeta } from "./types";
 
@@ -12,8 +12,8 @@ export const meta: TemplateMeta = {
   contentSensitive: true,
   brand: "skylab",
   trigger:
-    "core-backend, Member apply / Guest apply / Apply-for-other bir Ticket yazdığında, yayında ve bitmemiş bir etkinlikte (TICKET_CREATED_NOTIFICATION=on; docs/ticket-created-notification.md), ve panelden yeniden gönderimde. Üyeye bildirim olarak (POST /v1/notifications: kutu + e-posta), konuğa yalnız bu e-posta. TICKET_PAGE_URL açıkken core TicketUrl (bilet sayfası), TicketQrUrl (QR görseli; PUBLIC_API_ORIGIN boşsa boş) ve TicketCode da gönderir; kapalıyken göndermez ve satırları görünmez. EventUrl hiç gönderilmez.",
-  variables: ["EventName", "EventDate", "Venue", "TicketQrUrl", "TicketCode", "TicketUrl", "OwnerTeam", "EventUrl"],
+    "core-backend, Member apply / Guest apply / Apply-for-other bir Ticket yazdığında, yayında ve bitmemiş bir etkinlikte (TICKET_CREATED_NOTIFICATION=on; docs/ticket-created-notification.md), ve panelden yeniden gönderimde. Üyeye bildirim olarak (POST /v1/notifications: kutu + e-posta), konuğa yalnız bu e-posta. TICKET_PAGE_URL açıkken core TicketUrl (bilet sayfası), TicketQrUrl (QR görseli; PUBLIC_API_ORIGIN boşsa boş) ve TicketCode da gönderir; kapalıyken göndermez ve satırları görünmez. EventUrl hiç gönderilmez. TicketNote ve TicketNoteParts düzenleyenin bilet duyurusudur (ör. WhatsApp grubu; core docs/ticket-note.md), boşsa bölüm görünmez.",
+  variables: ["EventName", "EventDate", "Venue", "TicketQrUrl", "TicketCode", "TicketUrl", "OwnerTeam", "EventUrl", "Theme", "EventBannerUrl", "TicketNote", "TicketNoteParts"],
   sensitiveVariables: ["TicketCode", "TicketQrUrl", "TicketUrl"],
   notification: {
     category: null,
@@ -37,6 +37,15 @@ export const meta: TemplateMeta = {
     TicketUrl: "https://yildizskylab.com/bilet/7Q2MK4XRWZ3HN5TJVB6PDYCGEA",
     OwnerTeam: "WEBLAB",
     EventUrl: "https://skyl.app/gecekodu",
+    // The club's own look; "artlab" previews the ARTLAB theme.
+    Theme: "",
+    EventBannerUrl: "",
+    // The organizer's announcement, a WhatsApp group (core cuts it at its https addresses).
+    TicketNote: "Etkinlik duyuruları WhatsApp grubunda: https://chat.whatsapp.com/OrnekDavet123",
+    TicketNoteParts: [
+      { Text: "Etkinlik duyuruları WhatsApp grubunda: ", Url: "" },
+      { Text: "https://chat.whatsapp.com/OrnekDavet123", Url: "https://chat.whatsapp.com/OrnekDavet123" },
+    ],
   },
 };
 
@@ -51,7 +60,7 @@ export const meta: TemplateMeta = {
  */
 export default function EventTicketCreated() {
   return (
-    <Shell preview={`${v("EventName")} biletin hazır.`} brand="skylab" reason={null}>
+    <Shell preview={`${v("EventName")} biletin hazır.`} brand="skylab" reason={null} themed>
       <Context tone="ok">{v("EventName")}</Context>
       <Title>Biletin Hazır</Title>
 
@@ -99,6 +108,8 @@ export default function EventTicketCreated() {
       {ifSet("EventUrl")}
       <Cta href={v("EventUrl")}>Etkinlik Sayfası</Cta>
       {end}
+
+      <TicketNote />
 
       {/* KVKK aydınlatma §5.12: the photo notice goes in the registration mail, fixed, before the footer. */}
       <Small style={{ marginTop: "24px" }}>Etkinlikte fotoğraf ve video çekilir, Kulübün kanallarında paylaşılabilir.</Small>

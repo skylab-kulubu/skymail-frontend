@@ -13,19 +13,22 @@ export const meta: TemplateMeta = {
   trigger:
     "core-backend, iptal geri alınırken \"Katılımcılara tekrar bildir\" seçiliyse, iptal postası ulaşan her bilet sahibine bir kez (internal/eventstatusmail).",
   // core-backend/internal/eventstatusmail/service.go vars.
-  variables: ["EventName", "EventStart", "FirstName"],
+  variables: ["EventName", "EventStart", "FirstName", "Theme", "EventBannerUrl"],
   requiredVariables: [{ name: "EventName", reason: "Hangi etkinliğin yeniden yayında olduğunu söyleyen tek alan; kaldırılırsa posta etkinliği adlandırmaz." }],
   sample: {
     EventName: "GECEKODU 2026",
     EventStart: "14.03.2026 19:00",
     FirstName: "Yusuf",
+    // The club's own look; "artlab" previews the ARTLAB theme.
+    Theme: "",
+    EventBannerUrl: "",
   },
 };
 
 /** Goes only to who got the cancellation mail of the same Event. */
 export default function CoreEventReinstated() {
   return (
-    <Shell preview={`${v("EventName")} yeniden yayında.`} brand="skylab" reason={null}>
+    <Shell preview={`${v("EventName")} yeniden yayında.`} brand="skylab" reason={null} themed>
       <Context tone="ok">Yeniden yayında</Context>
       <Title>İptal Geri Alındı</Title>
 

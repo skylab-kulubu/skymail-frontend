@@ -13,7 +13,7 @@ export const meta: TemplateMeta = {
   trigger:
     "core-backend, yoklama kesinleştikten sonra sertifika üretildiğinde (SKYNOTIFY_CERTIFICATE_TEMPLATE_ID, certificate/service.go).",
   // core-backend/internal/certificate/service.go:161 gönderdiği set.
-  variables: ["FirstName", "EventName", "VerifyURL", "Serial", "OwnerTeam"],
+  variables: ["FirstName", "EventName", "VerifyURL", "Serial", "OwnerTeam", "Theme", "EventBannerUrl"],
   // The only way to the certificate page and its check; core always passes it.
   requiredVariables: [{ name: "VerifyURL", reason: "Sertifika sayfasının ve doğrulamasının adresi; kaldırılırsa katılımcı sertifikasına ulaşamaz." }],
   sample: {
@@ -22,6 +22,9 @@ export const meta: TemplateMeta = {
     VerifyURL: "https://skyl.app/dogrula/SKY-CERT-2026-0042",
     Serial: "SKY-CERT-2026-0042",
     OwnerTeam: "WEBLAB",
+    // The club's own look; "artlab" previews the ARTLAB theme.
+    Theme: "",
+    EventBannerUrl: "",
   },
 };
 
@@ -34,7 +37,7 @@ export default function CoreCertificate() {
   const verifyUrl = v("VerifyURL");
 
   return (
-    <Shell preview="Katılım sertifikan hazır." brand="skylab" reason={null}>
+    <Shell preview="Katılım sertifikan hazır." brand="skylab" reason={null} themed>
       <Context tone="ok">{v("EventName")}</Context>
       <Title>Sertifikan Hazır</Title>
 
