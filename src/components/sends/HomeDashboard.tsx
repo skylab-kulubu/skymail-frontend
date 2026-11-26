@@ -9,7 +9,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { AlertTriangle, ArrowRight, Send } from 'lucide-react';
+import { ArrowRight, Send } from 'lucide-react';
 import { Button, Notice, StateCard, StatusDot } from '@skylab-kulubu/skylcn-ui';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { useConsole } from '@/components/layout/ConsoleContext';
@@ -35,6 +35,7 @@ import { SectionTitle } from './SectionTitle';
 import { SendItem } from './SendItem';
 import { SenderPausedNotice } from './SenderPaused';
 import { SKYLCN_TONE, TONE_TEXT, type Tone } from '@/components/common/ToneBadge';
+import { loadFailureArt } from '@/components/common/load-failure';
 
 const DAYS = 30;
 const RECENT = 5;
@@ -75,7 +76,7 @@ function Summary() {
 
   if (state.status === 'error') {
     return (
-      <StateCard icon={AlertTriangle} tone="danger" title="Gönderim özeti yüklenemedi" description={state.error.message}>
+      <StateCard {...loadFailureArt(state.error)} tone="danger" title="Gönderim özeti yüklenemedi" description={state.error.message}>
         <Button variant="outline" onClick={() => void state.reload()}>
           Tekrar dene
         </Button>

@@ -8,7 +8,7 @@
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { AlertTriangle, ArrowRight, Plus } from 'lucide-react';
+import { ArrowRight, Plus } from 'lucide-react';
 import { Button, FilterPills, Pagination, StateCard } from '@skylab-kulubu/skylcn-ui';
 import { useConsole } from '@/components/layout/ConsoleContext';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -38,6 +38,7 @@ import { sendAccess } from '@/lib/send-form/access';
 import { composeHref, formatCount } from '@/lib/sends';
 import { useLastPage } from '@/lib/ui/use-last-page';
 import { ApprovalStateBadge, Deadline, Submitter } from './ApprovalParts';
+import { loadFailureArt } from '@/components/common/load-failure';
 
 const EMPTY_TEXT: Readonly<Record<ApprovalFilter, string>> = {
   all: 'Henüz onaya sunulan bir gönderim yok.',
@@ -116,7 +117,7 @@ export function ApprovalList() {
       {state.status === 'loading' ? (
         <StateCard loading title="İstekler yükleniyor" />
       ) : state.status === 'error' ? (
-        <StateCard icon={AlertTriangle} tone="danger" title="İstekler yüklenemedi" description={state.error.message}>
+        <StateCard {...loadFailureArt(state.error)} tone="danger" title="İstekler yüklenemedi" description={state.error.message}>
           <Button variant="outline" onClick={() => void state.reload()}>
             Tekrar dene
           </Button>
