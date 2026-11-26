@@ -23,6 +23,8 @@ const THEMED = [
   "core.certificate",
   "core.feedback-request",
   "core.feedback-reminder",
+  "event.attendance-welcome",
+  "event.attendance-recorded",
 ];
 
 const escaped = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

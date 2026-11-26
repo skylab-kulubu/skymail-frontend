@@ -26,6 +26,8 @@ const BRAND_OF: Record<string, Brand> = {
   "core.certificate-auto-finalized": "skylab",
   "core.event-cancelled": "skylab",
   "core.event-reinstated": "skylab",
+  "core.event-co-organizer-added": "skylab",
+  "core.event-co-organizer-removed": "skylab",
   "core.feedback-request": "skylab",
   "core.feedback-reminder": "skylab",
   "core.contact-consent-confirm": "skylab",

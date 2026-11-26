@@ -560,6 +560,109 @@
       "{{if .UnsubscribeUrl}}"
     ]
   },
+  "core.event-co-organizer-added": {
+    "subject": "{{.EventName}}: {{if .TeamName}}ekibin etkinliğe eklendi{{else}}ortak düzenleyen oldun{{end}}",
+    "system": true,
+    "contentSensitive": false,
+    "variables": [
+      "EventId",
+      "EventName",
+      "OwnerTeam",
+      "TeamName",
+      "Management",
+      "Visibility",
+      "ActorName",
+      "PanelUrl"
+    ],
+    "requiredVariables": [
+      "EventName"
+    ],
+    "sensitiveVariables": null,
+    "sampleKeys": [
+      "ActorName",
+      "EventId",
+      "EventName",
+      "Management",
+      "OwnerTeam",
+      "PanelUrl",
+      "TeamName",
+      "Visibility"
+    ],
+    "referenced": [
+      "ActorName",
+      "EventName",
+      "Management",
+      "OwnerTeam",
+      "PanelUrl",
+      "TeamName",
+      "UnsubscribeUrl",
+      "Visibility"
+    ],
+    "actions": [
+      "{{.ActorName}}",
+      "{{.EventName}}",
+      "{{.Management}}",
+      "{{.OwnerTeam}}",
+      "{{.PanelUrl}}",
+      "{{.TeamName}}",
+      "{{.UnsubscribeUrl}}",
+      "{{.Visibility}}",
+      "{{if .ActorName}}",
+      "{{if .Management}}",
+      "{{if .OwnerTeam}}",
+      "{{if .PanelUrl}}",
+      "{{if .TeamName}}",
+      "{{if .UnsubscribeUrl}}",
+      "{{if .Visibility}}"
+    ]
+  },
+  "core.event-co-organizer-removed": {
+    "subject": "{{.EventName}}: {{if .TeamName}}ekibin etkinlikten çıkarıldı{{else}}artık ortak düzenleyen değilsin{{end}}",
+    "system": true,
+    "contentSensitive": false,
+    "variables": [
+      "EventId",
+      "EventName",
+      "OwnerTeam",
+      "TeamName",
+      "Management",
+      "Visibility",
+      "ActorName",
+      "PanelUrl"
+    ],
+    "requiredVariables": [
+      "EventName"
+    ],
+    "sensitiveVariables": null,
+    "sampleKeys": [
+      "ActorName",
+      "EventId",
+      "EventName",
+      "Management",
+      "OwnerTeam",
+      "PanelUrl",
+      "TeamName",
+      "Visibility"
+    ],
+    "referenced": [
+      "ActorName",
+      "EventName",
+      "OwnerTeam",
+      "TeamName",
+      "UnsubscribeUrl"
+    ],
+    "actions": [
+      "{{.ActorName}}",
+      "{{.EventName}}",
+      "{{.OwnerTeam}}",
+      "{{.TeamName}}",
+      "{{.UnsubscribeUrl}}",
+      "{{if .ActorName}}",
+      "{{if .OwnerTeam}}",
+      "{{if .TeamName}}",
+      "{{if .UnsubscribeUrl}}"
+    ]
+  },
   "core.feedback-request": {
     "subject": "{{.EventName}} geri bildirim formu",
     "system": true,
@@ -1375,7 +1478,9 @@
       "CountedTotal",
       "MinRequired",
       "MissingRequired",
-      "MissedRequired"
+      "MissedRequired",
+      "Theme",
+      "EventBannerUrl"
     ],
     "requiredVariables": [],
     "sensitiveVariables": [],
@@ -1386,6 +1491,7 @@
       "CertificateLine",
       "CountedTotal",
       "DayLabel",
+      "EventBannerUrl",
       "EventId",
       "EventName",
       "FirstName",
@@ -1394,7 +1500,8 @@
       "MissingRequired",
       "OwnerTeam",
       "Program",
-      "Recorded"
+      "Recorded",
+      "Theme"
     ],
     "referenced": [
       "Attended",
@@ -1403,6 +1510,7 @@
       "CertificateLine",
       "CountedTotal",
       "DayLabel",
+      "EventBannerUrl",
       "EventName",
       "FirstName",
       "MinRequired",
@@ -1411,6 +1519,7 @@
       "OwnerTeam",
       "Program",
       "Recorded",
+      "Theme",
       "UnsubscribeUrl"
     ],
     "actions": [
@@ -1419,6 +1528,7 @@
       "{{.CertificateLine}}",
       "{{.CountedTotal}}",
       "{{.DayLabel}}",
+      "{{.EventBannerUrl}}",
       "{{.EventName}}",
       "{{.FirstName}}",
       "{{.MinRequired}}",
@@ -1428,10 +1538,12 @@
       "{{.Title}}",
       "{{.UnsubscribeUrl}}",
       "{{.Url}}",
+      "{{end -}}",
       "{{if $i}}",
       "{{if .AttendeeNote}}",
       "{{if .CertificateLine}}",
       "{{if .DayLabel}}",
+      "{{if .EventBannerUrl}}",
       "{{if .FirstName}}",
       "{{if .MinRequired}}",
       "{{if .MissedRequired}}",
@@ -1441,6 +1553,7 @@
       "{{if .Recorded}}",
       "{{if .UnsubscribeUrl}}",
       "{{if .Url}}",
+      "{{if and .Theme (eq .Theme `artlab`)}}",
       "{{range $i, $s := .MissedRequired}}",
       "{{range $i, $s := .MissingRequired}}",
       "{{range $i, $s := .Recorded}}",
@@ -1464,13 +1577,16 @@
       "MinRequired",
       "MissingRequired",
       "MissedRequired",
-      "NotCounted"
+      "NotCounted",
+      "Theme",
+      "EventBannerUrl"
     ],
     "requiredVariables": [],
     "sensitiveVariables": null,
     "sampleKeys": [
       "Attended",
       "CountedTotal",
+      "EventBannerUrl",
       "EventId",
       "EventName",
       "FirstName",
@@ -1480,11 +1596,13 @@
       "MissingRequired",
       "NotCounted",
       "OwnerTeam",
-      "Sessions"
+      "Sessions",
+      "Theme"
     ],
     "referenced": [
       "Attended",
       "CountedTotal",
+      "EventBannerUrl",
       "EventName",
       "FirstName",
       "HasRule",
@@ -1494,18 +1612,22 @@
       "NotCounted",
       "OwnerTeam",
       "Sessions",
+      "Theme",
       "UnsubscribeUrl"
     ],
     "actions": [
       "{{$s.Title}}",
       "{{.Attended}}",
       "{{.CountedTotal}}",
+      "{{.EventBannerUrl}}",
       "{{.EventName}}",
       "{{.FirstName}}",
       "{{.MinRequired}}",
       "{{.OwnerTeam}}",
       "{{.UnsubscribeUrl}}",
+      "{{end -}}",
       "{{if $i}}",
+      "{{if .EventBannerUrl}}",
       "{{if .FirstName}}",
       "{{if .HasRule}}",
       "{{if .MissedRequired}}",
@@ -1513,6 +1635,7 @@
       "{{if .NotCounted}}",
       "{{if .OwnerTeam}}",
       "{{if .UnsubscribeUrl}}",
+      "{{if and .Theme (eq .Theme `artlab`)}}",
       "{{if eq (len .Sessions) 1}}",
       "{{range $i, $s := .MissedRequired}}",
       "{{range $i, $s := .MissingRequired}}",

@@ -444,7 +444,8 @@ function InboxPreview({ text }: { text: string }) {
   empty when it has none). Today's themes: none and "artlab".
 
   A mail opts in with <Shell themed>: the participant mails (ticket,
-  reminder, cancellation, change, certificate, feedback). Go chooses per
+  reminder, cancellation, change, certificate, feedback, the door's welcome
+  and receipt). Go chooses per
   send: for any other theme, and from a core that sends no Theme at all, every
   {{if}} … {{end -}} of the theme drops out and the mail is the same bytes as
   before. `and` guards the `eq`: Go's eq fails on a variable the send does not
