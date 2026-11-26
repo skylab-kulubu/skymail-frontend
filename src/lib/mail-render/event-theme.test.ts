@@ -1,11 +1,12 @@
 /**
  * The event's theme (emails/theme.tsx, <Shell themed>): core sends each
  * participant mail Theme and EventBannerUrl, and a mail of an event themed
- * "artlab" opens with the event's banner (or the written band without one)
- * and takes ARTLAB's accent. For any other theme, and from a core that sends
- * no Theme, the mail is the same bytes as before: Go drops every
- * {{if}} … {{end -}} of the theme then and trims the white space after it, so
- * cutting those spans here is what a send does.
+ * "artlab" is dark whatever the client's mode: the poster's navy, light text,
+ * orange accents, the banner (or the written band) on top. For any other
+ * theme, and from a core that sends no Theme, the mail is the same bytes as
+ * before. Go then takes the club's side of every per-send colour and drops
+ * every {{if}} … {{end -}} of the theme, trimming the white space after it;
+ * withoutTheme does the same here.
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
@@ -30,9 +31,18 @@ const escaped = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 /** Every {{if}} … {{end -}} of the theme with the white space Go trims after it. */
 const SPAN = new RegExp(`${escaped(ifArtlabTheme)}[\\s\\S]*?\\{\\{end -\\}\\}\\s*`, "g");
 
-/** The mail as Go sends it for any theme but "artlab". */
-const withoutTheme = (body: string) => body.replace(SPAN, "");
+/** A colour written per send: {{if <artlab>}}ARTLAB{{else}}club{{end}}, nothing else inside. */
+const PER_THEME = new RegExp(`${escaped(ifArtlabTheme)}([^{}]*)\\{\\{else\\}\\}([^{}]*)\\{\\{end\\}\\}`, "g");
 
+/** The mail as Go sends it for any theme but "artlab". */
+const withoutTheme = (body: string) => body.replace(PER_THEME, "$2").replace(SPAN, "");
+
+/** The mail as Go sends it for the ARTLAB theme, its banner's {{if}} left as it is. */
+const asArtlab = (body: string) =>
+  body
+    .replace(PER_THEME, "$1")
+    .replaceAll(ifArtlabTheme, "")
+    .replace(/\{\{end -\}\}\s*/g, "");
 async function rendered(Component: React.ComponentType) {
   const result = await renderComponent(Component);
   assert.ok(result.ok, result.ok ? "" : result.message);
@@ -43,7 +53,7 @@ describe("the event's theme", () => {
   it("reads the variables core sends, guarded for a send without them, in quotes React does not escape", () => {
     assert.equal(THEME, "Theme");
     assert.equal(EVENT_BANNER_URL, "EventBannerUrl");
-    assert.equal(ifArtlabTheme, "{{if and .Theme (eq .Theme `artlab`)}}");
+    assert.equal(ifArtlabTheme, "{{if and $.Theme (eq $.Theme `artlab`)}}");
   });
 
   it("adds nothing outside its {{if}}s to the shell", async () => {
@@ -54,7 +64,7 @@ describe("the event's theme", () => {
     const themed = () => h(Shell, { preview: "Önizleme.", reason: null, themed: true, children: body });
     const before = await rendered(plain);
     const after = await rendered(themed);
-    assert.equal(after.html.match(SPAN)?.length, 2, "biri <head>'de stil, biri gövdede bant");
+    assert.equal(after.html.replace(PER_THEME, "$2").match(SPAN)?.length, 2, "biri <head>'de stil, biri gövdede bant");
     assert.equal(withoutTheme(after.html), before.html);
     assert.equal(withoutTheme(after.plainText), before.plainText);
   });
@@ -70,7 +80,7 @@ describe("the event's theme", () => {
       assert.ok(!required.includes(THEME) && !required.includes(EVENT_BANNER_URL), `${key}: tema zorunlu olmamalı (eski core göndermiyor)`);
       const { html, plainText } = await rendered(template.Component);
 
-      const spans = html.match(SPAN) ?? [];
+      const spans = html.replace(PER_THEME, "$2").match(SPAN) ?? [];
       assert.equal(spans.length, 2, `${key}: tema bir stil, bir bant olmalı`);
       const [style, band] = spans;
       assert.ok(html.indexOf(style) < html.indexOf("</head>"), `${key}: tema stili <head>'de değil`);
@@ -95,6 +105,27 @@ describe("the event's theme", () => {
       const otherwise = withoutTheme(html);
       for (const word of ["artlab", "ARTLAB", EVENT_BANNER_URL, `.${THEME}`, "#0a1222"]) {
         assert.ok(!otherwise.includes(word), `${key}: ${word} {{if}} dışında`);
+      }
+
+      // For ARTLAB the whole mail is dark in every client, with or without <style>:
+      // every painted cell navy (or the button's surface), in bgcolor and inline both,
+      // no club colour left, the light text inline. The QR keeps its white box.
+      const artlab = asArtlab(html);
+      const painted = [...artlab.matchAll(/<(?:table|td)\b[^>]*\bbgcolor="([^"]+)"[^>]*>/g)];
+      assert.ok(painted.length >= 3, `${key}: boyanan hücre yok`);
+      for (const [tag, color] of painted) {
+        assert.ok(["#0a1222"].includes(color), `${key}: ${color} zemin`);
+        assert.ok(tag.includes(`background-color:${color}`), `${key}: bgcolor'ın yanında satır içi zemin yok`);
+      }
+      for (const club of ["#171717", "#525252", "#737373", "#8f5e98", "#ebebeb", "#fafafa", "#e5e5e5"]) {
+        // The QR's white box keeps its own light frame.
+        const outside = artlab.replace(/<style[\s\S]*?<\/style>/g, "").replace(/<img[^>]*alt="Bilet QR kodu"[^>]*>/g, "");
+        assert.ok(!outside.includes(club), `${key}: kulüp rengi ${club} kalmış`);
+      }
+      assert.ok(artlab.includes("color:#eaf2ff"), `${key}: açık metin satır içi değil`);
+      assert.ok(artlab.includes("/mail/skylab-lilac.png") && !/src="[^"]*skylab-ink\.png"/.test(artlab), `${key}: lacivertte koyu logo`);
+      if (html.includes("Bilet QR kodu")) {
+        assert.match(artlab, /<img[^>]*alt="Bilet QR kodu"[^>]*background-color:#ffffff/, `${key}: QR beyaz kutuda değil`);
       }
 
       // The plain text carries only the empty condition, which Go trims to nothing.

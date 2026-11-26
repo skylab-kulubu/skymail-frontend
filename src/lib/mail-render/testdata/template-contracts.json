@@ -441,7 +441,7 @@
       "{{end -}}",
       "{{if .EventBannerUrl}}",
       "{{if .UnsubscribeUrl}}",
-      "{{if and .Theme (eq .Theme `artlab`)}}"
+      "{{if and $.Theme (eq $.Theme `artlab`)}}"
     ]
   },
   "core.certificate-auto-finalized": {
@@ -603,7 +603,7 @@
       "{{if .EventBannerUrl}}",
       "{{if .FirstName}}",
       "{{if .UnsubscribeUrl}}",
-      "{{if and .Theme (eq .Theme `artlab`)}}",
+      "{{if and $.Theme (eq $.Theme `artlab`)}}",
       "{{range .Items}}"
     ]
   },
@@ -650,7 +650,7 @@
       "{{if .EventBannerUrl}}",
       "{{if .FirstName}}",
       "{{if .UnsubscribeUrl}}",
-      "{{if and .Theme (eq .Theme `artlab`)}}",
+      "{{if and $.Theme (eq $.Theme `artlab`)}}",
       "{{range .Items}}"
     ]
   },
@@ -925,7 +925,7 @@
       "{{if .TicketUrl}}",
       "{{if .UnsubscribeUrl}}",
       "{{if .Venue}}",
-      "{{if and .Theme (eq .Theme `artlab`)}}",
+      "{{if and $.Theme (eq $.Theme `artlab`)}}",
       "{{if not .TicketQrUrl}}"
     ]
   },
@@ -999,7 +999,7 @@
       "{{if .TicketUrl}}",
       "{{if .UnsubscribeUrl}}",
       "{{if .Venue}}",
-      "{{if and .Theme (eq .Theme `artlab`)}}",
+      "{{if and $.Theme (eq $.Theme `artlab`)}}",
       "{{if not .TicketQrUrl}}"
     ]
   },
@@ -1076,7 +1076,7 @@
       "{{if .TicketQrUrl}}",
       "{{if .TicketUrl}}",
       "{{if .UnsubscribeUrl}}",
-      "{{if and .Theme (eq .Theme `artlab`)}}",
+      "{{if and $.Theme (eq $.Theme `artlab`)}}",
       "{{if not .TicketQrUrl}}"
     ]
   },
@@ -1180,7 +1180,7 @@
       "{{if .OwnerTeam}}",
       "{{if .Reason}}",
       "{{if .UnsubscribeUrl}}",
-      "{{if and .Theme (eq .Theme `artlab`)}}",
+      "{{if and $.Theme (eq $.Theme `artlab`)}}",
       "{{if eq .CancelledBy `operator`}}"
     ]
   },

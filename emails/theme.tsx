@@ -290,6 +290,9 @@ const legacy = (attributes: Record<string, string>) => attributes as React.HTMLA
 
 function BrandMark({ brand }: { brand: Brand }) {
   const { label, href } = brands[brand];
+  const ink = useInk();
+  // On the ARTLAB theme's navy the ink mark would vanish: the lilac one, as dark mode shows it.
+  const logo = React.useContext(ThemedContext) ? perTheme(LOGO_LILAC, LOGO_INK) : LOGO_INK;
   // The footer names the product again with its link, so the plain-text part
   // skips this and starts with what the mail says. The logo is not a link: a
   // link with no text renders there as a bare URL glued to what follows.
@@ -298,7 +301,7 @@ function BrandMark({ brand }: { brand: Brand }) {
       <tbody>
         <tr>
           <td style={{ paddingRight: "8px", lineHeight: 0 }}>
-            <Img className="logo-light" src={LOGO_INK} width="20" height="19" alt="SKY LAB" style={{ display: "inline-block", border: 0 }} />
+            <Img className="logo-light" src={logo} width="20" height="19" alt="SKY LAB" style={{ display: "inline-block", border: 0 }} />
             <Img
               className="logo-dark"
               src={LOGO_LILAC}
@@ -324,6 +327,7 @@ function BrandMark({ brand }: { brand: Brand }) {
 }
 
 function Footer({ brand, reason, sender }: { brand: Brand; reason: React.ReactNode; sender?: React.ReactNode }) {
+  const ink = useInk();
   const { credit } = brands[brand];
   // Muted, not Forms' faint: the reason and the credit are text to read, and
   // faint is 2.5:1 on white (WCAG AA asks 4.5:1); muted is 4.7:1, 5.7:1 dark.
@@ -378,6 +382,7 @@ function Footer({ brand, reason, sender }: { brand: Brand; reason: React.ReactNo
  * (.foot-cell), and each phrase keeps its words together.
  */
 function CreditLine({ credit: { product, href, developer } }: { credit: Credit }) {
+  const ink = useInk();
   const cell: React.CSSProperties = { fontSize: "11px", lineHeight: "16px", color: ink.muted, fontFamily: fontStack, verticalAlign: "top", paddingTop: "4px" };
   const link = { color: ink.muted, textDecoration: "none" };
   return (
@@ -463,8 +468,13 @@ function InboxPreview({ text }: { text: string }) {
 export const THEME = "Theme";
 export const EVENT_BANNER_URL = "EventBannerUrl";
 
-/** The ARTLAB theme's condition. Backquoted strings, as ifEq writes them: React writes a double quote in text as &quot;. */
-export const ifArtlabTheme = `{{if and .${THEME} (eq .${THEME} \`artlab\`)}}`;
+/**
+ * The ARTLAB theme's condition. $.Theme, the send's own field: the colours are
+ * also written inside a {{range}} (the feedback mails' items), where dot is
+ * the element. Backquoted strings, as ifEq writes them: React writes a double
+ * quote in text as &quot;.
+ */
+export const ifArtlabTheme = `{{if and $.${THEME} (eq $.${THEME} \`artlab\`)}}`;
 
 /*
   The theme's end trims the white space after it. The formatter puts an {{if}}
@@ -483,22 +493,79 @@ const END_TRIMMED = "{{end -}}";
 const artlab = { ground: "#0a1222", surface: "#121c30", ink: "#e9edf2", orange: "#ff8a1f", orangeOnWhite: "#b35600", blue: "#3aa0ff" } as const;
 
 /*
+  The ARTLAB theme is dark whatever the client's mode (Yusuf, 2026-11-26): the
+  whole mail on the poster's navy, as the ticket PDF. Every colour of the
+  shell and of the content pieces is written per send, so a client that keeps
+  no <style> (Gmail with a non-Google account, Outlook's Word engine) still
+  gets light text on navy: inline, and bgcolor beside background-color on
+  every painted cell. The components read which set to write from the Shell
+  (ThemedContext); outside a themed Shell, and when core sends another theme
+  or none, they write the club's colours as before.
+*/
+const artlabInk: Record<keyof typeof ink, string> = {
+  primary: "#eaf2ff",
+  body: "#c9d6ea",
+  muted: "#8fa3bf",
+  faint: "#7e93b2",
+  hair: "#1d2a40",
+  link: artlab.orange,
+  page: artlab.ground,
+  surface: artlab.surface,
+  border: "#2a3a56",
+};
+
+/** The status colours on navy: the shell's own dark ones, the brand's the poster's orange. */
+const artlabTones: Record<Tone, string> = { ok: "#34d399", wait: "#fbbf24", bad: "#fca5a5", neutral: "#8fa3bf", brand: artlab.orange };
+
+/** A colour Go picks per send: the ARTLAB one for that theme, the club's otherwise. */
+const perTheme = (artlabValue: string, club: string) => `${ifArtlabTheme}${artlabValue}${elseBranch}${club}${end}`;
+
+const themedInk = Object.fromEntries(
+  (Object.keys(ink) as (keyof typeof ink)[]).map((key) => [key, perTheme(artlabInk[key], ink[key])]),
+) as Record<keyof typeof ink, string>;
+
+const themedTones = Object.fromEntries(
+  (Object.keys(tones) as Tone[]).map((key) => [key, perTheme(artlabTones[key], tones[key])]),
+) as Record<Tone, string>;
+
+/** Whether the mail is themed: set by <Shell themed>, read by the pieces inside it. */
+const ThemedContext = React.createContext(false);
+
+/** The colours a piece writes: the club's, or per send in a themed mail. */
+function useInk(): Record<keyof typeof ink, string> {
+  return React.useContext(ThemedContext) ? themedInk : ink;
+}
+
+function useTones(): Record<Tone, string> {
+  return React.useContext(ThemedContext) ? themedTones : tones;
+}
+
+/*
   Each rule is scoped under .email-bg, the page's own wrapper, so it outweighs
   the shell's rules for the same class whatever their order: the theme's sheet
   comes before the shell's in the <head>, where its {{end}} leaves the shell's
   bytes as they were.
 */
 const artlabCss = `
-.email-bg .t-link, .email-bg .tone-brand { color: ${artlab.orangeOnWhite} !important; }
+body, .email-bg .email-bg { background-color: ${artlab.ground} !important; }
+.email-bg .t-link, .email-bg .tone-brand { color: ${artlab.orange} !important; }
 .email-bg .card { border-color: ${artlab.orange} !important; }
 @media (prefers-color-scheme: dark) {
+  body, .email-bg .email-bg, .email-bg .artlab-ground { background-color: ${artlab.ground} !important; }
+  .email-bg .t-primary { color: ${artlabInk.primary} !important; }
+  .email-bg .t-body { color: ${artlabInk.body} !important; }
+  .email-bg .t-muted { color: ${artlabInk.muted} !important; }
+  .email-bg .t-faint { color: ${artlabInk.faint} !important; }
   .email-bg .t-link, .email-bg .tone-brand { color: ${artlab.orange} !important; }
-  .email-bg .card { background-color: ${artlab.surface} !important; border-color: ${artlab.orange} !important; }
-  .email-bg .artlab-ground { background-color: ${artlab.ground} !important; }
+  .email-bg .hair { border-color: ${artlabInk.hair} !important; }
+  .email-bg .card, .email-bg .chip, .email-bg .code-block { background-color: ${artlab.surface} !important; border-color: ${artlab.orange} !important; }
 }
-[data-ogsc] .email-bg .t-link, [data-ogsc] .email-bg .tone-brand, .email-bg .t-link[data-ogsc] { color: ${artlab.orange} !important; }
+[data-ogsb] .email-bg .email-bg, .email-bg .email-bg[data-ogsb], [data-ogsb] .email-bg .artlab-ground, .email-bg .artlab-ground[data-ogsb] { background-color: ${artlab.ground} !important; }
 [data-ogsb] .email-bg .card, .email-bg .card[data-ogsb] { background-color: ${artlab.surface} !important; }
-[data-ogsb] .email-bg .artlab-ground, .email-bg .artlab-ground[data-ogsb] { background-color: ${artlab.ground} !important; }
+[data-ogsc] .email-bg .t-primary, .email-bg .t-primary[data-ogsc] { color: ${artlabInk.primary} !important; }
+[data-ogsc] .email-bg .t-body, .email-bg .t-body[data-ogsc] { color: ${artlabInk.body} !important; }
+[data-ogsc] .email-bg .t-muted, .email-bg .t-muted[data-ogsc] { color: ${artlabInk.muted} !important; }
+[data-ogsc] .email-bg .t-link, .email-bg .t-link[data-ogsc], [data-ogsc] .email-bg .tone-brand { color: ${artlab.orange} !important; }
 `;
 
 /** The theme's stylesheet. */
@@ -623,6 +690,8 @@ export function Shell({
   themed?: boolean;
   children: React.ReactNode;
 }) {
+  // The page's colour, in bgcolor and inline both: Gmail strips the CSS one off some elements, Outlook reads the attribute.
+  const page = themed ? themedInk.page : ink.page;
   return (
     <Html lang="tr" dir="ltr">
       <Head>
@@ -634,11 +703,12 @@ export function Shell({
       </Head>
       <InboxPreview text={preview} />
       <Body className="email-bg" style={{ margin: 0, padding: 0, fontFamily: fontStack }}>
-        <Table className="email-bg" {...legacy({ bgcolor: ink.page })} style={{ backgroundColor: ink.page }}>
+        <ThemedContext.Provider value={themed}>
+        <Table className="email-bg" {...legacy({ bgcolor: page })} style={{ backgroundColor: page }}>
           <tr>
             {/* bgcolor, not only a CSS background: Gmail strips background-color
                 from <body> and <div>, and the HTML attribute is what survives. */}
-            <td align="center" className="email-bg" {...legacy({ bgcolor: ink.page })} style={{ backgroundColor: ink.page }}>
+            <td align="center" className="email-bg" {...legacy({ bgcolor: page })} style={{ backgroundColor: page }}>
               <div dangerouslySetInnerHTML={{ __html: OUTLOOK_COLUMN_OPEN }} />
               <Table align="center" style={{ maxWidth: "520px", margin: "0 auto" }}>
                 <tr>
@@ -656,6 +726,7 @@ export function Shell({
             </td>
           </tr>
         </Table>
+        </ThemedContext.Provider>
       </Body>
     </Html>
   );
@@ -666,6 +737,8 @@ export function Shell({
  * of how it went. The dot is decoration, so the plain text leaves it out.
  */
 export function Context({ tone = "brand", children }: { tone?: Tone; children: React.ReactNode }) {
+  const ink = useInk();
+  const tones = useTones();
   return (
     <p className="t-muted" style={{ margin: 0, fontSize: "13px", lineHeight: "20px", color: ink.muted, fontFamily: fontStack }}>
       <span
@@ -697,8 +770,9 @@ const titleStyle: React.CSSProperties = {
 
 /** The mail's title, under its Context. */
 export function Title({ children }: { children: React.ReactNode }) {
+  const ink = useInk();
   return (
-    <p role="heading" aria-level={1} className="t-primary" style={{ margin: "6px 0 0", ...titleStyle }}>
+    <p role="heading" aria-level={1} className="t-primary" style={{ margin: "6px 0 0", ...titleStyle, color: ink.primary }}>
       {children}
     </p>
   );
@@ -706,14 +780,16 @@ export function Title({ children }: { children: React.ReactNode }) {
 
 /** A title with no Context above it; `spaced` gives one further down the mail room above it. */
 export function Heading({ children, spaced }: { children: React.ReactNode; spaced?: boolean }) {
+  const ink = useInk();
   return (
-    <p role="heading" aria-level={1} className="t-primary" style={{ margin: spaced ? "28px 0 0" : 0, ...titleStyle }}>
+    <p role="heading" aria-level={1} className="t-primary" style={{ margin: spaced ? "28px 0 0" : 0, ...titleStyle, color: ink.primary }}>
       {children}
     </p>
   );
 }
 
 export function Paragraph({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+  const ink = useInk();
   return (
     <p className="t-body" style={{ margin: "12px 0 0", fontSize: "15px", lineHeight: "24px", color: ink.body, fontFamily: fontStack, ...style }}>
       {children}
@@ -723,6 +799,7 @@ export function Paragraph({ children, style }: { children: React.ReactNode; styl
 
 /** A quieter sentence: an expiry, what to do if this was not you. Muted, not faint, so it stays readable. */
 export function Small({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+  const ink = useInk();
   return (
     <p className="t-muted" style={{ margin: "16px 0 0", fontSize: "13px", lineHeight: "20px", color: ink.muted, fontFamily: fontStack, ...style }}>
       {children}
@@ -731,6 +808,7 @@ export function Small({ children, style }: { children: React.ReactNode; style?: 
 }
 
 export function Strong({ children }: { children: React.ReactNode }) {
+  const ink = useInk();
   return (
     <strong className="t-primary" style={{ color: ink.primary, fontWeight: 500 }}>
       {children}
@@ -745,6 +823,7 @@ export function Em({ children }: { children: React.ReactNode }) {
 
 /** A word in a status colour inside running text. */
 export function Toned({ tone, children }: { tone: Tone; children: React.ReactNode }) {
+  const tones = useTones();
   return (
     <span className={`tone-${tone}`} style={{ color: tones[tone] }}>
       {children}
@@ -754,6 +833,7 @@ export function Toned({ tone, children }: { tone: Tone; children: React.ReactNod
 
 /** A link inside running text, in the brand colour both themes read. */
 export function TextLink({ href, children }: { href: string; children: React.ReactNode }) {
+  const ink = useInk();
   return (
     <Link href={href} className="t-link" style={{ color: ink.link, textDecoration: "underline" }}>
       {children}
@@ -787,11 +867,13 @@ export function Figure({ src, alt, width }: { src: string; alt: string; width?: 
 
 /** A hairline between two parts of the body; the plain text draws it as a rule. */
 export function Divider() {
+  const ink = useInk();
   return <Hr className="hair" style={{ margin: "28px 0 0", border: "none", borderTop: `1px solid ${ink.hair}` }} />;
 }
 
 /** A small caption over a value that stands on its own (a code, a number). */
 export function Label({ children }: { children: React.ReactNode }) {
+  const ink = useInk();
   return (
     <p className="t-muted" style={{ margin: 0, fontSize: "12px", lineHeight: "18px", color: ink.muted, fontFamily: fontStack }}>
       {children}
@@ -801,6 +883,8 @@ export function Label({ children }: { children: React.ReactNode }) {
 
 /** A short tag; the layout's own way is a Context line above the title. */
 export function Chip({ children, tone = "brand" }: { children: React.ReactNode; tone?: "brand" | "alert" }) {
+  const ink = useInk();
+  const tones = useTones();
   const alert = tone === "alert";
   return (
     <table role="presentation" cellPadding="0" cellSpacing="0" border={0} style={{ marginTop: "12px" }}>
@@ -835,6 +919,7 @@ export function Chip({ children, tone = "brand" }: { children: React.ReactNode; 
  * address once; the arrow is decoration.
  */
 export function Cta({ href, children }: { href: string; children: React.ReactNode }) {
+  const ink = useInk();
   return (
     <Table style={{ marginTop: "28px", borderCollapse: "separate" }}>
       <tr>
@@ -876,6 +961,7 @@ export function Cta({ href, children }: { href: string; children: React.ReactNod
 
 /** A fallback for the action: some clients strip it, and some people copy links. */
 export function LinkFallback({ href }: { href: string }) {
+  const ink = useInk();
   return (
     <p className="t-muted" style={{ margin: "16px 0 0", fontSize: "12px", lineHeight: "18px", color: ink.muted, wordBreak: "break-all", fontFamily: fontStack }}>
       Buton çalışmazsa bu adresi tarayıcına yapıştır:
@@ -901,14 +987,15 @@ const cellText: React.CSSProperties = { margin: 0, fontSize: "13px", lineHeight:
 // Each side is a <p>: the plain-text part joins table cells with nothing
 // between them, and a block keeps the label and its value on lines of their own.
 export function RowItem({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
+  const ink = useInk();
   return (
     <tr>
-      <td className="hair" style={cell}>
+      <td className="hair" style={{ ...cell, borderTop: `1px solid ${ink.hair}` }}>
         <p className="t-muted" style={{ ...cellText, color: ink.muted }}>
           {label}
         </p>
       </td>
-      <td className="hair" align="right" style={{ ...cell, padding: "10px 0 10px 16px", textAlign: "right" }}>
+      <td className="hair" align="right" style={{ ...cell, borderTop: `1px solid ${ink.hair}`, padding: "10px 0 10px 16px", textAlign: "right" }}>
         {/* break-word lets a long UUID or address wrap at any character, and
             unlike overflow-wrap alone it also narrows the cell, so the table
             cannot grow past a 320 px screen. */}
@@ -924,6 +1011,7 @@ export function RowItem({ label, children }: { label: React.ReactNode; children:
 }
 
 export function RowsEnd() {
+  const ink = useInk();
   return (
     <tr>
       <td colSpan={2} className="hair" style={{ borderTop: `1px solid ${ink.hair}`, fontSize: 0, lineHeight: 0, height: "1px" }}>
@@ -962,6 +1050,8 @@ export function Note({
   keepLines?: boolean;
 }) {
   const alert = tone === "alert";
+  const ink = useInk();
+  const tones = useTones();
   return (
     <Table style={{ marginTop: "24px" }}>
       <tr>
@@ -988,6 +1078,7 @@ export function Note({
 
 /** A value to read or type exactly: a code, an error. `size` is the type size in pixels. */
 export function CodeBlock({ children, size = 13, center = false }: { children: React.ReactNode; size?: number; center?: boolean }) {
+  const ink = useInk();
   const big = size >= 20;
   return (
     <Table style={{ marginTop: "8px", borderCollapse: "separate" }}>
@@ -1019,6 +1110,7 @@ export function CodeBlock({ children, size = 13, center = false }: { children: R
 
 /** The heading of a list, with its count on the right. */
 export function ListHeader({ title, count }: { title: React.ReactNode; count?: React.ReactNode }) {
+  const ink = useInk();
   return (
     <Table style={{ marginTop: "32px" }}>
       <tr>

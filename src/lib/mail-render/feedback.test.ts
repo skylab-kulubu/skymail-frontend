@@ -41,7 +41,12 @@ describe("the feedback mails", () => {
         const actions = actionsOf(body);
         const open = actions.indexOf("{{range.Items}}");
         assert.ok(open >= 0, "no range over Items");
-        const close = actions.indexOf("{{end}}", open);
+        // The range's own {{end}}: the blocks inside it (a colour the event's theme picks per send) close first.
+        let close = open + 1;
+        for (let depth = 1; close < actions.length; close += 1) {
+          if (/^\{\{-?(if|range|with)/.test(actions[close])) depth += 1;
+          if (/^\{\{-?end-?\}\}$/.test(actions[close]) && --depth === 0) break;
+        }
         const inside = actions.slice(open + 1, close);
         assert.ok(inside.includes("{{.Title}}") && inside.includes("{{.URL}}"), `range body: ${inside.join(" ")}`);
         // Title and URL belong to the element: none is read outside the range.
