@@ -15,7 +15,7 @@ export const meta: TemplateMeta = {
     "core-backend, yer açılıp bekleme listesindeki bilet kendiliğinden etkinleşince ya da düzenleyen \"Öne al\" deyince kişiye (TICKET_STATUS_MAIL=on; docs/ticket-status-mail.md, ticket_mails kuyruğu, tür promoted). event.ticket-created ayrıca gitmez. Değişkenler event.ticket-created'ınkiler: TICKET_PAGE_URL açıkken TicketUrl, TicketQrUrl (PUBLIC_API_ORIGIN boşsa boş) ve TicketCode da gelir; kapalıyken boş gelir ve satırları görünmez. Üyeye bildirim olarak (POST /v1/notifications: kutu + e-posta), misafire yalnız bu e-posta (POST /v1/mail_tasks/single). EventId yalnız kutu bağlantısı içindir. TicketNote ve TicketNoteParts düzenleyenin bilet duyurusudur (ör. WhatsApp grubu; core docs/ticket-note.md), boşsa bölüm görünmez.",
   // core-backend kontenjan-iptal-hatirlatma 04/07: event.ticket-created's
   // variables (EventUrl aside, which core never sends).
-  variables: ["EventId", "EventName", "EventDate", "Venue", "TicketQrUrl", "TicketCode", "TicketUrl", "OwnerTeam", "TicketNote", "TicketNoteParts"],
+  variables: ["EventId", "EventName", "EventDate", "Venue", "TicketQrUrl", "TicketCode", "TicketUrl", "OwnerTeam", "TicketNote", "TicketNoteParts", "Theme", "EventBannerUrl"],
   sensitiveVariables: ["TicketCode", "TicketQrUrl", "TicketUrl"],
   notification: {
     category: null,
@@ -43,6 +43,9 @@ export const meta: TemplateMeta = {
       { Text: "Etkinlik duyuruları WhatsApp grubunda: ", Url: "" },
       { Text: "https://chat.whatsapp.com/OrnekDavet123", Url: "https://chat.whatsapp.com/OrnekDavet123" },
     ],
+    // The club's own look; "artlab" previews the ARTLAB theme.
+    Theme: "",
+    EventBannerUrl: "",
   },
 };
 
@@ -53,7 +56,7 @@ export const meta: TemplateMeta = {
  */
 export default function EventWaitlistPromoted() {
   return (
-    <Shell preview={`Yer açıldı: ${v("EventName")} biletin hazır.`} brand="skylab" reason={null}>
+    <Shell preview={`Yer açıldı: ${v("EventName")} biletin hazır.`} brand="skylab" reason={null} themed>
       <Context tone="ok">{v("EventName")}</Context>
       <Title>Biletin Hazır</Title>
 

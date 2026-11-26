@@ -27,8 +27,8 @@ zaman verdiği değişkenler kullanılır.
 | Hoş Geldin 🔒 | `core.welcome` | SKY LAB'e hoş geldin | `FirstName`, `LastName`, `Email`, `Username`, `SchoolEmail`, `SkyNumber`, `CreatedAt` |
 | Katılım Sertifikası 🔒 | `core.certificate` | Katılım sertifikan hazır | `FirstName`, `EventName`, `VerifyURL`, `Serial`, `OwnerTeam`, `Theme`, `EventBannerUrl` |
 | Katılım Kendiliğinden Kapandı 🔒 | `core.certificate-auto-finalized` | {{.EventName}}: katılım kapandı | `FirstName`, `EventName`, `EventId`, `CertificateCount`, `OwnerTeam` |
-| Etkinlik İptali 🔒 | `core.event-cancelled` | {{.EventName}} iptal edildi | `EventName`, `EventStart`, `CancelReason`, `FirstName` |
-| Etkinlik Yeniden Yayında 🔒 | `core.event-reinstated` | {{.EventName}} yeniden yayında | `EventName`, `EventStart`, `FirstName` |
+| Etkinlik İptali 🔒 | `core.event-cancelled` | {{.EventName}} iptal edildi | `EventName`, `EventStart`, `CancelReason`, `FirstName`, `Theme`, `EventBannerUrl` |
+| Etkinlik Yeniden Yayında 🔒 | `core.event-reinstated` | {{.EventName}} yeniden yayında | `EventName`, `EventStart`, `FirstName`, `Theme`, `EventBannerUrl` |
 | Etkinlik · Ortak Düzenleyen Eklendi 🔒 | `core.event-co-organizer-added` | {{.EventName}}: {{if .TeamName}}ekibin etkinliğe eklendi{{else}}ortak düzenleyen oldun{{end}} | `EventId`, `EventName`, `OwnerTeam`, `TeamName`, `Management`, `Visibility`, `ActorName`, `PanelUrl` |
 | Etkinlik · Ortak Düzenleyen Çıkarıldı 🔒 | `core.event-co-organizer-removed` | {{.EventName}}: {{if .TeamName}}ekibin etkinlikten çıkarıldı{{else}}artık ortak düzenleyen değilsin{{end}} | `EventId`, `EventName`, `OwnerTeam`, `TeamName`, `Management`, `Visibility`, `ActorName`, `PanelUrl` |
 | Geri Bildirim İsteği 🔒 🙈 | `core.feedback-request` | {{.EventName}} geri bildirim formu | `FirstName`, `EventName`, `Items`, `EventId`, `Theme`, `EventBannerUrl` |
@@ -43,10 +43,10 @@ zaman verdiği değişkenler kullanılır.
 | Etkinlik · Bilet Oluşturuldu 🙈 | `event.ticket-created` | {{.EventName}} biletin hazır | `EventName`, `EventDate`, `Venue`, `TicketQrUrl`, `TicketCode`, `TicketUrl`, `OwnerTeam`, `EventUrl`, `Theme`, `EventBannerUrl`, `TicketNote`, `TicketNoteParts` |
 | Etkinlik · Hatırlatma 🙈 | `event.reminder` | Yarın: {{.EventName}} | `EventId`, `EventName`, `StartsAt`, `Venue`, `OwnerTeam`, `TicketUrl`, `TicketQrUrl`, `TicketCode`, `MapUrl`, `Theme`, `EventBannerUrl`, `TicketNote`, `TicketNoteParts` |
 | Etkinlik · Güncellendi 🙈 | `event.updated` | {{.EventName}} etkinliğinde değişiklik var | `EventName`, `ChangeSummary`, `NewStartsAt`, `NewEndsAt`, `NewVenue`, `TicketQrUrl`, `TicketCode`, `TicketUrl`, `EventUrl`, `Theme`, `EventBannerUrl` |
-| Etkinlik · Ayrıntılar Değişti | `event.changed` | {{.EventName}} etkinliğinde değişiklik var | `EventId`, `EventName`, `ChangedFields`, `ChangeSummary`, `StartsAt`, `Venue`, `TicketCode`, `TicketUrl` |
+| Etkinlik · Ayrıntılar Değişti | `event.changed` | {{.EventName}} etkinliğinde değişiklik var | `EventId`, `EventName`, `ChangedFields`, `ChangeSummary`, `StartsAt`, `Venue`, `TicketCode`, `TicketUrl`, `Theme`, `EventBannerUrl` |
 | Etkinlik · Bilet İptal Edildi | `event.ticket-cancelled` | {{.EventName}} biletin iptal edildi | `EventId`, `EventName`, `EventDate`, `OwnerTeam`, `CancelledBy`, `Reason`, `Theme`, `EventBannerUrl` |
-| Etkinlik · Bekleme Listesi 🙈 | `event.waitlist-joined` | {{.EventName}}: bekleme listesindesin | `EventId`, `EventName`, `EventDate`, `Venue`, `OwnerTeam`, `TicketUrl` |
-| Etkinlik · Bekleme Listesinden Bilet 🙈 | `event.waitlist-promoted` | Yer açıldı: {{.EventName}} biletin hazır | `EventId`, `EventName`, `EventDate`, `Venue`, `TicketQrUrl`, `TicketCode`, `TicketUrl`, `OwnerTeam`, `TicketNote`, `TicketNoteParts` |
+| Etkinlik · Bekleme Listesi 🙈 | `event.waitlist-joined` | {{.EventName}}: bekleme listesindesin | `EventId`, `EventName`, `EventDate`, `Venue`, `OwnerTeam`, `TicketUrl`, `Theme`, `EventBannerUrl` |
+| Etkinlik · Bekleme Listesinden Bilet 🙈 | `event.waitlist-promoted` | Yer açıldı: {{.EventName}} biletin hazır | `EventId`, `EventName`, `EventDate`, `Venue`, `TicketQrUrl`, `TicketCode`, `TicketUrl`, `OwnerTeam`, `TicketNote`, `TicketNoteParts`, `Theme`, `EventBannerUrl` |
 | Etkinlik · Kontenjan Doldu | `event.registration-full` | {{.EventName}} kontenjanı doldu | `EventId`, `EventName`, `EventDate`, `OwnerTeam` |
 | Etkinlik · Kapı: Hoş Geldin | `event.attendance-welcome` | {{.EventName}}: hoş geldin | `FirstName`, `EventName`, `EventId`, `OwnerTeam`, `DayLabel`, `Program`, `AttendeeNote`, `AttendeeNoteParts`, `CertificateLine`, `Recorded`, `Attended`, `CountedTotal`, `MinRequired`, `MissingRequired`, `MissedRequired`, `Theme`, `EventBannerUrl` |
 | Etkinlik · Kapı: Katılım Alındı | `event.attendance-recorded` | {{.EventName}}: katılımın alındı | `FirstName`, `EventName`, `EventId`, `OwnerTeam`, `Sessions`, `HasRule`, `Attended`, `CountedTotal`, `MinRequired`, `MissingRequired`, `MissedRequired`, `NotCounted`, `Theme`, `EventBannerUrl` |

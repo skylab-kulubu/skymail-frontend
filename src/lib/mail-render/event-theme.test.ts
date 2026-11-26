@@ -25,6 +25,11 @@ const THEMED = [
   "core.feedback-reminder",
   "event.attendance-welcome",
   "event.attendance-recorded",
+  "event.waitlist-promoted",
+  "event.waitlist-joined",
+  "event.changed",
+  "core.event-cancelled",
+  "core.event-reinstated",
 ];
 
 const escaped = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
