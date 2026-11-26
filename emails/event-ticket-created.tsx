@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Img } from "@react-email/components";
 import { Context, Cta, Paragraph, RowItem, Rows, RowsEnd, Shell, Small, TextLink, TicketNote, Title } from "./theme";
-import { end, ifNotSet, ifSet, v } from "./go";
+import { elseBranch, end, ifNotSet, ifSet, v } from "./go";
 import type { TemplateMeta } from "./types";
 
 export const meta: TemplateMeta = {
@@ -12,8 +12,8 @@ export const meta: TemplateMeta = {
   contentSensitive: true,
   brand: "skylab",
   trigger:
-    "core-backend, Member apply / Guest apply / Apply-for-other bir Ticket yazdığında, yayında ve bitmemiş bir etkinlikte (TICKET_CREATED_NOTIFICATION=on; docs/ticket-created-notification.md), ve panelden yeniden gönderimde. Üyeye bildirim olarak (POST /v1/notifications: kutu + e-posta), konuğa yalnız bu e-posta. TICKET_PAGE_URL açıkken core TicketUrl (bilet sayfası), TicketQrUrl (QR görseli; PUBLIC_API_ORIGIN boşsa boş) ve TicketCode da gönderir; kapalıyken göndermez ve satırları görünmez. EventUrl hiç gönderilmez. TicketNote ve TicketNoteParts düzenleyenin bilet duyurusudur (ör. WhatsApp grubu; core docs/ticket-note.md), boşsa bölüm görünmez.",
-  variables: ["EventName", "EventDate", "Venue", "TicketQrUrl", "TicketCode", "TicketUrl", "OwnerTeam", "EventUrl", "Theme", "EventBannerUrl", "TicketNote", "TicketNoteParts"],
+    "core-backend, Member apply / Guest apply / Apply-for-other bir Ticket yazdığında, yayında ve bitmemiş bir etkinlikte (TICKET_CREATED_NOTIFICATION=on; docs/ticket-created-notification.md), ve panelden yeniden gönderimde. Üyeye bildirim olarak (POST /v1/notifications: kutu + e-posta), konuğa yalnız bu e-posta. TICKET_PAGE_URL açıkken core TicketUrl (bilet sayfası), TicketQrUrl (QR görseli; PUBLIC_API_ORIGIN boşsa boş) ve TicketCode da gönderir; kapalıyken göndermez ve satırları görünmez. EventUrl hiç gönderilmez. TicketNote ve TicketNoteParts düzenleyenin bilet duyurusudur (ör. WhatsApp grubu; core docs/ticket-note.md), boşsa bölüm görünmez. MapUrl yol tarifidir: Yer satırı ve Yol Tarifi butonu onu açar, boşsa ikisi de düz/yok. TicketNoteLink duyurunun buton adresidir (ilk WhatsApp adresi, yoksa ilk https adresi; boşsa buton yok), TicketNoteWhatsApp doluysa buton \"WhatsApp grubuna katıl\" der.",
+  variables: ["EventName", "EventDate", "Venue", "TicketQrUrl", "TicketCode", "TicketUrl", "OwnerTeam", "EventUrl", "Theme", "EventBannerUrl", "MapUrl", "TicketNote", "TicketNoteParts", "TicketNoteLink", "TicketNoteWhatsApp"],
   sensitiveVariables: ["TicketCode", "TicketQrUrl", "TicketUrl"],
   notification: {
     category: null,
@@ -37,6 +37,7 @@ export const meta: TemplateMeta = {
     TicketUrl: "https://yildizskylab.com/bilet/7Q2MK4XRWZ3HN5TJVB6PDYCGEA",
     OwnerTeam: "WEBLAB",
     EventUrl: "https://skyl.app/gecekodu",
+    MapUrl: "https://www.google.com/maps/dir/?api=1&destination=41.025376%2C28.889648",
     // The club's own look; "artlab" previews the ARTLAB theme.
     Theme: "",
     EventBannerUrl: "",
@@ -46,6 +47,8 @@ export const meta: TemplateMeta = {
       { Text: "Etkinlik duyuruları WhatsApp grubunda: ", Url: "" },
       { Text: "https://chat.whatsapp.com/OrnekDavet123", Url: "https://chat.whatsapp.com/OrnekDavet123" },
     ],
+    TicketNoteLink: "https://chat.whatsapp.com/OrnekDavet123",
+    TicketNoteWhatsApp: "1",
   },
 };
 
@@ -70,7 +73,13 @@ export default function EventTicketCreated() {
         <RowItem label="Tarih">{v("EventDate")}</RowItem>
         {end}
         {ifSet("Venue")}
-        <RowItem label="Yer">{v("Venue")}</RowItem>
+        <RowItem label="Yer">
+          {ifSet("MapUrl")}
+          <TextLink href={v("MapUrl")}>{v("Venue")}</TextLink>
+          {elseBranch}
+          {v("Venue")}
+          {end}
+        </RowItem>
         {end}
         {ifSet("OwnerTeam")}
         <RowItem label="Düzenleyen">{v("OwnerTeam")}</RowItem>
@@ -105,11 +114,15 @@ export default function EventTicketCreated() {
       </Paragraph>
       {end}
 
+      <TicketNote />
+
+      {ifSet("MapUrl")}
+      <Cta href={v("MapUrl")}>Yol Tarifi</Cta>
+      {end}
+
       {ifSet("EventUrl")}
       <Cta href={v("EventUrl")}>Etkinlik Sayfası</Cta>
       {end}
-
-      <TicketNote />
 
       {/* KVKK aydınlatma §5.12: the photo notice goes in the registration mail, fixed, before the footer. */}
       <Small style={{ marginTop: "24px" }}>Etkinlikte fotoğraf ve video çekilir, Kulübün kanallarında paylaşılabilir.</Small>
