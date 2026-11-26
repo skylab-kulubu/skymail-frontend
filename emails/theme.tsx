@@ -35,7 +35,7 @@
  */
 import { Body, Head, Hr, Html, Img, Link, Preview } from "@react-email/components";
 import * as React from "react";
-import { elseBranch, end, ifSet, v } from "./go";
+import { elseBranch, end, ifSet, rangeOver, v } from "./go";
 
 /** Forms' palette: the light theme, inline. */
 const ink = {
@@ -1032,5 +1032,32 @@ export function ListHeader({ title, count }: { title: React.ReactNode; count?: R
         </td>
       </tr>
     </Table>
+  );
+}
+
+/**
+ * The organizer's announcement in the ticket mails (event.ticket-created,
+ * event.waitlist-promoted, event.reminder): the event's WhatsApp group, say.
+ * core sends TicketNote, the note as written (at most 500 characters, line
+ * breaks kept), and TicketNoteParts, [{Text, Url}], the same text cut at its
+ * https addresses, Url empty for plain text (core-backend docs/ticket-note.md;
+ * Yusuf, 2026-11-26). An http address stays text. Empty, the section is not
+ * there; a core that sends neither leaves it out too.
+ */
+export function TicketNote() {
+  return (
+    <>
+      {ifSet("TicketNote")}
+      <Note label="Duyuru" keepLines>
+        {rangeOver("TicketNoteParts")}
+        {ifSet("Url")}
+        <TextLink href={v("Url")}>{v("Text")}</TextLink>
+        {elseBranch}
+        {v("Text")}
+        {end}
+        {end}
+      </Note>
+      {end}
+    </>
   );
 }

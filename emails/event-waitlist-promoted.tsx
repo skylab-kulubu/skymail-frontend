@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Img } from "@react-email/components";
-import { Context, Paragraph, RowItem, Rows, RowsEnd, Shell, Small, TextLink, Title } from "./theme";
+import { Context, Paragraph, RowItem, Rows, RowsEnd, Shell, Small, TextLink, TicketNote, Title } from "./theme";
 import { end, ifNotSet, ifSet, v } from "./go";
 import type { TemplateMeta } from "./types";
 
@@ -12,10 +12,10 @@ export const meta: TemplateMeta = {
   contentSensitive: true,
   brand: "skylab",
   trigger:
-    "core-backend, yer açılıp bekleme listesindeki bilet kendiliğinden etkinleşince ya da düzenleyen \"Öne al\" deyince kişiye (TICKET_STATUS_MAIL=on; docs/ticket-status-mail.md, ticket_mails kuyruğu, tür promoted). event.ticket-created ayrıca gitmez. Değişkenler event.ticket-created'ınkiler: TICKET_PAGE_URL açıkken TicketUrl, TicketQrUrl (PUBLIC_API_ORIGIN boşsa boş) ve TicketCode da gelir; kapalıyken boş gelir ve satırları görünmez. Üyeye bildirim olarak (POST /v1/notifications: kutu + e-posta), misafire yalnız bu e-posta (POST /v1/mail_tasks/single). EventId yalnız kutu bağlantısı içindir.",
+    "core-backend, yer açılıp bekleme listesindeki bilet kendiliğinden etkinleşince ya da düzenleyen \"Öne al\" deyince kişiye (TICKET_STATUS_MAIL=on; docs/ticket-status-mail.md, ticket_mails kuyruğu, tür promoted). event.ticket-created ayrıca gitmez. Değişkenler event.ticket-created'ınkiler: TICKET_PAGE_URL açıkken TicketUrl, TicketQrUrl (PUBLIC_API_ORIGIN boşsa boş) ve TicketCode da gelir; kapalıyken boş gelir ve satırları görünmez. Üyeye bildirim olarak (POST /v1/notifications: kutu + e-posta), misafire yalnız bu e-posta (POST /v1/mail_tasks/single). EventId yalnız kutu bağlantısı içindir. TicketNote ve TicketNoteParts düzenleyenin bilet duyurusudur (ör. WhatsApp grubu; core docs/ticket-note.md), boşsa bölüm görünmez.",
   // core-backend kontenjan-iptal-hatirlatma 04/07: event.ticket-created's
   // variables (EventUrl aside, which core never sends).
-  variables: ["EventId", "EventName", "EventDate", "Venue", "TicketQrUrl", "TicketCode", "TicketUrl", "OwnerTeam"],
+  variables: ["EventId", "EventName", "EventDate", "Venue", "TicketQrUrl", "TicketCode", "TicketUrl", "OwnerTeam", "TicketNote", "TicketNoteParts"],
   sensitiveVariables: ["TicketCode", "TicketQrUrl", "TicketUrl"],
   notification: {
     category: null,
@@ -37,6 +37,12 @@ export const meta: TemplateMeta = {
     TicketCode: "K7M2-QX9F",
     TicketUrl: "https://yildizskylab.com/bilet/7Q2MK4XRWZ3HN5TJVB6PDYCGEA",
     OwnerTeam: "WEBLAB",
+    // The organizer's announcement, a WhatsApp group (core cuts it at its https addresses).
+    TicketNote: "Etkinlik duyuruları WhatsApp grubunda: https://chat.whatsapp.com/OrnekDavet123",
+    TicketNoteParts: [
+      { Text: "Etkinlik duyuruları WhatsApp grubunda: ", Url: "" },
+      { Text: "https://chat.whatsapp.com/OrnekDavet123", Url: "https://chat.whatsapp.com/OrnekDavet123" },
+    ],
   },
 };
 
@@ -92,6 +98,8 @@ export default function EventWaitlistPromoted() {
         <TextLink href={v("TicketUrl")}>Biletini aç</TextLink>
       </Paragraph>
       {end}
+
+      <TicketNote />
 
       {/* KVKK aydınlatma §5.12: as in the registration mail, since this is where the Ticket is made. */}
       <Small style={{ marginTop: "24px" }}>Etkinlikte fotoğraf ve video çekilir, Kulübün kanallarında paylaşılabilir.</Small>
