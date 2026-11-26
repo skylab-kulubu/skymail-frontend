@@ -1,5 +1,5 @@
 /**
- * Mail templates as skymail-backend serves them (`internal/handlers/template.go`,
+ * Mail templates as skynotify-backend serves them (`internal/handlers/template.go`,
  * routes under `/templates` in `main.go`) and as the template list shows them.
  *
  * A template's row is a copy of its published version, which is what is sent.
@@ -116,7 +116,7 @@ export type MailTemplate = {
   /** Null when no Template seed is refused. Absent from a backend before ticket 09. */
   seed_refusal?: SeedRefusal | null;
   /**
-   * Whether SkyMail never shows what a send of it said: true hidden, false
+   * Whether SkyNotify never shows what a send of it said: true hidden, false
    * shown, null left to the kind of send (a single mail hidden, a send to many
    * shown). Absent from a backend before sent mail content.
    */

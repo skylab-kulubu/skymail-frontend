@@ -12,7 +12,7 @@ import type { SourceInput, SourceRender } from ".";
  * key.
  *
  * But refusing every unrendered save would close a door ADR-0045 deliberately
- * opened: a system template's wording is edited in SkyMail without a release,
+ * opened: a system template's wording is edited in SkyNotify without a release,
  * and the stored body of one the editor cannot render still travels back
  * unchanged under a new subject. So there are three outcomes, not two.
  */

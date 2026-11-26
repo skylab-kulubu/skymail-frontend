@@ -19,7 +19,7 @@ describe("a render request, as the sandbox reads it", () => {
   });
 
   it("carries a Visual source, the document's JSON text", () => {
-    const request = renderRequest("r2", { mode: "visual", source: '{"type":"skymail.visual","version":1,"blocks":[]}' });
+    const request = renderRequest("r2", { mode: "visual", source: '{"type":"skynotify.visual","version":1,"blocks":[]}' });
     assert.deepEqual(readRenderRequest(structuredClone(request))?.input, request.input);
   });
 

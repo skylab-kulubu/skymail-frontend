@@ -1,6 +1,6 @@
 /**
  * The Mail template list as the operator sees it, driven through the one HTTP
- * client with a scripted fetch that answers the way skymail-backend's template
+ * client with a scripted fetch that answers the way skynotify-backend's template
  * routes do (`GET /templates` with `main_mode` and `drafts` since ticket 07,
  * `DELETE /templates/{id}`, `POST /templates/{id}/restore`): which request the
  * list sends, and which rows, markers and actions come out of the answer.
@@ -265,8 +265,8 @@ describe("the unpublished-draft indicator", () => {
 });
 
 describe("what a row allows", () => {
-  const READER = ["skymail:access", "skymail:templates:read"];
-  const WRITER = [...READER, "skymail:templates:write"];
+  const READER = ["skynotify:access", "skynotify:templates:read"];
+  const WRITER = [...READER, "skynotify:templates:write"];
 
   const current = toTemplateRow(template(), VIEWER);
   const system = toTemplateRow(systemTemplate(), VIEWER);
@@ -315,8 +315,8 @@ describe("what a row allows", () => {
     assert.deepEqual(allowed(templateActions(archived, READER)), []);
   });
 
-  it("offers nothing that writes without skymail:access, whatever else the token carries", () => {
-    const actions = templateActions(current, ["skymail:templates:read", "skymail:templates:write"]);
+  it("offers nothing that writes without skynotify:access, whatever else the token carries", () => {
+    const actions = templateActions(current, ["skynotify:templates:read", "skynotify:templates:write"]);
 
     assert.deepEqual(allowed(actions), []);
     assert.equal(actions.href, `/templates/show/${ID.newsletter}`);

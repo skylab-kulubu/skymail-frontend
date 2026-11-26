@@ -10,7 +10,7 @@ const SIZE = {
 } as const;
 
 /**
- * SkyMail's dialogs on skylcn-ui's Dialog: a title, then the body with its own
+ * SkyNotify's dialogs on skylcn-ui's Dialog: a title, then the body with its own
  * buttons at the end (DangerActions, PrimaryActions). Focus starts on the
  * body's first control, stays inside, and returns on close; Escape and a click
  * outside call `onClose`, which a dialog busy with a request may ignore.

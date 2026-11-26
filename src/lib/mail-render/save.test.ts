@@ -13,7 +13,7 @@ import { decideSave, renderOf, renderSource, type SaveDecision, type SourceInput
 
 // What seed-templates.ts writes into react_email_content until ticket 09.
 const SEEDED_STUB =
-  "// Kaynak: skymail-frontend/emails/core.welcome.tsx — burada düzenlersen repodaki kaynakla ayrışır.\n";
+  "// Kaynak: skynotify-frontend/emails/core.welcome.tsx — burada düzenlersen repodaki kaynakla ayrışır.\n";
 
 const GOOD_CODE = "export default () => <p>Merhaba</p>;";
 

@@ -1,6 +1,6 @@
 /**
  * Silinmiş kullanıcı (ADR-0051, ticket 27): once a person's account is
- * erased, skymail-backend (#34) keeps SkyMail's records and puts one stand-in
+ * erased, skynotify-backend (#34) keeps SkyNotify's records and puts one stand-in
  * where they named that person. An actor field — who sent, submitted,
  * decided, wrote or archived — holds a fixed subject; a Mail onayı request's
  * person holds a placeholder address; a sent or failed mail to them keeps its
@@ -24,7 +24,7 @@ const SOMEONE = "8d0f5c2e-6b1a-4c3e-9f27-5a1d3b7e9c41";
 const UNKNOWN = "Adı bilinmeyen üye";
 
 describe("Silinmiş kullanıcı", () => {
-  it("is skymail-backend's one subject and one address for everyone erased", () => {
+  it("is skynotify-backend's one subject and one address for everyone erased", () => {
     assert.equal(ERASED_SUBJECT, "00000000-0000-4000-8000-000000000000");
     assert.equal(ERASED_RECIPIENT_EMAIL, "silinmis-kullanici@invalid");
     assert.equal(ERASED_PERSON, "Silinmiş kullanıcı");

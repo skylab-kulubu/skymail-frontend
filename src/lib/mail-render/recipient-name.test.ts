@@ -1,5 +1,5 @@
 /**
- * The preview fills the recipient's name tags as skymail-backend's mailer
+ * The preview fills the recipient's name tags as skynotify-backend's mailer
  * does (internal/mailer/recipient_name.go): both repos hold the same cases.
  */
 import assert from "node:assert/strict";
@@ -25,21 +25,21 @@ interface NameCase {
 }
 
 /**
- * One file kept in two repos: this copy, and skymail-backend's
+ * One file kept in two repos: this copy, and skynotify-backend's
  * internal/mailer/testdata/recipient-name.json, whose test pins the same
  * hash. Changing either copy fails its own repo's test until both copies,
  * and both hashes, change together.
  */
-const SHARED_CASES_SHA256 = "46ad04b6204b6ffb29353cd715ea4001f7cdfd2b485ab2d74b8b62058d774a54";
+const SHARED_CASES_SHA256 = "c65787fd7242ae42884d05b60980706fa16e2b86d4c6095fa231258e154b8f6b";
 const raw = readFileSync(join(import.meta.dirname, "testdata", "recipient-name.json"));
 const fixture = JSON.parse(raw.toString("utf8")) as { text: NameCase[]; markup: NameCase[] };
 
 describe("the recipient's name, as the mailer fills it", () => {
-  it("holds the cases skymail-backend holds", () => {
+  it("holds the cases skynotify-backend holds", () => {
     assert.equal(
       createHash("sha256").update(raw).digest("hex"),
       SHARED_CASES_SHA256,
-      "testdata/recipient-name.json değişmiş: skymail-backend'deki kopyayı (internal/mailer/testdata/recipient-name.json) da aynı yap, sonra iki sabiti de güncelle",
+      "testdata/recipient-name.json değişmiş: skynotify-backend'deki kopyayı (internal/mailer/testdata/recipient-name.json) da aynı yap, sonra iki sabiti de güncelle",
     );
     assert.ok(fixture.text.length > 0 && fixture.markup.length > 0);
   });

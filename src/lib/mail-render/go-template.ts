@@ -1,5 +1,5 @@
 /**
- * Go template actions, found the way skymail-backend's text/template and
+ * Go template actions, found the way skynotify-backend's text/template and
  * html/template find them: `{{` to the next `}}` that is not inside a quoted
  * string, and `{{/* … *\/}}` comments, with or without trim markers.
  *
@@ -14,7 +14,7 @@ import { v } from "../../../emails/go";
  */
 export const variableAction: (name: string) => string = v;
 
-/** A name the mailer's data may have as a field: skymail-backend's rule (pkg/validator IsVariableName). */
+/** A name the mailer's data may have as a field: skynotify-backend's rule (pkg/validator IsVariableName). */
 export function isVariableName(name: string): boolean {
   return /^[A-Za-z_][A-Za-z0-9_]{0,63}$/.test(name);
 }
@@ -289,7 +289,7 @@ const COMMENT_END = "-->";
  * `<!--` in an action's string opens nothing. html/template does not read
  * `<!--` as a comment inside a tag, a <script> or a <style>; taking one there
  * for a comment only makes a reference not count, never a missing one count.
- * skymail-backend reads comments the same way (internal/mailer/variables.go).
+ * skynotify-backend reads comments the same way (internal/mailer/variables.go).
  */
 function htmlCommentFlags(text: string, actions: Action[]): boolean[] {
   const flags: boolean[] = [];

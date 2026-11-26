@@ -28,14 +28,14 @@ const OUT_DIR = join(process.cwd(), "build", "emails");
  */
 function buildCatalogue(): string {
   const lines = [
-    "# SkyMail şablon kataloğu",
+    "# SkyNotify şablon kataloğu",
     "",
     "`yarn emails:render` tarafından `emails/` içindeki kaynaklardan üretilir — elle düzenleme.",
     "",
     "Her şablona ayrıca `Email` ve `FullName` değişkenleri mailer tarafından eklenir.",
     "",
     "**Konu sütunu canlıya seed ile gider.** Seed her koşuda konuyu da buradan yazar. Son seed'den",
-    "sonra bir operatör şablonu SkyMail'de değiştirdiyse (konusu ya da bir taslağı dahil) SkyMail o",
+    "sonra bir operatör şablonu SkyNotify'da değiştirdiyse (konusu ya da bir taslağı dahil) SkyNotify o",
     "şablonu reddeder ve hiçbir şeyini yazmaz; seed reddedilenleri, nedenini ve zorlama komutunu",
     "(`--force=<anahtar>`) listeler. Zorlamak operatörün sürümlerini silmez, geçmişte kalırlar (ADR-0047).",
     "",
@@ -57,7 +57,7 @@ function buildCatalogue(): string {
   lines.push(
     "",
     "🔒 = sistem şablonu: arşivlenemez, anahtarı değiştirilemez.",
-    "🙈 = içeriği maskeli: SkyMail gönderimin içeriğini gösterir ama kodları ve tek kullanımlık bağlantıları sunucuda gizler (kod, tek kullanımlık ya da hesap bağlantısı, bilet kodu taşır).",
+    "🙈 = içeriği maskeli: SkyNotify gönderimin içeriğini gösterir ama kodları ve tek kullanımlık bağlantıları sunucuda gizler (kod, tek kullanımlık ya da hesap bağlantısı, bilet kodu taşır).",
     "",
     "## Ne zaman gider",
     "",

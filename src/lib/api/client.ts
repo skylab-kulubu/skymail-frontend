@@ -1,5 +1,5 @@
 /**
- * The one HTTP client the panel uses to reach the SkyMail API.
+ * The one HTTP client the panel uses to reach the SkyNotify API.
  */
 import { ApiError, apiErrorFromResponse, networkError } from "./errors";
 
@@ -13,7 +13,7 @@ export type ClientSession = {
 };
 
 export type ApiClientOptions = {
-  /** The API base, e.g. `https://api.yildizskylab.com/api/skymail/v1`. */
+  /** The API base, e.g. `https://api.yildizskylab.com/api/skynotify/v1`. */
   baseUrl: string;
   /** Reads the current session; called for every request. */
   getSession: () => Promise<ClientSession | null>;
@@ -161,7 +161,7 @@ export function createApiClient({
     get: (path, options) => request("GET", path, undefined, options),
     async getPage<T>(path: string, options?: RequestOptions): Promise<ApiPage<T>> {
       const { data, headers } = await send<T[] | null | undefined>("GET", path, undefined, options);
-      // skymail-backend encodes a list with no rows as null.
+      // skynotify-backend encodes a list with no rows as null.
       return { items: data ?? [], total: totalCount(headers.get("X-Total-Count")) };
     },
     post: (path, body, options) => request("POST", path, body, options),

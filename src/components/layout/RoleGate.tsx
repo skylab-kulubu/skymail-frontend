@@ -26,7 +26,7 @@ export function RoleGate({ role, children }: { role?: Role | readonly Role[]; ch
   const pathname = usePathname() || '/';
   const { roles, confirmRoles, teamSeat } = useConsole();
   const required: readonly Role[] = role === undefined ? requiredRolesFor(pathname) : typeof role === 'string' ? [role] : role;
-  // A Leader without skymail:access opens only Team mail's pages; a page's own role gate is not theirs to pass.
+  // A Leader without skynotify:access opens only Team mail's pages; a page's own role gate is not theirs to pass.
   const seat = teamSeat !== null && !hasAccess(roles);
   const allowed = seat ? role === undefined && teamSeatAllows(pathname) : hasAnyRole(roles, required);
   // The page and roles a fresh token has already said no to.

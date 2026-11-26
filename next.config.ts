@@ -27,7 +27,7 @@ const nextConfig: NextConfig = {
   // for a few seconds; a page from one that navigates or calls a Server Action
   // on the other then reloads in full instead of mixing two builds' chunks and
   // action IDs. Unset (local builds) Next.js behaves as before.
-  deploymentId: process.env.SKYMAIL_BUILD_ID || undefined,
+  deploymentId: process.env.SKYNOTIFY_BUILD_ID || undefined,
   poweredByHeader: false,
   // skylcn-ui's entry re-exports every component; import only the ones a page uses.
   experimental: { optimizePackageImports: ["@skylab-kulubu/skylcn-ui"] },
@@ -83,7 +83,7 @@ const nextConfig: NextConfig = {
 // http://localhost:3000 call its hosts cross-origin, so the browser calls this
 // dev server on its own origin and the server forwards /sandbox-api/* to the
 // sandbox API, never to production. Locally API_URL is
-// http://localhost:3000/sandbox-api/api/skymail/v1 (.env.example). `next build`
+// http://localhost:3000/sandbox-api/api/skynotify/v1 (.env.example). `next build`
 // never adds this rewrite, so the image forwards nothing.
 const sandboxApi = {
   source: "/sandbox-api/:path*",
@@ -95,7 +95,7 @@ export default function config(phase: string): NextConfig {
   const api = process.env.API_URL ?? "";
   if (/^https:\/\/([\w-]+\.)*yildizskylab\.com(\/|$)/.test(api)) {
     console.warn(
-      `⚠ API_URL=${api}: the browser would call that host from http://localhost:3000, which the edge does not allow. Use http://localhost:3000/sandbox-api/api/skymail/v1 (.env.example).`,
+      `⚠ API_URL=${api}: the browser would call that host from http://localhost:3000, which the edge does not allow. Use http://localhost:3000/sandbox-api/api/skynotify/v1 (.env.example).`,
     );
   }
   return { ...nextConfig, rewrites: async () => [sandboxApi] };

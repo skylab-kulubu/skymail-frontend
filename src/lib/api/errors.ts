@@ -1,13 +1,13 @@
 /**
- * What an operator reads when a request to the SkyMail API fails.
+ * What an operator reads when a request to the SkyNotify API fails.
  *
- * The API answers an error with `{ code, message, params? }` (skymail-backend
+ * The API answers an error with `{ code, message, params? }` (skynotify-backend
  * `internal/apperrors`). The `message` is English and written for developers,
  * so the panel shows a Turkish sentence chosen by `code`, falling back to one
  * chosen by the HTTP status for codes it does not know yet. The server's own
  * message stays on the error for logs and support.
  *
- * The codes below are every one skymail-backend `origin/main` raises
+ * The codes below are every one skynotify-backend `origin/main` raises
  * (2026-09-23); a new code the backend adds falls back to its status until it
  * gets a sentence here.
  */
@@ -19,7 +19,7 @@ const TEXT = {
   invalid: "Gönderilen bilgiler geçersiz. Alanları kontrol edip tekrar dene.",
   conflict: "Bu kayıt mevcut bir kayıtla çakışıyor.",
   tooMany: "Kısa sürede çok fazla istek gönderildi. Biraz bekleyip tekrar dene.",
-  unavailable: "SkyMail şu anda yanıt vermiyor. Biraz sonra tekrar dene.",
+  unavailable: "SkyNotify şu anda yanıt vermiyor. Biraz sonra tekrar dene.",
   serverError: "Sunucuda beklenmeyen bir hata oluştu. Tekrar dene; sürerse yöneticine haber ver.",
   unreachable: "Sunucuya ulaşılamadı. Bağlantını kontrol edip tekrar dene.",
 } as const;
@@ -90,7 +90,7 @@ const BY_CODE: ReadonlyMap<string, string> = new Map([
   ],
   ["mail_approval.not_submitter", "Bu işlemi yalnız isteği sunan yapabilir."],
   ["mail_approval.no_edit", "Düzenleme sunulan değerlerle aynı."],
-  // A send's purpose and category (abonelik-cikisi 03/04, skymail-backend #99; category_unknown and preference_unavailable: ticket 09).
+  // A send's purpose and category (abonelik-cikisi 03/04, skynotify-backend #99; category_unknown and preference_unavailable: ticket 09).
   ["mail_task.purpose_not_allowed", "Listeye ve Keycloak grubuna yalnız duyuru gönderilir."],
   ["mail_task.transactional_statement_required", "Başvuruyla ilgili bilgi için beyanı işaretle."],
   ["mail_task.commercial_content_not_allowed", "Tanıtım beyanı işaretlenmeden gönderilmez."],
@@ -102,7 +102,7 @@ const BY_CODE: ReadonlyMap<string, string> = new Map([
   ["mail_task.category_unknown", "Bu grup bir ekip değil; kulüp genelini ya da bir ekip seç."],
   ["mail_task.preference_unavailable", "İletişim tercihleri şu an okunamıyor. Birkaç dakika sonra yeniden dene."],
   ["mail_task.commercial_statement_required", "Duyuru için tanıtım beyanını işaretle."],
-  // Ekip postası (skymail-backend #128).
+  // Ekip postası (skynotify-backend #128).
   ["team_mail.off", "Ekip postası şu an kapalı."],
   ["team_mail.not_leader", "Seçtiğin ekiplerden bazılarının artık lideri görünmüyorsun."],
   ["team_mail.free_announcement_only", "Ekibine yalnız serbest duyuru gönderebilirsin."],
@@ -110,7 +110,7 @@ const BY_CODE: ReadonlyMap<string, string> = new Map([
   ["team_mail.leadership_unavailable", "Ekip liderliğin şu an doğrulanamadı. Birkaç saniye sonra yeniden dene."],
   ["mail_approval.team_leadership_lost", "Sunan artık seçilen ekiplerin hiçbirinin lideri değil: istek gönderilmeden reddedildi."],
   ["mail_approval.team_mail_off", "Ekip postası şu an kapalı: istek olduğu gibi bekliyor."],
-  // The suppression list's unsubscribes (abonelik-cikisi 02/04, skymail-backend #98).
+  // The suppression list's unsubscribes (abonelik-cikisi 02/04, skynotify-backend #98).
   ["suppression.reason_required", "Gerekçe tek satır ve 10–500 karakter olmalı."],
   ["suppression.reason_has_address", "Gerekçeye adres yazma."],
   ["suppression.use_delete", "Bu kayıt kalıcı ret; geri alınmaz, kaldırılır."],
@@ -119,7 +119,7 @@ const BY_CODE: ReadonlyMap<string, string> = new Map([
   ["news_send.not_enabled", "Haberden gönderim şu an kapalı."],
   ["news_send.not_found", "Bu adreste yayımlanmış bir haber yok: adres (slug) yanlış ya da kayıt arşivlenmiş."],
   ["news_send.private_record", "Bu kayıt herkese açık değil; şimdilik yalnız herkese açık haber gönderilir."],
-  ["news_send.template_missing", "Haber şablonu (club.news) SkyMail'de yok ya da yayımlanmamış."],
+  ["news_send.template_missing", "Haber şablonu (club.news) SkyNotify'da yok ya da yayımlanmamış."],
   ["news_send.cms_unavailable", "İçerik sistemine ulaşılamadı. Biraz sonra tekrar dene."],
   ["news_send.audience_unavailable", "Alıcılar core'dan okunamadı; hiçbir şey kuyruğa alınmadı. Biraz sonra tekrar dene."],
   ["news_send.teams_invalid", "Tüm üyelere gönderimde ekip seçilmez; ekiplere gönderimde en az bir ekip seç."],

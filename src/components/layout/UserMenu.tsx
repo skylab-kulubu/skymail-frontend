@@ -3,7 +3,7 @@
 // Copied from the admin panel (core-frontend src/components/layout/UserMenu.tsx, PR #144) so
 // the account sits in the same place, with the same rows in the same order, in every console:
 // the person, Hesap merkezi, Tema, Çıkış yap. Goes away once skylcn-ui ships an AccountMenu and
-// an `account` slot in AppShell (top bar standard, S1; Kaan). SkyMail's token carries no
+// an `account` slot in AppShell (top bar standard, S1; Kaan). SkyNotify's token carries no
 // Keycloak groups, so the club role line the panel shows is left out.
 
 import {

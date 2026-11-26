@@ -1,5 +1,5 @@
 /**
- * The HTTP client is the one way the panel talks to the SkyMail API, so these
+ * The HTTP client is the one way the panel talks to the SkyNotify API, so these
  * tests drive it the way a page does — through its public methods — with the
  * two things it depends on injected: `fetch` and the session getter. What they
  * pin down is what the operator sees: which token went out, whether a success
@@ -84,7 +84,7 @@ describe("the bearer token", () => {
 describe("a successful answer", () => {
   const signedIn = async () => session("token");
 
-  // SkyMail answers an archive and a recipient removal with 204 and no body.
+  // SkyNotify answers an archive and a recipient removal with 204 and no body.
   // The old data provider parsed that body as JSON, threw after the row was
   // already archived, and told the operator "Silinirken hata oluştu".
   for (const [name, path] of [
@@ -188,7 +188,7 @@ describe("a page of a list", () => {
     });
   }
 
-  // skymail-backend encodes an empty sqlc result as null, not [].
+  // skynotify-backend encodes an empty sqlc result as null, not [].
   it("is empty when the API sends null for no rows", async () => {
     const { fetch } = scriptedFetch(json(200, null, { "X-Total-Count": "0" }));
     const api = createApiClient({ baseUrl: BASE_URL, fetch, getSession: signedIn });

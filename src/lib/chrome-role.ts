@@ -1,5 +1,5 @@
 // Copied from superadmin (ADR-0017). The club role label reads Keycloak groups,
-// which the skymail token does not carry, so only the name formatting is kept.
+// which the skynotify token does not carry, so only the name formatting is kept.
 
 export function displayPersonName(
   firstName?: string,

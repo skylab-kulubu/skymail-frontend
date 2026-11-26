@@ -1,8 +1,8 @@
 /**
  * The container's health check (Dockerfile HEALTHCHECK) polls this route, and
  * Swarm's start-first deploy waits for it before it stops the old task. It must
- * answer from the server process alone: if it asked Keycloak or the SkyMail API,
- * their short outage would restart every SkyMail panel task at once.
+ * answer from the server process alone: if it asked Keycloak or the SkyNotify API,
+ * their short outage would restart every SkyNotify panel task at once.
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";

@@ -1,10 +1,10 @@
 /**
  * Sends — mail tasks — as the home screen, the send list and a send show
- * them: the shapes skymail-backend answers with, the addresses the screens
+ * them: the shapes skynotify-backend answers with, the addresses the screens
  * keep their view in, and the wording the panel puts on them.
  *
  * A send has no status of its own. The API derives one from its recipients'
- * queue rows (`mail_task_status`, skymail-backend PR #21): `failed` when any
+ * queue rows (`mail_task_status`, skynotify-backend PR #21): `failed` when any
  * recipient failed (or none was queued a minute after the send), `sending`
  * while any is pending or processing, `sent` otherwise. The summary and the
  * `?status=` filter use that one definition, so the failed tile on the home
@@ -26,14 +26,14 @@ export type RecipientStatus = "pending" | "processing" | "sent" | "failed";
 
 /**
  * Queue rows by status; each row is one mail to one recipient. `cancelled`
- * (skymail-backend, duyuru-haber 05 G4): pending recipients of a cancelled
+ * (skynotify-backend, duyuru-haber 05 G4): pending recipients of a cancelled
  * send, in failed too; absent from a backend before it.
  */
 export type RecipientCounts = Readonly<Record<RecipientStatus, number> & { cancelled?: number }>;
 
 /**
  * A send's recipients by status, and what the suppression list did to them
- * (skymail-backend QueueTotals; missing from an older backend): undelivered
+ * (skynotify-backend QueueTotals; missing from an older backend): undelivered
  * were sent and a report said the address does not exist (in sent);
  * suppressed were never sent (in failed); suppressed_but_sent were account
  * mail sent to a suppressed address anyway, flagged (in their status).
@@ -71,7 +71,7 @@ export type Send = Readonly<{
   status: SendStatus;
   recipient_counts: SendRecipientCounts;
   /**
-   * Whether the viewer may open the send's content (skymail-backend, sent mail
+   * Whether the viewer may open the send's content (skynotify-backend, sent mail
    * content): its recipients' mails as they were sent. Missing from a backend
    * that cannot show content.
    */
@@ -79,7 +79,7 @@ export type Send = Readonly<{
   /** When the content is emptied; null unless content_access is available or masked. */
   content_expires_at?: string | null;
   /**
-   * Whether the send asked for open and click tracking and got it (SkyMail's
+   * Whether the send asked for open and click tracking and got it (SkyNotify's
    * tracking was on, and its template may be tracked). Missing from a backend
    * before tracking.
    */
@@ -93,11 +93,11 @@ export type Send = Readonly<{
 }>;
 
 /**
- * Whether a send's content can be opened, and if not why (skymail-backend,
+ * Whether a send's content can be opened, and if not why (skynotify-backend,
  * sent mail content). `masked`: mail that may carry a code or a one-time link,
  * shown whole with every code and one-time link replaced by `••••••` on the
  * server (Yusuf, 2026-10-13); `restricted` is shown to others (its sender,
- * those who send to lists for a send to many, SkyMail's administrators);
+ * those who send to lists for a send to many, SkyNotify's administrators);
  * `expired` is past the retention period, emptied; `not_kept` is mail of the
  * masked kind whose content was emptied (before such content was kept, or
  * because it could not be masked for certain); `pending` is such mail not
@@ -111,7 +111,7 @@ export function contentOpens(access: ContentAccess | "unavailable" | undefined):
   return access === "available" || access === "masked";
 }
 
-/** What a masked value reads as: skymail-backend's mailer.Mask. */
+/** What a masked value reads as: skynotify-backend's mailer.Mask. */
 export const MASK = "••••••";
 
 /** Text cut where it shows a masked value, so each mask can be marked. */
@@ -132,7 +132,7 @@ export type SentContent = Readonly<{
   access: ContentAccess | "unavailable";
   subject: string | null;
   plain_text: string | null;
-  /** Masked, each masked value in the text is `<mark data-skymail-masked="">••••••</mark>`. */
+  /** Masked, each masked value in the text is `<mark data-skynotify-masked="">••••••</mark>`. */
   html: string | null;
   expires_at: string | null;
   /** Masked content: the send's variables masked (`link`, `code`, `answers[0].url`). */
@@ -148,17 +148,17 @@ export type SendSummary = Readonly<{
   queue_counts: RecipientCounts;
   /**
    * True while `MAIL_SENDER=paused` holds the sender back, as during a restore
-   * from backup (skymail-backend ticket 28): sends are queued, none goes out.
-   * skymail-backend always gives it; senderPaused reads it missing as false.
+   * from backup (skynotify-backend ticket 28): sends are queued, none goes out.
+   * skynotify-backend always gives it; senderPaused reads it missing as false.
    */
   sender_paused?: boolean;
-  /** True while `SKYMAIL_TRACKING=on`: a send may ask for open and click tracking. Absent from a backend before tracking. */
+  /** True while `SKYNOTIFY_TRACKING=on`: a send may ask for open and click tracking. Absent from a backend before tracking. */
   tracking_available?: boolean;
-  /** True while `SKYMAIL_TRACKING_OPERATOR=on` too: every send a person makes is tracked and the form shows no box. Absent from a backend before it. */
+  /** True while `SKYNOTIFY_TRACKING_OPERATOR=on` too: every send a person makes is tracked and the form shows no box. Absent from a backend before it. */
   tracking_always?: boolean;
-  /** True while `SKYMAIL_MAIL_PURPOSE=on`: a send carries its purpose and category (send-form/purpose.ts). Absent from a backend before it. */
+  /** True while `SKYNOTIFY_MAIL_PURPOSE=on`: a send carries its purpose and category (send-form/purpose.ts). Absent from a backend before it. */
   purpose_available?: boolean;
-  /** True while `SKYMAIL_LIST_CONSENT=on`: a list's guests need their announcement consent unless the send states it is about the list's own event (send-form/purpose.ts). Absent from a backend before it. */
+  /** True while `SKYNOTIFY_LIST_CONSENT=on`: a list's guests need their announcement consent unless the send states it is about the list's own event (send-form/purpose.ts). Absent from a backend before it. */
   list_consent_available?: boolean;
   /** Until when sends to lists, groups and News wait because the relay throttled the account (send-controls.ts); null or absent when not held. */
   bulk_held_until?: string | null;
@@ -353,7 +353,7 @@ export function contentNote(send: Pick<Send, "content_access" | "content_expires
       return { text: PENDING_TEXT };
     case "restricted":
       return {
-        text: "Bu gönderimin içeriğini göremezsin. İçeriği gönderen, toplu gönderimlerde gönderme yetkisi olanlar ve SkyMail yöneticileri görür.",
+        text: "Bu gönderimin içeriğini göremezsin. İçeriği gönderen, toplu gönderimlerde gönderme yetkisi olanlar ve SkyNotify yöneticileri görür.",
       };
     case "expired":
       return {
@@ -383,11 +383,11 @@ export const CONTENT_MISSING_TEXT: Readonly<Record<SentContent["access"], string
 };
 
 // ---------------------------------------------------------------------------
-// A paused sender (skymail-backend ticket 28)
+// A paused sender (skynotify-backend ticket 28)
 
 /**
  * What the home screen and the send list say while the sender is paused. It
- * cannot be dismissed: it goes away when SkyMail sends again.
+ * cannot be dismissed: it goes away when SkyNotify sends again.
  */
 export const SENDER_PAUSED_TEXT =
   "Gönderim duraklatıldı: yeni gönderimler kuyruğa alınıyor ama hiçbiri gönderilmiyor (geri yükleme sürüyor).";

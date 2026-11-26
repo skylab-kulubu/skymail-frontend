@@ -10,7 +10,13 @@ import { join } from "node:path";
 import { describe, it } from "node:test";
 import { getSchema } from "@tiptap/core";
 import { FREE_BODY_ALLOWANCE } from "@/lib/mail-render/free-body";
-import { TEMPLATE_BODY_ALLOWANCE, visualSource, type VisualDocument } from "@/lib/mail-render/visual-document";
+import {
+  TEMPLATE_BODY_ALLOWANCE,
+  VISUAL_DOCUMENT_TYPE,
+  parseVisualSource,
+  visualSource,
+  type VisualDocument,
+} from "@/lib/mail-render/visual-document";
 import { visualSchemaExtensions } from "./schema";
 import { fromEditorContent, toEditorContent } from "./tiptap-document";
 
@@ -40,12 +46,12 @@ describe("a Visual document in the editor", () => {
   });
 
   it("starts empty as a single empty paragraph to type in, and an empty paragraph is no content", () => {
-    const empty: VisualDocument = { type: "skymail.visual", version: 1, blocks: [] };
+    const empty: VisualDocument = { type: "skynotify.visual", version: 1, blocks: [] };
     const node = schema.nodeFromJSON(toEditorContent(empty));
 
     assert.equal(schema.topNodeType.createAndFill()?.childCount, 1);
     assert.deepEqual(fromEditorContent(schema.topNodeType.createAndFill()!.toJSON()), {
-      type: "skymail.visual",
+      type: "skynotify.visual",
       version: 1,
       blocks: [{ type: "paragraph", content: [] }],
     });
@@ -132,7 +138,7 @@ describe("the editor for a free announcement's body", () => {
     }),
   );
   const document: VisualDocument = {
-    type: "skymail.visual",
+    type: "skynotify.visual",
     version: 1,
     blocks: [
       { type: "heading", content: [{ type: "text", text: "Duyuru" }] },
@@ -190,7 +196,7 @@ describe("the editor for a free announcement's body", () => {
 describe("a link not to be counted", () => {
   const free = getSchema(visualSchemaExtensions(FREE_BODY_ALLOWANCE));
   const document: VisualDocument = {
-    type: "skymail.visual",
+    type: "skynotify.visual",
     version: 1,
     blocks: [
       {
@@ -223,7 +229,7 @@ describe("a link not to be counted", () => {
 describe("the recipient's name in the free body's editor", () => {
   const free = getSchema(visualSchemaExtensions(FREE_BODY_ALLOWANCE));
   const document: VisualDocument = {
-    type: "skymail.visual",
+    type: "skynotify.visual",
     version: 1,
     blocks: [
       { type: "heading", content: [{ type: "text", text: "Merhaba " }, { type: "variable", name: "FullName" }] },
@@ -248,5 +254,30 @@ describe("the recipient's name in the free body's editor", () => {
     const back = fromEditorContent(throughSchema(EVERY_BLOCK));
     assert.equal(JSON.stringify(back), visualSource(EVERY_BLOCK));
     assert.ok(!JSON.stringify(back).includes("fallback"));
+  });
+});
+
+// The SkyNotify rename (ADR 0091, hub ticket skynotify-ad 02/03): a Visual
+// source saved before the window says its old type. The window's data
+// migration (skynotify-backend db/tasima/veri-ileri.sql) sets only the
+// top-level "type" (jsonb_set), and the console reads no other type.
+describe("a Visual source the rename window migrated", () => {
+  /** The type every Visual source was saved with before the window. */
+  const OLD_TYPE = "skymail.visual";
+  const saved = JSON.stringify({ ...EVERY_BLOCK, type: OLD_TYPE });
+  /** What jsonb_set(visual_source, '{type}', to_jsonb(new type)) leaves behind. */
+  const migrated = JSON.stringify({ ...(JSON.parse(saved) as object), type: VISUAL_DOCUMENT_TYPE });
+
+  it("opens in the editor as the same document", () => {
+    const read = parseVisualSource(migrated);
+    assert.ok(read.ok, read.ok ? "" : read.problems.join("\n"));
+    assert.equal(read.document.type, "skynotify.visual");
+    assert.deepEqual(fromEditorContent(throughSchema(read.document)), EVERY_BLOCK);
+  });
+
+  it("is refused before it was migrated: the old type is not read", () => {
+    const read = parseVisualSource(saved);
+    assert.ok(!read.ok);
+    assert.ok(read.problems.some((problem) => problem.includes(`türü "skynotify.visual" değil: "${OLD_TYPE}"`)), read.problems.join("\n"));
   });
 });

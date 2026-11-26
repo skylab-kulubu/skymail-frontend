@@ -1,8 +1,8 @@
 /**
  * The Template seed, driven with a scripted fetch that answers the way
- * skymail-backend's by-key upsert does (`PUT /v1/templates/by-key/{key}`,
+ * skynotify-backend's by-key upsert does (`PUT /v1/templates/by-key/{key}`,
  * ticket 09): what each request carries, which templates it forces, and what
- * a run prints and exits with when SkyMail refuses a template an operator
+ * a run prints and exits with when SkyNotify refuses a template an operator
  * changed.
  */
 import assert from "node:assert/strict";
@@ -15,7 +15,7 @@ import type { TemplateMeta } from "../../../emails/types";
 import { json, scriptedFetch, type RecordedCall } from "../api/testing";
 import { parseSeedArgs, runSeed, templateSources, type SeedRun, type RepoTemplate } from ".";
 
-const BASE_URL = "https://skymail.example.test";
+const BASE_URL = "https://skynotify.example.test";
 
 function template(key: string, text: string, overrides: Partial<TemplateMeta> = {}): RepoTemplate {
   return {
@@ -39,9 +39,9 @@ function template(key: string, text: string, overrides: Partial<TemplateMeta> = 
 const seeded = (key: string) => json(200, { id: `id-${key}`, key, subject: `Konu ${key}` });
 
 const operator = (name: string) => ({ kind: "operator", sub: `sub-${name}`, name });
-const templateSeed = { kind: "template_seed", sub: "sub-seed", name: "service-account-skymail-seed" };
+const templateSeed = { kind: "template_seed", sub: "sub-seed", name: "service-account-skynotify-seed" };
 
-/** A version as skymail-backend's version routes summarise it. */
+/** A version as skynotify-backend's version routes summarise it. */
 function summary(
   seq: number,
   author: { kind: string; sub: string; name: string },
@@ -66,7 +66,7 @@ function summary(
   };
 }
 
-/** skymail-backend's refusal of a template an operator changed since the last seed. */
+/** skynotify-backend's refusal of a template an operator changed since the last seed. */
 function refused(key: string, params: Record<string, unknown>): Response {
   return json(409, {
     code: "template.seed_conflict",
@@ -138,7 +138,7 @@ describe("the Template seed", () => {
       },
     );
     assert.match(output, /✓ core\.welcome\s+id-core\.welcome/);
-    assert.match(output, /1 şablon https:\/\/skymail\.example\.test üzerine yazıldı\./);
+    assert.match(output, /1 şablon https:\/\/skynotify\.example\.test üzerine yazıldı\./);
   });
 
   it("sends the sensitive variables a template lists, an empty list too, and leaves the field out when it lists none", async () => {
@@ -157,14 +157,14 @@ describe("the Template seed", () => {
 
     assert.equal(exitCode, 0, output);
     assert.deepEqual(bodyOf(calls[0]).sensitive_variables, ["link"]);
-    // [] clears the template's list on SkyMail; it is a decision, so it is sent.
+    // [] clears the template's list on SkyNotify; it is a decision, so it is sent.
     assert.deepEqual(bodyOf(calls[1]).sensitive_variables, []);
-    // Left out, SkyMail keeps the list the template has — and a SkyMail from
+    // Left out, SkyNotify keeps the list the template has — and a SkyNotify from
     // before the field never sees it.
     assert.equal("sensitive_variables" in bodyOf(calls[2]), false);
   });
 
-  it("goes on past a template SkyMail refuses, then lists it with why and how to force it, and fails", async () => {
+  it("goes on past a template SkyNotify refuses, then lists it with why and how to force it, and fails", async () => {
     const templates = [
       template("free.basic", "Serbest"),
       template("keycloak.reset-password", "Parola"),
@@ -198,7 +198,7 @@ describe("the Template seed", () => {
     assert.match(output, /✓ free\.basic/);
     assert.match(output, /✗ keycloak\.reset-password\s+reddedildi/);
     assert.match(output, /✓ core\.certificate/);
-    assert.match(output, /2 şablon https:\/\/skymail\.example\.test üzerine yazıldı\./);
+    assert.match(output, /2 şablon https:\/\/skynotify\.example\.test üzerine yazıldı\./);
     assert.match(output, /2 şablon reddedildi/);
 
     // Why, in the words of each rule that held, with the versions involved.
@@ -212,6 +212,11 @@ describe("the Template seed", () => {
     assert.match(output, /^Reddedilenlerin hepsini zorlamak için: corepack yarn emails:seed --force=keycloak\.reset-password,core\.welcome$/m);
     assert.match(output, /corepack yarn emails:seed --force-all/);
     assert.match(output, /geçmiş/, "says the operator's versions stay in the history");
+
+    // The skipped ones in one line, and that they kept their old text, footer included,
+    // so the operator is told (the SkyNotify rename window seeds without forcing).
+    assert.match(output, /^Atlanan şablonlar: keycloak\.reset-password, core\.welcome$/m);
+    assert.match(output, /alt bilgi dahil.*operatöre bildir/);
   });
 
   it("forces only the templates it is told to, and says what each force wrote over", async () => {
@@ -434,7 +439,7 @@ describe("the Template seed's Notification types", () => {
     assert.match(output, /2 şablon ve 1 bildirim türü/);
   });
 
-  it("writes the type of a template SkyMail refused: the template is there, with the operator's text", async () => {
+  it("writes the type of a template SkyNotify refused: the template is there, with the operator's text", async () => {
     const { fetch, calls } = scriptedFetch(refused("event.ticket-created", { rules: ["operator_subject"] }), json(200, {}));
 
     const { exitCode, output } = await run({ templates: [ticket()], fetch });
@@ -444,7 +449,7 @@ describe("the Template seed's Notification types", () => {
     assert.match(output, /bildirim türü/);
   });
 
-  it("stops and fails when SkyMail refuses a type, and says why", async () => {
+  it("stops and fails when SkyNotify refuses a type, and says why", async () => {
     const { fetch, calls } = scriptedFetch(
       seeded("event.ticket-created"),
       json(400, { code: "notification_type.inbox_variant_invalid", message: "bad link", params: { part: "link" } }),
@@ -510,10 +515,11 @@ describe("the Template seed's Notification types", () => {
     assert.equal(calls.length, 0);
     for (const key of keys) assert.match(output, new RegExp(`${key.replace(".", "\\.")}.*\\[bildirim türü\\]`));
   });
-  it("register the Ticket status, reminder and door mails as required, system lane types by e-mail and the inbox", async () => {
+  it("register the Ticket status, reminder, event change and door mails as required, system lane types by e-mail and the inbox", async () => {
     const keys = [
       "event.ticket-cancelled", "event.waitlist-joined", "event.waitlist-promoted", "event.registration-full", "event.reminder",
       "event.attendance-welcome", "event.attendance-recorded", "event.attendance-day-summary",
+      "event.changed", "event.door-staff-added",
     ];
     for (const key of keys) {
       const n = repoTemplates.find(({ meta }) => meta.key === key)?.meta.notification;

@@ -1,5 +1,5 @@
 /**
- * The Login code mail and its operator alarm, sent by Keycloak's SkyMail provider (e-skylab-keycloak,
+ * The Login code mail and its operator alarm, sent by Keycloak's SkyNotify provider (e-skylab-keycloak,
  * sky-email-code, eskylab-login-ux 08, ADR-0063). Keycloak passes every one of its system-mail
  * variables on every mail, empty when it does not know one (docs/keycloak-mail-via-skymail.md);
  * the Login code fills code, codeExpirationMinutes and purpose.
@@ -9,7 +9,7 @@ import { describe, it } from "node:test";
 import { findTemplate } from "../../../emails";
 import { fillSampleValues, referencedVariables, renderComponent } from ".";
 
-/** What Keycloak's SkyMail provider always passes (SkyMailMessage.VARIABLE_NAMES), beside Email and FullName. */
+/** What Keycloak's SkyNotify provider always passes (SkyNotifyMessage.VARIABLE_NAMES), beside Email and FullName. */
 const KEYCLOAK_SENDS = [
   "link",
   "linkExpirationMinutes",

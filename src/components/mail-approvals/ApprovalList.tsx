@@ -53,7 +53,7 @@ export function ApprovalList() {
   const router = useRouter();
   const { roles, teamSeat } = useConsole();
   const approver = isApprover(roles);
-  // A Leader without skymail:access composes to their Teams.
+  // A Leader without skynotify:access composes to their Teams.
   const canCompose = sendAccess(roles).people || teamSeat !== null;
   const view = readApprovalListView(useSearchParams(), { approver });
   const state = useApiLoad(

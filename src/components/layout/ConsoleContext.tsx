@@ -20,7 +20,7 @@ type ConsoleContextValue = Readonly<{
   user: ConsoleUser;
   config: PublicConfig;
   /**
-   * A Leader without skymail:access (ekip-postasi 06): the Teams they lead,
+   * A Leader without skynotify:access (ekip-postasi 06): the Teams they lead,
    * as the layout's check read them. Null for anyone with access. They get
    * the team seat: their Teams, a free announcement and their own requests.
    */
@@ -134,7 +134,7 @@ export function useConsole(): ConsoleContextValue {
   return value;
 }
 
-/** Whether the signed-in person holds `role` (and `skymail:access`). */
+/** Whether the signed-in person holds `role` (and `skynotify:access`). */
 export function useCan(role: Role): boolean {
   return hasRole(useConsole().roles, role);
 }

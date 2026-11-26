@@ -161,7 +161,7 @@ describe("JSX mode", () => {
     {
       // What seed-templates.ts wrote into react_email_content before ticket 09.
       name: "the seed's pointer comment",
-      source: "// Kaynak: skymail-frontend/emails/core-welcome.tsx — burada düzenlersen repodaki kaynakla ayrışır.\n",
+      source: "// Kaynak: skynotify-frontend/emails/core-welcome.tsx — burada düzenlersen repodaki kaynakla ayrışır.\n",
       reason: "no-component",
     },
     {

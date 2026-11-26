@@ -11,7 +11,7 @@ export type ConsoleLink = Readonly<{ id: "admin" | "forms"; label: string; href:
 
 /** What the browser needs to know, and nothing secret. */
 export type PublicConfig = Readonly<{
-  /** The SkyMail API base, e.g. `https://api.yildizskylab.com/api/skymail/v1`. */
+  /** The SkyNotify API base, e.g. `https://api.yildizskylab.com/api/skynotify/v1`. */
   apiUrl: string;
   /** The other club consoles, for the club switcher. */
   consoles: readonly ConsoleLink[];
@@ -46,7 +46,7 @@ export function missingEnv(): string[] {
 export function keycloakSettings(): { issuer: string; clientId: string } {
   return {
     issuer: required("KEYCLOAK_ISSUER").replace(/\/+$/, ""),
-    clientId: read("KEYCLOAK_CLIENT_ID") ?? "skymail",
+    clientId: read("KEYCLOAK_CLIENT_ID") ?? "skynotify",
   };
 }
 

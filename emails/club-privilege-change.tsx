@@ -11,7 +11,7 @@ export const meta: TemplateMeta = {
   contentSensitive: false,
   brand: "account",
   trigger:
-    "core-backend, yönetim yetkisi veren bir değişiklikte (docs/privilege-change-mail.md): bir grubun rol eşlemesi değişince yalnız ADMIN üyelerine; bir yönetim grubuna (ADMIN, YK, DK ya da altları; AUTHZ_PRIVILEGED_ROOTS) kişi eklenince ya da çıkarılınca ADMIN üyelerine ve o kökün diğer üyelerine. Değişikliği yapan ve eklenen/çıkarılan kişi bu postayı almaz; kişi kendi club.role-membership postasını alır. Core kuyruğa yazar ve SkyMail'e anahtarla gönderir.",
+    "core-backend, yönetim yetkisi veren bir değişiklikte (docs/privilege-change-mail.md): bir grubun rol eşlemesi değişince yalnız ADMIN üyelerine; bir yönetim grubuna (ADMIN, YK, DK ya da altları; AUTHZ_PRIVILEGED_ROOTS) kişi eklenince ya da çıkarılınca ADMIN üyelerine ve o kökün diğer üyelerine. Değişikliği yapan ve eklenen/çıkarılan kişi bu postayı almaz; kişi kendi club.role-membership postasını alır. Core kuyruğa yazar ve SkyNotify'a anahtarla gönderir.",
   // Change: `member-added`, `member-removed` ya da `roles-changed`.
   // GroupName: değişen grup, "KOD · Türkçe ad" (YK · Yönetim Kurulu), alt
   // grupta kendi adı (BASKAN). GroupId: panel bağlantısı için grubun kimliği;

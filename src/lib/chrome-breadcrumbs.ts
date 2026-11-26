@@ -1,4 +1,4 @@
-// First copied from superadmin (ADR-0017); the labels are SkyMail's sections, from
+// First copied from superadmin (ADR-0017); the labels are SkyNotify's sections, from
 // the one list the menu uses. Unlike the copy, a crumb says whether its
 // address is a page, so a segment without one is shown as text, not a link
 // to a 404.
@@ -68,7 +68,7 @@ export function chromeCrumbs(pathname: string): ChromeCrumb[] {
  * the id's "Kayıt".
  */
 export function shellCrumbs(pathname: string, { teamSeat = false }: { teamSeat?: boolean } = {}): { href: string; label: string }[] {
-  // A Leader without skymail:access (ekip-postasi 06): the send form is "Ekibime gönder", and Gönderimler is not theirs.
+  // A Leader without skynotify:access (ekip-postasi 06): the send form is "Ekibime gönder", and Gönderimler is not theirs.
   if (teamSeat && pathname === TEAM_SEAT_SEND_PATH) return [{ href: TEAM_SEAT_SEND_PATH, label: TEAM_SEAT_SEND_LABEL }];
   const crumbs = chromeCrumbs(pathname);
   const last = crumbs[crumbs.length - 1];

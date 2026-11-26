@@ -16,7 +16,7 @@ import {
 } from "./session-token";
 
 const ISSUER = "https://e.example.test/realms/e-skylab-sandbox";
-const CLIENT_ID = "skymail";
+const CLIENT_ID = "skynotify";
 const NOW = Date.UTC(2026, 8, 22, 12, 0, 0);
 
 /** An unsigned JWT with the given payload: enough for code that only reads claims. */
@@ -29,7 +29,7 @@ function tokenWithRoles(roles: string[]): string {
   return accessToken({
     sub: "user-1",
     resource_access: {
-      skymail: { roles },
+      skynotify: { roles },
       forms: { roles: ["skyforms:access"] },
       account: { roles: ["manage-account"] },
     },
@@ -38,10 +38,10 @@ function tokenWithRoles(roles: string[]): string {
 }
 
 describe("signing in", () => {
-  it("keeps SkyMail's client roles from the access token and nothing else", () => {
+  it("keeps SkyNotify's client roles from the access token and nothing else", () => {
     const token = tokenFromSignIn(
       {
-        access_token: tokenWithRoles(["skymail:access", "skymail:templates:read"]),
+        access_token: tokenWithRoles(["skynotify:access", "skynotify:templates:read"]),
         refresh_token: "refresh-1",
         id_token: "id-1",
         expires_at: NOW / 1000 + 300,
@@ -49,7 +49,7 @@ describe("signing in", () => {
       { clientId: CLIENT_ID, profile: { name: "Ada Lovelace", email: "ada@example.test" } },
     );
 
-    assert.deepEqual(token.roles, ["skymail:access", "skymail:templates:read"]);
+    assert.deepEqual(token.roles, ["skynotify:access", "skynotify:templates:read"]);
     assert.equal(token.refreshToken, "refresh-1");
     assert.equal(token.idToken, "id-1");
     assert.equal(token.expiresAt, NOW + 300_000);
@@ -89,11 +89,11 @@ function options(fetch: typeof globalThis.fetch, now: () => number = () => NOW):
 
 function signedIn(overrides: Partial<SessionToken> = {}): SessionToken {
   return {
-    accessToken: tokenWithRoles(["skymail:access"]),
+    accessToken: tokenWithRoles(["skynotify:access"]),
     refreshToken: "refresh-1",
     idToken: "id-1",
     expiresAt: NOW + 10 * 60_000,
-    roles: ["skymail:access"],
+    roles: ["skynotify:access"],
     subject: "user-1",
     user: { name: "Ada Lovelace" },
     ...overrides,
@@ -111,12 +111,12 @@ describe("reading the session", () => {
     assert.equal(calls.length, 0);
   });
 
-  // skymail is a public client: it has no secret, and Keycloak refuses a
+  // skynotify is a public client: it has no secret, and Keycloak refuses a
   // refresh that presents one it does not know.
   it("refreshes a token about to expire as a public client, without a secret", async () => {
     const { fetch, calls } = tokenEndpoint(() =>
       Response.json({
-        access_token: tokenWithRoles(["skymail:access", "skymail:lists:read"]),
+        access_token: tokenWithRoles(["skynotify:access", "skynotify:lists:read"]),
         refresh_token: "refresh-2",
         id_token: "id-2",
         expires_in: 300,
@@ -136,13 +136,13 @@ describe("reading the session", () => {
     assert.equal(next.refreshToken, "refresh-2");
     assert.equal(next.idToken, "id-2");
     assert.equal(next.expiresAt, NOW + 300_000);
-    assert.deepEqual(next.roles, ["skymail:access", "skymail:lists:read"]);
+    assert.deepEqual(next.roles, ["skynotify:access", "skynotify:lists:read"]);
     assert.equal(next.error, undefined);
   });
 
   it("keeps the refresh token when Keycloak does not rotate it", async () => {
     const { fetch } = tokenEndpoint(() =>
-      Response.json({ access_token: tokenWithRoles(["skymail:access"]), expires_in: 300 }),
+      Response.json({ access_token: tokenWithRoles(["skynotify:access"]), expires_in: 300 }),
     );
 
     const next = await refreshIfExpiring(signedIn({ expiresAt: NOW - 1 }), options(fetch));
@@ -177,7 +177,7 @@ describe("reading the session", () => {
   // once), so the next read tries again, and a success clears the flag.
   it("tries again on the next read and clears the flag when it works", async () => {
     const { fetch, calls } = tokenEndpoint(() =>
-      Response.json({ access_token: tokenWithRoles(["skymail:access"]), expires_in: 300 }),
+      Response.json({ access_token: tokenWithRoles(["skynotify:access"]), expires_in: 300 }),
     );
 
     const next = await refreshIfExpiring(
@@ -203,7 +203,7 @@ describe("reads that need a refresh at the same moment", () => {
       issued += 1;
       await gate;
       return Response.json({
-        access_token: tokenWithRoles(["skymail:access"]),
+        access_token: tokenWithRoles(["skynotify:access"]),
         refresh_token: `refresh-rotated-${issued}`,
         expires_in: 300,
       });
@@ -272,7 +272,7 @@ describe("reads of one session on two server processes", () => {
         return Response.json({ error: "invalid_grant", error_description: "Stale token" }, { status: 400 });
       }
       return Response.json({
-        access_token: tokenWithRoles(["skymail:access"]),
+        access_token: tokenWithRoles(["skynotify:access"]),
         refresh_token: "refresh-2",
         expires_in: 300,
       });
@@ -337,7 +337,7 @@ describe("a refused refresh", () => {
       attempts += 1;
       return attempts === 1
         ? Response.json({ error: "temporarily_unavailable" }, { status: 503 })
-        : Response.json({ access_token: tokenWithRoles(["skymail:access"]), expires_in: 300 });
+        : Response.json({ access_token: tokenWithRoles(["skynotify:access"]), expires_in: 300 });
     });
     const shared = options(fetch);
     const token = signedIn({ expiresAt: NOW + 30_000 });
@@ -357,7 +357,7 @@ describe("a forced refresh", () => {
   it("trades a token that still has time left and reads the roles again", async () => {
     const { fetch, calls } = tokenEndpoint(() =>
       Response.json({
-        access_token: tokenWithRoles(["skymail:access", "skymail:templates:read"]),
+        access_token: tokenWithRoles(["skynotify:access", "skynotify:templates:read"]),
         refresh_token: "refresh-2",
         expires_in: 300,
       }),
@@ -366,7 +366,7 @@ describe("a forced refresh", () => {
     const next = await refreshIfExpiring(signedIn(), { ...options(fetch), force: true });
 
     assert.equal(calls.length, 1);
-    assert.deepEqual(next.roles, ["skymail:access", "skymail:templates:read"]);
+    assert.deepEqual(next.roles, ["skynotify:access", "skynotify:templates:read"]);
     assert.equal(next.refreshToken, "refresh-2");
     assert.equal(next.expiresAt, NOW + 300_000);
   });
@@ -388,7 +388,7 @@ describe("the session the browser sees", () => {
   const token = signedIn({
     refreshToken: "secret-refresh-token",
     idToken: "secret-id-token",
-    roles: ["skymail:access", "skymail:lists:read"],
+    roles: ["skynotify:access", "skynotify:lists:read"],
     user: { name: "Ada Lovelace", email: "ada@example.test" },
   });
   const expires = "2026-10-23T00:00:00.000Z";
@@ -397,7 +397,7 @@ describe("the session the browser sees", () => {
     const session = sessionFromToken({ expires }, token);
 
     assert.equal(session.accessToken, token.accessToken);
-    assert.deepEqual(session.roles, ["skymail:access", "skymail:lists:read"]);
+    assert.deepEqual(session.roles, ["skynotify:access", "skynotify:lists:read"]);
     assert.equal(session.user.name, "Ada Lovelace");
     assert.equal(session.user.email, "ada@example.test");
     assert.equal(session.expires, expires);
@@ -427,7 +427,7 @@ describe("who the session belongs to", () => {
     tokenFromSignIn({ access_token, expires_at: NOW / 1000 + 300 }, { clientId: CLIENT_ID, profile: {} });
 
   it("is the access token's subject, kept at sign-in", () => {
-    assert.equal(signIn(tokenWithRoles(["skymail:access"])).subject, "user-1");
+    assert.equal(signIn(tokenWithRoles(["skynotify:access"])).subject, "user-1");
   });
 
   it("is unknown when the token carries no usable subject", () => {
@@ -440,7 +440,7 @@ describe("who the session belongs to", () => {
   // A cookie written before the subject was kept gets it with its next token.
   it("is read again from a refreshed token", async () => {
     const { fetch } = tokenEndpoint(() =>
-      Response.json({ access_token: tokenWithRoles(["skymail:access"]), expires_in: 300 }),
+      Response.json({ access_token: tokenWithRoles(["skynotify:access"]), expires_in: 300 }),
     );
     const older = signedIn({ expiresAt: NOW + 30_000 });
     delete older.subject;

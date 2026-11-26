@@ -11,7 +11,7 @@ export const meta: TemplateMeta = {
   contentSensitive: false,
   brand: "account",
   trigger:
-    "core-backend, admin panelinde bir kişi takım ya da yönetim grubu olmayan bir gruba (kulüp, alan grupları ör. /UYELER/ARGE, alanın LIDERLER'i, teknik gruplar) eklendiğinde veya oradan çıkarıldığında; değişikliği kuyruğa yazar ve SkyMail'e anahtarla gönderir (docs/team-membership-mail.md).",
+    "core-backend, admin panelinde bir kişi takım ya da yönetim grubu olmayan bir gruba (kulüp, alan grupları ör. /UYELER/ARGE, alanın LIDERLER'i, teknik gruplar) eklendiğinde veya oradan çıkarıldığında; değişikliği kuyruğa yazar ve SkyNotify'a anahtarla gönderir (docs/team-membership-mail.md).",
   // Action: `added` ise eklendi, değilse çıkarıldı. GroupName: değişen grubun
   // "KOD · Türkçe ad"ı (ARGE · Ar-Ge), Türkçe adı yoksa kodu
   // (ESKI-EDITORLER). ActorName boş gelebilir.

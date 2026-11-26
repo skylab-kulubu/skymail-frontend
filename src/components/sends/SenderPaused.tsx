@@ -1,7 +1,7 @@
 'use client';
 
-// While SkyMail runs with MAIL_SENDER=paused, as during a restore from backup
-// (skymail-backend ticket 28), a send is queued and never goes out. The home
+// While SkyNotify runs with MAIL_SENDER=paused, as during a restore from backup
+// (skynotify-backend ticket 28), a send is queued and never goes out. The home
 // screen and the send list say so above everything else, with no way to close
 // it: the notice lasts as long as the pause.
 

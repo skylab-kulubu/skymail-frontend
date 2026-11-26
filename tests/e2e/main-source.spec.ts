@@ -20,9 +20,9 @@ export default function Duyuru() {
 }
 `;
 
-test("making the HTML source main keeps the JSX source as it was", async ({ page, skymail, signIn }) => {
+test("making the HTML source main keeps the JSX source as it was", async ({ page, skynotify, signIn }) => {
   await signIn("writer");
-  const { id } = skymail.addTemplate({
+  const { id } = skynotify.addTemplate({
     name: "Haftalık duyuru",
     subject: "Bu hafta SKY LAB'de, {{.FirstName}}",
     mainMode: "jsx",
@@ -52,18 +52,18 @@ test("making the HTML source main keeps the JSX source as it was", async ({ page
   await expect(preview(page, "Main source adayı")).toContainText("HTML ile düzeltilmiş metin");
   await expect(dialog).toContainText("JSX kaynağı olduğu gibi korunur");
   await expect(dialog).toContainText("kaydedilmemiş olarak kalır");
-  expect(skymail.writes()).toHaveLength(0);
+  expect(skynotify.writes()).toHaveLength(0);
   await dialog.getByRole("button", { name: "Main source yap" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Main source artık HTML" })).toBeVisible();
 
   // One draft: the new mode and its render, with the JSX source left for the API to keep.
-  const [change] = skymail.writes();
+  const [change] = skynotify.writes();
   expect(change.path).toBe(`/templates/${id}/drafts`);
   expect(change.body).toMatchObject({ main_mode: "html", html_source: edited, html_content: edited });
   expect(change.body).not.toHaveProperty("jsx_source");
-  const draft = skymail.versionsOf(id)[0];
+  const draft = skynotify.versionsOf(id)[0];
   expect(draft).toMatchObject({ main_mode: "html", html_source: edited, jsx_source: JSX, published_at: null });
-  expect(skymail.row(id).html_content).toBe("<p>stored render</p>");
+  expect(skynotify.row(id).html_content).toBe("<p>stored render</p>");
 
   await expect(page.getByRole("tab", { name: /HTML/ })).toContainText("Main source");
   await page.getByRole("tab", { name: /JSX/ }).click();
@@ -80,10 +80,10 @@ test("making the HTML source main keeps the JSX source as it was", async ({ page
 // Story 35: stopping halfway through an edit. A source that does not compile
 // is never saved, so a half-written experiment is set aside — that source
 // alone — and the rest of the work is saved.
-test("a half-written source is set aside so the rest can be saved", async ({ page, skymail, signIn }) => {
+test("a half-written source is set aside so the rest can be saved", async ({ page, skynotify, signIn }) => {
   await signIn("writer");
   const html = "<!DOCTYPE html><html><body><p>Merhaba {{.FirstName}}</p></body></html>";
-  const { id } = skymail.addTemplate({
+  const { id } = skynotify.addTemplate({
     name: "Haftalık duyuru",
     subject: "Eski konu",
     mainMode: "html",
@@ -104,11 +104,11 @@ test("a half-written source is set aside so the rest can be saved", async ({ pag
   await page.getByRole("button", { name: "Taslağı kaydet" }).click();
   const refusal = page.getByRole("alert").filter({ hasText: "Kaydedilmedi" });
   await expect(refusal).toContainText("JSX kaynağı render edilemedi");
-  expect(skymail.writes()).toHaveLength(0);
+  expect(skynotify.writes()).toHaveLength(0);
 
   await refusal.getByRole("button", { name: "JSX kaynağındaki değişiklikleri geri al" }).click();
   expect(await sourceIn(page, "jsx")).toBe(JSX);
   await page.getByRole("button", { name: "Taslağı kaydet" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Taslak kaydedildi" })).toBeVisible();
-  expect(skymail.versionsOf(id)[0]).toMatchObject({ subject: "Yeni konu", jsx_source: JSX, html_source: html, published_at: null });
+  expect(skynotify.versionsOf(id)[0]).toMatchObject({ subject: "Yeni konu", jsx_source: JSX, html_source: html, published_at: null });
 });

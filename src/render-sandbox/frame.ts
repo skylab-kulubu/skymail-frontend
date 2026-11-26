@@ -109,7 +109,7 @@ function loadInFrame(): Promise<Renderer | null> {
   return new Promise((resolve) => {
     const script = document.createElement("script");
     script.src = workerScript;
-    script.onload = () => resolve((globalThis as { skymailRender?: Renderer }).skymailRender ?? null);
+    script.onload = () => resolve((globalThis as { skynotifyRender?: Renderer }).skynotifyRender ?? null);
     script.onerror = () => resolve(null);
     document.head.append(script);
   });

@@ -1,6 +1,6 @@
 /**
  * What a viewer can do with a request (ticket 20), as the API allows it
- * (ticket 19): approvers (`skymail:mails:approve`) decide a pending request,
+ * (ticket 19): approvers (`skynotify:mails:approve`) decide a pending request,
  * their own too (Yusuf, 2026-09-23); the submitter answers an edit returned to
  * them and resubmits a rejected or declined request; an expired request is
  * final, and its submitter can start a new one from it. The page offers

@@ -17,9 +17,9 @@ test("the render sandbox's page is sandboxed by its own header when opened direc
   expect(await page.evaluate(() => self.origin)).toBe("null");
 });
 
-test("the editor loads Monaco from a path named by its version, cached for good", async ({ page, request, skymail, signIn }) => {
+test("the editor loads Monaco from a path named by its version, cached for good", async ({ page, request, skynotify, signIn }) => {
   await signIn("writer");
-  const { id } = skymail.addTemplate({
+  const { id } = skynotify.addTemplate({
     name: "Duyuru",
     subject: "Merhaba",
     mainMode: "html",

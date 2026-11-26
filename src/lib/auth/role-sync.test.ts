@@ -15,8 +15,8 @@ import {
   type RoleSyncOptions,
 } from "./role-sync";
 
-const ACCESS = "skymail:access";
-const TEMPLATES = "skymail:templates:read";
+const ACCESS = "skynotify:access";
+const TEMPLATES = "skynotify:templates:read";
 
 function harness(overrides: Partial<RoleSyncOptions> = {}) {
   let time = 1_000_000;

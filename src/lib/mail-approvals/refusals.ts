@@ -79,7 +79,7 @@ function recipientIndex(field: unknown): number | null {
 /** What a 400 to a submission says of its audience, in words; null when it is about something else. */
 function invalidSubmission(error: ApiError): string | null {
   const errors = fieldErrors(error);
-  if (errors.some((entry) => recipientIndex(entry.field) !== null)) return "SkyMail bazı adresleri kabul etmedi.";
+  if (errors.some((entry) => recipientIndex(entry.field) !== null)) return "SkyNotify bazı adresleri kabul etmedi.";
   const found = (field: string, code: string) => errors.find((entry) => entry.field === field && entry.code === code);
   const tooMany = found("recipients", "max_length");
   if (tooMany) {
@@ -87,7 +87,7 @@ function invalidSubmission(error: ApiError): string | null {
     return `Onaya en çok ${limit} kişi sunulur; daha kalabalık bir gönderim bir mail listesine gider.`;
   }
   if (found("recipients", "duplicate")) {
-    return "SkyMail aynı adresi iki kez buldu; büyük ve küçük harfle yazılmışı da aynı adres sayılır. Her adresi bir kez yaz.";
+    return "SkyNotify aynı adresi iki kez buldu; büyük ve küçük harfle yazılmışı da aynı adres sayılır. Her adresi bir kez yaz.";
   }
   if (found("mail_list_id", "exactly_one_of") || found("team_ids", "exactly_one_of")) return "Onaya ya bir mail listesi, ya kişiler ya da ekipler sunulur: birini seç.";
   const manyTeams = found("team_ids", "max_length");
@@ -142,7 +142,7 @@ export function submissionRefusal(thrown: unknown, action: "submit" | "resubmit"
       ...(teamIds.length > 0 ? { teamIds } : {}),
     };
   }
-  return { text: "SkyMail bazı adresleri kabul etmedi: işaretli kişileri düzelt.", reload: false, addresses };
+  return { text: "SkyNotify bazı adresleri kabul etmedi: işaretli kişileri düzelt.", reload: false, addresses };
 }
 
 /**
@@ -158,9 +158,9 @@ export function refusalNow(refusal: SubmissionRefusal, rows: readonly PersonRow[
     const found = sent.has(index) ? addresses.get(address(row)) : undefined;
     if (!found) return {};
     if (found.problem === "missing") return { email: EMAIL_MISSING };
-    if (found.problem === "invalid") return { email: "SkyMail bu adresi geçerli bir e-posta adresi saymadı." };
+    if (found.problem === "invalid") return { email: "SkyNotify bu adresi geçerli bir e-posta adresi saymadı." };
     const first = rows.findIndex((other) => address(other) === found.first);
-    return { email: first >= 0 ? repeatedAddress(first) : "SkyMail bu adresi başka bir kişininkiyle aynı saydı; herkese bir kez gönderilir." };
+    return { email: first >= 0 ? repeatedAddress(first) : "SkyNotify bu adresi başka bir kişininkiyle aynı saydı; herkese bir kez gönderilir." };
   });
   return marks.some((mark) => mark.email) ? { text: refusal.text, rows: marks } : null;
 }
@@ -233,10 +233,10 @@ export function approvalRefusal(thrown: unknown, action: ApprovalActionName): Ap
       return say("Mail listesi arşivlenmiş ya da Keycloak grubu artık yok; gönderilemez.");
     case "mail_approval.audience_empty":
       return say("Mail listesinde gönderilecek kimse yok; gönderilemez.");
-    // core's preferences could not be read at the approval (skymail-backend, abonelik-cikisi 09): nothing was queued and the request is as it was.
+    // core's preferences could not be read at the approval (skynotify-backend, abonelik-cikisi 09): nothing was queued and the request is as it was.
     case "mail_task.preference_unavailable":
       return say("İletişim tercihleri şu an okunamıyor; gönderim açılmadı. Birkaç dakika sonra yeniden dene.");
-    // Ekip postası (skymail-backend #128).
+    // Ekip postası (skynotify-backend #128).
     case "team_mail.not_leader":
       return say("Seçtiğin ekiplerden bazılarının artık lideri görünmüyorsun. Ekip listesi yenilendi; seçimini gözden geçirip yeniden sun.");
     case "team_mail.free_announcement_only":

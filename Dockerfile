@@ -13,8 +13,8 @@ WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 # The build's name (release.yml passes the commit SHA), Next.js's deploymentId
 # (next.config.ts). Empty for a local `docker build`.
-ARG SKYMAIL_BUILD_ID=""
-ENV SKYMAIL_BUILD_ID=${SKYMAIL_BUILD_ID}
+ARG SKYNOTIFY_BUILD_ID=""
+ENV SKYNOTIFY_BUILD_ID=${SKYNOTIFY_BUILD_ID}
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN yarn build
@@ -29,7 +29,7 @@ COPY --from=builder --chown=nextjs:nextjs /app/.next/static ./.next/static
 USER nextjs
 EXPOSE 3000
 # Swarm's start-first deploy keeps the old task until this passes. /api/health
-# answers from the process alone (no Keycloak, no SkyMail API). wget is
+# answers from the process alone (no Keycloak, no SkyNotify API). wget is
 # BusyBox's, already in node:22-alpine.
 HEALTHCHECK --interval=10s --timeout=3s --start-period=30s --start-interval=2s --retries=3 \
   CMD wget -q -T 2 -O /dev/null http://127.0.0.1:3000/api/health || exit 1

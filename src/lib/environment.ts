@@ -1,5 +1,5 @@
 /**
- * Whether this server talks to the sandbox, read from the SkyMail API address
+ * Whether this server talks to the sandbox, read from the SkyNotify API address
  * as the admin panel reads its core address (core-frontend
  * src/lib/environment.ts): sandbox-api.… in the sandbox, and locally `yarn
  * dev` forwards /sandbox-api/*. The image is the same for both; the address

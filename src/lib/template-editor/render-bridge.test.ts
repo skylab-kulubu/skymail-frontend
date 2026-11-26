@@ -89,10 +89,10 @@ describe("where a source is rendered", () => {
     const { createFrame } = sandbox({ answering: (input, frame) => OK(`${input.mode} in frame ${frame}`) });
     const bridge = createRenderBridge({ createFrame });
 
-    const visual = await bridge.render({ mode: "visual", source: '{"type":"skymail.visual","version":1,"blocks":[]}' });
+    const visual = await bridge.render({ mode: "visual", source: '{"type":"skynotify.visual","version":1,"blocks":[]}' });
     const html = await bridge.render({ mode: "html", source: "<p>1</p>" });
     await bridge.render({ mode: "jsx", source: "A" });
-    const after = await bridge.render({ mode: "visual", source: '{"type":"skymail.visual","version":1,"blocks":[]}' });
+    const after = await bridge.render({ mode: "visual", source: '{"type":"skynotify.visual","version":1,"blocks":[]}' });
 
     assert.equal(visual?.ok && visual.html, "visual in frame 0");
     assert.equal(html?.ok && html.html, "html in frame 0");

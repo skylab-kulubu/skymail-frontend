@@ -1,6 +1,6 @@
 /**
  * A send's purpose and category (hub ticket abonelik-cikisi 04; ADR 0072
- * decision 2, 9; skymail-backend #99). Only while the backend says
+ * decision 2, 9; skynotify-backend #99). Only while the backend says
  * `purpose_available` (`GET /mail_tasks/tracking-mode` or `/summary`); with
  * an older backend, or with the switch off, the form sends none of it and
  * works as before.
@@ -85,7 +85,7 @@ export const KIND_OPTIONS = [
 
 export const TRANSACTIONAL_STATEMENT =
   "Bu posta alıcının kendi başvurusu ya da işlemi hakkında (yer veya saat değişikliği, eksik belge, sonuç). Duyuru ya da davet değil.";
-/** KVKK notice s6 row 15 (skymail-backend own_event_statement): a list's mail about the list's own event or work goes to its guests without their announcement consent. Optional. */
+/** KVKK notice s6 row 15 (skynotify-backend own_event_statement): a list's mail about the list's own event or work goes to its guests without their announcement consent. Optional. */
 export const OWN_EVENT_STATEMENT = "Bu posta listenin oluşturulduğu etkinlik ya da çalışmayla ilgili (oturum saati, yer değişikliği, iptal).";
 /** KVKK notice s6 §5.10: a short sponsor thanks or logo is not promotion. The same words as duyuru-haber 08's send from a news item. */
 export const COMMERCIAL_STATEMENT = "Postanın asıl amacı tanıtım değildir. Kısa sponsor teşekkürü ve logo serbesttir.";
@@ -93,7 +93,7 @@ export const COMMERCIAL_STATEMENT = "Postanın asıl amacı tanıtım değildir.
 /** KVKK notice s6 §5.14 (hub tickets kvkk-s6-yayin-oncesi 23, 24): what the dispatcher writes `suppressed: no_announcement_consent`, in words. */
 export const GUESTS_SKIPPED = "Hesabı olmayan ve geçerli duyuru izni bulunmayan alıcılar atlanır.";
 
-/** The API's refusals of a send's purpose or category (skymail-backend #99; category_unknown, commercial_statement_required: ticket 09); api/errors.ts words each. */
+/** The API's refusals of a send's purpose or category (skynotify-backend #99; category_unknown, commercial_statement_required: ticket 09); api/errors.ts words each. */
 export const PURPOSE_REFUSALS: ReadonlySet<string> = new Set([
   "mail_task.purpose_not_allowed",
   "mail_task.transactional_statement_required",

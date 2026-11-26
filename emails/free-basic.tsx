@@ -12,7 +12,7 @@ export const meta: TemplateMeta = {
   system: false,
   contentSensitive: false,
   brand: "skylab",
-  trigger: "SkyMail'de elle: alıcıları seç, konuyu ve gövdeyi yaz, gönder.",
+  trigger: "SkyNotify'da elle: alıcıları seç, konuyu ve gövdeyi yaz, gönder.",
   variables: ["Subject", "Heading", "BodyHtml", "CtaLabel", "CtaUrl"],
   sample: {
     Subject: "GECEKODU başvuruları açıldı",

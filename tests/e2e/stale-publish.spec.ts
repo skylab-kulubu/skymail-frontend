@@ -10,9 +10,9 @@ import { expect, preview, test, writeSource } from "./fixtures";
 
 const page1 = (text: string) => `<!DOCTYPE html><html><body><p>${text}</p><p>Merhaba {{.FirstName}}</p></body></html>`;
 
-test("a stale draft is published only over the version the operator was shown", async ({ page, skymail, signIn }) => {
+test("a stale draft is published only over the version the operator was shown", async ({ page, skynotify, signIn }) => {
   await signIn("writer");
-  const { id, versionId: first } = skymail.addTemplate({
+  const { id, versionId: first } = skynotify.addTemplate({
     name: "Etkinlik duyurusu",
     subject: "Bu hafta SKY LAB'de",
     mainMode: "html",
@@ -28,12 +28,12 @@ test("a stale draft is published only over the version the operator was shown", 
   await expect(preview(page, "Mail önizlemesi")).toContainText("Benim taslağım");
   await page.getByRole("button", { name: "Taslağı kaydet" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Taslak kaydedildi" })).toBeVisible();
-  const draft = skymail.versionsOf(id)[0];
+  const draft = skynotify.versionsOf(id)[0];
   expect(draft.published_at).toBeNull();
   expect(draft.base_version_id).toBe(first);
 
   // Meanwhile someone else publishes.
-  const theirs = skymail.publishAs(id, OTHER_OPERATOR, {
+  const theirs = skynotify.publishAs(id, OTHER_OPERATOR, {
     html_source: page1("Mehmet'in metni"),
     html_content: page1("Mehmet'in metni"),
   });
@@ -47,10 +47,10 @@ test("a stale draft is published only over the version the operator was shown", 
   await expect(preview(page, "Şu an gönderilen")).toContainText("Mehmet'in metni");
   await expect(comparison).toContainText("Mehmet Kaya");
   // Refused, not published: the row still sends their version.
-  expect(skymail.row(id).published_version_id).toBe(theirs.id);
+  expect(skynotify.row(id).published_version_id).toBe(theirs.id);
 
   // A Template seed publishes while the operator compares.
-  const seeded = skymail.publishAs(id, TEMPLATE_SEED, {
+  const seeded = skynotify.publishAs(id, TEMPLATE_SEED, {
     html_source: page1("Seed'in metni"),
     html_content: page1("Seed'in metni"),
   });
@@ -59,15 +59,15 @@ test("a stale draft is published only over the version the operator was shown", 
   // Refused again, naming the seed's version: the comparison is shown anew.
   await expect(comparison.getByText("Sen karşılaştırırken bir sürüm daha yayımlandı")).toBeVisible();
   await expect(preview(page, "Şu an gönderilen")).toContainText("Seed'in metni");
-  expect(skymail.row(id).published_version_id).toBe(seeded.id);
+  expect(skynotify.row(id).published_version_id).toBe(seeded.id);
 
   await comparison.getByRole("button", { name: "Taslağımı yine de yayımla" }).click();
   await expect(comparison).toBeHidden();
   await expect(page.getByRole("status").filter({ hasText: "Yayımlandı" })).toBeVisible();
 
-  expect(skymail.row(id).published_version_id).toBe(draft.id);
-  expect(skymail.row(id).html_content).toContain("Benim taslağım");
-  const publishes = skymail.writes().filter((request) => request.path.endsWith("/publish"));
+  expect(skynotify.row(id).published_version_id).toBe(draft.id);
+  expect(skynotify.row(id).html_content).toContain("Benim taslağım");
+  const publishes = skynotify.writes().filter((request) => request.path.endsWith("/publish"));
   expect(publishes.map((request) => request.body)).toEqual([
     null,
     { force: { over_version_id: theirs.id } },
@@ -75,9 +75,9 @@ test("a stale draft is published only over the version the operator was shown", 
   ]);
 });
 
-test("backing out of the comparison publishes nothing", async ({ page, skymail, signIn }) => {
+test("backing out of the comparison publishes nothing", async ({ page, skynotify, signIn }) => {
   await signIn("writer");
-  const { id } = skymail.addTemplate({
+  const { id } = skynotify.addTemplate({
     name: "Etkinlik duyurusu",
     subject: "Bu hafta SKY LAB'de",
     mainMode: "html",
@@ -90,7 +90,7 @@ test("backing out of the comparison publishes nothing", async ({ page, skymail, 
   await expect(preview(page, "Mail önizlemesi")).toContainText("Benim taslağım");
   await page.getByRole("button", { name: "Taslağı kaydet" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Taslak kaydedildi" })).toBeVisible();
-  const theirs = skymail.publishAs(id, OTHER_OPERATOR, { subject: "Mehmet'in konusu" });
+  const theirs = skynotify.publishAs(id, OTHER_OPERATOR, { subject: "Mehmet'in konusu" });
 
   await page.getByRole("button", { name: "Yayımla", exact: true }).click();
   await page.getByRole("dialog", { name: "Taslağı yayımla" }).getByRole("button", { name: "Yayımla", exact: true }).click();
@@ -99,6 +99,6 @@ test("backing out of the comparison publishes nothing", async ({ page, skymail, 
   await comparison.getByRole("button", { name: "Vazgeç" }).click();
 
   await expect(comparison).toBeHidden();
-  expect(skymail.row(id).published_version_id).toBe(theirs.id);
-  expect(skymail.writes().filter((request) => request.path.endsWith("/publish"))).toHaveLength(1);
+  expect(skynotify.row(id).published_version_id).toBe(theirs.id);
+  expect(skynotify.writes().filter((request) => request.path.endsWith("/publish"))).toHaveLength(1);
 });

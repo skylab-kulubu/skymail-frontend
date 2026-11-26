@@ -38,7 +38,7 @@ type WorkerScope = {
   postMessage(message: WorkerAnswer): void;
 };
 
-const scope = globalThis as unknown as { importScripts?: unknown; skymailRender?: typeof render };
+const scope = globalThis as unknown as { importScripts?: unknown; skynotifyRender?: typeof render };
 
 if (typeof scope.importScripts === "function") {
   const worker = globalThis as unknown as WorkerScope;
@@ -48,5 +48,5 @@ if (typeof scope.importScripts === "function") {
   };
   worker.postMessage({ ready: true });
 } else {
-  scope.skymailRender = render;
+  scope.skynotifyRender = render;
 }

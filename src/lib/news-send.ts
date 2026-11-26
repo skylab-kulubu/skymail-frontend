@@ -1,13 +1,13 @@
 /**
  * "Haberden gönder" (hub ticket duyuru-haber 08): a published News record of
- * inscribed mailed to every member or to some teams, through skymail-backend's
+ * inscribed mailed to every member or to some teams, through skynotify-backend's
  * /news_sends routes (tickets 06 and 07).
  *
- * The panel, the site and SkyMail's own "Yeni gönderim" open the same form:
+ * The panel, the site and SkyNotify's own "Yeni gönderim" open the same form:
  * `/mail-tasks/create?source=news&slug=<slug>`. The backend reads the record,
  * renders the club.news template, asks core who it reaches and queues it; the
  * form only says which record, to whom, how, and shows what would go out.
- * Only skymail:announcements:send sends at once; skymail:mails:write may
+ * Only skynotify:announcements:send sends at once; skynotify:mails:write may
  * prepare one (preview, test mail, count). Mail onayı for news sends comes
  * with a later backend version.
  */
@@ -17,8 +17,8 @@ import type { ListRow } from "./mailing-lists";
 import { SEND_LIST_PATH } from "./sends";
 import { COMMERCIAL_STATEMENT } from "./send-form/purpose";
 
-/** Sends to everyone at once (skymail-backend handlers.AnnouncementsSendRole). */
-export const ANNOUNCEMENTS_SEND_ROLE = "skymail:announcements:send";
+/** Sends to everyone at once (skynotify-backend handlers.AnnouncementsSendRole). */
+export const ANNOUNCEMENTS_SEND_ROLE = "skynotify:announcements:send";
 
 export const NEWS_SLUG_MAX = 200;
 export const NEWS_SUBJECT_MAX = 200;

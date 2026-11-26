@@ -1,7 +1,7 @@
 /**
  * The console's Content-Security-Policy, built per request by the proxy
  * (src/proxy.ts) around a fresh nonce: Account Center's pattern
- * (account-center src/proxy.ts), with what İletişim needs besides.
+ * (account-center src/proxy.ts), with what SkyNotify needs besides.
  *
  * Scripts run only with the nonce, and what they load ('strict-dynamic'):
  * Next.js puts the nonce on its own scripts once it finds it in the request's
@@ -71,7 +71,7 @@ export type PolicyInput = Readonly<{
   development: boolean;
   /** Whether the page was asked for over https (behind the edge, AUTH_URL's scheme). */
   https: boolean;
-  /** The SkyMail API the browser calls (API_URL). */
+  /** The SkyNotify API the browser calls (API_URL). */
   apiUrl?: string;
   /** The Keycloak realm sign-in and sign-out go to (KEYCLOAK_ISSUER). */
   issuer?: string;
