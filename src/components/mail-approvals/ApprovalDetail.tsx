@@ -12,7 +12,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { AlertTriangle, SearchX } from 'lucide-react';
+import { SearchX } from 'lucide-react';
 import { Button, Notice, StateCard } from '@skylab-kulubu/skylcn-ui';
 import { useCan, useConsole } from '@/components/layout/ConsoleContext';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -73,6 +73,7 @@ import { DecisionDialog } from './DecisionDialog';
 import { EditComparison } from './EditComparison';
 import { OutcomeNotice } from '@/components/common/OutcomeNotice';
 import { NavButton } from '@/components/common/NavButton';
+import { loadFailureArt } from '@/components/common/load-failure';
 
 /** How many of a request's people the facts name before "+N kişi"; all of them are listed below. */
 const PEOPLE_NAMED = 3;
@@ -91,7 +92,7 @@ export function ApprovalDetail({ id }: { id: string }) {
         </Link>
       </StateCard>
     ) : (
-      <StateCard icon={AlertTriangle} tone="danger" title="İstek yüklenemedi" description={approval.error.message}>
+      <StateCard {...loadFailureArt(approval.error)} tone="danger" title="İstek yüklenemedi" description={approval.error.message}>
         <Button variant="outline" onClick={() => void approval.reload()}>
           Tekrar dene
         </Button>

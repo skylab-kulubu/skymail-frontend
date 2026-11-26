@@ -1276,9 +1276,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@skylab-kulubu/skylcn-ui@npm:^0.2.2":
-  version: 0.2.2
-  resolution: "@skylab-kulubu/skylcn-ui@npm:0.2.2"
+"@skylab-kulubu/skylcn-ui@https://github.com/skylab-kulubu/skylcn-ui/releases/download/v0.3.0-onizleme.1/skylab-kulubu-skylcn-ui-0.3.0-onizleme.1.tgz":
+  version: 0.3.0-onizleme.1
+  resolution: "@skylab-kulubu/skylcn-ui@https://github.com/skylab-kulubu/skylcn-ui/releases/download/v0.3.0-onizleme.1/skylab-kulubu-skylcn-ui-0.3.0-onizleme.1.tgz"
   dependencies:
     "@base-ui/react": "npm:^1.8.0"
     "@tanstack/react-table": "npm:^9.2.4"
@@ -1294,7 +1294,7 @@ __metadata:
   peerDependencies:
     react: ^19.0.0
     react-dom: ^19.0.0
-  checksum: 10c0/8a8c06fc2ac6a8aed10d7c5caeb3b0399804b8484e9f787da2824d6e9ba862f43d5eba093f3fb2d74f794e710c5f8856ed8c8011b7b8798dea7af245954257c6
+  checksum: 10c0/034f13353410b976355cac2c6c7e570d3a2a5993104344a23b57460ce46eaa61e7eb067dae1e84ab6dab4c0bfb2509d12d2a809ed44f12659117dd06e1634d38
   languageName: node
   linkType: hard
 
@@ -4510,7 +4510,7 @@ __metadata:
     "@playwright/test": "npm:1.63.0"
     "@react-email/components": "npm:^1.0.8"
     "@react-email/render": "npm:^2.0.4"
-    "@skylab-kulubu/skylcn-ui": "npm:^0.2.2"
+    "@skylab-kulubu/skylcn-ui": "https://github.com/skylab-kulubu/skylcn-ui/releases/download/v0.3.0-onizleme.1/skylab-kulubu-skylcn-ui-0.3.0-onizleme.1.tgz"
     "@tailwindcss/postcss": "npm:^4.3.3"
     "@tiptap/core": "npm:^3.12.1"
     "@tiptap/extension-list": "npm:^3.12.1"

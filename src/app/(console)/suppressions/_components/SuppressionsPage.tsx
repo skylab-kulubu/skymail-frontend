@@ -8,7 +8,6 @@
 // the reversals.
 
 import { useState, type FormEvent } from 'react';
-import { AlertTriangle } from 'lucide-react';
 import { Button, FilterPills, Notice, Pagination, StateCard } from '@skylab-kulubu/skylcn-ui';
 import { useCan } from '@/components/layout/ConsoleContext';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -49,6 +48,7 @@ import {
   type Reactivation,
   type Suppression,
 } from '@/lib/suppressions';
+import { loadFailureArt } from '@/components/common/load-failure';
 
 type View = 'list' | 'reactivations';
 
@@ -63,7 +63,7 @@ function Loaded<T>({ query, title, children }: { query: Query<Page<T>>; title: s
   if (query.status === 'loading') return <StateCard loading title={`${title} yükleniyor`} />;
   if (query.status === 'error') {
     return (
-      <StateCard icon={AlertTriangle} tone="danger" title={`${title} yüklenemedi`} description={query.error.message}>
+      <StateCard {...loadFailureArt(query.error)} tone="danger" title={`${title} yüklenemedi`} description={query.error.message}>
         <Button variant="outline" onClick={() => void query.reload()}>
           Tekrar dene
         </Button>

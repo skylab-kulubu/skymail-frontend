@@ -52,6 +52,7 @@ import { COMMERCIAL_STATEMENT } from '@/lib/send-form/purpose';
 import { fetchSendableLists } from '@/lib/send-form/send';
 import { sendAccess } from '@/lib/send-form/access';
 import { formatCount, sendHref, SEND_LIST_PATH } from '@/lib/sends';
+import { loadFailureArt } from '@/components/common/load-failure';
 
 const STEPS = [
   { id: 'content', label: 'İçerik' },
@@ -98,7 +99,7 @@ export function NewsSendForm({ slug, problem }: { slug: string; problem?: string
   if (availability.status === 'loading') return <StateCard loading title="Haberden gönderim hazırlanıyor" />;
   if (availability.status === 'error') {
     return (
-      <StateCard icon={AlertTriangle} tone="danger" title="Haberden gönderim açılamadı" description={availability.error.message}>
+      <StateCard {...loadFailureArt(availability.error)} tone="danger" title="Haberden gönderim açılamadı" description={availability.error.message}>
         <Button variant="outline" onClick={() => void availability.reload()}>
           Tekrar dene
         </Button>

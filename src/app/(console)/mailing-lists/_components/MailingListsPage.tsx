@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { AlertTriangle, Lock, Plus } from 'lucide-react';
+import { Lock, Plus } from 'lucide-react';
 import { Badge, Button, FilterPills, Pagination, StateCard } from '@skylab-kulubu/skylcn-ui';
 import { useConsole } from '@/components/layout/ConsoleContext';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -24,6 +24,7 @@ import {
 import { useArchivableList } from '@/lib/ui/use-archivable-list';
 import { ArchiveListDialog, archivedNotice } from './ArchiveListDialog';
 import { OutcomeNotice } from '@/components/common/OutcomeNotice';
+import { loadFailureArt } from '@/components/common/load-failure';
 
 const EMPTY_TEXT: Record<Lifecycle, string> = {
   current: 'Henüz mail listesi yok.',
@@ -112,7 +113,7 @@ export function MailingListsPage() {
       {state.status === 'loading' ? (
         <StateCard loading title="Listeler yükleniyor" />
       ) : state.status === 'error' ? (
-        <StateCard icon={AlertTriangle} tone="danger" title="Listeler yüklenemedi" description={state.error.message}>
+        <StateCard {...loadFailureArt(state.error)} tone="danger" title="Listeler yüklenemedi" description={state.error.message}>
           <Button variant="outline" onClick={() => void state.reload()}>
             Tekrar dene
           </Button>

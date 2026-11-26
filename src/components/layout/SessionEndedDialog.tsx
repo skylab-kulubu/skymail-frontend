@@ -5,13 +5,14 @@ import { useEffect, useState } from 'react';
 import { PanelDialog } from '@/components/common/PanelDialog';
 import { useApi } from '@/lib/api/react';
 import { signInWithKeycloak } from '@/lib/auth/actions';
-import { Button } from '@skylab-kulubu/skylcn-ui';
+import { Button, SessionExpiredScene } from '@skylab-kulubu/skylcn-ui';
 
 /**
  * Listens for the HTTP client's "session ended" announcement (a 401, or a
  * token Keycloak would not refresh) and offers a re-login that comes back to
  * this page. It can be closed, so someone halfway through a form can copy what
- * they wrote before signing in again.
+ * they wrote before signing in again. The session scene's plain drawing (B)
+ * stands above the words.
  */
 export function SessionEndedDialog() {
   const api = useApi();
@@ -25,6 +26,7 @@ export function SessionEndedDialog() {
 
   return (
     <PanelDialog isOpen={open} onClose={() => setOpen(false)} title="Oturumun sona erdi">
+      <SessionExpiredScene variant="B" className="mx-auto mb-5 max-w-56 [--skylcn-scene-backdrop:var(--popover)]" />
       <p className="leading-relaxed">
         Oturumun kapandığı için son isteğin tamamlanamadı. Kaldığın yerden devam etmek için yeniden
         giriş yap; bu sayfaya geri dönersin.

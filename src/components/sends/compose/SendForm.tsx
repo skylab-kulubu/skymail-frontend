@@ -42,6 +42,7 @@ import { FormSourceCard } from '../FormSourceCard';
 import { Compose } from './Compose';
 import { NewsSendForm } from '../news/NewsSendForm';
 import { readNewsSendQuery } from '@/lib/news-send';
+import { loadFailureArt } from '@/components/common/load-failure';
 
 /** A Leader without skynotify:access (ekip-postasi 06): their Teams and a free announcement only. */
 function useTeamSeat(): boolean {
@@ -213,7 +214,7 @@ function ComposeCatalog({ from, forms, formSource }: { from: From | null; forms?
       );
     }
     return (
-      <StateCard icon={AlertTriangle} tone="danger" title="Gönderim formu açılamadı" description={catalog.error.message}>
+      <StateCard {...loadFailureArt(catalog.error)} tone="danger" title="Gönderim formu açılamadı" description={catalog.error.message}>
         <Button variant="outline" onClick={() => void catalog.reload()}>
           Tekrar dene
         </Button>

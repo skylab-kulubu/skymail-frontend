@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, type ReactNode } from 'react';
-import { AlertTriangle, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { ArchiveDialog } from '@/components/common/ArchiveDialog';
 import { Button, FilterPills, Pagination, StateCard } from '@skylab-kulubu/skylcn-ui';
 import { useConsole } from '@/components/layout/ConsoleContext';
@@ -31,6 +31,7 @@ import { useArchivableList, type ArchivableRecord } from '@/lib/ui/use-archivabl
 import { DraftIndicator } from './DraftIndicator';
 import { MainSource, TemplateName } from './TemplateRowParts';
 import { OutcomeNotice } from '@/components/common/OutcomeNotice';
+import { loadFailureArt } from '@/components/common/load-failure';
 
 const EMPTY_TEXT: Readonly<Record<Lifecycle, string>> = {
   current: 'Henüz Mail template yok.',
@@ -153,7 +154,7 @@ export function TemplatesPage() {
         <StateCard loading title="Mail template'ler yükleniyor" />
       ) : state.status === 'error' ? (
         <StateCard
-          icon={AlertTriangle}
+          {...loadFailureArt(state.error)}
           tone="danger"
           title="Mail template'ler yüklenemedi"
           description={state.error.message}

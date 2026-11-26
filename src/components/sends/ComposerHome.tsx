@@ -7,7 +7,7 @@
 // summary's recent sends: a section title, a few rows, Tümünü gör.
 
 import Link from 'next/link';
-import { AlertTriangle, ArrowRight, ClipboardCheck, Plus } from 'lucide-react';
+import { ArrowRight, ClipboardCheck, Plus } from 'lucide-react';
 import { Button, StateCard } from '@skylab-kulubu/skylcn-ui';
 import { NavButton } from '@/components/common/NavButton';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -18,6 +18,7 @@ import { useApiLoad } from '@/lib/api/react';
 import { approvalListHref, fetchOwnApprovals } from '@/lib/mail-approvals/approvals';
 import { composeHref } from '@/lib/sends';
 import { SectionTitle } from './SectionTitle';
+import { loadFailureArt } from '@/components/common/load-failure';
 
 const RECENT = 5;
 
@@ -72,7 +73,7 @@ function OwnRequests() {
       {state.status === 'loading' ? (
         <StateCard loading title="İstekler yükleniyor" />
       ) : state.status === 'error' ? (
-        <StateCard icon={AlertTriangle} tone="danger" title="İstekler yüklenemedi" description={state.error.message}>
+        <StateCard {...loadFailureArt(state.error)} tone="danger" title="İstekler yüklenemedi" description={state.error.message}>
           <Button variant="outline" onClick={() => void state.reload()}>
             Tekrar dene
           </Button>

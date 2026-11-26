@@ -22,6 +22,7 @@
 @import '@skylab-kulubu/skylcn-ui/sources/charts.css';
 @import '@skylab-kulubu/skylcn-ui/sources/dialog.css';
 @import '@skylab-kulubu/skylcn-ui/sources/display-extra.css';
+@import '@skylab-kulubu/skylcn-ui/sources/error-scene.css';
 @import '@skylab-kulubu/skylcn-ui/sources/feedback.css';
 @import '@skylab-kulubu/skylcn-ui/sources/field.css';
 @import '@skylab-kulubu/skylcn-ui/sources/form-extra.css';
@@ -29,6 +30,10 @@
 @import '@skylab-kulubu/skylcn-ui/sources/notice.css';
 @import '@skylab-kulubu/skylcn-ui/sources/page-header.css';
 @import '@skylab-kulubu/skylcn-ui/sources/pagination.css';
+@import '@skylab-kulubu/skylcn-ui/sources/scene-forbidden.css';
+@import '@skylab-kulubu/skylcn-ui/sources/scene-server-error.css';
+@import '@skylab-kulubu/skylcn-ui/sources/scene-session-expired.css';
+@import '@skylab-kulubu/skylcn-ui/sources/scene-unavailable.css';
 @import '@skylab-kulubu/skylcn-ui/sources/segmented-control.css';
 @import '@skylab-kulubu/skylcn-ui/sources/select.css';
 @import '@skylab-kulubu/skylcn-ui/sources/state-card.css';
