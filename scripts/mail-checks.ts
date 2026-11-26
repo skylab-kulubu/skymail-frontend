@@ -63,6 +63,8 @@ const DARK_AWARE_CLASSES = [
   "note-box",
   "cta",
   "code-block",
+  // SolidButton's fill: the same purple in either theme, kept by its own dark rules.
+  "btn-solid",
 ];
 
 export function checkBackgroundLayersAreThemed(key: string, body: string, problems: string[]): void {

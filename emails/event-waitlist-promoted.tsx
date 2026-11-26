@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Img } from "@react-email/components";
-import { Context, Paragraph, RowItem, Rows, RowsEnd, Shell, Small, TextLink, TicketNote, Title } from "./theme";
-import { end, ifNotSet, ifSet, v } from "./go";
+import { Context, Cta, Paragraph, RowItem, Rows, RowsEnd, Shell, Small, TextLink, TicketNote, Title } from "./theme";
+import { elseBranch, end, ifNotSet, ifSet, v } from "./go";
 import type { TemplateMeta } from "./types";
 
 export const meta: TemplateMeta = {
@@ -12,10 +12,10 @@ export const meta: TemplateMeta = {
   contentSensitive: true,
   brand: "skylab",
   trigger:
-    "core-backend, yer açılıp bekleme listesindeki bilet kendiliğinden etkinleşince ya da düzenleyen \"Öne al\" deyince kişiye (TICKET_STATUS_MAIL=on; docs/ticket-status-mail.md, ticket_mails kuyruğu, tür promoted). event.ticket-created ayrıca gitmez. Değişkenler event.ticket-created'ınkiler: TICKET_PAGE_URL açıkken TicketUrl, TicketQrUrl (PUBLIC_API_ORIGIN boşsa boş) ve TicketCode da gelir; kapalıyken boş gelir ve satırları görünmez. Üyeye bildirim olarak (POST /v1/notifications: kutu + e-posta), misafire yalnız bu e-posta (POST /v1/mail_tasks/single). EventId yalnız kutu bağlantısı içindir. TicketNote ve TicketNoteParts düzenleyenin bilet duyurusudur (ör. WhatsApp grubu; core docs/ticket-note.md), boşsa bölüm görünmez.",
+    "core-backend, yer açılıp bekleme listesindeki bilet kendiliğinden etkinleşince ya da düzenleyen \"Öne al\" deyince kişiye (TICKET_STATUS_MAIL=on; docs/ticket-status-mail.md, ticket_mails kuyruğu, tür promoted). event.ticket-created ayrıca gitmez. Değişkenler event.ticket-created'ınkiler: TICKET_PAGE_URL açıkken TicketUrl, TicketQrUrl (PUBLIC_API_ORIGIN boşsa boş) ve TicketCode da gelir; kapalıyken boş gelir ve satırları görünmez. Üyeye bildirim olarak (POST /v1/notifications: kutu + e-posta), misafire yalnız bu e-posta (POST /v1/mail_tasks/single). EventId yalnız kutu bağlantısı içindir. TicketNote ve TicketNoteParts düzenleyenin bilet duyurusudur (ör. WhatsApp grubu; core docs/ticket-note.md), boşsa bölüm görünmez. MapUrl yol tarifidir: Yer satırı ve Yol Tarifi butonu onu açar, boşsa ikisi de düz/yok. TicketNoteLink duyurunun buton adresidir (ilk WhatsApp adresi, yoksa ilk https adresi; boşsa buton yok), TicketNoteWhatsApp doluysa buton \"WhatsApp grubuna katıl\" der.",
   // core-backend kontenjan-iptal-hatirlatma 04/07: event.ticket-created's
   // variables (EventUrl aside, which core never sends).
-  variables: ["EventId", "EventName", "EventDate", "Venue", "TicketQrUrl", "TicketCode", "TicketUrl", "OwnerTeam", "TicketNote", "TicketNoteParts", "Theme", "EventBannerUrl"],
+  variables: ["EventId", "EventName", "EventDate", "Venue", "TicketQrUrl", "TicketCode", "TicketUrl", "OwnerTeam", "MapUrl", "TicketNote", "TicketNoteParts", "TicketNoteLink", "TicketNoteWhatsApp", "Theme", "EventBannerUrl"],
   sensitiveVariables: ["TicketCode", "TicketQrUrl", "TicketUrl"],
   notification: {
     category: null,
@@ -43,6 +43,9 @@ export const meta: TemplateMeta = {
       { Text: "Etkinlik duyuruları WhatsApp grubunda: ", Url: "" },
       { Text: "https://chat.whatsapp.com/OrnekDavet123", Url: "https://chat.whatsapp.com/OrnekDavet123" },
     ],
+    TicketNoteLink: "https://chat.whatsapp.com/OrnekDavet123",
+    TicketNoteWhatsApp: "1",
+    MapUrl: "https://www.google.com/maps/dir/?api=1&destination=41.025376%2C28.889648",
     // The club's own look; "artlab" previews the ARTLAB theme.
     Theme: "",
     EventBannerUrl: "",
@@ -68,7 +71,13 @@ export default function EventWaitlistPromoted() {
         <RowItem label="Tarih">{v("EventDate")}</RowItem>
         {end}
         {ifSet("Venue")}
-        <RowItem label="Yer">{v("Venue")}</RowItem>
+        <RowItem label="Yer">
+          {ifSet("MapUrl")}
+          <TextLink href={v("MapUrl")}>{v("Venue")}</TextLink>
+          {elseBranch}
+          {v("Venue")}
+          {end}
+        </RowItem>
         {end}
         {ifSet("OwnerTeam")}
         <RowItem label="Düzenleyen">{v("OwnerTeam")}</RowItem>
@@ -103,6 +112,10 @@ export default function EventWaitlistPromoted() {
       {end}
 
       <TicketNote />
+
+      {ifSet("MapUrl")}
+      <Cta href={v("MapUrl")}>Yol Tarifi</Cta>
+      {end}
 
       {/* KVKK aydınlatma §5.12: as in the registration mail, since this is where the Ticket is made. */}
       <Small style={{ marginTop: "24px" }}>Etkinlikte fotoğraf ve video çekilir, Kulübün kanallarında paylaşılabilir.</Small>

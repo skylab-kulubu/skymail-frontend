@@ -61,6 +61,9 @@ export const tones = {
 
 export type Tone = keyof typeof tones;
 
+/** SolidButton's fill: the club's purple (colors.skylab800), white text on it is 5:1. */
+const buttonFill = "#8f5e98";
+
 export const colors = {
   ...ink,
   // The club's purple scale, for a template that wants the brand colour.
@@ -180,6 +183,8 @@ body { margin: 0; padding: 0; background-color: ${ink.page}; }
   .free-body a { color: #ebd5ee !important; }
   .free-body pre { background-color: #141414 !important; }
   .free-body hr { border-top-color: #262626 !important; }
+  .btn-solid { background-color: #8f5e98 !important; }
+  .btn-solid-text { color: #ffffff !important; }
 }
 
 [data-ogsb] .email-bg, .email-bg[data-ogsb] { background-color: #0a0a0a !important; }
@@ -190,6 +195,8 @@ body { margin: 0; padding: 0; background-color: ${ink.page}; }
 [data-ogsc] .t-faint, .t-faint[data-ogsc] { color: #6b6b6b !important; }
 [data-ogsc] .t-link, .t-link[data-ogsc] { color: #ebd5ee !important; }
 [data-ogsc] .free-body a { color: #ebd5ee !important; }
+[data-ogsb] .btn-solid, .btn-solid[data-ogsb] { background-color: #8f5e98 !important; }
+[data-ogsc] .btn-solid-text, .btn-solid-text[data-ogsc] { color: #ffffff !important; }
 
 @media (max-width: 480px) {
   .shell { padding: 28px 20px 24px !important; }
@@ -492,6 +499,8 @@ const artlab = { ground: "#0a1222", surface: "#121c30", ink: "#e9edf2", orange: 
 const artlabCss = `
 .email-bg .t-link, .email-bg .tone-brand { color: ${artlab.orangeOnWhite} !important; }
 .email-bg .card { border-color: ${artlab.orange} !important; }
+.email-bg .btn-solid { background-color: ${artlab.orange} !important; }
+.email-bg .btn-solid-text { color: ${artlab.ground} !important; }
 @media (prefers-color-scheme: dark) {
   .email-bg .t-link, .email-bg .tone-brand { color: ${artlab.orange} !important; }
   .email-bg .card { background-color: ${artlab.surface} !important; border-color: ${artlab.orange} !important; }
@@ -500,6 +509,8 @@ const artlabCss = `
 [data-ogsc] .email-bg .t-link, [data-ogsc] .email-bg .tone-brand, .email-bg .t-link[data-ogsc] { color: ${artlab.orange} !important; }
 [data-ogsb] .email-bg .card, .email-bg .card[data-ogsb] { background-color: ${artlab.surface} !important; }
 [data-ogsb] .email-bg .artlab-ground, .email-bg .artlab-ground[data-ogsb] { background-color: ${artlab.ground} !important; }
+[data-ogsb] .email-bg .btn-solid, .email-bg .btn-solid[data-ogsb] { background-color: ${artlab.orange} !important; }
+[data-ogsc] .email-bg .btn-solid-text, .email-bg .btn-solid-text[data-ogsc] { color: ${artlab.ground} !important; }
 `;
 
 /** The theme's stylesheet. */
@@ -1044,21 +1055,84 @@ export function ListHeader({ title, count }: { title: React.ReactNode; count?: R
  * https addresses, Url empty for plain text (core-backend docs/ticket-note.md;
  * Yusuf, 2026-11-26). An http address stays text. Empty, the section is not
  * there; a core that sends neither leaves it out too.
+ *
+ * It stands out (Kağan, 2026-11-26): a box, and under the note a button to
+ * TicketNoteLink, the note's first WhatsApp address (else its first https
+ * one), "WhatsApp grubuna katıl" when TicketNoteWhatsApp is set. No address,
+ * no button; a core of before sends neither and the box shows the note alone.
  */
 export function TicketNote() {
   return (
     <>
       {ifSet("TicketNote")}
-      <Note label="Duyuru" keepLines>
-        {rangeOver("TicketNoteParts")}
-        {ifSet("Url")}
-        <TextLink href={v("Url")}>{v("Text")}</TextLink>
-        {elseBranch}
-        {v("Text")}
-        {end}
-        {end}
-      </Note>
+      <Table style={{ marginTop: "28px", borderCollapse: "separate" }}>
+        <tr>
+          <td
+            className="card note-box"
+            style={{ border: `1px solid ${ink.border}`, borderRadius: "8px", backgroundColor: ink.surface, padding: "16px 18px", fontFamily: fontStack }}
+          >
+            <p className="t-muted" style={{ margin: "0 0 4px", fontSize: "12px", lineHeight: "18px", color: ink.muted }}>
+              Duyuru
+            </p>
+            <p className="t-primary" style={{ margin: 0, fontSize: "15px", lineHeight: "23px", color: ink.primary, whiteSpace: "pre-wrap" }}>
+              {rangeOver("TicketNoteParts")}
+              {ifSet("Url")}
+              <TextLink href={v("Url")}>{v("Text")}</TextLink>
+              {elseBranch}
+              {v("Text")}
+              {end}
+              {end}
+            </p>
+            {ifSet("TicketNoteLink")}
+            <SolidButton href={v("TicketNoteLink")}>
+              {ifSet("TicketNoteWhatsApp")}WhatsApp grubuna katıl{elseBranch}Bağlantıyı aç{end}
+            </SolidButton>
+            {end}
+          </td>
+        </tr>
+      </Table>
       {end}
     </>
+  );
+}
+
+/**
+ * A filled button, for the one action a mail puts first (the ticket note's
+ * group). A table cell painted with bgcolor and the colour inline, as Gmail
+ * and Outlook draw it; the padding again as mso-padding-alt for Outlook for
+ * Windows. The club's purple with white text (5:1), the same in the dark
+ * theme; a themed mail recolours it in its own sheet (ARTLAB: orange, navy
+ * text).
+ */
+export function SolidButton({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <Table style={{ marginTop: "14px", borderCollapse: "separate" }}>
+      <tr>
+        <td
+          className="btn-solid"
+          align="center"
+          {...legacy({ bgcolor: buttonFill })}
+          style={{ backgroundColor: buttonFill, borderRadius: "6px", padding: 0, msoPaddingAlt: "12px 18px" } as React.CSSProperties}
+        >
+          <a
+            href={href}
+            className="btn-solid-text"
+            style={{
+              display: "block",
+              padding: "12px 18px",
+              fontSize: "15px",
+              lineHeight: "20px",
+              fontWeight: 600,
+              color: "#ffffff",
+              textAlign: "center",
+              textDecoration: "none",
+              fontFamily: fontStack,
+            }}
+          >
+            {children}
+          </a>
+        </td>
+      </tr>
+    </Table>
   );
 }
