@@ -40,13 +40,13 @@ async function received(key: string, vars: Record<string, unknown> = {}) {
   };
 }
 
-/** The variables core-backend sends for each key (SPEC §3.5, §3.6; core tickets 04, 06, 07, 08). */
+/** The variables core-backend sends for each key (SPEC §3.5, §3.6; core tickets 04, 06, 07, 08; Theme and EventBannerUrl: etkinlik teması T3). */
 const CORE: Record<string, string[]> = {
-  "event.ticket-cancelled": ["CancelledBy", "EventDate", "EventId", "EventName", "OwnerTeam", "Reason"],
+  "event.ticket-cancelled": ["CancelledBy", "EventBannerUrl", "EventDate", "EventId", "EventName", "OwnerTeam", "Reason", "Theme"],
   "event.waitlist-joined": ["EventDate", "EventId", "EventName", "OwnerTeam", "TicketUrl", "Venue"],
   "event.waitlist-promoted": ["EventDate", "EventId", "EventName", "OwnerTeam", "TicketCode", "TicketQrUrl", "TicketUrl", "Venue"],
   "event.registration-full": ["EventDate", "EventId", "EventName", "OwnerTeam"],
-  "event.reminder": ["EventId", "EventName", "MapUrl", "OwnerTeam", "StartsAt", "TicketCode", "TicketQrUrl", "TicketUrl", "Venue"],
+  "event.reminder": ["EventBannerUrl", "EventId", "EventName", "MapUrl", "OwnerTeam", "StartsAt", "Theme", "TicketCode", "TicketQrUrl", "TicketUrl", "Venue"],
 };
 
 const SUBJECTS: Record<string, string> = {

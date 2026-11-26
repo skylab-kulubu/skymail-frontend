@@ -14,7 +14,7 @@ export const meta: TemplateMeta = {
   trigger:
     "core-backend, etkinlikten önceki gün 18:00'de (İstanbul), başlangıcı ertesi gün olan, yayında, arşivsiz ve iptal edilmemiş etkinliklerin etkin bileti olan herkesine bir kez; aynı adresin biletleri tek posta (EVENT_REMINDER_NOTIFICATION=on, SKYNOTIFY_EVENT_REMINDER_TEMPLATE_KEY; docs/event-reminder.md). İşlem postası, kapatılamaz. Çok günlü etkinlikte yalnız ilk günden önce. Üyeye bildirim olarak (POST /v1/notifications: kutu + e-posta), misafire yalnız bu e-posta (POST /v1/mail_tasks/single). Her değişken her zaman gelir, boş olabilir: TicketUrl, TicketQrUrl ve TicketCode TICKET_PAGE_URL açıkken dolu; MapUrl bilet sayfasının yol tarifi. EventId yalnız kutu bağlantısı içindir.",
   // core-backend kontenjan-iptal-hatirlatma 08 (SPEC §3.5).
-  variables: ["EventId", "EventName", "StartsAt", "Venue", "OwnerTeam", "TicketUrl", "TicketQrUrl", "TicketCode", "MapUrl"],
+  variables: ["EventId", "EventName", "StartsAt", "Venue", "OwnerTeam", "TicketUrl", "TicketQrUrl", "TicketCode", "MapUrl", "Theme", "EventBannerUrl"],
   sensitiveVariables: ["TicketCode", "TicketQrUrl", "TicketUrl"],
   notification: {
     category: null,
@@ -37,6 +37,9 @@ export const meta: TemplateMeta = {
     TicketQrUrl: "https://api.yildizskylab.com/v1/public/tickets/7Q2MK4XRWZ3HN5TJVB6PDYCGEA/qr.png",
     TicketCode: "K7M2-QX9F",
     MapUrl: "https://maps.app.goo.gl/ornek",
+    // The club's own look; "artlab" previews the ARTLAB theme.
+    Theme: "",
+    EventBannerUrl: "",
   },
 };
 
@@ -47,7 +50,7 @@ export const meta: TemplateMeta = {
  */
 export default function EventReminder() {
   return (
-    <Shell preview={`${v("EventName")} yarın başlıyor.`} brand="skylab" reason={null}>
+    <Shell preview={`${v("EventName")} yarın başlıyor.`} brand="skylab" reason={null} themed>
       <Context tone="wait">{v("EventName")}</Context>
       <Title>Etkinlik Yarın</Title>
 

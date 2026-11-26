@@ -13,7 +13,7 @@ export const meta: TemplateMeta = {
   brand: "skylab",
   trigger:
     "core-backend, Member apply / Guest apply / Apply-for-other bir Ticket yazdığında, yayında ve bitmemiş bir etkinlikte (TICKET_CREATED_NOTIFICATION=on; docs/ticket-created-notification.md), ve panelden yeniden gönderimde. Üyeye bildirim olarak (POST /v1/notifications: kutu + e-posta), konuğa yalnız bu e-posta. TICKET_PAGE_URL açıkken core TicketUrl (bilet sayfası), TicketQrUrl (QR görseli; PUBLIC_API_ORIGIN boşsa boş) ve TicketCode da gönderir; kapalıyken göndermez ve satırları görünmez. EventUrl hiç gönderilmez.",
-  variables: ["EventName", "EventDate", "Venue", "TicketQrUrl", "TicketCode", "TicketUrl", "OwnerTeam", "EventUrl"],
+  variables: ["EventName", "EventDate", "Venue", "TicketQrUrl", "TicketCode", "TicketUrl", "OwnerTeam", "EventUrl", "Theme", "EventBannerUrl"],
   sensitiveVariables: ["TicketCode", "TicketQrUrl", "TicketUrl"],
   notification: {
     category: null,
@@ -37,6 +37,9 @@ export const meta: TemplateMeta = {
     TicketUrl: "https://yildizskylab.com/bilet/7Q2MK4XRWZ3HN5TJVB6PDYCGEA",
     OwnerTeam: "WEBLAB",
     EventUrl: "https://skyl.app/gecekodu",
+    // The club's own look; "artlab" previews the ARTLAB theme.
+    Theme: "",
+    EventBannerUrl: "",
   },
 };
 
@@ -51,7 +54,7 @@ export const meta: TemplateMeta = {
  */
 export default function EventTicketCreated() {
   return (
-    <Shell preview={`${v("EventName")} biletin hazır.`} brand="skylab" reason={null}>
+    <Shell preview={`${v("EventName")} biletin hazır.`} brand="skylab" reason={null} themed>
       <Context tone="ok">{v("EventName")}</Context>
       <Title>Biletin Hazır</Title>
 
