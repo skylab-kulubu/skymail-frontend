@@ -871,7 +871,9 @@
       "OwnerTeam",
       "EventUrl",
       "Theme",
-      "EventBannerUrl"
+      "EventBannerUrl",
+      "TicketNote",
+      "TicketNoteParts"
     ],
     "requiredVariables": [],
     "sensitiveVariables": [
@@ -887,6 +889,8 @@
       "OwnerTeam",
       "Theme",
       "TicketCode",
+      "TicketNote",
+      "TicketNoteParts",
       "TicketQrUrl",
       "TicketUrl",
       "Venue"
@@ -899,6 +903,8 @@
       "OwnerTeam",
       "Theme",
       "TicketCode",
+      "TicketNote",
+      "TicketNoteParts",
       "TicketQrUrl",
       "TicketUrl",
       "UnsubscribeUrl",
@@ -910,10 +916,12 @@
       "{{.EventName}}",
       "{{.EventUrl}}",
       "{{.OwnerTeam}}",
+      "{{.Text}}",
       "{{.TicketCode}}",
       "{{.TicketQrUrl}}",
       "{{.TicketUrl}}",
       "{{.UnsubscribeUrl}}",
+      "{{.Url}}",
       "{{.Venue}}",
       "{{end -}}",
       "{{if .EventBannerUrl}}",
@@ -921,12 +929,15 @@
       "{{if .EventUrl}}",
       "{{if .OwnerTeam}}",
       "{{if .TicketCode}}",
+      "{{if .TicketNote}}",
       "{{if .TicketQrUrl}}",
       "{{if .TicketUrl}}",
       "{{if .UnsubscribeUrl}}",
+      "{{if .Url}}",
       "{{if .Venue}}",
       "{{if and .Theme (eq .Theme `artlab`)}}",
-      "{{if not .TicketQrUrl}}"
+      "{{if not .TicketQrUrl}}",
+      "{{range .TicketNoteParts}}"
     ]
   },
   "event.reminder": {
@@ -944,7 +955,9 @@
       "TicketCode",
       "MapUrl",
       "Theme",
-      "EventBannerUrl"
+      "EventBannerUrl",
+      "TicketNote",
+      "TicketNoteParts"
     ],
     "requiredVariables": [],
     "sensitiveVariables": [
@@ -961,6 +974,8 @@
       "StartsAt",
       "Theme",
       "TicketCode",
+      "TicketNote",
+      "TicketNoteParts",
       "TicketQrUrl",
       "TicketUrl",
       "Venue"
@@ -973,6 +988,8 @@
       "StartsAt",
       "Theme",
       "TicketCode",
+      "TicketNote",
+      "TicketNoteParts",
       "TicketQrUrl",
       "TicketUrl",
       "UnsubscribeUrl",
@@ -984,10 +1001,12 @@
       "{{.MapUrl}}",
       "{{.OwnerTeam}}",
       "{{.StartsAt}}",
+      "{{.Text}}",
       "{{.TicketCode}}",
       "{{.TicketQrUrl}}",
       "{{.TicketUrl}}",
       "{{.UnsubscribeUrl}}",
+      "{{.Url}}",
       "{{.Venue}}",
       "{{end -}}",
       "{{if .EventBannerUrl}}",
@@ -995,12 +1014,15 @@
       "{{if .OwnerTeam}}",
       "{{if .StartsAt}}",
       "{{if .TicketCode}}",
+      "{{if .TicketNote}}",
       "{{if .TicketQrUrl}}",
       "{{if .TicketUrl}}",
       "{{if .UnsubscribeUrl}}",
+      "{{if .Url}}",
       "{{if .Venue}}",
       "{{if and .Theme (eq .Theme `artlab`)}}",
-      "{{if not .TicketQrUrl}}"
+      "{{if not .TicketQrUrl}}",
+      "{{range .TicketNoteParts}}"
     ]
   },
   "event.updated": {
@@ -1242,7 +1264,9 @@
       "TicketQrUrl",
       "TicketCode",
       "TicketUrl",
-      "OwnerTeam"
+      "OwnerTeam",
+      "TicketNote",
+      "TicketNoteParts"
     ],
     "requiredVariables": [],
     "sensitiveVariables": [
@@ -1256,6 +1280,8 @@
       "EventName",
       "OwnerTeam",
       "TicketCode",
+      "TicketNote",
+      "TicketNoteParts",
       "TicketQrUrl",
       "TicketUrl",
       "Venue"
@@ -1265,6 +1291,8 @@
       "EventName",
       "OwnerTeam",
       "TicketCode",
+      "TicketNote",
+      "TicketNoteParts",
       "TicketQrUrl",
       "TicketUrl",
       "UnsubscribeUrl",
@@ -1274,19 +1302,24 @@
       "{{.EventDate}}",
       "{{.EventName}}",
       "{{.OwnerTeam}}",
+      "{{.Text}}",
       "{{.TicketCode}}",
       "{{.TicketQrUrl}}",
       "{{.TicketUrl}}",
       "{{.UnsubscribeUrl}}",
+      "{{.Url}}",
       "{{.Venue}}",
       "{{if .EventDate}}",
       "{{if .OwnerTeam}}",
       "{{if .TicketCode}}",
+      "{{if .TicketNote}}",
       "{{if .TicketQrUrl}}",
       "{{if .TicketUrl}}",
       "{{if .UnsubscribeUrl}}",
+      "{{if .Url}}",
       "{{if .Venue}}",
-      "{{if not .TicketQrUrl}}"
+      "{{if not .TicketQrUrl}}",
+      "{{range .TicketNoteParts}}"
     ]
   },
   "event.registration-full": {

@@ -44,9 +44,9 @@ async function received(key: string, vars: Record<string, unknown> = {}) {
 const CORE: Record<string, string[]> = {
   "event.ticket-cancelled": ["CancelledBy", "EventBannerUrl", "EventDate", "EventId", "EventName", "OwnerTeam", "Reason", "Theme"],
   "event.waitlist-joined": ["EventDate", "EventId", "EventName", "OwnerTeam", "TicketUrl", "Venue"],
-  "event.waitlist-promoted": ["EventDate", "EventId", "EventName", "OwnerTeam", "TicketCode", "TicketQrUrl", "TicketUrl", "Venue"],
+  "event.waitlist-promoted": ["EventDate", "EventId", "EventName", "OwnerTeam", "TicketCode", "TicketNote", "TicketNoteParts", "TicketQrUrl", "TicketUrl", "Venue"],
   "event.registration-full": ["EventDate", "EventId", "EventName", "OwnerTeam"],
-  "event.reminder": ["EventBannerUrl", "EventId", "EventName", "MapUrl", "OwnerTeam", "StartsAt", "Theme", "TicketCode", "TicketQrUrl", "TicketUrl", "Venue"],
+  "event.reminder": ["EventBannerUrl", "EventId", "EventName", "MapUrl", "OwnerTeam", "StartsAt", "Theme", "TicketCode", "TicketNote", "TicketNoteParts", "TicketQrUrl", "TicketUrl", "Venue"],
 };
 
 const SUBJECTS: Record<string, string> = {
