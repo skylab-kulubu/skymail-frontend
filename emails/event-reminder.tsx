@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Img } from "@react-email/components";
 import { Context, Cta, Paragraph, RowItem, Rows, RowsEnd, Shell, Small, TextLink, TicketNote, Title } from "./theme";
-import { end, ifNotSet, ifSet, v } from "./go";
+import { elseBranch, end, ifNotSet, ifSet, v } from "./go";
 import type { TemplateMeta } from "./types";
 
 export const meta: TemplateMeta = {
@@ -12,9 +12,9 @@ export const meta: TemplateMeta = {
   contentSensitive: true,
   brand: "skylab",
   trigger:
-    "core-backend, etkinlikten önceki gün 18:00'de (İstanbul), başlangıcı ertesi gün olan, yayında, arşivsiz ve iptal edilmemiş etkinliklerin etkin bileti olan herkesine bir kez; aynı adresin biletleri tek posta (EVENT_REMINDER_NOTIFICATION=on, SKYNOTIFY_EVENT_REMINDER_TEMPLATE_KEY; docs/event-reminder.md). İşlem postası, kapatılamaz. Çok günlü etkinlikte yalnız ilk günden önce. Üyeye bildirim olarak (POST /v1/notifications: kutu + e-posta), misafire yalnız bu e-posta (POST /v1/mail_tasks/single). Her değişken her zaman gelir, boş olabilir: TicketUrl, TicketQrUrl ve TicketCode TICKET_PAGE_URL açıkken dolu; MapUrl bilet sayfasının yol tarifi. EventId yalnız kutu bağlantısı içindir. TicketNote ve TicketNoteParts düzenleyenin bilet duyurusudur (ör. WhatsApp grubu; core docs/ticket-note.md), boşsa bölüm görünmez.",
+    "core-backend, etkinlikten önceki gün 18:00'de (İstanbul), başlangıcı ertesi gün olan, yayında, arşivsiz ve iptal edilmemiş etkinliklerin etkin bileti olan herkesine bir kez; aynı adresin biletleri tek posta (EVENT_REMINDER_NOTIFICATION=on, SKYNOTIFY_EVENT_REMINDER_TEMPLATE_KEY; docs/event-reminder.md). İşlem postası, kapatılamaz. Çok günlü etkinlikte yalnız ilk günden önce. Üyeye bildirim olarak (POST /v1/notifications: kutu + e-posta), misafire yalnız bu e-posta (POST /v1/mail_tasks/single). Her değişken her zaman gelir, boş olabilir: TicketUrl, TicketQrUrl ve TicketCode TICKET_PAGE_URL açıkken dolu; MapUrl bilet sayfasının yol tarifi. EventId yalnız kutu bağlantısı içindir. TicketNote ve TicketNoteParts düzenleyenin bilet duyurusudur (ör. WhatsApp grubu; core docs/ticket-note.md), boşsa bölüm görünmez. MapUrl yol tarifidir: Yer satırı ve Yol Tarifi butonu onu açar, boşsa ikisi de düz/yok. TicketNoteLink duyurunun buton adresidir (ilk WhatsApp adresi, yoksa ilk https adresi; boşsa buton yok), TicketNoteWhatsApp doluysa buton \"WhatsApp grubuna katıl\" der.",
   // core-backend kontenjan-iptal-hatirlatma 08 (SPEC §3.5).
-  variables: ["EventId", "EventName", "StartsAt", "Venue", "OwnerTeam", "TicketUrl", "TicketQrUrl", "TicketCode", "MapUrl", "Theme", "EventBannerUrl", "TicketNote", "TicketNoteParts"],
+  variables: ["EventId", "EventName", "StartsAt", "Venue", "OwnerTeam", "TicketUrl", "TicketQrUrl", "TicketCode", "MapUrl", "Theme", "EventBannerUrl", "TicketNote", "TicketNoteParts", "TicketNoteLink", "TicketNoteWhatsApp"],
   sensitiveVariables: ["TicketCode", "TicketQrUrl", "TicketUrl"],
   notification: {
     category: null,
@@ -46,6 +46,8 @@ export const meta: TemplateMeta = {
       { Text: "Etkinlik duyuruları WhatsApp grubunda: ", Url: "" },
       { Text: "https://chat.whatsapp.com/OrnekDavet123", Url: "https://chat.whatsapp.com/OrnekDavet123" },
     ],
+    TicketNoteLink: "https://chat.whatsapp.com/OrnekDavet123",
+    TicketNoteWhatsApp: "1",
   },
 };
 
@@ -65,7 +67,13 @@ export default function EventReminder() {
         <RowItem label="Başlangıç">{v("StartsAt")}</RowItem>
         {end}
         {ifSet("Venue")}
-        <RowItem label="Yer">{v("Venue")}</RowItem>
+        <RowItem label="Yer">
+          {ifSet("MapUrl")}
+          <TextLink href={v("MapUrl")}>{v("Venue")}</TextLink>
+          {elseBranch}
+          {v("Venue")}
+          {end}
+        </RowItem>
         {end}
         {ifSet("OwnerTeam")}
         <RowItem label="Düzenleyen">{v("OwnerTeam")}</RowItem>
@@ -99,11 +107,11 @@ export default function EventReminder() {
       </Paragraph>
       {end}
 
+      <TicketNote />
+
       {ifSet("MapUrl")}
       <Cta href={v("MapUrl")}>Yol Tarifi</Cta>
       {end}
-
-      <TicketNote />
 
       {ifSet("TicketUrl")}
       <Small style={{ marginTop: "24px" }}>

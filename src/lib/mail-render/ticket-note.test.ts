@@ -10,6 +10,9 @@ import { describe, it } from "node:test";
 import { findTemplate } from "../../../emails";
 import { fillSampleValues, renderComponent } from ".";
 
+/** The HTML as a reader sees its text: comments React adds gone, white space as one space. */
+const flat = (html: string) => html.replace(/<!-- -->/g, "").replace(/\s+/g, " ");
+
 const KEYS = ["event.ticket-created", "event.waitlist-promoted", "event.reminder"];
 
 async function received(key: string, vars: Record<string, unknown> = {}, drop: string[] = []) {
@@ -45,8 +48,40 @@ describe("the ticket note (Duyuru)", () => {
       assert.match(html, /Duyuru/);
     });
 
+    it(`${key} puts the note in a box with a button to its WhatsApp group, a plain label for another address, none without one`, async () => {
+      const whatsApp = flat((await received(key)).html);
+      assert.match(whatsApp, /class="card note-box"/);
+      assert.match(
+        whatsApp,
+        /class="btn-solid" align="center" bgcolor="#8f5e98"[^>]*> <a href="https:\/\/chat\.whatsapp\.com\/OrnekDavet123" class="btn-solid-text"[^>]*>WhatsApp grubuna katıl<\/a/,
+      );
+      const other = flat((await received(key, { TicketNoteLink: "https://artlab.example/program", TicketNoteWhatsApp: "" })).html);
+      assert.match(other, /href="https:\/\/artlab\.example\/program" class="btn-solid-text"[^>]*>Bağlantıyı aç<\/a/);
+      assert.doesNotMatch(other, /WhatsApp grubuna katıl/);
+      // A core of before sends no TicketNoteLink: the note, no button.
+      for (const mail of [await received(key, { TicketNoteLink: "" }), await received(key, {}, ["TicketNoteLink", "TicketNoteWhatsApp"])]) {
+        assert.match(mail.html, /Duyuru/);
+        assert.doesNotMatch(mail.html, /class="btn-solid"|WhatsApp grubuna katıl|Bağlantıyı aç/);
+      }
+    });
+
+    it(`${key} links the place to its directions, and has a Yol Tarifi button`, async () => {
+      const map = String(findTemplate(key)?.meta.sample.MapUrl);
+      const html = flat((await received(key)).html);
+      const linked = [map, map.replaceAll("&", "&amp;")].some((href) => html.includes(`<a href="${href}" class="t-link"`));
+      assert.ok(linked, `${key}: Yer satırı yol tarifine gitmiyor`);
+      assert.match(html, /class="t-link"[^>]*>YTÜ Davutpaşa Kampüsü, D-Blok<\/a/);
+      assert.match(html, /Yol Tarifi/);
+      const none = flat((await received(key, { MapUrl: "" })).html);
+      assert.doesNotMatch(none, /Yol Tarifi|>YTÜ Davutpaşa Kampüsü, D-Blok<\/a/);
+      assert.match(none, /YTÜ Davutpaşa Kampüsü, D-Blok/);
+    });
+
     it(`${key} leaves the section out when the note is empty, or core sends none`, async () => {
-      for (const mail of [await received(key, { TicketNote: "", TicketNoteParts: [] }), await received(key, {}, ["TicketNote", "TicketNoteParts"])]) {
+      for (const mail of [
+        await received(key, { TicketNote: "", TicketNoteParts: [], TicketNoteLink: "", TicketNoteWhatsApp: "" }),
+        await received(key, {}, ["TicketNote", "TicketNoteParts", "TicketNoteLink", "TicketNoteWhatsApp"]),
+      ]) {
         assert.doesNotMatch(mail.html, /Duyuru|chat\.whatsapp/);
         assert.doesNotMatch(mail.plainText, /Duyuru|chat\.whatsapp/);
       }
