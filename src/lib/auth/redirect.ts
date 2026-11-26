@@ -8,7 +8,7 @@
  * outright, and what is left is parsed against a placeholder origin and kept
  * only if it stayed there and its resolved path does not begin with "//".
  */
-const PLACEHOLDER_ORIGIN = "http://skymail.invalid";
+const PLACEHOLDER_ORIGIN = "http://skynotify.invalid";
 
 /** Tab, newline and the other C0 controls, DEL, and the backslash browsers read as "/". */
 function hasUnsafeCharacter(raw: string): boolean {

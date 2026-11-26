@@ -1,8 +1,8 @@
 /**
- * Mail onayı (ADR-0031, ticket 18) as skymail-backend serves it (ticket 19,
+ * Mail onayı (ADR-0031, ticket 18) as skynotify-backend serves it (ticket 19,
  * `internal/handlers/mail_approval*.go`, routes under `/mail_approvals`) and
  * as the screens show it (ticket 20): a send someone submitted instead of
- * sending, held until an approver (`skymail:mails:approve`) decides it.
+ * sending, held until an approver (`skynotify:mails:approve`) decides it.
  *
  *  - A request is `pending` until an approver approves it (it is sent),
  *    rejects it with a reason, or edits its variables and either sends the
@@ -16,7 +16,7 @@
  *  - A request goes to a mailing list or to 1..100 people (ticket 21); once
  *    approved, a list gets one send and each person a send of their own.
  *    The request names them in `recipients`, its sends in `task_ids` and
- *    whom its preview is for in `preview_recipient`: skymail-backend always
+ *    whom its preview is for in `preview_recipient`: skynotify-backend always
  *    gives all three (#35 dropped the one-person fields).
  *  - An erased person stays in the request as Silinmiş kullanıcı (ticket 27,
  *    people.ts): as its submitter, whoever decided it, and in their place
@@ -77,7 +77,7 @@ export type ApprovalChange = Readonly<{
 export type ApprovalEvent = Readonly<{
   seq: number;
   kind: ApprovalEventKind;
-  /** Null when SkyMail expired the request. */
+  /** Null when SkyNotify expired the request. */
   actor: ApprovalPerson | null;
   /** A rejection's reason, or a note the approver or the submitter left. */
   note: string | null;
@@ -121,7 +121,7 @@ export type ApprovalItem = Readonly<{
   /** It asked for open and click tracking and may get it. Absent from a backend before tracking. */
   tracking?: boolean;
   /**
-   * Ekip postası (skymail-backend #128): the Teams it goes to, in path order;
+   * Ekip postası (skynotify-backend #128): the Teams it goes to, in path order;
    * empty for any other request, absent from a backend before Team mail. Its
    * `audience` is then the first Team's group.
    */
@@ -148,7 +148,7 @@ export type ApprovalPreview = Readonly<{
 }>;
 
 /**
- * How an approved request's sends went, in totals only (skymail-backend
+ * How an approved request's sends went, in totals only (skynotify-backend
  * `handlers.MailApprovalResult`, hub ticket ekip-postasi 09): its submitter
  * reads it without the send screens' role. No person is in it; a request to
  * people has one total. `tracking` sums the opens and clicks of its tracked
@@ -399,9 +399,9 @@ export function eventLabel(event: Pick<ApprovalEvent, "kind">): string {
   return EVENT_LABEL[event.kind] ?? event.kind;
 }
 
-/** Who did it: SkyMail expires a request. */
+/** Who did it: SkyNotify expires a request. */
 export function eventActorName(event: Pick<ApprovalEvent, "actor">): string {
-  return event.actor ? personLabel(event.actor, UNKNOWN_PERSON) : "SkyMail";
+  return event.actor ? personLabel(event.actor, UNKNOWN_PERSON) : "SkyNotify";
 }
 
 /** An approver's events: the ones a submitter deciding their own request is marked on. */
@@ -429,11 +429,11 @@ const NOTIFICATION_PROBLEM: ReadonlyMap<string, (notification: ApprovalNotificat
   ],
   ["no_address", () => "Sunanın e-posta adresi bilinmiyor; karar ona mail olarak gitmedi, bu sayfadan görebilir."],
   ["unverified_address", () => "Sunanın e-posta adresi Keycloak'ta doğrulanmamış; karar ona mail olarak gitmedi, bu sayfadan görebilir."],
-  ["template_unavailable", (notification) => `Bildirim maili gönderilemedi: ${notification.template_key} System template'i SkyMail'de yok.`],
+  ["template_unavailable", (notification) => `Bildirim maili gönderilemedi: ${notification.template_key} System template'i SkyNotify'da yok.`],
   ["enqueue_failed", () => "Bildirim maili kuyruğa yazılamadı; kimseye haber gitmedi."],
 ]);
 
-/** Who a request goes to, as tracking reads it; null for a Forms source, which has no box (tracked only while SkyMail tracks every send). */
+/** Who a request goes to, as tracking reads it; null for a Forms source, which has no box (tracked only while SkyNotify tracks every send). */
 export function approvalTrackingAudience(kind: SendAudience["kind"]): TrackingAudience | null {
   if (kind === "mailing_list") return "list";
   return kind === "single" || kind === "people" ? "people" : null;
@@ -441,11 +441,11 @@ export function approvalTrackingAudience(kind: SendAudience["kind"]): TrackingAu
 
 /**
  * What the request's page says of its tracking, only where it could have
- * any: Açık for one that got it (skymail-backend keeps it only for a
+ * any: Açık for one that got it (skynotify-backend keeps it only for a
  * trackable one); Kapalı for a request to a list or to people of a template
  * that may be tracked to them (`template` null when it cannot be read). Null
  * otherwise, and for a backend that does not say (before tracking). While
- * SkyMail tracks every send (`always`, tracking_always), a request still
+ * SkyNotify tracks every send (`always`, tracking_always), a request still
  * waiting is tracked once it is approved, whatever it asked: Açık
  * (onaylanınca).
  */

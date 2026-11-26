@@ -1,7 +1,7 @@
 /**
  * A send's controls and what its page says about them (hub ticket
  * duyuru-haber 05 G4, 08): pause, resume and cancel through
- * skymail-backend's POST /mail_tasks/:id/{pause,resume,cancel}, and the bulk
+ * skynotify-backend's POST /mail_tasks/:id/{pause,resume,cancel}, and the bulk
  * lane's hold after the relay throttled the account.
  */
 import assert from "node:assert/strict";
@@ -18,8 +18,8 @@ import {
 import { recipientSummary, type Send, type SendSummary } from "./sends";
 
 const SENDER = "31ef736f-72da-4a40-8791-d523199cf9f0";
-const WRITER = ["skymail:access", "skymail:mails:read", "skymail:mails:write"];
-const ANNOUNCER = ["skymail:access", "skymail:mails:read", "skymail:announcements:send"];
+const WRITER = ["skynotify:access", "skynotify:mails:read", "skynotify:mails:write"];
+const ANNOUNCER = ["skynotify:access", "skynotify:mails:read", "skynotify:announcements:send"];
 
 function send(overrides: Partial<Send> = {}): Send {
   return {

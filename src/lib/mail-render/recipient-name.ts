@@ -1,7 +1,7 @@
 /**
  * The recipient's name in a send's own text: the merge tag every mail tool
  * has (Mailchimp's *|FNAME|*, SendGrid's {{first_name}}), read the way
- * skymail-backend fills it (internal/mailer/recipient_name.go). A send's
+ * skynotify-backend fills it (internal/mailer/recipient_name.go). A send's
  * variables are data, never a template: the mailer prints `{{.Email}}` in a
  * free announcement as those characters. Exactly two tags are filled:
  *

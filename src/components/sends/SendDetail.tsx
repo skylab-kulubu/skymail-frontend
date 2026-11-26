@@ -144,7 +144,7 @@ const EMPTY_TEXT: Readonly<Record<RecipientFilter, string>> = {
   sent: 'Gönderilmiş alıcı yok.',
 };
 
-/** Whether the send's content can be opened, and if not why (skymail-backend, sent mail content). */
+/** Whether the send's content can be opened, and if not why (skynotify-backend, sent mail content). */
 function ContentNotice({ send }: { send: Send }) {
   const note = contentNote(send);
   if (!note) return null;

@@ -1,10 +1,10 @@
 /**
- * Notification types (skymail-backend `docs/notifications.md`, ADR 0070):
+ * Notification types (skynotify-backend `docs/notifications.md`, ADR 0070):
  * what core may send a person by `POST /v1/notifications`, each with the
  * Mail template of the same key as its e-mail text. The console shows a
  * template's type beside it (iletişim-servisi 10, dilim 2): its category,
  * whether it is required and its default channels. The Template seed writes
- * the types; the console reads them (`skymail:templates:read`).
+ * the types; the console reads them (`skynotify:templates:read`).
  */
 import type { ApiClient } from "@/lib/api/client";
 

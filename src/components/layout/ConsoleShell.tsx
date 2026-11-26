@@ -29,7 +29,7 @@ type ConsoleShellProps = Readonly<{
   config: PublicConfig;
   /** The refreshRoles server action, from the layout. */
   refreshRoles: RefreshRoles;
-  /** A Leader without skymail:access: their Teams (TeamSeatGate). */
+  /** A Leader without skynotify:access: their Teams (TeamSeatGate). */
   teamSeat?: readonly TeamAudience[] | null;
 }>;
 

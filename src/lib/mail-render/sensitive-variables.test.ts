@@ -1,11 +1,11 @@
 /**
  * The sensitive variables a template lists: the Template seed writes them to
- * SkyMail's `sensitive_variables` (skymail-backend #65), and a sensitive send's
+ * SkyNotify's `sensitive_variables` (skynotify-backend #65), and a sensitive send's
  * masking then hides each one whole, whatever its name or shape.
  *
  * The club's rule is that an operator may read a sensitive mail's content
  * except its codes and one-time links. So a list names only the variables
- * that carry one, and only those SkyMail already masks by their name: listing
+ * that carry one, and only those SkyNotify already masks by their name: listing
  * makes the masking certain (a code made of letters alone, a pass phrase), it
  * never hides more than today. A person's IP address and place are masked by
  * name already (mailer.personalName) and stay off the lists: they are not
@@ -16,14 +16,14 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { templates } from "../../../emails";
 
-/** skymail-backend's variable name rule (pkg/validator IsVariableName). */
+/** skynotify-backend's variable name rule (pkg/validator IsVariableName). */
 const VARIABLE_NAME = /^[A-Za-z_][A-Za-z0-9_]{0,63}$/;
 
-/** skymail-backend's limit on a list (requests.UpsertTemplateByKey). */
+/** skynotify-backend's limit on a list (requests.UpsertTemplateByKey). */
 const LIST_LIMIT = 50;
 
 /**
- * The last words skymail-backend masks a variable by, whatever its value
+ * The last words skynotify-backend masks a variable by, whatever its value
  * (internal/mailer/mask.go secretNameEnds, the English ones).
  */
 const SECRET_NAME_ENDS = [
@@ -40,7 +40,7 @@ const maskedByName = (name: string) => {
 /**
  * Each template's list, checked against the variables its sender passes.
  * Changing a list is changing this table, deliberately. A template not here
- * sends no list, and SkyMail keeps the one it has.
+ * sends no list, and SkyNotify keeps the one it has.
  */
 const LISTS: Record<string, string[]> = {
   "keycloak.verify-email": ["link"],
@@ -58,21 +58,18 @@ const LISTS: Record<string, string[]> = {
   "event.ticket-created": ["TicketCode", "TicketQrUrl", "TicketUrl"],
   "event.reminder": ["TicketCode", "TicketQrUrl", "TicketUrl"],
   "event.updated": ["TicketCode", "TicketQrUrl", "TicketUrl"],
+  "event.changed": [],
   "event.waitlist-joined": ["TicketUrl"],
-  "event.attendance-welcome": ["AttendeeNote"],
+  "event.attendance-welcome": [],
   "event.waitlist-promoted": ["TicketCode", "TicketQrUrl", "TicketUrl"],
   "core.contact-consent-confirm": ["confirmUrl", "withdrawUrl"],
 };
 
 /**
- * Variables listed although SkyMail does not mask them by name, each a
- * credential: the organizer's venue note carries the Wi-Fi password, and
- * SkyMail masks a password without digits only when it is listed
- * (skymail-backend internal/mailer/mask.go).
+ * Variables listed although SkyNotify does not mask them by name, each a
+ * credential by decision. None since ADR-0074's 2026-11-24 ek (no mask).
  */
-const CREDENTIALS_BY_DECISION: Record<string, string[]> = {
-  "event.attendance-welcome": ["AttendeeNote"],
-};
+const CREDENTIALS_BY_DECISION: Record<string, string[]> = {};
 
 describe("the sensitive variables declared in emails/", () => {
   it("are the lists checked against the senders' variables", () => {
@@ -90,8 +87,12 @@ describe("the sensitive variables declared in emails/", () => {
       continue;
     }
 
-    it(`${meta.key} lists only variables it is sent, as the server accepts them, that SkyMail masks by name today or that is a credential by decision`, () => {
-      assert.ok(meta.contentSensitive, `${meta.key}: hassas olmayan bir şablonun gönderimi maskelenmez, liste anlamsız`);
+    it(`${meta.key} lists only variables it is sent, as the server accepts them, that SkyNotify masks by name today or that is a credential by decision`, () => {
+      // An empty list on a template that is not content-sensitive clears what an earlier seed
+      // wrote (ADR-0074, 2026-11-24 ek: no mask); a list with names needs a sensitive template.
+      if (list.length > 0) {
+        assert.ok(meta.contentSensitive, `${meta.key}: hassas olmayan bir şablonun gönderimi maskelenmez, liste anlamsız`);
+      }
       assert.ok(list.length <= LIST_LIMIT, `${meta.key}: en çok ${LIST_LIMIT} değişken`);
       assert.deepEqual(list, [...new Set(list)].sort(), `${meta.key}: liste sıralı ve tekil olmalı (sunucu öyle saklar)`);
       for (const name of list) {

@@ -12,7 +12,7 @@ export const meta: TemplateMeta = {
   contentSensitive: true,
   brand: "skylab",
   trigger:
-    "core-backend, etkinlikten önceki gün 18:00'de (İstanbul), başlangıcı ertesi gün olan, yayında, arşivsiz ve iptal edilmemiş etkinliklerin etkin bileti olan herkesine bir kez; aynı adresin biletleri tek posta (EVENT_REMINDER_NOTIFICATION=on, SKYMAIL_EVENT_REMINDER_TEMPLATE_KEY; docs/event-reminder.md). İşlem postası, kapatılamaz. Çok günlü etkinlikte yalnız ilk günden önce. Üyeye bildirim olarak (POST /v1/notifications: kutu + e-posta), misafire yalnız bu e-posta (POST /v1/mail_tasks/single). Her değişken her zaman gelir, boş olabilir: TicketUrl, TicketQrUrl ve TicketCode TICKET_PAGE_URL açıkken dolu; MapUrl bilet sayfasının yol tarifi. EventId yalnız kutu bağlantısı içindir.",
+    "core-backend, etkinlikten önceki gün 18:00'de (İstanbul), başlangıcı ertesi gün olan, yayında, arşivsiz ve iptal edilmemiş etkinliklerin etkin bileti olan herkesine bir kez; aynı adresin biletleri tek posta (EVENT_REMINDER_NOTIFICATION=on, SKYNOTIFY_EVENT_REMINDER_TEMPLATE_KEY; docs/event-reminder.md). İşlem postası, kapatılamaz. Çok günlü etkinlikte yalnız ilk günden önce. Üyeye bildirim olarak (POST /v1/notifications: kutu + e-posta), misafire yalnız bu e-posta (POST /v1/mail_tasks/single). Her değişken her zaman gelir, boş olabilir: TicketUrl, TicketQrUrl ve TicketCode TICKET_PAGE_URL açıkken dolu; MapUrl bilet sayfasının yol tarifi. EventId yalnız kutu bağlantısı içindir.",
   // core-backend kontenjan-iptal-hatirlatma 08 (SPEC §3.5).
   variables: ["EventId", "EventName", "StartsAt", "Venue", "OwnerTeam", "TicketUrl", "TicketQrUrl", "TicketCode", "MapUrl"],
   sensitiveVariables: ["TicketCode", "TicketQrUrl", "TicketUrl"],

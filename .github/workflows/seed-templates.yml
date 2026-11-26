@@ -4,9 +4,9 @@ name: Seed templates
 # templates → Run workflow, or `gh workflow run seed-templates.yml`. A person
 # starts every run; nothing seeds on merge.
 #
-# It writes as the `skymail-seed` Keycloak service account. Its client secret is
+# It writes as the `skynotify-seed` Keycloak service account. Its client secret is
 # only in the seed-<environment> GitHub environment, put there by a wizard
-# without anyone seeing it (sky_lab_genel ops/wizards/skymail-seed-github-wizard.sh).
+# without anyone seeing it (sky_lab_genel ops/wizards/skynotify-seed-github-wizard.sh).
 # It is a GitHub secret rather than an OpenBao reference because OpenBao is
 # internal-only and CI secrets stay in GitHub for now (ADR-0049). seed-production
 # waits for a reviewer, and both environments take deployments from main only.
@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: Hangi SkyMail'e
+        description: Hangi SkyNotify'a
         type: choice
         options: [sandbox, production]
         default: sandbox
@@ -32,7 +32,7 @@ on:
 permissions:
   contents: read
 
-# Two seeds into the same SkyMail never overlap; a second one waits.
+# Two seeds into the same SkyNotify never overlap; a second one waits.
 concurrency:
   group: seed-templates-${{ inputs.environment }}
   cancel-in-progress: false
@@ -58,7 +58,7 @@ jobs:
       SEED_ENVIRONMENT: ${{ inputs.environment }}
       DRY_RUN: ${{ inputs.dry_run }}
       FORCE: ${{ inputs.force }}
-      SKYMAIL_URL: ${{ vars.SKYMAIL_URL }}
+      SKYNOTIFY_URL: ${{ vars.SKYNOTIFY_URL }}
       KEYCLOAK_TOKEN_URL: ${{ vars.KEYCLOAK_TOKEN_URL }}
       KEYCLOAK_CLIENT_ID: ${{ vars.KEYCLOAK_CLIENT_ID }}
       COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
@@ -76,11 +76,11 @@ jobs:
             *) echo "::error::dry_run true ya da false olmalı."; exit 1 ;;
           esac
           missing=()
-          for name in SKYMAIL_URL KEYCLOAK_TOKEN_URL KEYCLOAK_CLIENT_ID; do
+          for name in SKYNOTIFY_URL KEYCLOAK_TOKEN_URL KEYCLOAK_CLIENT_ID; do
             [[ -n "${!name}" ]] || missing+=("$name")
           done
           if (( ${#missing[@]} )); then
-            echo "::error::seed-$SEED_ENVIRONMENT ortamında değişken eksik: ${missing[*]}. Kurulum: skymail-seed-github-wizard.sh"
+            echo "::error::seed-$SEED_ENVIRONMENT ortamında değişken eksik: ${missing[*]}. Kurulum: skynotify-seed-github-wizard.sh"
             exit 1
           fi
 
@@ -114,15 +114,15 @@ jobs:
         run: yarn install --immutable
 
       # Everything the real run needs, without writing: the secret, a token
-      # with the openid scope, Keycloak's userinfo (SkyMail asks it), the
-      # account gate and skymail:access + skymail:templates:read. So a dry run
+      # with the openid scope, Keycloak's userinfo (SkyNotify asks it), the
+      # account gate and skynotify:access + skynotify:templates:read. So a dry run
       # proves the credentials too. Nothing about the token is printed.
       - name: Check the service account (writes nothing)
         env:
           KEYCLOAK_CLIENT_SECRET: ${{ secrets.KEYCLOAK_CLIENT_SECRET }}
         run: |
           if [[ -z "$KEYCLOAK_CLIENT_SECRET" ]]; then
-            echo "::error::seed-$SEED_ENVIRONMENT ortamında KEYCLOAK_CLIENT_SECRET yok. Kurulum: skymail-seed-github-wizard.sh"
+            echo "::error::seed-$SEED_ENVIRONMENT ortamında KEYCLOAK_CLIENT_SECRET yok. Kurulum: skynotify-seed-github-wizard.sh"
             exit 1
           fi
           # The secret goes in on stdin, the token in a header file: neither is
@@ -132,17 +132,17 @@ jobs:
             --data-urlencode "client_id=$KEYCLOAK_CLIENT_ID" --data-urlencode client_secret@- \
             | jq -r '.access_token // empty') || true
           if [[ -z "$token" ]]; then
-            echo "::error::Keycloak skymail-seed için token vermedi (secret yanlış ya da istemci yok)."
+            echo "::error::Keycloak skynotify-seed için token vermedi (secret yanlış ya da istemci yok)."
             exit 1
           fi
           code=$(curl -sS -o /dev/null -w '%{http_code}' -H @<(printf 'Authorization: Bearer %s\n' "$token") \
-            "${SKYMAIL_URL%/}/v1/templates?_start=0&_end=1") || code="bağlantı yok"
+            "${SKYNOTIFY_URL%/}/v1/templates?_start=0&_end=1") || code="bağlantı yok"
           token=""
           if [[ "$code" != 200 ]]; then
-            echo "::error::SkyMail servis hesabının token'ına $code dedi (beklenen 200)."
+            echo "::error::SkyNotify servis hesabının token'ına $code dedi (beklenen 200)."
             exit 1
           fi
-          echo "Servis hesabı tamam: token alındı, SkyMail GET /v1/templates → 200."
+          echo "Servis hesabı tamam: token alındı, SkyNotify GET /v1/templates → 200."
 
       - name: Seed
         env:
@@ -163,13 +163,13 @@ jobs:
           status=${PIPESTATUS[0]}
           set -e
 
-          # The seed prints template keys, subjects and SkyMail ids; with
+          # The seed prints template keys, subjects and SkyNotify ids; with
           # --hide-names no operator's name, and never a credential.
           {
             if [[ "$DRY_RUN" == true ]]; then mode="kuru çalışma"; else mode="gerçek çalışma"; fi
             echo "### Template seed · $SEED_ENVIRONMENT · $mode"
             echo
-            echo "- SkyMail: \`$SKYMAIL_URL\`"
+            echo "- SkyNotify: \`$SKYNOTIFY_URL\`"
             echo "- Commit: \`$GITHUB_SHA\`"
             echo "- Seçenekler: \`${args[*]}\`"
             echo "- Çıkış kodu: $status"

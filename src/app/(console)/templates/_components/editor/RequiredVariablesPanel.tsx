@@ -241,7 +241,7 @@ export function RequiredVariablesPanel({
                   <code className="font-mono break-all text-secondary-foreground">{variableAction(name)}</code>
                 </span>
               ))}
-              . Gönderilen mailde olmadığı için henüz zorunlu işaretlenemez: SkyMail yalnız yayımlanmış gövdenin başvurduğu
+              . Gönderilen mailde olmadığı için henüz zorunlu işaretlenemez: SkyNotify yalnız yayımlanmış gövdenin başvurduğu
               değişkeni zorunlu sayar. Taslağı yayımladıktan sonra burada işaretleyebilirsin.
             </p>
           ) : null}

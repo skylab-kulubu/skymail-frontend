@@ -1,6 +1,6 @@
 /**
  * Mailing lists as the operator sees them, driven through the one HTTP client
- * with a scripted fetch that answers the way skymail-backend `origin/main`
+ * with a scripted fetch that answers the way skynotify-backend `origin/main`
  * does (`internal/handlers/list.go`): which request each screen sends, and
  * which rows, tags and actions come out of the answer.
  */
@@ -108,7 +108,7 @@ describe("a row of the list screen", () => {
     assert.equal(row.external, false);
   });
 
-  // Only "internal" is writable in SkyMail; a source the panel does not know
+  // Only "internal" is writable in SkyNotify; a source the panel does not know
   // yet is treated like a group rather than offered actions that would fail.
   it("treats a source it does not know as external", () => {
     assert.equal(toListRow({ ...internal(ID.beta, "X"), source: "forms" }).external, true);
@@ -120,9 +120,9 @@ describe("what a row allows", () => {
   const archived = toListRow(internal(ID.old, "Eski", "2026-09-20T08:30:00Z"));
   const keycloak = toListRow(group(ID.weblab, "WEBLAB", "/UYELER/ARGE/WEBLAB"));
 
-  const READER = ["skymail:access", "skymail:lists:read"];
-  const WRITER = [...READER, "skymail:lists:write"];
-  const SENDER = [...WRITER, "skymail:mails:write", "skymail:templates:read"];
+  const READER = ["skynotify:access", "skynotify:lists:read"];
+  const WRITER = [...READER, "skynotify:lists:write"];
+  const SENDER = [...WRITER, "skynotify:mails:write", "skynotify:templates:read"];
 
   const allowed = (actions: ReturnType<typeof listActions>) =>
     Object.entries(actions)
@@ -144,8 +144,8 @@ describe("what a row allows", () => {
     assert.equal(listActions(keycloak, SENDER).compose, true);
     assert.equal(listActions(archived, SENDER).compose, false);
     assert.equal(listActions(current, WRITER).compose, false);
-    assert.equal(listActions(current, SENDER.filter((role) => role !== "skymail:templates:read")).compose, false);
-    assert.equal(listActions(current, [...READER, "skymail:templates:read"]).compose, true);
+    assert.equal(listActions(current, SENDER.filter((role) => role !== "skynotify:templates:read")).compose, false);
+    assert.equal(listActions(current, [...READER, "skynotify:templates:read"]).compose, true);
   });
 
   // The API hides an archived list from every read, so it cannot be opened.
@@ -165,8 +165,8 @@ describe("what a row allows", () => {
     assert.deepEqual(allowed(listActions(archived, READER)), []);
   });
 
-  it("offers nothing that writes without skymail:access, whatever else the token carries", () => {
-    assert.deepEqual(allowed(listActions(current, ["skymail:lists:write", "skymail:mails:write"])), ["open"]);
+  it("offers nothing that writes without skynotify:access, whatever else the token carries", () => {
+    assert.deepEqual(allowed(listActions(current, ["skynotify:lists:write", "skynotify:mails:write"])), ["open"]);
   });
 });
 

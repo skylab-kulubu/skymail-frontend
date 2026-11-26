@@ -18,7 +18,7 @@ export const meta: TemplateMeta = {
   contentSensitive: false,
   brand: "account",
   trigger:
-    "Keycloak, realm'in gün içinde (UTC) gönderdiği e-posta kodları günlük genel sınırın yarısına ve sonuna ulaştığında ve günün ilk hesabı yanlış kod tavanına ulaştığında (güvenlik incelemesi K2), günde birer kez, /ADMIN grubunun her üyesine ayrı ayrı (SKY_EMAIL_CODE_ALARM_GROUP; eskylab-login-ux 08). Ayrıca bir hesabın kalıcı ardışık yanlış e-posta kodu sayacı 99'dan 100'e yükseldiğinde, işlem commit olduktan sonra bir kez aynı gruba uyarı gider (eskylab-login-ux 24). Kod isteyen kişiyi, adresi ya da IP'yi taşımaz. SkyMail'e ulaşılamazsa Keycloak aynı uyarıyı sayılarla, düz metinle SMTP'den yollar.",
+    "Keycloak, realm'in gün içinde (UTC) gönderdiği e-posta kodları günlük genel sınırın yarısına ve sonuna ulaştığında ve günün ilk hesabı yanlış kod tavanına ulaştığında (güvenlik incelemesi K2), günde birer kez, /ADMIN grubunun her üyesine ayrı ayrı (SKY_EMAIL_CODE_ALARM_GROUP; eskylab-login-ux 08). Ayrıca bir hesabın kalıcı ardışık yanlış e-posta kodu sayacı 99'dan 100'e yükseldiğinde, işlem commit olduktan sonra bir kez aynı gruba uyarı gider (eskylab-login-ux 24). Kod isteyen kişiyi, adresi ya da IP'yi taşımaz. SkyNotify'a ulaşılamazsa Keycloak aynı uyarıyı sayılarla, düz metinle SMTP'den yollar.",
   variables: ["realmDisplayName", "subjectKey"],
   requiredVariables: [],
   sample: {
@@ -64,7 +64,7 @@ export default function KeycloakLoginCodeAlarm() {
         Giriş kodları sınırdan sonra da gider; kayıt kodları sınırda durur.
       </Paragraph>
       <Paragraph>
-        Beklenmedik bir artışsa Keycloak olaylarına (LOGIN_ERROR, ayrıntı sky_email_code) ve SkyMail&apos;deki
+        Beklenmedik bir artışsa Keycloak olaylarına (LOGIN_ERROR, ayrıntı sky_email_code) ve SkyNotify&apos;daki
         keycloak.login-code gönderimlerine bak.
       </Paragraph>
       {end}

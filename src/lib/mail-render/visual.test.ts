@@ -39,7 +39,7 @@ const EVERY_BLOCK = JSON.parse(
   readFileSync(join(import.meta.dirname, "testdata", "visual-every-block.json"), "utf8"),
 ) as VisualDocument;
 
-const documentOf = (blocks: VisualBlock[]): VisualDocument => ({ type: "skymail.visual", version: 1, blocks });
+const documentOf = (blocks: VisualBlock[]): VisualDocument => ({ type: "skynotify.visual", version: 1, blocks });
 
 /** The action that prints one `{`: how a brace the operator typed is written. */
 const TYPED_BRACE = "{{`{`}}";
@@ -470,7 +470,7 @@ describe("a Visual source that does not render", () => {
   it("is invalid when a block is one the model does not know, and says which", async () => {
     const result = await renderSource({
       mode: "visual",
-      source: JSON.stringify({ type: "skymail.visual", version: 1, blocks: [{ type: "html", html: "<script>" }] }),
+      source: JSON.stringify({ type: "skynotify.visual", version: 1, blocks: [{ type: "html", html: "<script>" }] }),
     });
 
     assert.ok(!result.ok);

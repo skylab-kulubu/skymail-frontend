@@ -6,12 +6,12 @@ import { expect, preview, test } from "./fixtures";
 
 test("a template the repo does not have previews with realistic values, and typed ones survive a reload", async ({
   page,
-  skymail,
+  skynotify,
   signIn,
 }) => {
   await signIn("writer");
   const html = "<!DOCTYPE html><html><body><p>Merhaba {{.FirstName}}, {{.EventName}} için yerin ayrıldı.</p><p>{{.Seat}}</p></body></html>";
-  const { id } = skymail.addTemplate({
+  const { id } = skynotify.addTemplate({
     name: "Etkinlik kaydı",
     subject: "{{.EventName}} kaydın",
     mainMode: "html",

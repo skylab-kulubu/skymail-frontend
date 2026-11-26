@@ -83,7 +83,7 @@ function AddRecipientForm({
         error={errors.email}
       />
       <p className="text-xs leading-relaxed text-subtle-foreground">
-        Bu adres SkyMail&apos;de başka bir listede de varsa aynı alıcı eklenir ve adı her listede burada
+        Bu adres SkyNotify&apos;da başka bir listede de varsa aynı alıcı eklenir ve adı her listede burada
         yazdığınla güncellenir.
       </p>
       {apiError ? (

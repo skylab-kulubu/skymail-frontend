@@ -3,7 +3,7 @@ import { E2E_BASE_URL, E2E_PORT, E2E_SERVER_ENV } from "./tests/e2e/fixtures/env
 
 /**
  * Browser tests for the riskiest flows (spec, Testing Decisions boundary 3):
- * the panel runs as a production build, the SkyMail API is mocked at the
+ * the panel runs as a production build, the SkyNotify API is mocked at the
  * network layer, and sessions are minted rather than signed in. Run with
  * `yarn test:e2e`; the first run builds the panel.
  */

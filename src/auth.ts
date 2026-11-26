@@ -1,5 +1,5 @@
 /**
- * Auth.js v5 with Keycloak's existing `skymail` client.
+ * Auth.js v5 with Keycloak's existing `skynotify` client.
  *
  * The client is public — the Refine app signed in with keycloak-js — so no
  * secret is sent to the token endpoint, and PKCE plus `state` protect the

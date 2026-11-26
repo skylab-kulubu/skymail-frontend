@@ -6,7 +6,7 @@ import type { TemplateMeta } from "./types";
 export const meta: TemplateMeta = {
   key: "keycloak.login-code",
   name: "Keycloak · Giriş Kodu",
-  // purpose is always passed by Keycloak's SkyMail provider (empty for every other mail), so the
+  // purpose is always passed by Keycloak's SkyNotify provider (empty for every other mail), so the
   // subject may branch on it; the code itself never goes into a subject line.
   subject:
     "{{if eq .purpose `sudo`}}SKY LAB işlem onaylama kodun{{else if eq .purpose `signup`}}SKY LAB hesap açma kodun{{else if eq .purpose `link`}}SKY LAB hesap bağlama kodun{{else}}SKY LAB giriş kodun{{end}}",
@@ -17,7 +17,7 @@ export const meta: TemplateMeta = {
     "Keycloak'ın e.yildizskylab.com giriş sayfasında \"E-postayla devam et\" ile kod istendiğinde (sky-email-code, eskylab-login-ux 08, ADR-0063). Kod hesabın birincil e-postasına gider; 6 haneli, 10 dakika geçerli, yalnız isteyen tarayıcıda çalışır. purpose: login (giriş), signup (kayıt), link (YTÜ ilk girişinde var olan hesabı bağlama) ve sudo (Hesap Merkezi’nde işlem onaylama; yalnız parolası, passkey’i ve TOTP’si olmayanlara, o anki doğrulanmış birincil adrese, Account center oturumuna bağlı). Keycloak'tan K5 ile gelir.",
   variables: ["code", "codeExpirationMinutes", "purpose", "firstName", "username", "realmDisplayName", "subjectKey"],
   sensitiveVariables: ["code"],
-  // The code the person types into the open sign-in page; Keycloak's SkyMail provider always passes it.
+  // The code the person types into the open sign-in page; Keycloak's SkyNotify provider always passes it.
   requiredVariables: [{ name: "code", reason: "Açık sayfaya yazılacak kod; kaldırılırsa giriş ya da işlem onayı tamamlanamaz." }],
   sample: {
     code: "731904",

@@ -1,14 +1,14 @@
 /**
  * Open and click tracking on the send form (hub ticket iletisim-servisi 15a,
- * skymail-backend 14a/14b; Yusuf 2026-10-20: people too): the box is offered
- * only while SkyMail's tracking is on (`GET /mail_tasks/summary`
+ * skynotify-backend 14a/14b; Yusuf 2026-10-20: people too): the box is offered
+ * only while SkyNotify's tracking is on (`GET /mail_tasks/summary`
  * tracking_available) and only for a send the backend may track — to a list
  * or to people, of a template that is neither a System template (account and
  * transaction mails) nor sensitive; to people, only a template that says its
  * content may be shown. Forms sends never get it. The box starts unticked; a
  * send that asked for it but came back untracked says so, and the
  * confirmation says who will not be tracked for want of a known account.
- * While SkyMail tracks every send a person makes (summary tracking_always;
+ * While SkyNotify tracks every send a person makes (summary tracking_always;
  * Yusuf 2026-10-21) there is no box and every list and people send asks.
  */
 import assert from "node:assert/strict";
@@ -62,7 +62,7 @@ describe("the tracking box", () => {
     assert.equal(offered({ template: template({ content_sensitive: false }) }), true);
   });
 
-  it("is never offered while SkyMail's tracking is off", () => {
+  it("is never offered while SkyNotify's tracking is off", () => {
     assert.equal(offered({ available: false }), false);
   });
 

@@ -11,7 +11,7 @@ export const meta: TemplateMeta = {
   contentSensitive: false,
   brand: "skylab",
   trigger:
-    "core-backend, son canlı oturumun bitişinden 1 saat sonra katılım kendiliğinden kapanınca, etkinliği yayınlayan kişiye bir kez (SKYMAIL_CERTIFICATE_AUTO_FINALIZED_TEMPLATE_KEY, internal/certificate/auto_finalize.go; boş anahtar postayı kapatır). Elle kapatmada gitmez.",
+    "core-backend, son canlı oturumun bitişinden 1 saat sonra katılım kendiliğinden kapanınca, etkinliği yayınlayan kişiye bir kez (SKYNOTIFY_CERTIFICATE_AUTO_FINALIZED_TEMPLATE_KEY, internal/certificate/auto_finalize.go; boş anahtar postayı kapatır). Elle kapatmada gitmez.",
   // core-backend/internal/certificate/auto_finalize.go mailAutoFinalized gönderdiği set.
   // CertificateCount: kapanışta sıraya alınan sertifika sayısı, "0" olabilir.
   variables: ["FirstName", "EventName", "EventId", "CertificateCount", "OwnerTeam"],

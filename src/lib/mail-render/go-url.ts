@@ -7,7 +7,7 @@
  * panel writes, and a preview of what the server keeps, need Go's rules
  * rather than the browser's.
  *
- * Ported from Go 1.25 `net/url` (the version skymail-backend builds with):
+ * Ported from Go 1.25 `net/url` (the version skynotify-backend builds with):
  * getScheme, parse, parseAuthority, parseHost, setPath / EscapedPath,
  * setFragment / EscapedFragment, shouldEscape, validEncoded, escape, unescape
  * and String, with netip's reading of an IPv6 host. Go works on bytes, so

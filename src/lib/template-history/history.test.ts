@@ -3,7 +3,7 @@
  * stories 37–39): which requests the page sends, who wrote each version and
  * how it stands, which two versions a comparison puts side by side and what it
  * says differs, and what a restore did — driven through the one HTTP client
- * with a scripted fetch that answers as skymail-backend's version routes do
+ * with a scripted fetch that answers as skynotify-backend's version routes do
  * (`GET …/versions`, `POST …/versions/{id}/restore`, feat/seed-conflict).
  */
 import assert from "node:assert/strict";
@@ -177,7 +177,7 @@ describe("who wrote a version", () => {
 
   // The seed's token has a name of its own (a service account); what counts is that a seed wrote it.
   it("is the Template seed, whatever name its token carried", () => {
-    const seeded = summary(2, { author: { kind: "template_seed", sub: "svc-1", name: "service-account-skymail-seed" } });
+    const seeded = summary(2, { author: { kind: "template_seed", sub: "svc-1", name: "service-account-skynotify-seed" } });
     assert.deepEqual(versionAuthor(seeded, VIEWER), { label: "Template seed", kind: "seed", beforeHistory: false });
   });
 

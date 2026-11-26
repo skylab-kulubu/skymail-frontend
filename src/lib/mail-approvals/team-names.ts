@@ -2,7 +2,7 @@
  * A Team request's Teams by name (ekip-postasi 05), on the request's page:
  * the request names them by id (`team_ids`) and its audience only the first.
  * The submitter reads their own Teams (`GET /me/team_audiences`); an approver
- * who reads lists (`skymail:lists:read`, YK) reads each Keycloak group. A
+ * who reads lists (`skynotify:lists:read`, YK) reads each Keycloak group. A
  * Team neither gives stays unnamed and is counted.
  */
 import type { ApiClient } from "../api/client";

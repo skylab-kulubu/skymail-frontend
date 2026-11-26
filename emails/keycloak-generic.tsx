@@ -14,7 +14,7 @@ export const meta: TemplateMeta = {
     "Keycloak gönderici SPI'ın yedeği: eşlenmemiş bir sistem postası (ileride eklenecek bir required action gibi) bu anahtara düşer. subjectKey hangi posta olduğunu söyler.",
   variables: ["link", "linkExpirationMinutes", "firstName", "username", "realmDisplayName", "subjectKey"],
   sensitiveVariables: ["link"],
-  // Nothing: Keycloak's SkyMail provider sends link as "" for the event mails
+  // Nothing: Keycloak's SkyNotify provider sends link as "" for the event mails
   // that fall back here (sendEvent), so the mail cannot count on one.
   requiredVariables: [],
   sample: {

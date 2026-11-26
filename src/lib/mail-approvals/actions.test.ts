@@ -118,9 +118,9 @@ describe("what anyone else can do", () => {
 
 describe("the viewer of a request", () => {
   it("is their subject, and whether they hold the approver's role with access", () => {
-    assert.deepEqual(approvalViewer(["skymail:access", "skymail:mails:approve"], { sub: APPROVER }), { sub: APPROVER, approver: true });
-    assert.deepEqual(approvalViewer(["skymail:mails:approve"], { sub: SUBMITTER }), { sub: SUBMITTER, approver: false });
-    assert.deepEqual(approvalViewer(["skymail:access"], {}), { sub: null, approver: false });
+    assert.deepEqual(approvalViewer(["skynotify:access", "skynotify:mails:approve"], { sub: APPROVER }), { sub: APPROVER, approver: true });
+    assert.deepEqual(approvalViewer(["skynotify:mails:approve"], { sub: SUBMITTER }), { sub: SUBMITTER, approver: false });
+    assert.deepEqual(approvalViewer(["skynotify:access"], {}), { sub: null, approver: false });
   });
 });
 

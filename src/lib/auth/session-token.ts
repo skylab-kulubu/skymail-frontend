@@ -1,9 +1,9 @@
 /**
  * What Auth.js keeps in its encrypted session cookie, and how it is kept fresh.
  *
- * SkyMail signs in through Keycloak's `skymail` client — the same public client
+ * SkyNotify signs in through Keycloak's `skynotify` client — the same public client
  * the Refine app used — so the access token carries the same audience and the
- * same `resource_access.skymail.roles` the API already checks. The panel reads
+ * same `resource_access.skynotify.roles` the API already checks. The panel reads
  * its roles from there too.
  */
 
@@ -18,7 +18,7 @@ export type SessionToken = {
   idToken?: string;
   /** Epoch milliseconds. */
   expiresAt: number;
-  /** The `skymail` client roles, e.g. `skymail:access`, `skymail:templates:read`. */
+  /** The `skynotify` client roles, e.g. `skynotify:access`, `skynotify:templates:read`. */
   roles: string[];
   /**
    * The Keycloak subject the access token was issued to; null when it carries
@@ -79,7 +79,7 @@ export function clientRoles(accessToken: string, clientId: string): string[] {
 
 /**
  * The Keycloak subject the access token was issued to, read like the roles.
- * skymail-backend records it as the author of a Mail template version, so the
+ * skynotify-backend records it as the author of a Mail template version, so the
  * panel tells the viewer's own draft apart by it.
  */
 function tokenSubject(accessToken: string): string | null {
@@ -149,7 +149,7 @@ const SHARED_RESULT_MS = 30_000;
  * after the access token has expired is flagged — and if its response sets the
  * cookie last, the person has to sign in again. A retry here would not help:
  * the losing request only has the spent refresh token. Keep the realm setting
- * off while SkyMail runs more than one process.
+ * off while SkyNotify runs more than one process.
  */
 export type RefreshStore = {
   run(refreshToken: string, attempt: () => Promise<Issued | null>, now: () => number): Promise<Issued | null>;
@@ -269,9 +269,9 @@ export type ExposedSession = {
   user: { name?: string | null; email?: string | null };
   /** The Keycloak subject, which the API records as the author of what this person writes. */
   subject: string | null;
-  /** Sent as the bearer token to the SkyMail API. */
+  /** Sent as the bearer token to the SkyNotify API. */
   accessToken: string;
-  /** The `skymail` client roles. */
+  /** The `skynotify` client roles. */
   roles: string[];
   /** Set once Keycloak refused to refresh an expired token. */
   error?: typeof REFRESH_ERROR;

@@ -181,7 +181,7 @@ describe("the words for a request", () => {
     at: NOW.toISOString(),
   });
 
-  it("says what each event was, and who did it; SkyMail expires a request", () => {
+  it("says what each event was, and who did it; SkyNotify expires a request", () => {
     assert.equal(eventLabel(event("submitted")), "Onaya sundu");
     assert.equal(eventLabel(event("resubmitted")), "Yeniden onaya sundu");
     assert.equal(eventLabel(event("edited")), "Değişkenleri düzenledi");
@@ -193,7 +193,7 @@ describe("the words for a request", () => {
     assert.equal(eventLabel(event("expired", null)), "7 gün içinde karar verilmediği için süresi doldu; gönderilmedi");
     assert.equal(eventActorName(event("approved")), "Ayşe Yılmaz");
     assert.equal(eventActorName(event("approved", { sub: "s", name: " " })), "Adı bilinmeyen üye");
-    assert.equal(eventActorName(event("expired", null)), "SkyMail");
+    assert.equal(eventActorName(event("expired", null)), "SkyNotify");
   });
 
   it("names the submitter by name, else by address", () => {
@@ -257,7 +257,7 @@ describe("what an action's notification says", () => {
     );
     assert.equal(
       notificationNote({ template_key: "mail.approval-resolved", notified: 0, problem: "template_unavailable" }),
-      "Bildirim maili gönderilemedi: mail.approval-resolved System template'i SkyMail'de yok.",
+      "Bildirim maili gönderilemedi: mail.approval-resolved System template'i SkyNotify'da yok.",
     );
     assert.match(notificationNote({ template_key: "mail.approval-resolved", notified: 0, problem: "something_new" }) ?? "", /bildirim/i);
   });
@@ -459,7 +459,7 @@ describe("an approved request's result", () => {
     const withheld = { ...base, tracking_withheld: true };
     assert.equal(approvalResultFacts(withheld)?.length, 3);
     const note = approvalResultNote(withheld);
-    assert.ok(note && note.startsWith("Açılma ve tıklama sayıları") && !/skymail:|tracking:read|YK|DK|ADMIN/.test(note), note ?? "");
+    assert.ok(note && note.startsWith("Açılma ve tıklama sayıları") && !/skynotify:|tracking:read|YK|DK|ADMIN/.test(note), note ?? "");
   });
   it("shows no tracking line and no note when the backend could not read them", () => {
     const unread = { ...base, tracking: null, tracking_withheld: false };

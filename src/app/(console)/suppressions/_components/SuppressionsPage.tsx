@@ -2,7 +2,7 @@
 
 // The suppression list and the reversals of unsubscribes (abonelik-cikisi
 // 04; src/lib/suppressions.ts). The section needs
-// skymail:suppressions:manage or skymail:unsubscribes:reactivate
+// skynotify:suppressions:manage or skynotify:unsubscribes:reactivate
 // (src/lib/access.ts): the first removes a bounce and reads the bounce rate
 // (skymail-bounce-isleme 08), the second reverses an unsubscribe and reads
 // the reversals.
@@ -231,7 +231,7 @@ export function SuppressionsPage() {
   );
 }
 
-/** The bounce rate over the last days and each sender mailbox's last read (skymail:suppressions:manage). */
+/** The bounce rate over the last days and each sender mailbox's last read (skynotify:suppressions:manage). */
 function BounceRate() {
   const summary = useApiLoad((api, signal) => fetchBounceSummary(api, BOUNCE_DAYS, signal), 'bounces');
   if (summary.status === 'loading') return null;

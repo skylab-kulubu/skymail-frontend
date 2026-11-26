@@ -10,7 +10,7 @@ export const meta: TemplateMeta = {
   contentSensitive: true,
   brand: "account",
   trigger:
-    "Keycloak (sky-account SPI), giriş sayfasında \"E-postayla devam et\" ile silinme sürecindeki bir hesabın adresine kod istendiğinde, o adrese; aynı adrese saatte en çok bir. Takip edilmez, SkyMail'de kaydı kalmaz (erase_after_send).",
+    "Keycloak (sky-account SPI), giriş sayfasında \"E-postayla devam et\" ile silinme sürecindeki bir hesabın adresine kod istendiğinde, o adrese; aynı adrese saatte en çok bir. Takip edilmez, SkyNotify'da kaydı kalmaz (erase_after_send).",
   variables: [],
   sensitiveVariables: [],
   requiredVariables: [],

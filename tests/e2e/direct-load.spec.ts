@@ -13,7 +13,7 @@
  */
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
-import type { MockSkymail } from "./fixtures/mock-api";
+import type { MockSkyNotify } from "./fixtures/mock-api";
 import { MEMBER } from "./fixtures/session";
 
 /** What a tab that is not drawn does: animation frames never come. */
@@ -23,8 +23,8 @@ async function withoutFrames(page: Page) {
   });
 }
 
-function seed(skymail: MockSkymail) {
-  const template = skymail.addTemplate({
+function seed(skynotify: MockSkyNotify) {
+  const template = skynotify.addTemplate({
     name: "Etkinlik hatırlatması",
     key: "event.reminder",
     subject: "{{.EventName}} yarın",
@@ -33,8 +33,8 @@ function seed(skymail: MockSkymail) {
     htmlContent: "<p>{{.EventName}} yarın.</p>",
     plainText: "{{.EventName}} yarın.",
   });
-  const list = skymail.addList({ name: "GECEKODU katılımcıları", recipients: [{ full_name: "Ayşe Yılmaz", email: "ayse@ornek.com" }] });
-  const approval = skymail.addApproval({
+  const list = skynotify.addList({ name: "GECEKODU katılımcıları", recipients: [{ full_name: "Ayşe Yılmaz", email: "ayse@ornek.com" }] });
+  const approval = skynotify.addApproval({
     templateId: template.id,
     listId: list,
     variables: { EventName: "GECEKODU" },
@@ -62,21 +62,21 @@ const PAGES: { page: (ids: Ids) => string; asks: (ids: Ids) => string }[] = [
 for (const { page: address, asks } of PAGES) {
   const pattern = address({ template: ":template", approval: ":approval", send: ":send" });
 
-  test(`${pattern}, opened in a tab that draws no frames, asks for its data`, async ({ page, skymail, signIn }) => {
+  test(`${pattern}, opened in a tab that draws no frames, asks for its data`, async ({ page, skynotify, signIn }) => {
     await signIn("sender");
-    const ids = seed(skymail);
+    const ids = seed(skynotify);
     await withoutFrames(page);
 
     await page.goto(address(ids));
     await expect
-      .poll(() => skymail.requests.some((request) => request.method === "GET" && request.path === asks(ids)), { timeout: 5_000 })
+      .poll(() => skynotify.requests.some((request) => request.method === "GET" && request.path === asks(ids)), { timeout: 5_000 })
       .toBe(true);
   });
 }
 
-test("the send form, opened in a tab that draws no frames, loads its templates and lists", async ({ page, skymail, signIn }) => {
+test("the send form, opened in a tab that draws no frames, loads its templates and lists", async ({ page, skynotify, signIn }) => {
   await signIn("sender");
-  seed(skymail);
+  seed(skynotify);
   await withoutFrames(page);
 
   await page.goto("/mail-tasks/create");

@@ -1,5 +1,5 @@
 /**
- * skymail-backend's template routes, answered in the browser (`page.route`),
+ * skynotify-backend's template routes, answered in the browser (`page.route`),
  * with the behaviour the editor depends on as tickets 04, 07 and 08 built it
  * (internal/handlers/template*.go on feat/required-variables), plus the draft
  * `name` field of ticket 09's review:
@@ -36,7 +36,7 @@
  *    repeat (the caller's draft in progress on the published version, else
  *    the published one); a template carries `seed_refusal`.
  *
- * The send form's routes (ticket 16), as skymail-backend `origin/main`
+ * The send form's routes (ticket 16), as skynotify-backend `origin/main`
  * answers them (internal/handlers/mail.go, list.go):
  *
  *  - `GET /templates` lists templates by `lifecycle` (default current), paged
@@ -55,9 +55,9 @@
  *  - `GET /mail_tasks/summary` (mails:read; `days` 1..90, `recent` 1..20)
  *    counts the queue and the sends, zero-fills the days up to the mock's
  *    today and gives the latest sends; `sender_paused` is what a test set
- *    with `pauseSender` (MAIL_SENDER=paused, skymail-backend ticket 28).
+ *    with `pauseSender` (MAIL_SENDER=paused, skynotify-backend ticket 28).
  *
- * Mail onayı's routes (ticket 20), as skymail-backend answers them (ticket
+ * Mail onayı's routes (ticket 20), as skynotify-backend answers them (ticket
  * 19, and ticket 21 for people: internal/handlers/mail_approval*.go):
  *
  *  - `POST /mail_approvals` takes a template and a list (`mail_list_id`) or
@@ -95,15 +95,15 @@
  *  - what a test set with `refuseApproval` answers the next such action, and
  *    `failApprovalNotifications` names a notification problem.
  *
- * Open and click tracking's read routes (skymail-backend 14b,
+ * Open and click tracking's read routes (skynotify-backend 14b,
  * internal/handlers/tracking_read.go), for a send a test gave a report with
  * `trackSend`: the send reads `tracking: true`; `GET …/tracking` needs
  * mails:read and answers the report; `GET …/tracking/recipients` needs
- * skymail:mails:tracking:read or being the send's sender (403 otherwise),
+ * skynotify:mails:tracking:read or being the send's sender (403 otherwise),
  * answers 410 mail.tracking_expired once the report is retained, and filters
  * and pages the rows as the server does.
  *
- * Account erasure (skymail-backend #34, ticket 27): `erase` does to the
+ * Account erasure (skynotify-backend #34, ticket 27): `erase` does to the
  * mock's records what the Erasure command does to what the screens read.
  * Whoever sent, submitted, decided or wrote something becomes Silinmiş
  * kullanıcı's subject and name; a submitter loses their address, and every
@@ -255,11 +255,11 @@ type Viewer = { sub: string; can: (...roles: string[]) => boolean };
 
 /** How many days a send's content is kept. */
 const CONTENT_RETENTION_DAYS = 90;
-/** skymail-backend's mailer.Mask, and the names whose value it masks: the last word is a code or a link. */
+/** skynotify-backend's mailer.Mask, and the names whose value it masks: the last word is a code or a link. */
 const MASK = "••••••";
 const MASKED_VARIABLE = /(link|links|url|urls|uri|href|code|codes|otp|pin|token|tokens|passcode|password|secret)$/i;
 
-/** Locked sensitive, as skymail-backend's list (internal/handlers/content_sensitivity.go). */
+/** Locked sensitive, as skynotify-backend's list (internal/handlers/content_sensitivity.go). */
 function contentSensitiveLocked(key: string | null): boolean {
   if (key === null) return false;
   const words = ["login", "signin", "code", "otp", "passcode", "password", "reset", "verify", "verification",
@@ -271,7 +271,7 @@ function contentSensitiveLocked(key: string | null): boolean {
   );
 }
 
-/** Silinmiş kullanıcı as skymail-backend writes it (#34, internal/database/account_erasure.go). */
+/** Silinmiş kullanıcı as skynotify-backend writes it (#34, internal/database/account_erasure.go). */
 export const ERASED_SUBJECT = "00000000-0000-4000-8000-000000000000";
 export const ERASED_EMAIL = "silinmis-kullanici@invalid";
 const ERASED_NAME = "Silinmiş kullanıcı";
@@ -326,7 +326,7 @@ const WEEK = 7 * 24 * 3600_000;
 const MAILER_FILLS = ["FullName", "Email"];
 
 export const OTHER_OPERATOR: Author = { kind: "operator", sub: "1b7e2d94-3c5a-4f08-8e61-2d9c4a7b3f10", name: "Mehmet Kaya" };
-export const TEMPLATE_SEED: Author = { kind: "template_seed", sub: null, name: "service-account-skymail-seed" };
+export const TEMPLATE_SEED: Author = { kind: "template_seed", sub: null, name: "service-account-skynotify-seed" };
 const ME: Author = { kind: "operator", sub: VIEWER.sub, name: VIEWER.name };
 
 type Content = Pick<Version, "name" | "subject" | "main_mode" | "jsx_source" | "visual_source" | "html_source" | "html_content" | "plain_text_content">;
@@ -361,7 +361,7 @@ function asJsonb(value: unknown): unknown {
 const sourceOf = (content: Content, mode: Mode) =>
   mode === "jsx" ? content.jsx_source : mode === "html" ? content.html_source : content.visual_source;
 
-export class MockSkymail {
+export class MockSkyNotify {
   readonly requests: Recorded[] = [];
   private readonly rows = new Map<string, Row>();
   private readonly holds: HeldRequest[] = [];
@@ -526,7 +526,7 @@ export class MockSkymail {
     this.listRefusal = answer;
   }
 
-  /** SkyMail runs with MAIL_SENDER=paused, or no longer does: what the summary's `sender_paused` says. */
+  /** SkyNotify runs with MAIL_SENDER=paused, or no longer does: what the summary's `sender_paused` says. */
   pauseSender(paused = true) {
     this.senderPaused = paused;
   }
@@ -629,7 +629,7 @@ export class MockSkymail {
 
   /**
    * An Erasure command for `sub` and `emails` (compared whole, whatever their
-   * case), as skymail-backend carries it out on what the screens read.
+   * case), as skynotify-backend carries it out on what the screens read.
    */
   erase({ sub, emails = [] }: { sub: string; emails?: string[] }) {
     const theirs = (email: string) => emails.some((address) => address.toLowerCase() === email.toLowerCase());
@@ -828,7 +828,7 @@ export class MockSkymail {
       return this.approvalRoute(method, path, body, query, personOf(profile), can);
     }
 
-    // Ekip postası (skymail-backend #128): off unless a test turns it on, as SKYMAIL_TEAM_SEND is.
+    // Ekip postası (skynotify-backend #128): off unless a test turns it on, as SKYNOTIFY_TEAM_SEND is.
     if (method === "GET" && path === "/me/team_audiences") return refuse(404, "team_mail.off");
 
     const templateMatch = /^\/templates\/([^/]+)$/.exec(path);
@@ -839,16 +839,16 @@ export class MockSkymail {
 
     if (method === "GET" && path === "/templates") return this.templateList(query);
     if (method === "GET" && path === "/notification_types") {
-      return can("skymail:templates:read") ? { status: 200, body: this.notificationTypes } : refuse(403, "server.forbidden");
+      return can("skynotify:templates:read") ? { status: 200, body: this.notificationTypes } : refuse(403, "server.forbidden");
     }
     if (method === "GET" && path === "/mailing_lists") return this.listPage(query);
     const listMatch = /^\/mailing_lists\/([^/]+)(\/recipients)?$/.exec(path);
     if (method === "GET" && listMatch) return this.listOrRecipients(listMatch[1], Boolean(listMatch[2]), query);
     if (method === "POST" && path === "/mail_tasks") {
-      return can("skymail:mails:write") ? this.openListSend(asFields(body)) : refuse(403, "server.forbidden");
+      return can("skynotify:mails:write") ? this.openListSend(asFields(body)) : refuse(403, "server.forbidden");
     }
     if (method === "POST" && path === "/mail_tasks/single") {
-      return can("skymail:mails:send", "skymail:mails:write") ? this.openSingleSend(asFields(body)) : refuse(403, "server.forbidden");
+      return can("skynotify:mails:send", "skynotify:mails:write") ? this.openSingleSend(asFields(body)) : refuse(403, "server.forbidden");
     }
     const viewer: Viewer = { sub: personOf(profile).sub, can };
     if (method === "GET" && path === "/mail_tasks") {
@@ -856,16 +856,16 @@ export class MockSkymail {
       return this.page(sends, query);
     }
     if (method === "GET" && path === "/mail_tasks/summary") {
-      return can("skymail:mails:read") ? this.sendSummary(query, viewer) : refuse(403, "server.forbidden");
+      return can("skynotify:mails:read") ? this.sendSummary(query, viewer) : refuse(403, "server.forbidden");
     }
     const contentMatch = /^\/mail_tasks\/([^/]+)\/queue\/([^/]+)\/content$/.exec(path);
     if (method === "GET" && contentMatch) {
-      return can("skymail:mails:read") ? this.sentContent(contentMatch[1], contentMatch[2], viewer) : refuse(403, "server.forbidden");
+      return can("skynotify:mails:read") ? this.sentContent(contentMatch[1], contentMatch[2], viewer) : refuse(403, "server.forbidden");
     }
-    // Who opened masked content (skymail-backend #135): skymail:audit:read alone, newest first, paged.
+    // Who opened masked content (skynotify-backend #135): skynotify:audit:read alone, newest first, paged.
     const viewsMatch = /^\/mail_tasks\/([^/]+)\/content-views$/.exec(path);
     if (method === "GET" && viewsMatch) {
-      if (!can("skymail:audit:read")) return refuse(403, "server.forbidden");
+      if (!can("skynotify:audit:read")) return refuse(403, "server.forbidden");
       const send = this.sends.get(viewsMatch[1]);
       if (!send) return refuse(404, "server.not_found");
       const views = send.contentViews ?? [];
@@ -901,7 +901,7 @@ export class MockSkymail {
     if (method === "POST" && draftsMatch) return this.saveDraft(draftsMatch[1], asFields(body));
     const sensitiveMatch = /^\/templates\/([^/]+)\/content-sensitive$/.exec(path);
     if (method === "PUT" && sensitiveMatch) {
-      if (!can("skymail:templates:write")) return refuse(403, "server.forbidden");
+      if (!can("skynotify:templates:write")) return refuse(403, "server.forbidden");
       const row = this.rows.get(sensitiveMatch[1]);
       if (!row || row.archived_at !== null) return refuse(404, "server.not_found");
       const value = asFields(body).content_sensitive;
@@ -1061,7 +1061,7 @@ export class MockSkymail {
   }
 
   /**
-   * Whether `viewer` may open the send's content, as skymail-backend decides
+   * Whether `viewer` may open the send's content, as skynotify-backend decides
    * it (internal/handlers/sent_content.go): the send's sender, whoever reads
    * system mail, and for a send to many whoever sends to lists; then whether
    * it is still kept; a sensitive one is shown masked, and one emptied before
@@ -1071,7 +1071,7 @@ export class MockSkymail {
     const bulk = send.list !== null || send.approved;
     const sensitive = send.template.content_sensitive ?? !bulk;
     const mayRead =
-      viewer.sub === send.sent_by || viewer.can("skymail:system-mails:read") || (bulk && viewer.can("skymail:mails:write"));
+      viewer.sub === send.sent_by || viewer.can("skynotify:system-mails:read") || (bulk && viewer.can("skynotify:mails:write"));
     if (!mayRead) return { access: "restricted", expires_at: null };
     if (send.cleared) return { access: sensitive ? "not_kept" : "expired", expires_at: null };
     const expires_at = new Date(Date.parse(send.created_at) + CONTENT_RETENTION_DAYS * 86_400_000).toISOString();
@@ -1088,7 +1088,7 @@ export class MockSkymail {
     const answer = { id: rowId, task_id: sendId, access, subject: null, plain_text: null, html: null, expires_at: null };
     if (access !== "available" && access !== "masked") return { status: 200, body: answer };
     const values: Record<string, unknown> = { ...send.body_variables, Email: recipient.email, FullName: recipient.full_name };
-    // Masked as skymail-backend's mailer masks by variables: a code or a link
+    // Masked as skynotify-backend's mailer masks by variables: a code or a link
     // variable (by the last word of its name) is never sent; the HTML marks it.
     const masked = access === "masked" ? Object.keys(send.body_variables).filter((name) => MASKED_VARIABLE.test(name)).sort() : [];
     const fillWith = (mask: string) => (text: string) =>
@@ -1100,7 +1100,7 @@ export class MockSkymail {
         ...answer,
         subject: fill(send.template.subject),
         plain_text: fill(send.template.plain_text_content),
-        html: fillWith(`<mark data-skymail-masked="">${MASK}</mark>`)(send.template.html_content),
+        html: fillWith(`<mark data-skynotify-masked="">${MASK}</mark>`)(send.template.html_content),
         expires_at,
         masked_variables: access === "masked" ? masked : null,
         masked_by: access === "masked" ? "variables" : null,
@@ -1164,13 +1164,13 @@ export class MockSkymail {
     if (!send) return refuse(404, "server.not_found");
     const tracking = send.tracking;
     if (!recipients) {
-      if (!viewer.can("skymail:mails:read")) return refuse(403, "server.forbidden");
+      if (!viewer.can("skynotify:mails:read")) return refuse(403, "server.forbidden");
       return {
         status: 200,
         body: { tracking_available: true, tracking_requested: tracking !== undefined, retained: tracking?.summary.retained ?? false, report: tracking?.summary.report ?? null },
       };
     }
-    if (!viewer.can("skymail:mails:tracking:read") && viewer.sub !== send.sent_by) return refuse(403, "server.forbidden");
+    if (!viewer.can("skynotify:mails:tracking:read") && viewer.sub !== send.sent_by) return refuse(403, "server.forbidden");
     if (!tracking || tracking.summary.retained) {
       return { status: 410, body: { code: "mail.tracking_expired", message: "Kişi bazında takip kaydı 1 yıl sonra silindi." } };
     }
@@ -1292,8 +1292,8 @@ export class MockSkymail {
     });
     const listId = typeof body.mail_list_id === "string" && body.mail_list_id !== "" ? body.mail_list_id : null;
     const missingRoles = [
-      ...(can("skymail:templates:read") ? [] : ["skymail:templates:read"]),
-      ...(listId && !can("skymail:lists:read") ? ["skymail:lists:read"] : []),
+      ...(can("skynotify:templates:read") ? [] : ["skynotify:templates:read"]),
+      ...(listId && !can("skynotify:lists:read") ? ["skynotify:lists:read"] : []),
     ];
     if (missingRoles.length > 0) return { ok: false, answer: refuse(403, "server.forbidden", { missing_roles: missingRoles }) };
     if (typeof body.template_id !== "string" || body.template_id === "") return invalid({ field: "template_id", code: "required" });
@@ -1364,7 +1364,7 @@ export class MockSkymail {
     caller: Person,
     can: (...roles: string[]) => boolean,
   ): Answer {
-    const approver = can("skymail:mails:approve");
+    const approver = can("skynotify:mails:approve");
     const fields = asFields(body);
     const refused = (action: string) => {
       const answer = this.approvalRefusals.get(action);

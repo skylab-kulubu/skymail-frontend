@@ -62,11 +62,11 @@ describe("reading a free announcement's body back", () => {
   });
 
   it("reads a link's no-track mark as the server keeps it: bare, empty or true", () => {
-    for (const mark of ["data-skymail-notrack", 'data-skymail-notrack=""', 'data-skymail-notrack="true"', "data-skymail-notrack='true'"]) {
+    for (const mark of ["data-skynotify-notrack", 'data-skynotify-notrack=""', 'data-skynotify-notrack="true"', "data-skynotify-notrack='true'"]) {
       const read = readFreeBody(`<p><a href="https://zoom.example/j/1" ${mark}>Toplantı</a></p>`);
       assert.deepEqual(read.document.blocks, [b.paragraph([b.text("Toplantı", [untracked("https://zoom.example/j/1")])])], mark);
     }
-    for (const other of ['data-skymail-notrack-x=""', 'data-skymail-notrack="false"', 'data-x="data-skymail-notrack"', ""]) {
+    for (const other of ['data-skynotify-notrack-x=""', 'data-skynotify-notrack="false"', 'data-x="data-skynotify-notrack"', ""]) {
       const read = readFreeBody(`<p><a href="https://skyl.app/" ${other}>site</a></p>`);
       assert.deepEqual(read.document.blocks, [b.paragraph([b.text("site", [link("https://skyl.app/")])])], other);
     }

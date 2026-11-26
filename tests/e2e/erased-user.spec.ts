@@ -1,6 +1,6 @@
 /**
- * Silinmiş kullanıcı (ADR-0051, ticket 27): once core has had SkyMail erase
- * someone (skymail-backend #34), whatever they sent, submitted, decided or
+ * Silinmiş kullanıcı (ADR-0051, ticket 27): once core has had SkyNotify erase
+ * someone (skynotify-backend #34), whatever they sent, submitted, decided or
  * wrote, and every request or mail that went to them, names them "Silinmiş
  * kullanıcı": never by the stand-in's subject or placeholder address, never
  * as someone whose name is unknown, never as the viewer. A request keeps the
@@ -9,7 +9,7 @@
  */
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
-import { ERASED_EMAIL, ERASED_SUBJECT, type MockSkymail } from "./fixtures/mock-api";
+import { ERASED_EMAIL, ERASED_SUBJECT, type MockSkyNotify } from "./fixtures/mock-api";
 import { MEMBER } from "./fixtures/session";
 
 /** An approver who has left the club, and whose account core erased. */
@@ -35,8 +35,8 @@ async function namesNoTrace(page: Page) {
   expect(html).not.toContain("Adı bilinmeyen");
 }
 
-function reminder(skymail: MockSkymail) {
-  return skymail.addTemplate({
+function reminder(skynotify: MockSkyNotify) {
+  return skynotify.addTemplate({
     name: "Etkinlik hatırlatması",
     key: "event.reminder",
     subject: "{{.EventName}} yarın",
@@ -49,12 +49,12 @@ function reminder(skymail: MockSkymail) {
 
 test("an approved request names its erased submitter, approver and person Silinmiş kullanıcı, the person beside their send", async ({
   page,
-  skymail,
+  skynotify,
   signIn,
 }) => {
   await signIn("approver");
-  const { id: templateId } = reminder(skymail);
-  const id = skymail.addApproval({
+  const { id: templateId } = reminder(skynotify);
+  const id = skynotify.addApproval({
     templateId,
     recipients: [ALI, MERT, ECE],
     variables: { EventName: "GECEKODU" },
@@ -65,10 +65,10 @@ test("an approved request names its erased submitter, approver and person Silinm
       { kind: "approved", actor: FORMER_APPROVER },
     ],
   });
-  const sends = skymail.approval(id).task_ids;
-  skymail.erase({ sub: MEMBER.sub, emails: [MEMBER.email] });
-  skymail.erase({ sub: FORMER_APPROVER.sub, emails: [FORMER_APPROVER.email] });
-  skymail.erase(MERT_ACCOUNT);
+  const sends = skynotify.approval(id).task_ids;
+  skynotify.erase({ sub: MEMBER.sub, emails: [MEMBER.email] });
+  skynotify.erase({ sub: FORMER_APPROVER.sub, emails: [FORMER_APPROVER.email] });
+  skynotify.erase(MERT_ACCOUNT);
 
   await page.goto("/mail-approvals?state=approved");
   const row = page.getByRole("row").filter({ hasText: "Etkinlik hatırlatması" });
@@ -112,11 +112,11 @@ test("an approved request names its erased submitter, approver and person Silinm
   await namesNoTrace(page);
 });
 
-test("a list send by an erased member keeps every row and count, the erased recipient's as Silinmiş kullanıcı", async ({ page, skymail, signIn }) => {
+test("a list send by an erased member keeps every row and count, the erased recipient's as Silinmiş kullanıcı", async ({ page, skynotify, signIn }) => {
   await signIn("approver");
-  const { id: templateId } = reminder(skymail);
-  const listId = skymail.addList({ name: "GECEKODU katılımcıları", recipients: [ALI, MERT, ECE] });
-  const id = skymail.addApproval({
+  const { id: templateId } = reminder(skynotify);
+  const listId = skynotify.addList({ name: "GECEKODU katılımcıları", recipients: [ALI, MERT, ECE] });
+  const id = skynotify.addApproval({
     templateId,
     listId,
     variables: { EventName: "GECEKODU" },
@@ -124,9 +124,9 @@ test("a list send by an erased member keeps every row and count, the erased reci
     state: "approved",
     decided: { kind: "approved", actor: FORMER_APPROVER },
   });
-  const [send] = skymail.approval(id).task_ids;
-  skymail.erase({ sub: MEMBER.sub, emails: [MEMBER.email] });
-  skymail.erase(MERT_ACCOUNT);
+  const [send] = skynotify.approval(id).task_ids;
+  skynotify.erase({ sub: MEMBER.sub, emails: [MEMBER.email] });
+  skynotify.erase(MERT_ACCOUNT);
 
   await page.goto(`/mail-tasks/show/${send}`);
   await expect(fact(page, "Kitle")).toHaveText("GECEKODU katılımcıları");
@@ -141,12 +141,12 @@ test("a list send by an erased member keeps every row and count, the erased reci
 
 test("a rejected request whose only person and approver were erased reads so, and is resubmitted without the stand-in", async ({
   page,
-  skymail,
+  skynotify,
   signIn,
 }) => {
   await signIn("member");
-  const { id: templateId } = reminder(skymail);
-  const id = skymail.addApproval({
+  const { id: templateId } = reminder(skynotify);
+  const id = skynotify.addApproval({
     templateId,
     recipients: [MERT],
     variables: { EventName: "GECEKODU" },
@@ -154,8 +154,8 @@ test("a rejected request whose only person and approver were erased reads so, an
     state: "rejected",
     decided: { kind: "rejected", actor: FORMER_APPROVER, note: "Mert Demir yanlış kişi." },
   });
-  skymail.erase({ sub: FORMER_APPROVER.sub, emails: [FORMER_APPROVER.email] });
-  skymail.erase(MERT_ACCOUNT);
+  skynotify.erase({ sub: FORMER_APPROVER.sub, emails: [FORMER_APPROVER.email] });
+  skynotify.erase(MERT_ACCOUNT);
 
   await page.goto(`/mail-approvals/show/${id}`);
   await expect(fact(page, "Kitle")).toHaveText("Silinmiş kullanıcı");
@@ -175,10 +175,10 @@ test("a rejected request whose only person and approver were erased reads so, an
   await namesNoTrace(page);
 });
 
-test("an erased operator's versions and draft read as Silinmiş kullanıcı, never as the viewer's", async ({ page, skymail, signIn }) => {
+test("an erased operator's versions and draft read as Silinmiş kullanıcı, never as the viewer's", async ({ page, skynotify, signIn }) => {
   await signIn("writer");
   const mail = (text: string) => `<!DOCTYPE html><html><body><p>${text}</p></body></html>`;
-  const { id } = skymail.addTemplate({
+  const { id } = skynotify.addTemplate({
     name: "Etkinlik duyurusu",
     subject: "Bu hafta SKY LAB'de",
     mainMode: "html",
@@ -186,9 +186,9 @@ test("an erased operator's versions and draft read as Silinmiş kullanıcı, nev
     htmlContent: mail("İlk metin"),
     plainText: "İlk metin",
   });
-  skymail.publishAs(id, FORMER_OPERATOR, { html_source: mail("Deniz'in metni"), html_content: mail("Deniz'in metni") });
-  skymail.addDraft(id, FORMER_OPERATOR, { html_source: mail("Deniz'in taslağı"), html_content: mail("Deniz'in taslağı") });
-  skymail.erase({ sub: FORMER_OPERATOR.sub });
+  skynotify.publishAs(id, FORMER_OPERATOR, { html_source: mail("Deniz'in metni"), html_content: mail("Deniz'in metni") });
+  skynotify.addDraft(id, FORMER_OPERATOR, { html_source: mail("Deniz'in taslağı"), html_content: mail("Deniz'in taslağı") });
+  skynotify.erase({ sub: FORMER_OPERATOR.sub });
 
   await page.goto("/templates");
   const row = page.getByRole("row").filter({ hasText: "Etkinlik duyurusu" });

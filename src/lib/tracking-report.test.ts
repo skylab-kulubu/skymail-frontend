@@ -1,6 +1,6 @@
 /**
  * A tracked send's opens and clicks (hub ticket iletisim-servisi 15b,
- * skymail-backend 14b): who may see the recipients one by one, what the
+ * skynotify-backend 14b): who may see the recipients one by one, what the
  * section calls each thing, and the hourly-then-daily series.
  */
 import assert from "node:assert/strict";
@@ -28,7 +28,7 @@ import {
 const SEND_ID = "b1c2d3e4-0000-4000-8000-000000000001";
 const SENDER = "8d0f5c2e-6b1a-4c3e-9f27-5a1d3b7e9c41";
 const SOMEONE = "0c9e4f6a-1b2d-4c3e-8f7a-9d0e1f2a3b4c";
-const READER = ["skymail:access", "skymail:mails:read"];
+const READER = ["skynotify:access", "skynotify:mails:read"];
 
 describe("the section", () => {
   it("shows only for a send that asked for tracking and got it", () => {
@@ -61,7 +61,7 @@ describe("who sees the recipients one by one", () => {
     assert.equal(mayReadTrackingRecipients(READER, "", { sent_by: "" }), false);
   });
 
-  it("the role counts only with skymail:access", () => {
+  it("the role counts only with skynotify:access", () => {
     assert.equal(mayReadTrackingRecipients([ROLE.mailsTrackingRead], SOMEONE, { sent_by: SENDER }), false);
   });
 });
@@ -89,7 +89,7 @@ describe("the read routes", () => {
   it("asks for the summary of the send", async () => {
     const { api, calls } = scriptedClient(json(200, { tracking_available: true, tracking_requested: true, retained: false, report: null }));
     await fetchTrackingSummary(api, SEND_ID);
-    assert.equal(new URL(calls[0].url).pathname, `/api/skymail/v1/mail_tasks/${SEND_ID}/tracking`);
+    assert.equal(new URL(calls[0].url).pathname, `/api/skynotify/v1/mail_tasks/${SEND_ID}/tracking`);
   });
 
   it("asks for a filtered page of recipients, and leaves the filter out for all", async () => {
@@ -98,7 +98,7 @@ describe("the read routes", () => {
     await fetchTrackingRecipients(api, SEND_ID, { filter: "clicked", page: 2 });
     await fetchTrackingRecipients(api, SEND_ID, { filter: "all", page: 1 });
     const first = new URL(calls[0].url);
-    assert.equal(first.pathname, `/api/skymail/v1/mail_tasks/${SEND_ID}/tracking/recipients`);
+    assert.equal(first.pathname, `/api/skynotify/v1/mail_tasks/${SEND_ID}/tracking/recipients`);
     assert.equal(first.searchParams.get("filter"), "clicked");
     assert.equal(first.searchParams.get("page"), "2");
     assert.equal(first.searchParams.get("page_size"), "25");

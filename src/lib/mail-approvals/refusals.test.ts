@@ -124,21 +124,21 @@ describe("a refused submission", () => {
   // The screens already ask for templates:read (and lists:read to pick a list); the API holds the same rule (ticket 21).
   it("says what the missing roles keep from the viewer, in plain words without a role name", () => {
     const forbidden = (roles: string[]) => refusal(403, "server.forbidden", { missing_roles: roles });
-    assert.deepEqual(approvalRefusal(forbidden(["skymail:templates:read"]), "submit"), {
+    assert.deepEqual(approvalRefusal(forbidden(["skynotify:templates:read"]), "submit"), {
       text: "Bu hesap Mail template okuyamadığı için onaya sunamaz. Erişime ihtiyacın varsa kulüp yönetimine başvur.",
       reload: false,
     });
     assert.equal(
-      approvalRefusal(forbidden(["skymail:templates:read", "skymail:lists:read"]), "resubmit").text,
+      approvalRefusal(forbidden(["skynotify:templates:read", "skynotify:lists:read"]), "resubmit").text,
       "Bu hesap Mail template okuyamadığı için onaya sunamaz. Erişime ihtiyacın varsa kulüp yönetimine başvur.",
     );
     assert.equal(
-      approvalRefusal(forbidden(["skymail:access"]), "submit").text,
+      approvalRefusal(forbidden(["skynotify:access"]), "submit").text,
       "Onaya sunma yetkin yok. Erişime ihtiyacın varsa kulüp yönetimine başvur.",
     );
-    assert.doesNotMatch(approvalRefusal(forbidden(["skymail:access"]), "submit").text, /skymail:/);
+    assert.doesNotMatch(approvalRefusal(forbidden(["skynotify:access"]), "submit").text, /skynotify:/);
     assert.equal(
-      approvalRefusal(forbidden(["skymail:lists:read"]), "submit").text,
+      approvalRefusal(forbidden(["skynotify:lists:read"]), "submit").text,
       "Bu hesap mail listesine onaya sunamaz; kişilere onaya sunabilirsin.",
     );
     assert.equal(approvalRefusal(refusal(403, "server.forbidden"), "submit").text, "Bu işlem için yetkin yok.");
@@ -148,7 +148,7 @@ describe("a refused submission", () => {
     refusal(400, "validation.error", { errors });
 
   it("says what is wrong with its people", () => {
-    assert.equal(approvalRefusal(invalid({ field: "recipients[1].email", code: "invalid_email" }), "submit").text, "SkyMail bazı adresleri kabul etmedi.");
+    assert.equal(approvalRefusal(invalid({ field: "recipients[1].email", code: "invalid_email" }), "submit").text, "SkyNotify bazı adresleri kabul etmedi.");
     // The form stops more than it takes before asking; a limit the API lowered since is said as it gives it.
     assert.equal(
       approvalRefusal(invalid({ field: "recipients", code: "max_length", params: { limit: "50" } }), "resubmit").text,
@@ -157,7 +157,7 @@ describe("a refused submission", () => {
     // Found only by Postgres: its lower() and Go's differ on an unusual address, so the API cannot say which.
     assert.equal(
       approvalRefusal(invalid({ field: "recipients", code: "duplicate" }), "submit").text,
-      "SkyMail aynı adresi iki kez buldu; büyük ve küçük harfle yazılmışı da aynı adres sayılır. Her adresi bir kez yaz.",
+      "SkyNotify aynı adresi iki kez buldu; büyük ve küçük harfle yazılmışı da aynı adres sayılır. Her adresi bir kez yaz.",
     );
     assert.equal(
       approvalRefusal(
@@ -188,13 +188,13 @@ describe("a refused submission", () => {
 
   // recipients[i] is the ith row that names someone: an empty row is not sent.
   it("puts what the API found on the rows it was about", () => {
-    assert.equal(refused.text, "SkyMail bazı adresleri kabul etmedi: işaretli kişileri düzelt.");
+    assert.equal(refused.text, "SkyNotify bazı adresleri kabul etmedi: işaretli kişileri düzelt.");
     assert.deepEqual(refusalNow(refused, rows), {
-      text: "SkyMail bazı adresleri kabul etmedi: işaretli kişileri düzelt.",
+      text: "SkyNotify bazı adresleri kabul etmedi: işaretli kişileri düzelt.",
       rows: [
         {},
         {},
-        { email: "SkyMail bu adresi geçerli bir e-posta adresi saymadı." },
+        { email: "SkyNotify bu adresi geçerli bir e-posta adresi saymadı." },
         { email: "Bu adres 1. satırda da var; herkese bir kez gönderilir." },
         { email: "E-posta adresini yaz." },
       ],
@@ -205,7 +205,7 @@ describe("a refused submission", () => {
     const moved = [{ name: "", email: "yeni@ornek.com" }, rows[2], rows[0], { name: "Mert Demir", email: "mert@ornek.com" }, rows[4]];
     assert.deepEqual(refusalNow(refused, moved)?.rows, [
       {},
-      { email: "SkyMail bu adresi geçerli bir e-posta adresi saymadı." },
+      { email: "SkyNotify bu adresi geçerli bir e-posta adresi saymadı." },
       {},
       {},
       { email: "E-posta adresini yaz." },
@@ -217,8 +217,8 @@ describe("a refused submission", () => {
 
   it("is said as it is when it names no row", () => {
     const beyond = submissionRefusal(invalid({ field: "recipients[9].email", code: "invalid_email" }), "submit", rows);
-    assert.deepEqual(refusalNow(beyond, rows), { text: "SkyMail bazı adresleri kabul etmedi.", rows: null });
-    const forbidden = submissionRefusal(refusal(403, "server.forbidden", { missing_roles: ["skymail:lists:read"] }), "resubmit", rows);
+    assert.deepEqual(refusalNow(beyond, rows), { text: "SkyNotify bazı adresleri kabul etmedi.", rows: null });
+    const forbidden = submissionRefusal(refusal(403, "server.forbidden", { missing_roles: ["skynotify:lists:read"] }), "resubmit", rows);
     assert.deepEqual(refusalNow(forbidden, []), {
       text: "Bu hesap mail listesine onaya sunamaz; kişilere onaya sunabilirsin.",
       rows: null,
@@ -230,10 +230,10 @@ describe("a refused submission", () => {
   });
 
   it("shows the form's own problem on a row first, and what the API found where there is none", () => {
-    const found = [{ email: "SkyMail bu adresi geçerli bir e-posta adresi saymadı." }, {}];
+    const found = [{ email: "SkyNotify bu adresi geçerli bir e-posta adresi saymadı." }, {}];
     assert.deepEqual(withRefusedRows(null, found), { rows: found, none: false });
     assert.deepEqual(withRefusedRows({ rows: [{}, { email: "Geçerli bir e-posta adresi gir." }], none: false }, found), {
-      rows: [{ email: "SkyMail bu adresi geçerli bir e-posta adresi saymadı." }, { email: "Geçerli bir e-posta adresi gir." }],
+      rows: [{ email: "SkyNotify bu adresi geçerli bir e-posta adresi saymadı." }, { email: "Geçerli bir e-posta adresi gir." }],
       none: false,
     });
     const own = { rows: [{}], none: true };
@@ -242,14 +242,14 @@ describe("a refused submission", () => {
   });
 });
 
-// Ekip postası (skymail-backend #128): the Leader's submissions, and the approver's decisions on them.
+// Ekip postası (skynotify-backend #128): the Leader's submissions, and the approver's decisions on them.
 describe("a refused Team request", () => {
   it("names the Teams the submitter does not lead now, for the form to take them out", () => {
     const refused = submissionRefusal(refusal(403, "team_mail.not_leader", { team_ids: ["a", "b"] }), "submit", []);
     assert.deepEqual(refused.teamIds, ["a", "b"]);
     assert.equal(refused.code, "team_mail.not_leader");
     assert.match(refused.text, /artık lideri görünmüyorsun/);
-    assert.equal(submissionRefusal(refusal(403, "server.forbidden", { missing_roles: ["skymail:access"] }), "submit", []).teamIds, undefined);
+    assert.equal(submissionRefusal(refusal(403, "server.forbidden", { missing_roles: ["skynotify:access"] }), "submit", []).teamIds, undefined);
   });
 
   it("says a free announcement only, a fixed purpose, the switch off and core not answering in plain words", () => {

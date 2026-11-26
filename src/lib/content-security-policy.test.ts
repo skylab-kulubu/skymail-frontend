@@ -19,7 +19,7 @@ const PRODUCTION: PolicyInput = {
   mode: "enforce",
   development: false,
   https: true,
-  apiUrl: "https://api.yildizskylab.com/api/skymail/v1",
+  apiUrl: "https://api.yildizskylab.com/api/skynotify/v1",
   issuer: "https://e.yildizskylab.com/realms/e-skylab",
 };
 
@@ -83,7 +83,7 @@ describe("the policy", () => {
   });
 
   it("lets next dev evaluate and reload", () => {
-    const dev = directives(contentSecurityPolicy({ ...PRODUCTION, development: true, apiUrl: "http://localhost:3000/sandbox-api/api/skymail/v1" }));
+    const dev = directives(contentSecurityPolicy({ ...PRODUCTION, development: true, apiUrl: "http://localhost:3000/sandbox-api/api/skynotify/v1" }));
     assert.ok(dev.get("script-src")!.includes("'unsafe-eval'"));
     assert.deepEqual(dev.get("connect-src"), ["'self'", "http://localhost:3000", "ws:"]);
   });
@@ -103,7 +103,7 @@ describe("the helpers", () => {
   });
 
   it("reads an origin from an http(s) URL only", () => {
-    assert.equal(originOf("https://api.yildizskylab.com/api/skymail/v1"), "https://api.yildizskylab.com");
+    assert.equal(originOf("https://api.yildizskylab.com/api/skynotify/v1"), "https://api.yildizskylab.com");
     assert.equal(originOf("not a url"), null);
     assert.equal(originOf("data:text/plain,x"), null);
     assert.equal(originOf(undefined), null);

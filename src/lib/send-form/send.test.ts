@@ -1,5 +1,5 @@
 /**
- * A send as skymail-backend takes it (internal/requests/mail.go, unchanged by
+ * A send as skynotify-backend takes it (internal/requests/mail.go, unchanged by
  * the rewrite): to a mailing list, `POST /mail_tasks {template_id,
  * mail_list_id, body_variables}`; to one person, `POST /mail_tasks/single
  * {template_id, recipient_email, recipient_full_name, body_variables}`, once
@@ -205,7 +205,7 @@ describe("a send's requests", () => {
     const nobody = sendPlan(draft({ audience: "people", people: [{ name: "Ayşe", email: "ayse@" }] }));
     assert.deepEqual(nobody.ok ? null : nobody.problems.people?.rows, [{ email: "Geçerli bir e-posta adresi gir." }]);
     const freeWithoutTemplate = sendPlan(draft({ what: "free", template: null }));
-    assert.equal(freeWithoutTemplate.ok ? null : freeWithoutTemplate.problems.template, "Serbest duyuru template'i (free.basic) SkyMail'de yok ya da arşivlenmiş; serbest duyuru gönderilemez.");
+    assert.equal(freeWithoutTemplate.ok ? null : freeWithoutTemplate.problems.template, "Serbest duyuru template'i (free.basic) SkyNotify'da yok ya da arşivlenmiş; serbest duyuru gönderilemez.");
   });
 
   it("to a list asks for tracking only when the form passes it, and the request for approval carries it", () => {
@@ -282,7 +282,7 @@ describe("sending", () => {
     const outcomes = await sendToPeople(api, REQUESTS, { canSeeSends: true, onEach: (done) => progress.push(done) });
     assert.deepEqual(outcomes, [
       { name: "Ayşe", email: "ayse@ornek.com", status: "sent", sendId: TASK_ID },
-      { name: "Ali", email: "ali@ornek.c", status: "final", reason: "SkyMail bu adresi geçerli bir e-posta adresi saymadı." },
+      { name: "Ali", email: "ali@ornek.c", status: "final", reason: "SkyNotify bu adresi geçerli bir e-posta adresi saymadı." },
       {
         name: "Veli",
         email: "veli@ornek.com",
@@ -348,10 +348,10 @@ describe("a failed send, in plain words", () => {
       reason: "Mail template arşivlenmiş ya da artık yok; arşivlenmiş bir template gönderilmez.",
     });
     const invalid = new ApiError(400, "validation.error", "x", { errors: [{ field: "recipient_email", code: "invalid_email" }] });
-    assert.deepEqual(sendFailure(invalid, "person", person), { kind: "final", reason: "SkyMail bu adresi geçerli bir e-posta adresi saymadı." });
+    assert.deepEqual(sendFailure(invalid, "person", person), { kind: "final", reason: "SkyNotify bu adresi geçerli bir e-posta adresi saymadı." });
     assert.deepEqual(sendFailure(new ApiError(422, "template.unparseable"), "list", person), {
       kind: "final",
-      reason: "SkyMail gönderimi reddetti: Konu ya da gövde, mailer'ın okuyabileceği bir Go template değil.",
+      reason: "SkyNotify gönderimi reddetti: Konu ya da gövde, mailer'ın okuyabileceği bir Go template değil.",
     });
   });
 

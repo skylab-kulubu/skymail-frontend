@@ -7,7 +7,7 @@
  * from here.
  *
  * Layout is the theme's Shell with the Forms brand: the same logo and name on
- * top, the footer with Forms' credit line above SkyMail's. Note is the theme's
+ * top, the footer with Forms' credit line above SkyNotify's. Note is the theme's
  * Note keeping the line breaks, as Forms' does: a review note is typed in a
  * text area.
  */

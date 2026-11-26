@@ -1,11 +1,11 @@
 /**
  * Who opened a send's masked content (hub ticket skymail-frontend-rewrite 32;
- * skymail-backend `GET /mail_tasks/{id}/content-views`): every opening of a
+ * skynotify-backend `GET /mail_tasks/{id}/content-views`): every opening of a
  * recipient's masked mail, newest first, paged with `X-Total-Count`. It names
  * the queue row, never the recipient; the page finds the recipient's name
  * among the send's rows (`GET /mail_tasks/{id}/queue`).
  *
- * Only `skymail:audit:read` reads it (Yusuf, 2026-11-22: DK alone). The roles
+ * Only `skynotify:audit:read` reads it (Yusuf, 2026-11-22: DK alone). The roles
  * that open the content do not: those audited do not read their own record.
  */
 import type { ApiClient, ApiPage } from "./api/client";

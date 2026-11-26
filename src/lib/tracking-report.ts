@@ -1,14 +1,14 @@
 /**
  * A tracked send's opens and clicks (hub ticket iletisim-servisi 15b, design
- * note 07 §3.2 and §4.9), as skymail-backend's read routes give them
+ * note 07 §3.2 and §4.9), as skynotify-backend's read routes give them
  * (internal/handlers/tracking_read.go):
  *
  *  - `GET /mail_tasks/{id}/tracking` (mails:read): counts, per-link counts and
  *    an hourly-then-daily series, with no person and no link address in it. A
  *    year after the last mail went out it is `retained`: only the totals kept
  *    for a send to at least ten tracked recipients, or none (`report: null`).
- *  - `GET /mail_tasks/{id}/tracking/recipients` (`skymail:mails:tracking:read`;
- *    the send's own sender only while SkyMail's SKYMAIL_SENDER_SEES_RECIPIENTS
+ *  - `GET /mail_tasks/{id}/tracking/recipients` (`skynotify:mails:tracking:read`;
+ *    the send's own sender only while SkyNotify's SKYNOTIFY_SENDER_SEES_RECIPIENTS
  *    is on, off by default): one row per recipient, filtered and paged; 410
  *    90 days after the last mail went out. The summary says whether the
  *    viewer may read it (`recipients_readable`).
@@ -66,7 +66,7 @@ export type TrackingSummary = Readonly<{
   /**
    * The send's counts tell of people (fewer than 10 tracked, or mail the
    * system sends) and the caller may not read its people: report is null
-   * (skymail-backend GetTracking). Absent from an older backend.
+   * (skynotify-backend GetTracking). Absent from an older backend.
    */
   withheld?: boolean;
   /**
@@ -83,7 +83,7 @@ export const TRACKING_WITHHELD_TEXT = "Bu gönderimin sayıları kişiye dair bi
 
 /**
  * What the sender reads under the counts of their own send (ADR-0074 addendum 2026-11-08).
- * Only per-person opens and clicks are withheld; skymail:mails:read still sees the recipients in the queue.
+ * Only per-person opens and clicks are withheld; skynotify:mails:read still sees the recipients in the queue.
  */
 export const TRACKING_COUNTS_ONLY_TEXT = "Kişi bazında açılma ve tıklama yalnız takip yetkisi olanlara açık.";
 
@@ -151,8 +151,8 @@ export function sendTracked(send: Pick<Send, "tracking">): boolean {
 /**
  * Whether the viewer may see the send's recipients one by one, as the API
  * decides it. The summary says so (`recipients_readable`): only
- * `skymail:mails:tracking:read` (YK, DK, ADMIN) by default; the send's own
- * sender too only while SkyMail's switch reopens it (Yusuf, 2026-11-08;
+ * `skynotify:mails:tracking:read` (YK, DK, ADMIN) by default; the send's own
+ * sender too only while SkyNotify's switch reopens it (Yusuf, 2026-11-08;
  * ADR-0074 addendum 2026-11-08). Anyone else gets the counts only, and the
  * page never asks for the people. An older backend does not say: then the
  * rule it applies, the role or the send's own sender.
@@ -238,7 +238,7 @@ export function linkLabel(position: number): string {
 export type TrackingBadge = Readonly<{ key: string; label: string; tone: "warning" | "info" | "neutral" }>;
 
 /**
- * Every source class skymail-backend's classifier writes
+ * Every source class skynotify-backend's classifier writes
  * (internal/tracking/classifier.go), in the order a row shows them. The rows
  * show each one a recipient has, not only the ones that cast doubt on an
  * open (K6, Yusuf 2026-11-24: everything the tracking records is shown).

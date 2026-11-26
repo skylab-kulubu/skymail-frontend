@@ -1,6 +1,6 @@
 /**
  * "Haberden gönder" (hub ticket duyuru-haber 08): the address the panel and
- * the site open, what the form sends to skymail-backend's /news_sends routes
+ * the site open, what the form sends to skynotify-backend's /news_sends routes
  * (06, 07), the live count's breakdown and what stops a send.
  */
 import assert from "node:assert/strict";
@@ -57,10 +57,10 @@ describe("the address", () => {
 });
 
 describe("who may do what", () => {
-  it("sends with skymail:announcements:send, prepares with skymail:mails:write", () => {
-    assert.deepEqual(newsAccess(["skymail:access", "skymail:announcements:send"]), { prepare: true, send: true });
-    assert.deepEqual(newsAccess(["skymail:access", "skymail:mails:write"]), { prepare: true, send: false });
-    assert.deepEqual(newsAccess(["skymail:access", "skymail:mails:read"]), { prepare: false, send: false });
+  it("sends with skynotify:announcements:send, prepares with skynotify:mails:write", () => {
+    assert.deepEqual(newsAccess(["skynotify:access", "skynotify:announcements:send"]), { prepare: true, send: true });
+    assert.deepEqual(newsAccess(["skynotify:access", "skynotify:mails:write"]), { prepare: true, send: false });
+    assert.deepEqual(newsAccess(["skynotify:access", "skynotify:mails:read"]), { prepare: false, send: false });
   });
 });
 
@@ -89,7 +89,7 @@ describe("what goes to the API", () => {
     assert.deepEqual(newsCountRequest(draft), { slug: "bahar-kayitlari", audience: { type: "teams", teams: ["g-airlab", "g-algolab"] } });
   });
 
-  it("calls the routes skymail-backend serves", async () => {
+  it("calls the routes skynotify-backend serves", async () => {
     const { api, calls } = scriptedClient(
       json(200, { available: true, read_more: "pages" }),
       json(200, { subject: "Duyuru: Kayıtlar", plain_text: "x", html: "<p>x</p>" }),

@@ -2,8 +2,8 @@
 
 // A tracked send's opens and clicks (hub ticket iletisim-servisi 15b): one
 // caveat, the counts, the hours and days after the send, the links, and to
-// those who may see them (skymail:mails:tracking:read; the send's own sender
-// only while SkyMail's switch reopens it, ADR-0074 addendum 2026-11-08) the
+// those who may see them (skynotify:mails:tracking:read; the send's own sender
+// only while SkyNotify's switch reopens it, ADR-0074 addendum 2026-11-08) the
 // recipients one by one. Everyone else gets the counts only, and the page
 // never asks for the people; the sender reads a line saying so. 90 days
 // after the last mail went out only the kept totals remain.

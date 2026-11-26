@@ -11,7 +11,7 @@ export const meta: TemplateMeta = {
   contentSensitive: false,
   brand: "account",
   trigger:
-    "core-backend, admin panelinde bir kişi bir takıma ya da takımın LIDERLER/KOORDINATORLER alt grubuna eklendiğinde veya oradan çıkarıldığında; değişikliği kuyruğa yazar ve SkyMail'e anahtarla gönderir (core-backend#215, docs/team-membership-mail.md).",
+    "core-backend, admin panelinde bir kişi bir takıma ya da takımın LIDERLER/KOORDINATORLER alt grubuna eklendiğinde veya oradan çıkarıldığında; değişikliği kuyruğa yazar ve SkyNotify'a anahtarla gönderir (core-backend#215, docs/team-membership-mail.md).",
   // Action: `added` ise eklendi, değilse çıkarıldı. Role: `member` (takımın
   // kendisi), `leader` (LIDERLER) ya da `coordinator` (KOORDINATORLER); yönetim
   // yetkisi yalnız lider ve koordinatörlerde, metin buna göre değişir.

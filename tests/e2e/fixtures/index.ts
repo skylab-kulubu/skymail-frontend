@@ -1,15 +1,15 @@
 /**
- * The browser tests' fixtures: a page whose SkyMail API is the mock, which
+ * The browser tests' fixtures: a page whose SkyNotify API is the mock, which
  * cannot reach any other host, and a way to sign in as a writer or a reader.
  */
 import { test as base, expect, type Page } from "@playwright/test";
 import { E2E_BASE_URL } from "./env";
-import { MockSkymail } from "./mock-api";
+import { MockSkyNotify } from "./mock-api";
 import { sessionCookie, type Profile } from "./session";
 
 export { expect };
 
-export const test = base.extend<{ skymail: MockSkymail; signIn: (profile?: Profile) => Promise<void> }>({
+export const test = base.extend<{ skynotify: MockSkyNotify; signIn: (profile?: Profile) => Promise<void> }>({
   // Playwright hands each fixture its value through the second argument; it is
   // named `provide` here so the React hooks lint does not take it for `use`.
   page: async ({ page }, provide) => {
@@ -17,10 +17,10 @@ export const test = base.extend<{ skymail: MockSkymail; signIn: (profile?: Profi
     await page.route((url) => !url.href.startsWith(E2E_BASE_URL) && /^https?:/.test(url.protocol), (route) => route.abort());
     await provide(page);
   },
-  skymail: async ({ page }, provide) => {
-    const skymail = new MockSkymail();
-    await skymail.attach(page);
-    await provide(skymail);
+  skynotify: async ({ page }, provide) => {
+    const skynotify = new MockSkyNotify();
+    await skynotify.attach(page);
+    await provide(skynotify);
   },
   signIn: async ({ context }, provide) => {
     await provide(async (profile = "writer") => {

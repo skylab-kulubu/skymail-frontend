@@ -13,14 +13,14 @@ import { FALLBACK_RULE, fillRecipientNameMarkup } from "./recipient-name";
 import { buildVisual as b, visualSource, type VisualBlock, type VisualDocument, type VisualInline, type VisualMark } from "./visual-document";
 
 /**
- * The server's allow-list, copied from skymail-backend
+ * The server's allow-list, copied from skynotify-backend
  * internal/mailer/sanitize.go (2026-10-21, #95 review T7): the elements it
- * keeps with no attribute, and `href` and `data-skymail-notrack` (empty or
+ * keeps with no attribute, and `href` and `data-skynotify-notrack` (empty or
  * "true") on `a`. A change there is a change here.
  */
 const SERVER_ALLOWLIST = {
   elements: ["p", "br", "strong", "b", "em", "i", "u", "ul", "ol", "li", "h2", "h3", "blockquote"],
-  attributes: { a: ["href", "data-skymail-notrack"] } as Record<string, string[]>,
+  attributes: { a: ["href", "data-skynotify-notrack"] } as Record<string, string[]>,
   schemes: ["http:", "https:", "mailto:"],
 };
 
@@ -69,7 +69,7 @@ describe("a free announcement's body", () => {
   it("marks a link the sender said not to count, as the server keeps it, and no other", () => {
     assert.equal(
       html(doc(b.paragraph([b.text("Toplantı", [untracked("https://zoom.example/j/1?pwd=x")]), b.text(" "), b.text("site", [link("https://skyl.app/")])]))),
-      '<p><a href="https://zoom.example/j/1?pwd=x" data-skymail-notrack="true">Toplantı</a> <a href="https://skyl.app/">site</a></p>',
+      '<p><a href="https://zoom.example/j/1?pwd=x" data-skynotify-notrack="true">Toplantı</a> <a href="https://skyl.app/">site</a></p>',
     );
   });
 
@@ -261,7 +261,7 @@ function outsideTheAllowList(body: string): string[] {
     for (const [, name, value] of attributes.matchAll(ATTRIBUTE)) {
       if (!allowed.includes(name)) outside.push(`${tag}[${name}]`);
       if (name === "href" && !SERVER_ALLOWLIST.schemes.includes(new URL(value.replaceAll("&amp;", "&")).protocol)) outside.push(`href ${value}`);
-      if (name === "data-skymail-notrack" && value !== "" && value !== "true") outside.push(`data-skymail-notrack ${value}`);
+      if (name === "data-skynotify-notrack" && value !== "" && value !== "true") outside.push(`data-skynotify-notrack ${value}`);
     }
     if (tag === "a" && !closing && attributes.trim() === "") outside.push("<a> without href");
   }

@@ -14,7 +14,7 @@
 import type { AuthoringMode, RenderFailureReason, RenderResult, SourceInput } from "@/lib/mail-render";
 
 /** Marks this protocol's messages among whatever else a window receives. */
-export const RENDER_CHANNEL = "skymail.render-sandbox.v1";
+export const RENDER_CHANNEL = "skynotify.render-sandbox.v1";
 
 /** Editor → sandbox: render this source. */
 export type RenderRequest = Readonly<{

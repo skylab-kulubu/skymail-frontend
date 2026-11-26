@@ -10,7 +10,7 @@
  */
 import type { Page } from "@playwright/test";
 import { expect, preview, test, writeSource } from "./fixtures";
-import type { MockSkymail } from "./fixtures/mock-api";
+import type { MockSkyNotify } from "./fixtures/mock-api";
 
 const RESET_REASON = "Parola sıfırlama bağlantısı; kaldırılırsa kişi parolasını sıfırlayamaz ve mail işe yaramaz.";
 const BUTTON = '<a href="{{.link}}" style="display:inline-block;padding:12px 20px;background:#8f5e98;color:#ffffff;">Yeni Parola Belirle</a>';
@@ -26,8 +26,8 @@ ${FALLBACK}
 </body></html>`;
 
 /** A System template like the repo's keycloak.reset-password, in HTML: its contract is the link. */
-function resetPassword(skymail: MockSkymail, operatorRequired: string[] = []) {
-  return skymail.addTemplate({
+function resetPassword(skynotify: MockSkyNotify, operatorRequired: string[] = []) {
+  return skynotify.addTemplate({
     name: "Keycloak · Parola Sıfırlama",
     key: "keycloak.reset-password",
     system: true,
@@ -43,12 +43,12 @@ function resetPassword(skymail: MockSkymail, operatorRequired: string[] = []) {
 
 const panelOf = (page: Page) => page.getByRole("region", { name: "Required variable'lar" });
 const rowOf = (page: Page, name: string) => panelOf(page).getByRole("listitem").filter({ hasText: `{{.${name}}}` });
-const draftSaves = (skymail: MockSkymail, id: string) =>
-  skymail.requests.filter((request) => request.method === "POST" && request.path === `/templates/${id}/drafts`);
+const draftSaves = (skynotify: MockSkyNotify, id: string) =>
+  skynotify.requests.filter((request) => request.method === "POST" && request.path === `/templates/${id}/drafts`);
 
-test("a save that deletes the password-reset link is refused, naming the variable and why", async ({ page, skymail, signIn }) => {
+test("a save that deletes the password-reset link is refused, naming the variable and why", async ({ page, skynotify, signIn }) => {
   await signIn("writer");
-  const id = resetPassword(skymail);
+  const id = resetPassword(skynotify);
 
   await page.goto(`/templates/edit/${id}`);
   const link = rowOf(page, "link");
@@ -68,7 +68,7 @@ test("a save that deletes the password-reset link is refused, naming the variabl
   await expect(refusal).toContainText(RESET_REASON);
   await expect(refusal).toContainText("gönderen servisin sözleşmesi");
   await expect(link).toContainText("Kaydedilmedi: gövde bu değişkene başvurmuyor.");
-  expect(draftSaves(skymail, id)).toHaveLength(1);
+  expect(draftSaves(skynotify, id)).toHaveLength(1);
 
   // Commenting the button out instead is refused too: the mailer leaves an HTML comment out of the mail.
   const commented = RESET_HTML.replace("Parolanı Sıfırla", "Parolanı yeniden belirle")
@@ -78,14 +78,14 @@ test("a save that deletes the password-reset link is refused, naming the variabl
   await expect(preview(page, "Mail önizlemesi")).toContainText("Parolanı yeniden belirle");
   await expect(link).toContainText("Kaydedilmedi: gövde bu değişkene başvurmuyor.");
   await page.getByRole("button", { name: "Taslağı kaydet" }).click();
-  await expect.poll(() => draftSaves(skymail, id).length).toBe(2);
-  expect(draftSaves(skymail, id)[1].body).toMatchObject({ html_content: commented });
+  await expect.poll(() => draftSaves(skynotify, id).length).toBe(2);
+  expect(draftSaves(skynotify, id)[1].body).toMatchObject({ html_content: commented });
   await expect(refusal).toContainText("{{.link}}");
   await expect(refusal).toContainText(RESET_REASON);
 
   // Nothing was written; the published mail keeps its link.
-  expect(skymail.versionsOf(id)).toHaveLength(1);
-  expect(skymail.row(id).html_content).toBe(RESET_HTML);
+  expect(skynotify.versionsOf(id)).toHaveLength(1);
+  expect(skynotify.row(id).html_content).toBe(RESET_HTML);
 
   // Kept inside a conditional section, the link counts: that saves.
   const conditional = commented.replace(`<!-- ${BUTTON} -->`, `{{if .link}}${BUTTON}{{end}}`);
@@ -94,12 +94,12 @@ test("a save that deletes the password-reset link is refused, naming the variabl
   await expect(link).not.toContainText("başvurmuyor");
   await page.getByRole("button", { name: "Taslağı kaydet" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Taslak kaydedildi" })).toBeVisible();
-  expect(skymail.versionsOf(id)[0]).toMatchObject({ html_content: conditional, published_at: null });
+  expect(skynotify.versionsOf(id)[0]).toMatchObject({ html_content: conditional, published_at: null });
 });
 
-test("an operator marks what the sent mail references and releases only what operators marked", async ({ page, skymail, signIn }) => {
+test("an operator marks what the sent mail references and releases only what operators marked", async ({ page, skynotify, signIn }) => {
   await signIn("writer");
-  const id = resetPassword(skymail);
+  const id = resetPassword(skynotify);
   await page.goto(`/templates/edit/${id}`);
 
   // What the published body references and is not required yet; the link is required already.
@@ -112,8 +112,8 @@ test("an operator marks what the sent mail references and releases only what ope
   await expect(panel.getByRole("status").filter({ hasText: "{{.firstName}} artık zorunlu" })).toBeVisible();
   await expect(rowOf(page, "firstName")).toContainText("Bir operatör bu değişkeni zorunlu işaretledi.");
   await expect(panel.getByRole("button", { name: "{{.firstName}} değişkenini zorunlu işaretle" })).toHaveCount(0);
-  expect(skymail.row(id).operator_required_variables).toEqual(["firstName"]);
-  expect(skymail.versionsOf(id)).toHaveLength(1);
+  expect(skynotify.row(id).operator_required_variables).toEqual(["firstName"]);
+  expect(skynotify.versionsOf(id)).toHaveLength(1);
 
   // A variable only the draft has is named, not offered: the server marks only what the sent mail references.
   const edited = RESET_HTML.replace(GREETING, "<p>{{.username}} hesabının parolasını sıfırlamak için bir istek aldık.</p>");
@@ -128,27 +128,27 @@ test("an operator marks what the sent mail references and releases only what ope
   const refusal = page.getByRole("alert").filter({ hasText: "Kaydedilmedi" });
   await expect(refusal).toContainText("{{.firstName}} Bir operatör bu değişkeni zorunlu işaretledi. (operatör işaretledi)");
   await expect(rowOf(page, "firstName")).toContainText("Kaydedilmedi: gövde bu değişkene başvurmuyor.");
-  expect(skymail.versionsOf(id)).toHaveLength(1);
+  expect(skynotify.versionsOf(id)).toHaveLength(1);
 
   // Only the operator's has Çıkar; releasing it lets the same save through.
   await expect(rowOf(page, "link").getByRole("button")).toHaveCount(0);
   await rowOf(page, "firstName").getByRole("button", { name: "Çıkar {{.firstName}}" }).click();
   await expect(panel.getByRole("status").filter({ hasText: "{{.firstName}} artık zorunlu değil." })).toBeVisible();
   await expect(rowOf(page, "firstName")).toHaveCount(0);
-  expect(skymail.row(id).operator_required_variables).toEqual([]);
+  expect(skynotify.row(id).operator_required_variables).toEqual([]);
   await page.getByRole("button", { name: "Taslağı kaydet" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Taslak kaydedildi" })).toBeVisible();
 
-  const writes = skymail.writes().map(({ method, path, body }) => ({ method, path, body }));
+  const writes = skynotify.writes().map(({ method, path, body }) => ({ method, path, body }));
   expect(writes.filter((write) => write.path.includes("required-variables"))).toEqual([
     { method: "POST", path: `/templates/${id}/required-variables`, body: { name: "firstName" } },
     { method: "DELETE", path: `/templates/${id}/required-variables/firstName`, body: null },
   ]);
 });
 
-test("a publish is refused when the draft dropped a variable marked since it was saved", async ({ page, skymail, signIn }) => {
+test("a publish is refused when the draft dropped a variable marked since it was saved", async ({ page, skynotify, signIn }) => {
   await signIn("writer");
-  const id = resetPassword(skymail);
+  const id = resetPassword(skynotify);
   await page.goto(`/templates/edit/${id}`);
 
   const withoutName = RESET_HTML.replace(GREETING, "<p>Parolanı sıfırlamak için bir istek aldık.</p>");
@@ -168,23 +168,23 @@ test("a publish is refused when the draft dropped a variable marked since it was
   const refusal = page.getByRole("alert").filter({ hasText: "Yayımlanmadı" });
   await expect(refusal).toContainText("{{.firstName}}");
   await expect(rowOf(page, "firstName")).toContainText("Yayımlanmadı: gövde bu değişkene başvurmuyor.");
-  expect(skymail.row(id).html_content).toBe(RESET_HTML);
+  expect(skynotify.row(id).html_content).toBe(RESET_HTML);
 });
 
 test("a variable the contract took over since the page opened is not released, and the panel re-reads it, again if that fails", async ({
   page,
-  skymail,
+  skynotify,
   signIn,
 }) => {
   await signIn("writer");
-  const id = resetPassword(skymail, ["linkExpirationMinutes"]);
+  const id = resetPassword(skynotify, ["linkExpirationMinutes"]);
   await page.goto(`/templates/edit/${id}`);
   const row = rowOf(page, "linkExpirationMinutes");
   await expect(row.getByRole("button", { name: /^Çıkar/ })).toBeVisible();
 
   // A Template seed moves it into the contract meanwhile.
   const reason = "Bağlantının ne kadar geçerli olduğu; Keycloak her mailde gönderir.";
-  const template = skymail.row(id);
+  const template = skynotify.row(id);
   template.contract_required_variables.push({ name: "linkExpirationMinutes", reason });
   template.operator_required_variables = [];
   // The first re-read of the template fails.
@@ -200,7 +200,7 @@ test("a variable the contract took over since the page opened is not released, a
     "{{.linkExpirationMinutes}} gönderen servisin sözleşmesinde; panelden çıkarılamaz.",
   );
   const stale = panel.getByRole("status").filter({ hasText: "Panel güncel olmayabilir" });
-  await expect(stale).toContainText("SkyMail şu anda yanıt vermiyor.");
+  await expect(stale).toContainText("SkyNotify şu anda yanıt vermiyor.");
   await expect(row).not.toContainText(reason);
   await stale.getByRole("button", { name: "Yeniden dene" }).click();
 
@@ -211,16 +211,16 @@ test("a variable the contract took over since the page opened is not released, a
   await expect(row.getByRole("button")).toHaveCount(0);
 });
 
-test("mark and release wait while a save is in flight, and a mark on its way keeps its variable's name", async ({ page, skymail, signIn }) => {
+test("mark and release wait while a save is in flight, and a mark on its way keeps its variable's name", async ({ page, skynotify, signIn }) => {
   await signIn("writer");
-  const id = resetPassword(skymail, ["linkExpirationMinutes"]);
+  const id = resetPassword(skynotify, ["linkExpirationMinutes"]);
   await page.goto(`/templates/edit/${id}`);
   const panel = panelOf(page);
   const mark = panel.getByRole("button", { name: "{{.firstName}} değişkenini zorunlu işaretle" });
   const release = rowOf(page, "linkExpirationMinutes").getByRole("button", { name: "Çıkar {{.linkExpirationMinutes}}" });
   await expect(mark).toBeEnabled();
 
-  const save = skymail.hold("POST", `/templates/${id}/drafts`, "answer");
+  const save = skynotify.hold("POST", `/templates/${id}/drafts`, "answer");
   await page.getByLabel("Konu").fill("SKY LAB parolanı sıfırla");
   await page.getByRole("button", { name: "Taslağı kaydet" }).click();
   await save.reached;
@@ -231,7 +231,7 @@ test("mark and release wait while a save is in flight, and a mark on its way kee
   await expect(mark).toBeEnabled();
   await expect(release).toBeEnabled();
 
-  const marking = skymail.hold("POST", `/templates/${id}/required-variables`, "answer");
+  const marking = skynotify.hold("POST", `/templates/${id}/required-variables`, "answer");
   await mark.click();
   await marking.reached;
   await expect(panel.getByRole("button", { name: "{{.firstName}} işaretleniyor…" })).toBeDisabled();
@@ -239,16 +239,16 @@ test("mark and release wait while a save is in flight, and a mark on its way kee
   await expect(rowOf(page, "firstName")).toBeVisible();
 });
 
-test("a save refused while a release was on its way does not bring the released variable back", async ({ page, skymail, signIn }) => {
+test("a save refused while a release was on its way does not bring the released variable back", async ({ page, skynotify, signIn }) => {
   await signIn("writer");
-  const id = resetPassword(skymail, ["firstName"]);
+  const id = resetPassword(skynotify, ["firstName"]);
   await page.goto(`/templates/edit/${id}`);
   await writeSource(page, "html", RESET_HTML.replace(GREETING, "<p>Parolanı sıfırlamak için bir istek aldık.</p>"));
   await expect(rowOf(page, "firstName")).toContainText("Düzenlediğin gövde buna artık başvurmuyor");
 
   // The release reaches the server after the save, and is answered first.
-  const release = skymail.hold("DELETE", `/templates/${id}/required-variables/firstName`, "request");
-  const save = skymail.hold("POST", `/templates/${id}/drafts`, "answer");
+  const release = skynotify.hold("DELETE", `/templates/${id}/required-variables/firstName`, "request");
+  const save = skynotify.hold("POST", `/templates/${id}/drafts`, "answer");
   await rowOf(page, "firstName").getByRole("button", { name: "Çıkar {{.firstName}}" }).click();
   await release.reached;
   await page.getByRole("button", { name: "Taslağı kaydet" }).click();
@@ -264,15 +264,15 @@ test("a save refused while a release was on its way does not bring the released 
   await expect(rowOf(page, "firstName")).toHaveCount(0);
   await reread;
   await expect(rowOf(page, "firstName")).toHaveCount(0);
-  expect(skymail.row(id).operator_required_variables).toEqual([]);
+  expect(skynotify.row(id).operator_required_variables).toEqual([]);
 });
 
-test("a variable someone marked since the page opened is shown, pointed at, when a save is refused for it", async ({ page, skymail, signIn }) => {
+test("a variable someone marked since the page opened is shown, pointed at, when a save is refused for it", async ({ page, skynotify, signIn }) => {
   await signIn("writer");
-  const id = resetPassword(skymail);
+  const id = resetPassword(skynotify);
   await page.goto(`/templates/edit/${id}`);
   await expect(preview(page, "Mail önizlemesi")).toContainText("Merhaba");
-  skymail.row(id).operator_required_variables = ["firstName"];
+  skynotify.row(id).operator_required_variables = ["firstName"];
 
   await writeSource(page, "html", RESET_HTML.replace(GREETING, "<p>Parolanı sıfırlamak için bir istek aldık.</p>"));
   // Before the click, the panel says what marking it would do to this body.
@@ -285,11 +285,11 @@ test("a variable someone marked since the page opened is shown, pointed at, when
   await expect(rowOf(page, "firstName").getByRole("button", { name: "Çıkar {{.firstName}}" })).toBeVisible();
 });
 
-test("a mark the server refuses for another variable names that one, with why", async ({ page, skymail, signIn }) => {
+test("a mark the server refuses for another variable names that one, with why", async ({ page, skynotify, signIn }) => {
   await signIn("writer");
   // A contract variable the sent mail does not reference, left from before the check.
   const codeReason = "Account center'a girilecek doğrulama kodu; kaldırılırsa kişisel e-posta onaylanamaz.";
-  const id = skymail.addTemplate({
+  const id = skynotify.addTemplate({
     name: "Keycloak · Parola Sıfırlama",
     key: "keycloak.reset-password",
     system: true,
@@ -311,30 +311,30 @@ test("a mark the server refuses for another variable names that one, with why", 
   await expect(refusal).toContainText("{{.firstName}} işaretlenemedi");
   await expect(refusal).toContainText(`{{.code}} ${codeReason} (gönderen servisin sözleşmesi)`);
   await expect(refusal).not.toContainText("{{.firstName}} gönderilen mailde geçmiyor");
-  expect(skymail.row(id).operator_required_variables).toEqual([]);
+  expect(skynotify.row(id).operator_required_variables).toEqual([]);
 });
 
-test("marking on a template archived since the page opened is refused as not found", async ({ page, skymail, signIn }) => {
+test("marking on a template archived since the page opened is refused as not found", async ({ page, skynotify, signIn }) => {
   await signIn("writer");
-  const id = resetPassword(skymail);
+  const id = resetPassword(skynotify);
   await page.goto(`/templates/edit/${id}`);
   const mark = panelOf(page).getByRole("button", { name: "{{.firstName}} değişkenini zorunlu işaretle" });
   await expect(mark).toBeVisible();
-  skymail.row(id).archived_at = "2026-09-23T07:30:00Z";
+  skynotify.row(id).archived_at = "2026-09-23T07:30:00Z";
 
   await mark.click();
   await expect(panelOf(page).getByRole("alert")).toHaveText("Aradığın kayıt bulunamadı. Silinmiş ya da arşivlenmiş olabilir.");
-  expect(skymail.row(id).operator_required_variables).toEqual([]);
+  expect(skynotify.row(id).operator_required_variables).toEqual([]);
 });
 
-test("a reader sees the Required variables locked and read-only", async ({ page, skymail, signIn }) => {
+test("a reader sees the Required variables locked and read-only", async ({ page, skynotify, signIn }) => {
   await signIn("reader");
-  const id = resetPassword(skymail, ["firstName"]);
+  const id = resetPassword(skynotify, ["firstName"]);
   await page.goto(`/templates/show/${id}`);
 
   await expect(rowOf(page, "link")).toContainText(RESET_REASON);
   await expect(rowOf(page, "firstName")).toContainText("Bir operatör bu değişkeni zorunlu işaretledi.");
   await expect(panelOf(page).getByRole("button")).toHaveCount(0);
   await expect(panelOf(page)).not.toContainText("Zorunlu işaretle");
-  expect(skymail.writes()).toHaveLength(0);
+  expect(skynotify.writes()).toHaveLength(0);
 });

@@ -10,7 +10,7 @@ export const meta: TemplateMeta = {
   system: true,
   contentSensitive: false,
   brand: "skylab",
-  trigger: "core-backend, yeni bir User ilk kez göründüğünde (SKYMAIL_WELCOME_TEMPLATE_ID).",
+  trigger: "core-backend, yeni bir User ilk kez göründüğünde (SKYNOTIFY_WELCOME_TEMPLATE_ID).",
   // core-backend/internal/mail/mail.go: kimlik alanları boş da olsa gönderilir.
   variables: ["FirstName", "LastName", "Email", "Username", "SchoolEmail", "SkyNumber", "CreatedAt"],
   // Nothing: the mail welcomes without an action, and every fact in it is also in Account center.

@@ -5,18 +5,18 @@
  * every code and link as •••••• and the panel marks each. The HTML is shown in a
  * sandboxed frame that reaches nothing on the network until the operator asks
  * for images: a tracking pixel must not count the operator as the recipient.
- * The mock API decides who sees what as skymail-backend does.
+ * The mock API decides who sees what as skynotify-backend does.
  */
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
-import type { MockSkymail } from "./fixtures/mock-api";
+import type { MockSkyNotify } from "./fixtures/mock-api";
 import { VIEWER } from "./fixtures/session";
 
 const PIXEL_HOST = "iz.example.test";
 const SOMEONE_ELSE = "0c9e4f6a-1b2d-4c3e-8f7a-9d0e1f2a3b4c";
 
-function newsletter(skymail: MockSkymail) {
-  return skymail.addTemplate({
+function newsletter(skynotify: MockSkyNotify) {
+  return skynotify.addTemplate({
     name: "Bülten",
     subject: "{{.Heading}}",
     mainMode: "html",
@@ -52,12 +52,12 @@ function watchPixel(page: Page) {
   return seen;
 }
 
-test("the sender opens a recipient's mail as sent, with remote images held back until asked for", async ({ page, skymail, signIn }) => {
+test("the sender opens a recipient's mail as sent, with remote images held back until asked for", async ({ page, skynotify, signIn }) => {
   await signIn("sender");
   const pixel = watchPixel(page);
-  const { id: templateId } = newsletter(skymail);
-  const listId = skymail.addList({ name: "WebLab", recipients: [{ full_name: "Ali Can", email: "ali@ornek.com" }, { full_name: "Ece Ak", email: "ece@ornek.com" }] });
-  const sendId = skymail.addSend({ templateId, listId, variables: { Heading: "Ekim buluşması" }, sentBy: SOMEONE_ELSE });
+  const { id: templateId } = newsletter(skynotify);
+  const listId = skynotify.addList({ name: "WebLab", recipients: [{ full_name: "Ali Can", email: "ali@ornek.com" }, { full_name: "Ece Ak", email: "ece@ornek.com" }] });
+  const sendId = skynotify.addSend({ templateId, listId, variables: { Heading: "Ekim buluşması" }, sentBy: SOMEONE_ELSE });
 
   await page.goto(`/mail-tasks/show/${sendId}`);
   await expect(page.getByText(/Her alıcının postasını gönderildiği hâliyle açabilirsin\. İçerik .+ tarihine kadar saklanır\./)).toBeVisible();
@@ -86,8 +86,8 @@ test("the sender opens a recipient's mail as sent, with remote images held back 
   await expect(dialog.locator("pre")).toHaveText("Merhaba Ali Can, Ekim buluşması");
 });
 
-function resetMail(skymail: MockSkymail) {
-  return skymail.addTemplate({
+function resetMail(skynotify: MockSkyNotify) {
+  return skynotify.addTemplate({
     name: "Keycloak · Parola Sıfırlama",
     key: "keycloak.reset-password",
     system: true,
@@ -99,10 +99,10 @@ function resetMail(skymail: MockSkymail) {
   });
 }
 
-test("a mail with a code or a one-time link opens whole, its link masked and marked, never sent unmasked", async ({ page, skymail, signIn }) => {
+test("a mail with a code or a one-time link opens whole, its link masked and marked, never sent unmasked", async ({ page, skynotify, signIn }) => {
   await signIn("admin");
-  const { id: templateId } = resetMail(skymail);
-  const sendId = skymail.addSend({
+  const { id: templateId } = resetMail(skynotify);
+  const sendId = skynotify.addSend({
     templateId,
     recipients: [{ full_name: "Ali Can", email: "ali@ornek.com" }],
     variables: { link: "https://sso.example.test/reset?key=secret", firstName: "Ali" },
@@ -122,21 +122,21 @@ test("a mail with a code or a one-time link opens whole, its link masked and mar
   await expect(dialog.getByText(/Gizlenen alanlar: link/)).toBeVisible();
   const frame = dialog.locator("iframe").contentFrame();
   await expect(frame.getByText(/Merhaba Ali/)).toBeVisible();
-  await expect(frame.locator("mark[data-skymail-masked]").first()).toHaveText("••••••");
+  await expect(frame.locator("mark[data-skynotify-masked]").first()).toHaveText("••••••");
 
   await dialog.getByRole("button", { name: "Düz metin" }).click();
   await expect(dialog.locator("pre")).toHaveText("Merhaba Ali, ••••••");
-  await expect(dialog.locator("pre mark[data-skymail-masked]")).toHaveText("••••••");
+  await expect(dialog.locator("pre mark[data-skynotify-masked]")).toHaveText("••••••");
 
   expect(answers.length).toBeGreaterThan(0);
   for (const answer of answers) expect(answer).not.toContain("reset?key=secret");
   expect(await page.content()).not.toContain("reset?key=secret");
 });
 
-test("a mail with a code or a link emptied before such content was kept says it was not kept", async ({ page, skymail, signIn }) => {
+test("a mail with a code or a link emptied before such content was kept says it was not kept", async ({ page, skynotify, signIn }) => {
   await signIn("admin");
-  const { id: templateId } = resetMail(skymail);
-  const sendId = skymail.addSend({
+  const { id: templateId } = resetMail(skynotify);
+  const sendId = skynotify.addSend({
     templateId,
     recipients: [{ full_name: "Ali Can", email: "ali@ornek.com" }],
     variables: { link: "https://sso.example.test/reset?key=secret", firstName: "Ali" },
@@ -149,8 +149,8 @@ test("a mail with a code or a link emptied before such content was kept says it 
 });
 
 /** A welcome mail (single, shown) and a newsletter to a list, both sent by someone else, and an old newsletter of the viewer's the sweep emptied. */
-function sends(skymail: MockSkymail) {
-  const { id: welcomeId } = skymail.addTemplate({
+function sends(skynotify: MockSkyNotify) {
+  const { id: welcomeId } = skynotify.addTemplate({
     name: "Hoş Geldin",
     key: "core.welcome",
     system: true,
@@ -160,17 +160,17 @@ function sends(skymail: MockSkymail) {
     htmlContent: "<p>Hoş geldin {{.FullName}}</p>",
     plainText: "Hoş geldin {{.FullName}}",
   });
-  const welcome = skymail.addSend({ templateId: welcomeId, recipients: [{ full_name: "Ali Can", email: "ali@ornek.com" }], sentBy: SOMEONE_ELSE });
-  const { id: newsletterId } = newsletter(skymail);
-  const listId = skymail.addList({ name: "WebLab", recipients: [{ full_name: "Ece Ak", email: "ece@ornek.com" }] });
-  const listSend = skymail.addSend({ templateId: newsletterId, listId, variables: { Heading: "Duyuru" }, sentBy: SOMEONE_ELSE });
-  const old = skymail.addSend({ templateId: newsletterId, listId, variables: { Heading: "Eski" }, sentBy: VIEWER.sub, cleared: true });
+  const welcome = skynotify.addSend({ templateId: welcomeId, recipients: [{ full_name: "Ali Can", email: "ali@ornek.com" }], sentBy: SOMEONE_ELSE });
+  const { id: newsletterId } = newsletter(skynotify);
+  const listId = skynotify.addList({ name: "WebLab", recipients: [{ full_name: "Ece Ak", email: "ece@ornek.com" }] });
+  const listSend = skynotify.addSend({ templateId: newsletterId, listId, variables: { Heading: "Duyuru" }, sentBy: SOMEONE_ELSE });
+  const old = skynotify.addSend({ templateId: newsletterId, listId, variables: { Heading: "Eski" }, sentBy: VIEWER.sub, cleared: true });
   return { welcome, listSend, old };
 }
 
-test("someone who sends to lists cannot open another's single mail, and an emptied send says why", async ({ page, skymail, signIn }) => {
+test("someone who sends to lists cannot open another's single mail, and an emptied send says why", async ({ page, skynotify, signIn }) => {
   await signIn("sender");
-  const { welcome, old } = sends(skymail);
+  const { welcome, old } = sends(skynotify);
   await page.goto(`/mail-tasks/show/${welcome}`);
   await expect(page.getByText(/Bu gönderimin içeriğini göremezsin/)).toBeVisible();
   await expect(page.getByRole("button", { name: /içeriği gör/ })).toHaveCount(0);
@@ -179,17 +179,17 @@ test("someone who sends to lists cannot open another's single mail, and an empti
   await expect(page.getByRole("button", { name: /içeriği gör/ })).toHaveCount(0);
 });
 
-test("someone who only reads sends cannot open a list send's content", async ({ page, skymail, signIn }) => {
+test("someone who only reads sends cannot open a list send's content", async ({ page, skynotify, signIn }) => {
   await signIn("watcher");
-  const { listSend } = sends(skymail);
+  const { listSend } = sends(skynotify);
   await page.goto(`/mail-tasks/show/${listSend}`);
   await expect(page.getByText(/Bu gönderimin içeriğini göremezsin/)).toBeVisible();
   await expect(page.getByRole("button", { name: /içeriği gör/ })).toHaveCount(0);
 });
 
-test("the administrator opens a single mail whose template may be shown", async ({ page, skymail, signIn }) => {
+test("the administrator opens a single mail whose template may be shown", async ({ page, skynotify, signIn }) => {
   await signIn("admin");
-  const { welcome } = sends(skymail);
+  const { welcome } = sends(skynotify);
   await page.goto(`/mail-tasks/show/${welcome}`);
   await page.getByRole("button", { name: "Ali Can: içeriği gör" }).click();
   const dialog = page.getByRole("dialog", { name: "Gönderilen posta · Ali Can" });
@@ -197,18 +197,18 @@ test("the administrator opens a single mail whose template may be shown", async 
   await expect(dialog.locator("iframe").contentFrame().getByText("Hoş geldin Ali Can")).toBeVisible();
 });
 
-test("a mail that starts with a byte-order mark is held back all the same", async ({ page, skymail, signIn }) => {
+test("a mail that starts with a byte-order mark is held back all the same", async ({ page, skynotify, signIn }) => {
   await signIn("sender");
   const pixel = watchPixel(page);
-  const { id: templateId } = skymail.addTemplate({
+  const { id: templateId } = skynotify.addTemplate({
     name: "Bülten",
     subject: "Duyuru",
     mainMode: "html",
     htmlContent: `\uFEFF<!DOCTYPE html><html><body><p>Merhaba {{.FullName}}</p><img alt="logo" src="https://${PIXEL_HOST}/bom.gif"></body></html>`,
     plainText: "Merhaba {{.FullName}}",
   });
-  const listId = skymail.addList({ name: "WebLab", recipients: [{ full_name: "Ali Can", email: "ali@ornek.com" }] });
-  const sendId = skymail.addSend({ templateId, listId, sentBy: SOMEONE_ELSE });
+  const listId = skynotify.addList({ name: "WebLab", recipients: [{ full_name: "Ali Can", email: "ali@ornek.com" }] });
+  const sendId = skynotify.addSend({ templateId, listId, sentBy: SOMEONE_ELSE });
 
   await page.goto(`/mail-tasks/show/${sendId}`);
   await page.getByRole("button", { name: "Ali Can: içeriği gör" }).click();
@@ -219,9 +219,9 @@ test("a mail that starts with a byte-order mark is held back all the same", asyn
   expect(pixel.sent).toBe(0);
 });
 
-test("the template editor's switch shows or hides a template's content, after asking; a credential template's stays off", async ({ page, skymail, signIn }) => {
+test("the template editor's switch shows or hides a template's content, after asking; a credential template's stays off", async ({ page, skynotify, signIn }) => {
   await signIn("writer");
-  const { id: welcomeId } = skymail.addTemplate({
+  const { id: welcomeId } = skynotify.addTemplate({
     name: "Hoş Geldin",
     key: "core.welcome",
     system: true,
@@ -232,7 +232,7 @@ test("the template editor's switch shows or hides a template's content, after as
     htmlContent: "<p>Hoş geldin {{.FullName}}</p>",
     plainText: "Hoş geldin {{.FullName}}",
   });
-  const toggles = () => skymail.requests.filter((request) => request.method === "PUT" && request.path === `/templates/${welcomeId}/content-sensitive`);
+  const toggles = () => skynotify.requests.filter((request) => request.method === "PUT" && request.path === `/templates/${welcomeId}/content-sensitive`);
 
   await page.goto(`/templates/edit/${welcomeId}`);
   const panel = page.getByRole("region", { name: "Gönderilen içerik" });
@@ -261,7 +261,7 @@ test("the template editor's switch shows or hides a template's content, after as
   await expect(toggle).not.toBeChecked();
   expect(toggles().map((request) => request.body)).toEqual([{ content_sensitive: false }, { content_sensitive: true }]);
 
-  const { id: resetId } = skymail.addTemplate({
+  const { id: resetId } = skynotify.addTemplate({
     name: "Keycloak · Parola Sıfırlama",
     key: "keycloak.reset-password",
     system: true,

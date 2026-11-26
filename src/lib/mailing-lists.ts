@@ -1,9 +1,9 @@
 /**
- * Mailing lists and their recipients, as skymail-backend `origin/main` serves
+ * Mailing lists and their recipients, as skynotify-backend `origin/main` serves
  * them (`internal/handlers/list.go`, routes under `/mailing_lists` in
  * `main.go`), and as the list screens show them.
  *
- * Two kinds of list share the routes. An internal list lives in SkyMail's
+ * Two kinds of list share the routes. An internal list lives in SkyNotify's
  * database: it can be created, renamed, archived and restored (archived, never
  * deleted — ADR-0042), and its recipients are added and removed here. A
  * Keycloak group is a list too: read-only, its members are the group's
@@ -44,8 +44,8 @@ export const RECIPIENT_PAGE_SIZE = 25;
 
 /** Why a Keycloak group list cannot be changed here. */
 export const GROUP_READ_ONLY_REASON =
-  "Bu liste Keycloak'taki bir gruptan geliyor, bu yüzden SkyMail'de salt okunur. Alıcıları grubun üyeleridir; " +
-  "adı, üyeleri ve kendisi Keycloak'ta yönetilir. SkyMail'de yeniden adlandırılamaz, arşivlenemez, alıcı eklenip çıkarılamaz.";
+  "Bu liste Keycloak'taki bir gruptan geliyor, bu yüzden SkyNotify'da salt okunur. Alıcıları grubun üyeleridir; " +
+  "adı, üyeleri ve kendisi Keycloak'ta yönetilir. SkyNotify'da yeniden adlandırılamaz, arşivlenemez, alıcı eklenip çıkarılamaz.";
 
 /** The same, short enough to stand on a row of the list. */
 export const GROUP_READ_ONLY_NOTE = "Salt okunur: Keycloak'ta yönetilir.";
@@ -72,7 +72,7 @@ export type ListRow = Readonly<{
   archivedAt: string | null;
 }>;
 
-/** Whether SkyMail owns the list. Only `internal` does; an unknown source is treated as read-only. */
+/** Whether SkyNotify owns the list. Only `internal` does; an unknown source is treated as read-only. */
 export function isInternal(list: Pick<MailingList, "source">): boolean {
   return list.source === "internal";
 }
@@ -103,7 +103,7 @@ export type ListActions = Readonly<{
    * archived list.
    */
   compose: boolean;
-  /** A Keycloak group: no one can change it in SkyMail, and every viewer is told so. */
+  /** A Keycloak group: no one can change it in SkyNotify, and every viewer is told so. */
   readOnly: boolean;
 }>;
 
@@ -155,7 +155,7 @@ export async function fetchListPage(
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** List ids are UUIDs, both SkyMail's and Keycloak's. */
+/** List ids are UUIDs, both SkyNotify's and Keycloak's. */
 export function isListId(id: string): boolean {
   return UUID.test(id);
 }

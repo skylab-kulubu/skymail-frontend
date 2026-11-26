@@ -15,7 +15,7 @@ export async function signInWithKeycloak(formData: FormData): Promise<void> {
 }
 
 /**
- * Refreshes the access token now and answers with the `skymail` roles it
+ * Refreshes the access token now and answers with the `skynotify` roles it
  * carries, or null when there is no session or Keycloak refused the refresh
  * (the roles the page already has stay then). The new token goes into the
  * session cookie, so the API calls that follow carry it too.

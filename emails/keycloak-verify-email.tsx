@@ -9,10 +9,10 @@ export const meta: TemplateMeta = {
   system: true,
   contentSensitive: true,
   brand: "account",
-  trigger: "Keycloak, hesap açılışında veya e-posta doğrulanmamışken (sky-account SPI üzerinden SkyMail'e düşer).",
+  trigger: "Keycloak, hesap açılışında veya e-posta doğrulanmamışken (sky-account SPI üzerinden SkyNotify'a düşer).",
   variables: ["link", "linkExpirationMinutes", "firstName", "username", "realmDisplayName", "subjectKey"],
   sensitiveVariables: ["link"],
-  // The verification link; Keycloak's SkyMail provider always passes it.
+  // The verification link; Keycloak's SkyNotify provider always passes it.
   requiredVariables: [{ name: "link", reason: "E-posta doğrulama bağlantısı; kaldırılırsa kişi adresini doğrulayamaz ve mail işe yaramaz." }],
   sample: {
     link: "https://e.yildizskylab.com/realms/skylab/login-actions/action-token?key=ornek",

@@ -1,6 +1,6 @@
 'use client';
 
-// The Teams a Leader mails (ekip-postasi 05): the tree skymail-backend lists,
+// The Teams a Leader mails (ekip-postasi 05): the tree skynotify-backend lists,
 // indented, any number picked. A Sub-team under a picked Team is shown
 // picked and fixed: the Team above reaches its members, and the request
 // leaves it out (ADR 0067 addendum). Each row says how many it reaches; the

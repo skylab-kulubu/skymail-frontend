@@ -1,17 +1,17 @@
 /**
  * The suppression list and the reversal of an unsubscribe (hub ticket
- * abonelik-cikisi 04; ADR 0072 decision 7; skymail-backend #98).
+ * abonelik-cikisi 04; ADR 0072 decision 7; skynotify-backend #98).
  *
  *  - `GET /suppressions` gives both records, `reason` bounce (every stream)
  *    or unsubscribed (the duyuru stream), `?reason=` keeping one.
  *  - An unsubscribed row is reversed only when the person asks or after a
- *    mistake, by one with `skymail:unsubscribes:reactivate`, with a reason of
+ *    mistake, by one with `skynotify:unsubscribes:reactivate`, with a reason of
  *    10–500 characters that names no address
  *    (`POST /suppressions/{id}/reactivate`).
  *  - `GET /suppressions/reactivations` says who reversed one, when and why,
  *    without the address; the same role reads it.
  *
- *  - A bounce row is removed by one with `skymail:suppressions:manage`
+ *  - A bounce row is removed by one with `skynotify:suppressions:manage`
  *    (`DELETE /suppressions/{id}`; skymail-bounce-isleme 08, ADR 0073
  *    decision 7): mail goes to the address again. The same role reads the
  *    bounce rate and the NDR reader's state (`GET /suppressions/bounces`).
@@ -105,13 +105,13 @@ export async function removeSuppression(api: ApiClient, id: string): Promise<voi
 /** A refused removal in words; `reload` when the list no longer holds the row as it was. */
 export function removeRefusal(error: unknown): { text: string; reload: boolean } {
   const refusal = asApiError(error);
-  if (refusal.status === 403) return { text: "Kaldırma yetkin yok (skymail:suppressions:manage).", reload: false };
+  if (refusal.status === 403) return { text: "Kaldırma yetkin yok (skynotify:suppressions:manage).", reload: false };
   if (refusal.status === 404) return { text: "Kayıt artık listede yok.", reload: true };
   if (refusal.code === "suppression.use_reactivate") return { text: refusal.message, reload: true };
   return { text: refusal.message, reload: false };
 }
 
-/** The viewer's suppression roles (skymail-backend main.go registerSuppressionRoutes). */
+/** The viewer's suppression roles (skynotify-backend main.go registerSuppressionRoutes). */
 export type SuppressionPowers = Readonly<{ canManage: boolean; canReactivate: boolean }>;
 
 /** A row's one action: Kaldır on a bounce (manage), Geri al on an unsubscribe (reactivate); null when the viewer may do neither. */
@@ -127,7 +127,7 @@ export function sectionParts(can: SuppressionPowers): { bounceRate: boolean; rea
 
 export const REMOVE_WARNING = "Bu adrese yeniden posta gider. Adres hâlâ yoksa bir sonraki ret onu yeniden listeye alır.";
 
-/** One sender mailbox's last read by the NDR reader (SKYMAIL_BOUNCE_READER). */
+/** One sender mailbox's last read by the NDR reader (SKYNOTIFY_BOUNCE_READER). */
 export type BounceReaderState = Readonly<{
   mailbox: string;
   mode: "dry-run" | "on";
@@ -207,7 +207,7 @@ export async function reactivate(api: ApiClient, id: string, reason: string): Pr
 /** A refused reversal in words; `reload` when the list no longer holds the row as it was. */
 export function reactivateRefusal(error: unknown): { text: string; reload: boolean } {
   const refusal = asApiError(error);
-  if (refusal.status === 403) return { text: "Geri alma yetkin yok (skymail:unsubscribes:reactivate).", reload: false };
+  if (refusal.status === 403) return { text: "Geri alma yetkin yok (skynotify:unsubscribes:reactivate).", reload: false };
   if (refusal.status === 404) return { text: "Kayıt artık listede yok: kişi geri almış ya da hesap silinmiş olabilir.", reload: true };
   if (refusal.code === "suppression.use_delete") return { text: refusal.message, reload: true };
   return { text: refusal.message, reload: false };

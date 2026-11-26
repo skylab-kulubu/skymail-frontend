@@ -24,7 +24,7 @@ interface Contract {
   contentSensitive: boolean;
   variables: string[];
   requiredVariables: string[];
-  /** null: the seed sends no list, and SkyMail keeps the one it has. */
+  /** null: the seed sends no list, and SkyNotify keeps the one it has. */
   sensitiveVariables: string[] | null;
   sampleKeys: string[];
   /** The fields the rendered body reads. */

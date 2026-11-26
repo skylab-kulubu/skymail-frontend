@@ -1,5 +1,5 @@
 /**
- * club.news (duyuru-haber 06): a News record as mail. skymail-backend
+ * club.news (duyuru-haber 06): a News record as mail. skynotify-backend
  * (internal/news Variables) writes the send's variables; core's audience
  * gives each recipient AudienceReason, CategoryLabel and UnsubscribeUrl. The
  * body is the record's whole text with FullBody, else its summary.

@@ -42,9 +42,9 @@ const RECENT = 5;
 export function HomeDashboard() {
   const { roles, confirmRoles, teamSeat } = useConsole();
   const [confirmed, setConfirmed] = useState(false);
-  // The home screen needs only skymail:access; its summary needs mails:read.
+  // The home screen needs only skynotify:access; its summary needs mails:read.
   // One who can do neither has the token refreshed once before the lock.
-  // A Leader without skymail:access (the team seat) sends to their Teams.
+  // A Leader without skynotify:access (the team seat) sends to their Teams.
   const seat = teamSeat !== null && !hasAccess(roles);
   const needsCheck = !seat && homeView(roles) === 'none';
 

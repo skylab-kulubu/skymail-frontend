@@ -1,7 +1,7 @@
 import type { Brand } from "./theme";
 
 /**
- * What the seed script needs in order to put a template into SkyMail, beside
+ * What the seed script needs in order to put a template into SkyNotify, beside
  * the rendered HTML. `sample` is never sent: it is what the preview and the
  * design review render with, so a template is judged with realistic values
  * rather than with its own `{{.placeholders}}`.
@@ -9,7 +9,7 @@ import type { Brand } from "./theme";
 export interface TemplateMeta {
   /** Stable handle a service addresses this template by. */
   key: string;
-  /** Shown in the SkyMail template list. */
+  /** Shown in the SkyNotify template list. */
   name: string;
   /**
    * Rendered by Go's text/template. A variable that is missing at send time
@@ -20,8 +20,8 @@ export interface TemplateMeta {
   /** Protected from archiving, because another service calls it by key. */
   system: boolean;
   /**
-   * Whether SkyMail shows what a send of it said masked: every code and
-   * one-time link hidden by the server, the rest as sent (skymail-backend,
+   * Whether SkyNotify shows what a send of it said masked: every code and
+   * one-time link hidden by the server, the rest as sent (skynotify-backend,
    * 2026-10-13; before, it was not shown at all). True for mail that carries
    * a code, a one-time or account link, a ticket code or a device's address —
    * anything that lets someone who reads it act as the recipient, or that the
@@ -40,7 +40,7 @@ export interface TemplateMeta {
    * The contract Required variables: the few the sending service always passes
    * and the mail cannot do its job without — a reset link, a certificate's
    * VerifyURL — not every variable it sends. The Template seed writes them to
-   * SkyMail, which refuses any save or publish whose body stops referencing
+   * SkyNotify, which refuses any save or publish whose body stops referencing
    * one, and the panel shows them locked, with their reason. Only what the
    * sender's code is known to pass, always, belongs here. Every System
    * template states its set, empty when nothing qualifies or nothing sends it
@@ -49,17 +49,17 @@ export interface TemplateMeta {
   requiredVariables?: RequiredVariable[];
   /**
    * The variables that carry a code or a one-time link, at the top level,
-   * sorted. The Template seed writes them to SkyMail's `sensitive_variables`,
+   * sorted. The Template seed writes them to SkyNotify's `sensitive_variables`,
    * and a sensitive send's masking hides each one whole, whatever its name or
-   * shape (skymail-backend #65); the rest stay readable. List only what
-   * SkyMail already masks by name: a list makes masking certain, it must not
+   * shape (skynotify-backend #65); the rest stay readable. List only what
+   * SkyNotify already masks by name: a list makes masking certain, it must not
    * hide more (sensitive-variables.test.ts). Left out, the seed sends nothing
-   * and SkyMail keeps the list the template has; [] clears it.
+   * and SkyNotify keeps the list the template has; [] clears it.
    */
   sensitiveVariables?: string[];
   sample: Record<string, unknown>;
   /**
-   * The Notification type of the same key (skymail-backend
+   * The Notification type of the same key (skynotify-backend
    * docs/notifications.md, ADR 0070), for a template a service sends through
    * `POST /v1/notifications`: the seed writes it after the template with
    * `PUT /v1/notification_types/{key}`. Left out, the template is no

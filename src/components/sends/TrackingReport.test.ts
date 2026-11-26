@@ -47,7 +47,7 @@ const SUMMARY: TrackingSummary = {
 };
 
 describe("counts withheld from the reader", () => {
-  // skymail-backend GetTracking: a send to fewer than 10 tracked people, or
+  // skynotify-backend GetTracking: a send to fewer than 10 tracked people, or
   // mail the system sends, to one who may not read its people.
   for (const retained of [false, true]) {
     it(`says why there are no counts, and shows none${retained ? ", a year on too" : ""}`, () => {
@@ -63,7 +63,7 @@ describe("counts withheld from the reader", () => {
 });
 
 describe("the sender of their own send without the recipients", () => {
-  // skymail-backend: SKYMAIL_SENDER_SEES_RECIPIENTS off (the default), the
+  // skynotify-backend: SKYNOTIFY_SENDER_SEES_RECIPIENTS off (the default), the
   // sender reads the counts only (ADR-0074 addendum 2026-11-08).
   const body = (people: "counts_only" | "none") =>
     text(render(createElement(TrackingBody, { summary: { ...SUMMARY, recipients_readable: false }, people, sendId: "b1c2d3e4-0000-4000-8000-000000000001" })));
@@ -77,11 +77,11 @@ describe("the sender of their own send without the recipients", () => {
   });
 
   it("names no role", () => {
-    assert.doesNotMatch(TRACKING_COUNTS_ONLY_TEXT, /skymail|tracking|:read/i);
+    assert.doesNotMatch(TRACKING_COUNTS_ONLY_TEXT, /skynotify|tracking|:read/i);
   });
 
   it("speaks of per-person opens and clicks, not the recipient list", () => {
-    // skymail:mails:read still sees the recipients and their delivery status
+    // skynotify:mails:read still sees the recipients and their delivery status
     // in the queue; only per-person opens and clicks need the tracking role.
     assert.match(TRACKING_COUNTS_ONLY_TEXT, /Kişi bazında açılma ve tıklama/);
     assert.doesNotMatch(TRACKING_COUNTS_ONLY_TEXT, /Alıcı listesi/);

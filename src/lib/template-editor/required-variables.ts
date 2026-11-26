@@ -155,7 +155,7 @@ export function requiredPanel({
 export type PanelProblem = Readonly<{ text: string; blockers: readonly MissingVariable[] }>;
 
 const PUBLISH_FIRST =
-  "SkyMail yalnız yayımlanmış gövdenin başvurduğu değişkeni zorunlu işaretler; ona başvuran taslağı yayımladıktan sonra işaretleyebilirsin.";
+  "SkyNotify yalnız yayımlanmış gövdenin başvurduğu değişkeni zorunlu işaretler; ona başvuran taslağı yayımladıktan sonra işaretleyebilirsin.";
 
 /**
  * Why marking or releasing `name` failed. Marking is refused by what the
@@ -177,7 +177,7 @@ export function requiredVariableProblem(error: unknown, name: string): PanelProb
       }
       if (others.length > 0) {
         return said(
-          `${variable} işaretlenemedi: SkyMail her işaretlemede bütün Required variable'ları gönderilen maile karşı denetler, ve gönderilen mail şunlara başvurmuyor. Önce onlara başvuran bir sürümü yayımla.`,
+          `${variable} işaretlenemedi: SkyNotify her işaretlemede bütün Required variable'ları gönderilen maile karşı denetler, ve gönderilen mail şunlara başvurmuyor. Önce onlara başvuran bir sürümü yayımla.`,
           others,
         );
       }
@@ -185,7 +185,7 @@ export function requiredVariableProblem(error: unknown, name: string): PanelProb
     }
     case "template.unparseable":
       return said(
-        "Gönderilen gövde mailer'ın okuyabileceği bir Go template değil; SkyMail değişkenlerini okuyamadığı için zorunlu işaretleyemiyor.",
+        "Gönderilen gövde mailer'ın okuyabileceği bir Go template değil; SkyNotify değişkenlerini okuyamadığı için zorunlu işaretleyemiyor.",
       );
     // Releasing one the contract took over since the panel was loaded.
     case "template.required_variable_in_contract":

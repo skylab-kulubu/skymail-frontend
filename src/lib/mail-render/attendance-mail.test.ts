@@ -1,7 +1,7 @@
 /**
  * The door mails (kapi-postalari 07; SPEC §5.2): the welcome on the day's first
  * scan, the receipt for each session check-in and the day's summary. core
- * sends every variable every time (SkyMail renders with missingkey=error);
+ * sends every variable every time (SkyNotify renders with missingkey=error);
  * lists are ranged over, so inside a range .Title, .Time and .Attended are the
  * element's. Words are Yusuf's (2026-11-24, K5): "'<Oturum>' oturumuna
  * katılımın alındı. <N> oturumdan <x> tanesine katıldın; sertifika için <M>
@@ -36,7 +36,7 @@ const text = (html: string) =>
 
 const CORE: Record<string, string[]> = {
   "event.attendance-welcome": [
-    "AttendeeNote", "Attended", "CertificateLine", "CountedTotal", "DayLabel", "EventId", "EventName", "FirstName",
+    "AttendeeNote", "AttendeeNoteParts", "Attended", "CertificateLine", "CountedTotal", "DayLabel", "EventId", "EventName", "FirstName",
     "MinRequired", "MissedRequired", "MissingRequired", "OwnerTeam", "Program", "Recorded",
   ],
   "event.attendance-recorded": [
@@ -104,10 +104,10 @@ describe("the door mails", () => {
 });
 
 describe("the welcome (event.attendance-welcome)", () => {
-  it("masks its content and the note whole, since the note may hold the Wi-Fi password", async () => {
+  it("masks no variable (ADR-0074, 2026-11-24 ek): the empty list clears an earlier seed's", async () => {
     const { meta } = await rendered("event.attendance-welcome");
-    assert.equal(meta.contentSensitive, true);
-    assert.deepEqual(meta.sensitiveVariables, ["AttendeeNote"]);
+    assert.equal(meta.contentSensitive, false);
+    assert.deepEqual(meta.sensitiveVariables, []);
   });
 
   it("shows the programme, the note with its line breaks and the certificate line only when set", async () => {
@@ -118,7 +118,17 @@ describe("the welcome (event.attendance-welcome)", () => {
         assert.ok(actions.includes(block), `${block} yok`);
       }
     }
-    assert.match(html, /white-space:pre-wrap[^>]*>\s*\{\{\.AttendeeNote\}\}/);
+    // The note keeps its lines and makes its web addresses links (core cuts it at them)
+    const gap = String.raw`(?:\s|<!-- -->)*`;
+    assert.match(
+      html,
+      new RegExp(
+        String.raw`white-space:pre-wrap[^>]*>` + gap +
+          String.raw`\{\{range \.AttendeeNoteParts\}\}` + gap + String.raw`\{\{if \.Url\}\}` + gap +
+          String.raw`<a[^>]*href="\{\{\.Url\}\}"[^>]*>\{\{\.Text\}\}</a>` + gap + String.raw`\{\{else\}\}` + gap +
+          String.raw`\{\{\.Text\}\}` + gap + String.raw`\{\{end\}\}` + gap + String.raw`\{\{end\}\}`,
+      ),
+    );
     assert.match(html, /\{\{range \.Program\}\}[\s\S]*\{\{\.Time\}\}[\s\S]*\{\{\.Title\}\}[\s\S]*\{\{end\}\}/);
   });
 
@@ -133,7 +143,7 @@ describe("the welcome (event.attendance-welcome)", () => {
 
   it("reads as a greeting and the day's rows when every list and note is empty", async () => {
     const { meta, html } = await rendered("event.attendance-welcome");
-    const empty = { ...meta.sample, Program: [], AttendeeNote: "", CertificateLine: "", Recorded: [], MissingRequired: [], DayLabel: "" };
+    const empty = { ...meta.sample, Program: [], AttendeeNote: "", AttendeeNoteParts: [], CertificateLine: "", Recorded: [], MissingRequired: [], DayLabel: "" };
     const body = text(fillSampleValues(html, empty));
     assert.match(body, /Merhaba Elif\s*, GECEKODU 2026 girişin alındı\./);
     assert.doesNotMatch(body, /Günün programı|Bilmen gerekenler|Sertifika için|Katılımın alındı|Gün /);

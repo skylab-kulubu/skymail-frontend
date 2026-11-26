@@ -1,5 +1,5 @@
 /**
- * Who built SkyMail. The Refine panel signed this on its sign-in screen
+ * Who built SkyNotify. The Refine panel signed this on its sign-in screen
  * until the Next.js rewrite (#25) dropped it; Forms and the e-skylab sign-in
  * page carry the same "Developed by" line. It sits under the sign-in task and
  * at the foot of the sidebar.

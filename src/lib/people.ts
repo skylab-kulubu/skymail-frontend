@@ -2,8 +2,8 @@
  * People as every screen names them, Silinmiş kullanıcı among them (ADR-0051,
  * CONTEXT.md; ticket 27).
  *
- * Erasing an account keeps SkyMail's records and takes the person out of them
- * (skymail-backend #34, `internal/database/account_erasure.go`):
+ * Erasing an account keeps SkyNotify's records and takes the person out of them
+ * (skynotify-backend #34, `internal/database/account_erasure.go`):
  *
  *  - who sent, submitted, decided, wrote or archived something holds one
  *    fixed subject, the same for everyone erased; a name kept beside it is

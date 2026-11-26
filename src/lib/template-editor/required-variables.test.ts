@@ -321,7 +321,7 @@ describe("marking and releasing through the API", () => {
     params: { missing: entries },
   });
   const PUBLISH_FIRST =
-    "SkyMail yalnız yayımlanmış gövdenin başvurduğu değişkeni zorunlu işaretler; ona başvuran taslağı yayımladıktan sonra işaretleyebilirsin.";
+    "SkyNotify yalnız yayımlanmış gövdenin başvurduğu değişkeni zorunlu işaretler; ona başvuran taslağı yayımladıktan sonra işaretleyebilirsin.";
 
   it("says in Turkish that a contract variable cannot be released", async () => {
     const error = await releaseRefused("link", 409, { code: "template.required_variable_in_contract", params: { name: "link" } });
@@ -345,7 +345,7 @@ describe("marking and releasing through the API", () => {
     // The server checks the whole set against the published body, the new one included.
     const error = await markRefused("username", 422, missing({ name: "link", source: "contract", reason: RESET_REASON }));
     assert.deepEqual(requiredVariableProblem(error, "username"), {
-      text: "{{.username}} işaretlenemedi: SkyMail her işaretlemede bütün Required variable'ları gönderilen maile karşı denetler, ve gönderilen mail şunlara başvurmuyor. Önce onlara başvuran bir sürümü yayımla.",
+      text: "{{.username}} işaretlenemedi: SkyNotify her işaretlemede bütün Required variable'ları gönderilen maile karşı denetler, ve gönderilen mail şunlara başvurmuyor. Önce onlara başvuran bir sürümü yayımla.",
       blockers: [{ name: "link", source: "contract", why: RESET_REASON }],
     });
   });
@@ -373,7 +373,7 @@ describe("marking and releasing through the API", () => {
   it("says a published body the mailer cannot parse has no variables to mark", async () => {
     const error = await markRefused("link", 422, { code: "template.unparseable", params: { part: "html", error: "x" } });
     assert.deepEqual(requiredVariableProblem(error, "link"), {
-      text: "Gönderilen gövde mailer'ın okuyabileceği bir Go template değil; SkyMail değişkenlerini okuyamadığı için zorunlu işaretleyemiyor.",
+      text: "Gönderilen gövde mailer'ın okuyabileceği bir Go template değil; SkyNotify değişkenlerini okuyamadığı için zorunlu işaretleyemiyor.",
       blockers: [],
     });
   });

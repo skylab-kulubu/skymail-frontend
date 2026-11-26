@@ -45,9 +45,9 @@ export default function Probe() {
 }
 `;
 
-test("a template's code cannot reach the operator's session", async ({ page, context, skymail, signIn }) => {
+test("a template's code cannot reach the operator's session", async ({ page, context, skynotify, signIn }) => {
   await signIn("writer");
-  const { id } = skymail.addTemplate({
+  const { id } = skynotify.addTemplate({
     name: "Zararsız görünen template",
     subject: "Merhaba",
     mainMode: "jsx",
@@ -106,17 +106,17 @@ test("a template's code cannot reach the operator's session", async ({ page, con
   expect(session?.error).toBeUndefined();
   const own = await page.evaluate(() => fetch("/api/auth/session").then((response) => response.json()));
   expect(own.user?.name).toBe("DENEME OPERATÖR");
-  expect(skymail.requests.every((request) => request.authorized && !request.frameUrl.includes("/render-sandbox/"))).toBe(true);
+  expect(skynotify.requests.every((request) => request.authorized && !request.frameUrl.includes("/render-sandbox/"))).toBe(true);
   await page.getByLabel("Konu").fill("Merhaba, oturum hâlâ yerinde");
   await page.getByRole("button", { name: "Taslağı kaydet" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Taslak kaydedildi" })).toBeVisible();
-  expect(skymail.writes().at(-1)?.authorized).toBe(true);
+  expect(skynotify.writes().at(-1)?.authorized).toBe(true);
 });
 
-test("a script in an HTML body does not run in the preview", async ({ page, skymail, signIn }) => {
+test("a script in an HTML body does not run in the preview", async ({ page, skynotify, signIn }) => {
   await signIn("writer");
   const html = `<!DOCTYPE html><html><body><p id="text">durağan metin</p><script>document.getElementById("text").textContent = "script çalıştı"; parent.document.title = "ele geçirildi";</script></body></html>`;
-  const { id } = skymail.addTemplate({
+  const { id } = skynotify.addTemplate({
     name: "Script taşıyan gövde",
     subject: "Merhaba",
     mainMode: "html",
@@ -143,9 +143,9 @@ export default function Mail() {
 }
 `;
 
-test("a template stuck in a loop is stopped, and the editor stays usable", async ({ page, skymail, signIn }) => {
+test("a template stuck in a loop is stopped, and the editor stays usable", async ({ page, skynotify, signIn }) => {
   await signIn("writer");
-  const { id } = skymail.addTemplate({
+  const { id } = skynotify.addTemplate({
     name: "Takılan template",
     subject: "Merhaba",
     mainMode: "jsx",

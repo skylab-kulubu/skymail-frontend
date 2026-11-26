@@ -36,7 +36,7 @@ const BROKEN_JSX = "export default () => <Text>";
 const HTML = "<p>Merhaba {{.FirstName}}</p>";
 
 const VISUAL_DOCUMENT: VisualDocument = {
-  type: "skymail.visual",
+  type: "skynotify.visual",
   version: 1,
   blocks: [
     { type: "heading", content: [{ type: "text", text: "Merhaba " }, { type: "variable", name: "FirstName" }] },
@@ -47,7 +47,7 @@ const VISUAL = visualSource(VISUAL_DOCUMENT);
 
 /** The document as jsonb hands it back: the same, keys in another order. */
 const FROM_JSONB = JSON.parse(
-  '{"type":"skymail.visual","blocks":[{"content":[{"text":"Merhaba ","type":"text"},{"name":"FirstName","type":"variable"}],"type":"heading"},{"link":{"variable":"TicketUrl"},"type":"button","label":"Bilete git"}],"version":1}',
+  '{"type":"skynotify.visual","blocks":[{"content":[{"text":"Merhaba ","type":"text"},{"name":"FirstName","type":"variable"}],"type":"heading"},{"link":{"variable":"TicketUrl"},"type":"button","label":"Bilete git"}],"version":1}',
 );
 
 function summary(overrides: Partial<TemplateVersionSummary> = {}): TemplateVersionSummary {
@@ -147,7 +147,7 @@ describe("what the editor holds of a version", () => {
   // An unknown block is never dropped on the way in: the render says what is
   // wrong, and a save that does not touch the source sends it back as it came.
   it("holds a Visual document the panel cannot read as it came", () => {
-    const unknown = { type: "skymail.visual", version: 1, blocks: [{ type: "quote", text: "x" }] };
+    const unknown = { type: "skynotify.visual", version: 1, blocks: [{ type: "quote", text: "x" }] };
     const stored = storedFromVersion(version({ visual_source: unknown }), "Hoş geldin");
     assert.deepEqual(JSON.parse(stored.sources.visual ?? "null"), unknown);
   });
@@ -220,7 +220,7 @@ describe("a save", () => {
     assert.match((!plan.ok && plan.blockers[0].message) || "", /önizlemesi henüz hazır değil/);
   });
 
-  // ADR-0045: a System template's wording is edited in SkyMail, and the stored
+  // ADR-0045: a System template's wording is edited in SkyNotify, and the stored
   // body of one the panel cannot render goes back unchanged.
   it("keeps the stored body of a Main source nobody touched, even one the panel cannot render", async () => {
     const stored = storedFromVersion(version({ jsx_source: BROKEN_JSX }), "Hoş geldin");

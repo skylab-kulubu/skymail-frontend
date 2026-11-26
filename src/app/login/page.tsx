@@ -37,7 +37,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     <AuthScreen
       Icon={LogIn}
       title="Giriş"
-      description="İletişim konsoluna SKY LAB hesabınla giriş yaparsın; diğer kulüp konsollarıyla aynı hesap."
+      description="SkyNotify konsoluna SKY LAB hesabınla giriş yaparsın; diğer kulüp konsollarıyla aynı hesap."
       actions={
         <form action={signInWithKeycloak} className="w-full">
           <input type="hidden" name="callbackUrl" value={callbackUrl} />
