@@ -15,7 +15,7 @@ export const meta: TemplateMeta = {
     "core-backend, kontenjanı dolu bir etkinliğe yapılan kayıt bekleme listesine yazılınca kişiye (TICKET_STATUS_MAIL=on; docs/ticket-status-mail.md, ticket_mails kuyruğu, tür waitlisted): uygulamadan, herkese açık kayıttan ya da kabul edilen Forms cevabından. Yer açılınca sıradaki kişi kendiliğinden bilet alır ve event.waitlist-promoted gider. Üyeye bildirim olarak (POST /v1/notifications: kutu + e-posta), misafire yalnız bu e-posta (POST /v1/mail_tasks/single). TICKET_PAGE_URL açıkken core TicketUrl'yi (bilet sayfası, listeden çıkma orada) gönderir; kapalıyken boş gelir ve bağlantı görünmez. EventId yalnız kutu bağlantısı içindir.",
   // core-backend kontenjan-iptal-hatirlatma 04/06: the event's rows as
   // event.ticket-created has them, and the waiting Ticket's page.
-  variables: ["EventId", "EventName", "EventDate", "Venue", "OwnerTeam", "TicketUrl"],
+  variables: ["EventId", "EventName", "EventDate", "Venue", "OwnerTeam", "TicketUrl", "Theme", "EventBannerUrl"],
   sensitiveVariables: ["TicketUrl"],
   notification: {
     category: null,
@@ -35,13 +35,16 @@ export const meta: TemplateMeta = {
     Venue: "YTÜ Davutpaşa Kampüsü, D-Blok",
     OwnerTeam: "WEBLAB",
     TicketUrl: "https://yildizskylab.com/bilet/7Q2MK4XRWZ3HN5TJVB6PDYCGEA",
+    // The club's own look; "artlab" previews the ARTLAB theme.
+    Theme: "",
+    EventBannerUrl: "",
   },
 };
 
 /** Yusuf, 2026-11-24: a freed place goes to the next person on the list by itself, with a mail. */
 export default function EventWaitlistJoined() {
   return (
-    <Shell preview={`${v("EventName")}: bekleme listesindesin.`} brand="skylab" reason={null}>
+    <Shell preview={`${v("EventName")}: bekleme listesindesin.`} brand="skylab" reason={null} themed>
       <Context tone="wait">{v("EventName")}</Context>
       <Title>Bekleme Listesindesin</Title>
 

@@ -14,7 +14,7 @@ export const meta: TemplateMeta = {
   trigger:
     "core-backend (üyeye Bildirim olarak: e-posta + kutu; misafire yalnız e-posta), ilk geri bildirim postasından 3 gün sonra, tek sefer, henüz cevaplanmamış ve iptal edilmemiş formlarla; kişi başına günde tek posta (ADR-0069).",
   // Same shape as core.feedback-request: Items { Title, URL }, same links.
-  variables: ["FirstName", "EventName", "Items", "EventId"],
+  variables: ["FirstName", "EventName", "Items", "EventId", "Theme", "EventBannerUrl"],
   requiredVariables: [{ name: "Items", reason: "Formların başlığı ve kişiye özel bağlantısı; kaldırılırsa posta forma ulaştırmaz." }],
   // A member gets it as a Notification (POST /v1/notifications), so it also
   // lands in the inbox; a guest by e-mail alone. The inbox item names the
@@ -36,6 +36,9 @@ export const meta: TemplateMeta = {
     EventName: "GECEKODU 2026",
     EventId: "6f1c2b9e-4d3a-4b7e-9a51-0c8d2e7f4a19",
     Items: [{ Title: "GECEKODU 2026", URL: "https://forms.yildizskylab.com/3f2a9c1e-7b4d-4e8a-9f61-2c5d8e0a4b17?davet=q8Zr2LkV0xNw4TfH6yPa1c" }],
+    // The club's own look; "artlab" previews the ARTLAB theme.
+    Theme: "",
+    EventBannerUrl: "",
   },
 };
 
@@ -45,7 +48,7 @@ export const meta: TemplateMeta = {
  */
 export default function CoreFeedbackReminder() {
   return (
-    <Shell preview={`${v("EventName")} geri bildirim formu.`} brand="skylab" reason={null}>
+    <Shell preview={`${v("EventName")} geri bildirim formu.`} brand="skylab" reason={null} themed>
       <Context>Hatırlatma</Context>
       <Title>Geri Bildirim</Title>
 

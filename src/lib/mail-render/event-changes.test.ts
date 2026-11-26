@@ -44,10 +44,11 @@ async function received(key: string, vars: Record<string, unknown> = {}) {
 /**
  * What core-backend passes: internal/eventupdatenotify changedVars (+ TicketUrl
  * and TicketCode from withTicket while TICKET_PAGE_URL is set) and
- * internal/doorstaffmail vars.
+ * internal/doorstaffmail vars; Theme and EventBannerUrl to event.changed
+ * (etkinlik teması, core #476).
  */
 const CORE: Record<string, string[]> = {
-  "event.changed": ["ChangeSummary", "ChangedFields", "EventId", "EventName", "StartsAt", "TicketCode", "TicketUrl", "Venue"],
+  "event.changed": ["ChangeSummary", "ChangedFields", "EventBannerUrl", "EventId", "EventName", "StartsAt", "Theme", "TicketCode", "TicketUrl", "Venue"],
   "event.door-staff-added": ["DoorUrl", "EndsAt", "EventId", "EventName", "FirstName", "StartsAt", "Venue"],
 };
 
