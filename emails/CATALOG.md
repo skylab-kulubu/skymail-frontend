@@ -25,12 +25,12 @@ zaman verdiği değişkenler kullanılır.
 | Keycloak · E-posta Kodu Sınır Alarmı 🔒 | `keycloak.login-code-alarm` | {{if eq .subjectKey `skyLoginCodeAlarmFullSubject`}}SKY LAB: e-posta kodu gönderimi günlük sınıra ulaştı{{else if eq .subjectKey `skyLoginCodeAlarmCeilingSubject`}}SKY LAB: bir hesap e-posta kodunda günlük yanlış kod tavanına ulaştı{{else if eq .subjectKey `skyLoginCodeAlarmConsecutiveSubject`}}SKY LAB: bir hesap ardışık 100 yanlış e-posta koduna ulaştı{{else}}SKY LAB: e-posta kodu gönderimi günlük sınırın yarısında{{end}} | `realmDisplayName`, `subjectKey` |
 | Keycloak · Genel Sistem Postası 🔒 🙈 | `keycloak.generic` | SKY LAB hesap bildirimi | `link`, `linkExpirationMinutes`, `firstName`, `username`, `realmDisplayName`, `subjectKey` |
 | Hoş Geldin 🔒 | `core.welcome` | SKY LAB'e hoş geldin | `FirstName`, `LastName`, `Email`, `Username`, `SchoolEmail`, `SkyNumber`, `CreatedAt` |
-| Katılım Sertifikası 🔒 | `core.certificate` | Katılım sertifikan hazır | `FirstName`, `EventName`, `VerifyURL`, `Serial`, `OwnerTeam` |
+| Katılım Sertifikası 🔒 | `core.certificate` | Katılım sertifikan hazır | `FirstName`, `EventName`, `VerifyURL`, `Serial`, `OwnerTeam`, `Theme`, `EventBannerUrl` |
 | Katılım Kendiliğinden Kapandı 🔒 | `core.certificate-auto-finalized` | {{.EventName}}: katılım kapandı | `FirstName`, `EventName`, `EventId`, `CertificateCount`, `OwnerTeam` |
 | Etkinlik İptali 🔒 | `core.event-cancelled` | {{.EventName}} iptal edildi | `EventName`, `EventStart`, `CancelReason`, `FirstName` |
 | Etkinlik Yeniden Yayında 🔒 | `core.event-reinstated` | {{.EventName}} yeniden yayında | `EventName`, `EventStart`, `FirstName` |
-| Geri Bildirim İsteği 🔒 🙈 | `core.feedback-request` | {{.EventName}} geri bildirim formu | `FirstName`, `EventName`, `Items`, `EventId` |
-| Geri Bildirim Hatırlatması 🔒 🙈 | `core.feedback-reminder` | Hatırlatma: {{.EventName}} geri bildirim formu | `FirstName`, `EventName`, `Items`, `EventId` |
+| Geri Bildirim İsteği 🔒 🙈 | `core.feedback-request` | {{.EventName}} geri bildirim formu | `FirstName`, `EventName`, `Items`, `EventId`, `Theme`, `EventBannerUrl` |
+| Geri Bildirim Hatırlatması 🔒 🙈 | `core.feedback-reminder` | Hatırlatma: {{.EventName}} geri bildirim formu | `FirstName`, `EventName`, `Items`, `EventId`, `Theme`, `EventBannerUrl` |
 | İletişim İzni Onayı 🔒 🙈 | `core.contact-consent-confirm` | {{if eq .purpose `event_invitations`}}SKY LAB duyuru iznini onayla{{else if eq .purpose `promotional`}}SKY LAB tanıtım e-postası iznini onayla{{else}}SKY LAB iznini onayla{{end}} | `confirmUrl`, `withdrawUrl`, `purpose` |
 | Ekip Sayfası İzni Bildirimi 🔒 | `core.team-page-consent-notice` | Ekip sayfalarında görünürlüğün | `FirstName`, `Teams`, `HideAt`, `SettingsURL`, `Board` |
 | Hesap Güvenlik Bildirimi 🔒 🙈 | `account.security-alert` | SKY LAB hesabında: {{.EventTitle}} | `EventTitle`, `EventDetail`, `OccurredAt`, `DeviceLabel`, `IpAddress`, `Location`, `SecureAccountUrl` |
@@ -38,11 +38,11 @@ zaman verdiği değişkenler kullanılır.
 | Hesap Silme Talebi Alındı 🔒 🙈 | `account.deletion-requested` | Hesap silme talebin alındı | `Deadline` |
 | Hesap Silindi 🔒 🙈 | `account.deletion-completed` | SKY LAB hesabın silindi | — |
 | Hesap Silme Sürüyor (kayıt denemesi) 🔒 🙈 | `account.deletion-in-progress` | Bu adresin hesabı siliniyor | — |
-| Etkinlik · Bilet Oluşturuldu 🙈 | `event.ticket-created` | {{.EventName}} biletin hazır | `EventName`, `EventDate`, `Venue`, `TicketQrUrl`, `TicketCode`, `TicketUrl`, `OwnerTeam`, `EventUrl` |
-| Etkinlik · Hatırlatma 🙈 | `event.reminder` | Yarın: {{.EventName}} | `EventId`, `EventName`, `StartsAt`, `Venue`, `OwnerTeam`, `TicketUrl`, `TicketQrUrl`, `TicketCode`, `MapUrl` |
-| Etkinlik · Güncellendi 🙈 | `event.updated` | {{.EventName}} etkinliğinde değişiklik var | `EventName`, `ChangeSummary`, `NewStartsAt`, `NewEndsAt`, `NewVenue`, `TicketQrUrl`, `TicketCode`, `TicketUrl`, `EventUrl` |
+| Etkinlik · Bilet Oluşturuldu 🙈 | `event.ticket-created` | {{.EventName}} biletin hazır | `EventName`, `EventDate`, `Venue`, `TicketQrUrl`, `TicketCode`, `TicketUrl`, `OwnerTeam`, `EventUrl`, `Theme`, `EventBannerUrl` |
+| Etkinlik · Hatırlatma 🙈 | `event.reminder` | Yarın: {{.EventName}} | `EventId`, `EventName`, `StartsAt`, `Venue`, `OwnerTeam`, `TicketUrl`, `TicketQrUrl`, `TicketCode`, `MapUrl`, `Theme`, `EventBannerUrl` |
+| Etkinlik · Güncellendi 🙈 | `event.updated` | {{.EventName}} etkinliğinde değişiklik var | `EventName`, `ChangeSummary`, `NewStartsAt`, `NewEndsAt`, `NewVenue`, `TicketQrUrl`, `TicketCode`, `TicketUrl`, `EventUrl`, `Theme`, `EventBannerUrl` |
 | Etkinlik · Ayrıntılar Değişti | `event.changed` | {{.EventName}} etkinliğinde değişiklik var | `EventId`, `EventName`, `ChangedFields`, `ChangeSummary`, `StartsAt`, `Venue`, `TicketCode`, `TicketUrl` |
-| Etkinlik · Bilet İptal Edildi | `event.ticket-cancelled` | {{.EventName}} biletin iptal edildi | `EventId`, `EventName`, `EventDate`, `OwnerTeam`, `CancelledBy`, `Reason` |
+| Etkinlik · Bilet İptal Edildi | `event.ticket-cancelled` | {{.EventName}} biletin iptal edildi | `EventId`, `EventName`, `EventDate`, `OwnerTeam`, `CancelledBy`, `Reason`, `Theme`, `EventBannerUrl` |
 | Etkinlik · Bekleme Listesi 🙈 | `event.waitlist-joined` | {{.EventName}}: bekleme listesindesin | `EventId`, `EventName`, `EventDate`, `Venue`, `OwnerTeam`, `TicketUrl` |
 | Etkinlik · Bekleme Listesinden Bilet 🙈 | `event.waitlist-promoted` | Yer açıldı: {{.EventName}} biletin hazır | `EventId`, `EventName`, `EventDate`, `Venue`, `TicketQrUrl`, `TicketCode`, `TicketUrl`, `OwnerTeam` |
 | Etkinlik · Kontenjan Doldu | `event.registration-full` | {{.EventName}} kontenjanı doldu | `EventId`, `EventName`, `EventDate`, `OwnerTeam` |

@@ -9,8 +9,9 @@
  *  - `.X` and `$.X` become the sample value, HTML-escaped as html/template
  *    would, or «X» when there is none; `safeHTML .X` goes in as markup;
  *  - `if` with a single field, `not` a single field or an `eq` against
- *    literals shows the branch the sample values select, `else if` and `else`
- *    included; any other condition shows as true;
+ *    literals, or `and` of those (`and .X (eq .X "a")`, the guarded test the
+ *    event theme uses), shows the branch the sample values select, `else if`
+ *    and `else` included; any other condition shows as true;
  *  - `len .X` prints how many elements a list sample value has;
  *  - an action holding only a literal prints it (the Visual editor writes
  *    braces an operator typed as {{`{{`}});
@@ -42,6 +43,8 @@ export const SAFE_HTML = new RegExp(String.raw`^safeHTML\s+\$?\.(${NAME})$`, "u"
 const LEN_FIELD = new RegExp(String.raw`^len\s+\$?\.(${NAME})$`, "u");
 const NOT_FIELD = new RegExp(String.raw`^not\s+\$?\.(${NAME})$`, "u");
 const EQ = new RegExp(String.raw`^eq\s+\$?\.(${NAME})\s+([\s\S]+)$`, "u");
+/** `and` of a field and one condition in parentheses: the field in group 1, the condition in group 2. */
+const AND_GUARDED = new RegExp(String.raw`^and\s+(\$?\.${NAME})\s+\(([^()]+)\)$`, "u");
 const LITERAL = /"(?:[^"\\\n]|\\.)*"|`[^`]*`|[+-]?\d+(?:\.\d+)?/gy;
 
 const escapeHtml = (text: string) =>
@@ -76,6 +79,10 @@ function literals(text: string): string[] | null {
 }
 
 function holds(condition: string, sample: SampleValues): boolean {
+  const and = AND_GUARDED.exec(condition);
+  if (and) {
+    return holds(and[1], sample) && holds(and[2].trim(), sample);
+  }
   const field = ONLY_FIELD.exec(condition);
   if (field) {
     return truthy(sample[field[1]]);

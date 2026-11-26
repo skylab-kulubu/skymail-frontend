@@ -102,6 +102,24 @@ describe("a preview with sample values", () => {
       sample: { K: "}}" },
       expect: "kapanış.",
     },
+    {
+      name: "and of a field and an eq it guards, with the field set",
+      body: "{{if and .Theme (eq .Theme `artlab`)}}bant{{else}}kulüp{{end}}",
+      sample: { Theme: "artlab" },
+      expect: "bant",
+    },
+    {
+      name: "and of a field and an eq it guards, with another value",
+      body: "{{if and .Theme (eq .Theme `artlab`)}}bant{{else}}kulüp{{end}}",
+      sample: { Theme: "default" },
+      expect: "kulüp",
+    },
+    {
+      name: "and of a field and an eq it guards, with no value",
+      body: "{{if and .Theme (eq .Theme `artlab`)}}bant{{end -}}  kulüp",
+      sample: {},
+      expect: "kulüp",
+    },
   ];
 
   for (const { name, body, sample, expect } of conditions) {
