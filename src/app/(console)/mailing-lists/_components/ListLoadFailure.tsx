@@ -1,8 +1,9 @@
 import Link from 'next/link';
-import { AlertTriangle, SearchX } from 'lucide-react';
+import { SearchX } from 'lucide-react';
 import { Button, StateCard } from '@skylab-kulubu/skylcn-ui';
 import type { ApiError } from '@/lib/api/errors';
 import { listHref } from '@/lib/mailing-lists';
+import { loadFailureArt } from '@/components/common/load-failure';
 
 /**
  * A list that would not load. A 404 is a missing or archived list — every
@@ -29,7 +30,7 @@ export function ListLoadFailure({ error, onRetry }: { error: ApiError; onRetry: 
     );
   }
   return (
-    <StateCard icon={AlertTriangle} tone="danger" title="Liste yüklenemedi" description={error.message}>
+    <StateCard {...loadFailureArt(error)} tone="danger" title="Liste yüklenemedi" description={error.message}>
       <Button variant="outline" onClick={onRetry}>
         Tekrar dene
       </Button>

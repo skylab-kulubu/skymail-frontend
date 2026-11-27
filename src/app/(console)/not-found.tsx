@@ -1,15 +1,6 @@
-'use client';
+import { ErrorScenePage } from '@skylab-kulubu/skylcn-ui';
 
-import Link from 'next/link';
-import { SearchX } from 'lucide-react';
-import { StateCard } from '@skylab-kulubu/skylcn-ui';
-
+/** A missing page inside the console: the 404 scene, as a block in the shell (its title is the page's h1). */
 export default function NotFound() {
-  return (
-    <StateCard icon={SearchX} title="Sayfa bulunamadı" description="Bu adreste bir sayfa yok.">
-      <Link href="/" className="text-skylab-300 text-sm hover:underline">
-        Ana sayfaya dön
-      </Link>
-    </StateCard>
-  );
+  return <ErrorScenePage kind="notFound" href="/" as="div" />;
 }

@@ -10,6 +10,7 @@ import { DeveloperCredit } from '@/components/auth/DeveloperCredit';
  */
 export function AuthScreen({
   Icon,
+  top,
   tone = 'brand',
   title,
   description,
@@ -17,6 +18,8 @@ export function AuthScreen({
   children,
 }: {
   Icon?: LucideIcon;
+  /** A picture above the title in place of the icon, such as an error scene. */
+  top?: ReactNode;
   tone?: 'brand' | 'warning';
   title: string;
   description?: ReactNode;
@@ -27,6 +30,7 @@ export function AuthScreen({
   return (
     <TaskPage
       icon={Icon}
+      top={top}
       tone={tone}
       title={title}
       description={description}
