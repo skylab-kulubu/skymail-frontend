@@ -50,6 +50,7 @@ import { parkedAttempt } from '@/lib/send-controls';
 import { TrackingSection } from './TrackingReport';
 import { ContentViewsSection } from './ContentViews';
 import { sendTracked } from '@/lib/tracking-report';
+import { loadFailureArt } from '@/components/common/load-failure';
 
 export function SendDetail({ id }: { id: string }) {
   const send = useApiLoad((api, signal) => fetchSend(api, id, signal), id);
@@ -65,7 +66,7 @@ export function SendDetail({ id }: { id: string }) {
         </Link>
       </StateCard>
     ) : (
-      <StateCard icon={AlertTriangle} tone="danger" title="Gönderim yüklenemedi" description={send.error.message}>
+      <StateCard {...loadFailureArt(send.error)} tone="danger" title="Gönderim yüklenemedi" description={send.error.message}>
         <Button variant="outline" onClick={() => void send.reload()}>
           Tekrar dene
         </Button>

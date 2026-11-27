@@ -1,5 +1,4 @@
-import { ShieldX } from 'lucide-react';
-import { Button } from '@skylab-kulubu/skylcn-ui';
+import { Button, ForbiddenScene } from '@skylab-kulubu/skylcn-ui';
 import { AuthScreen } from '@/components/auth/AuthScreen';
 import { signOutOfKeycloak } from '@/lib/auth/actions';
 import { displayPersonName } from '@/lib/chrome-role';
@@ -9,7 +8,8 @@ import type { ConsoleLink } from '@/lib/runtime-config';
 /**
  * Someone signed in with SKY LAB but without `skynotify:access`. They get a
  * clear answer and what to do about it, rather than a panel whose every
- * request fails.
+ * request fails. The 403 scene's "ask for it" drawing (B) stands above the
+ * words, which stay the console's own.
  */
 export function AccessDenied({
   name,
@@ -22,7 +22,7 @@ export function AccessDenied({
   const others = clubConsoles(consoles).filter((app) => app.id !== 'mail');
   return (
     <AuthScreen
-      Icon={ShieldX}
+      top={<ForbiddenScene variant="B" />}
       tone="warning"
       title="Erişimin yok"
       description={

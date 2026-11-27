@@ -7,7 +7,7 @@
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { AlertTriangle, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { Button, FilterPills, Pagination, StateCard } from '@skylab-kulubu/skylcn-ui';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { ResponsiveTable } from '@/components/tables/ResponsiveTable';
@@ -42,6 +42,7 @@ import { Audience } from './Audience';
 import { SendItem } from './SendItem';
 import { SenderPausedCheck } from './SenderPaused';
 import { SendStatusBadge } from './StatusBadge';
+import { loadFailureArt } from '@/components/common/load-failure';
 
 const EMPTY_TEXT: Readonly<Record<SendFilter, string>> = {
   all: 'Henüz gönderim yok.',
@@ -103,7 +104,7 @@ export function SendList() {
       {state.status === 'loading' ? (
         <StateCard loading title="Gönderimler yükleniyor" />
       ) : state.status === 'error' ? (
-        <StateCard icon={AlertTriangle} tone="danger" title="Gönderimler yüklenemedi" description={state.error.message}>
+        <StateCard {...loadFailureArt(state.error)} tone="danger" title="Gönderimler yüklenemedi" description={state.error.message}>
           <Button variant="outline" onClick={() => void state.reload()}>
             Tekrar dene
           </Button>
